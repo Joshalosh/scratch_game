@@ -1,12 +1,51 @@
 #include <windows.h>
 
-int CALLBACK
-WinMain(HINSTANCE hInstance,
-        HINSTANCE hPrevInstance,
-        LPSTR lpCmdLine,
-        int nCmdShow)
+LRESULT CALLBACK
+MainWindowCallback(HWND Window,
+                   UINT Message,
+                   WPARAM WParam,
+                   LPARAM LParam)
 {
-  MessageBoxA(0, "This is a game.", "GAME FROM SCRATCH",
-             MB_OK|MB_ICONINFORMATION);
+    switch(Message)
+    {
+        case WM_SIZE:
+        {
+            OutputDebugStringA("WM_SIZE\n");
+        } break;
+        
+        case WM_DESTROY:
+        {
+            OutputDebugStringA("WM_DESTROY\n");
+        } break;
+        
+        case WM_CLOSE:
+        {
+            OutputDebugStringA("WM_CLOSE\n");
+        } break;
+ 
+        case WM_ACTIVATEAPP:
+        {
+            OutputDebugStringA("WM_ACTIVATEAPP\n");
+        } break;
+
+        default:
+        {
+//            OutputDebugStringA("default\n");
+        } break;
+}
+
+int CALLBACK
+WinMain(HINSTANCE Instance,
+        HINSTANCE PrevInstance,
+        LPSTR CommanLine,
+        int ShowCode)
+{
+    WNDCLASS WindowClass = {};
+
+    WindowClass.style = CS_OWNDC|CS_HREDRAW|CS_VREDRAW;
+    WindowClass.lpfnWndProc = MainWindowCallback;
+    WindowClass.hInstance = Instance;
+//  WindowClass.hIcon;
+    WindowClass.lpszClassName = "GameWindowClass";
   return(0);
 }
