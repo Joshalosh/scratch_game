@@ -6,6 +6,8 @@ MainWindowCallback(HWND Window,
                    WPARAM WParam,
                    LPARAM LParam)
 {
+    LRESULT Result = 0;
+
     switch(Message)
     {
         case WM_SIZE:
@@ -31,7 +33,11 @@ MainWindowCallback(HWND Window,
         default:
         {
 //            OutputDebugStringA("default\n");
+              Result = DefWindowProc(Window, Message, WWParam, LParam);
         } break;
+    }
+    
+    return(Result);
 }
 
 int CALLBACK
@@ -40,12 +46,14 @@ WinMain(HINSTANCE Instance,
         LPSTR CommanLine,
         int ShowCode)
 {
-    WNDCLASS WindowClass = {};
+j    WNDCLASS WindowClass = {};
 
     WindowClass.style = CS_OWNDC|CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = MainWindowCallback;
     WindowClass.hInstance = Instance;
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
-  return(0);
+    RegisterClass(&WindowClass);
+
+    return(0);
 }
