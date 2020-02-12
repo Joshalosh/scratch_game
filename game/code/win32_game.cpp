@@ -30,10 +30,31 @@ MainWindowCallback(HWND Window,
             OutputDebugStringA("WM_ACTIVATEAPP\n");
         } break;
 
+        case WM_PAINT:
+        {
+            PAINTSTRUCT Paint;
+            HDC DeviceContext = BeginPaint(Window, &Paint);
+            int X = Paint.rcPaint.left;
+            int Y = Paint.rcPaint.top;
+            int Width = Paint.rcPaint.right - Paint.rcPaint.left;
+            int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
+            static DWORD Operation = WHITENESS;
+            PatBlt(DeviceContext, X, Y, Width, Height, Operation);
+            if( Operation == WHITENESS)
+            {
+                Operation = BLACKNESS;
+            }
+            else
+            {
+                Operation = WHITENESS;
+            }
+            EndPaint(Window, &Paint);
+        } break;
+
         default:
         {
 //            OutputDebugStringA("default\n");
-              Result = DefWindowProc(Window, Message, WWParam, LParam);
+              Result = DefWindowProc(Window, Message, WParam, LParam);
         } break;
     }
     
@@ -43,17 +64,61 @@ MainWindowCallback(HWND Window,
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
-        LPSTR CommanLine,
+        LPSTR CommandLine,
         int ShowCode)
 {
-j    WNDCLASS WindowClass = {};
+    WNDCLASS WindowClass = {};
 
     WindowClass.style = CS_OWNDC|CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = MainWindowCallback;
     WindowClass.hInstance = Instance;
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
-    RegisterClass(&WindowClass);
+
+
+    if(RegisterClass(&WindowClass))
+    {
+        HWND WindowHandle = 
+            CreateWindowEx(
+                0,
+                WindowClass.lpszClassName,
+                "Game",
+                WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                0,
+                0,
+                Instance,
+                0);
+        if(WindowHandle)
+        {
+            for(;;)
+            {
+                MSG Message;
+                BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
+                if(MessageResult > 0)
+                {
+                    TranslateMessage(&Message);
+                    DispatchMessage(&Message);
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // TBD: Logging
+        }
+   }
+   else
+   {
+      // TBD: Logging
+   }            
+
 
     return(0);
 }
