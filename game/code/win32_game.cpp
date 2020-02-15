@@ -1,10 +1,48 @@
 #include <windows.h>
 
+#define internal static
+#define local_persist static
+#define global_variable static
+
+// TBD: This is a global for now
+global_variable bool Running;
+
+internal void
+Win32ResizeDIBSection(int Width, int Height)
+{
+    HBITMAP CreateDIBSection(
+        HDC hdc,
+        const BITMAPINFO *pbmi,
+        UINT iUsage,
+        VOID **ppvBits,
+        HANDLE hSection,
+        DWORD dwOffset);
+}
+
+internal void
+Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
+{
+    StretchDIBits(
+        HDC hdc,
+        int xDest,
+        int yDest,
+        int nDestWidth,
+        int nDestHeight,
+        int XSrc,
+        int YSrc,
+        int nSrcWidth,
+        int nSrcHeight,
+        const VOID *lpBits,
+        const BITMAPINFO *lpBitsInfo,
+        UINT iUsage,
+        DWORD dwRop);
+}
+
 LRESULT CALLBACK
-MainWindowCallback(HWND Window,
-                   UINT Message,
-                   WPARAM WParam,
-                   LPARAM LParam)
+Win32MainWindowCallback(HWND Window,
+                        UINT Message,
+                        WPARAM WParam,
+                        LPARAM LParam)
 {
     LRESULT Result = 0;
 
@@ -12,22 +50,28 @@ MainWindowCallback(HWND Window,
     {
         case WM_SIZE:
         {
-            OutputDebugStringA("WM_SIZE\n");
-        } break;
-        
-        case WM_DESTROY:
-        {
-            OutputDebugStringA("WM_DESTROY\n");
+            RECT ClientRect;
+            GetClientRect(Window, &ClientRect);
+            int Width = ClientRect.right - ClientRect.left;
+            int Height = ClientRect.bottom - ClientRect.top;
+            ResizeDIBSection(Width, Height);
         } break;
         
         case WM_CLOSE:
         {
-            OutputDebugStringA("WM_CLOSE\n");
+            // TBD: Handle this with a message to the user
+            Running = false;
         } break;
  
         case WM_ACTIVATEAPP:
         {
             OutputDebugStringA("WM_ACTIVATEAPP\n");
+        } break;
+
+        case WM_DESTROY:
+        {
+            // TBD: Handle this as an error - recreate window
+            Running = false;
         } break;
 
         case WM_PAINT:
@@ -38,16 +82,7 @@ MainWindowCallback(HWND Window,
             int Y = Paint.rcPaint.top;
             int Width = Paint.rcPaint.right - Paint.rcPaint.left;
             int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
-            static DWORD Operation = WHITENESS;
-            PatBlt(DeviceContext, X, Y, Width, Height, Operation);
-            if( Operation == WHITENESS)
-            {
-                Operation = BLACKNESS;
-            }
-            else
-            {
-                Operation = WHITENESS;
-            }
+            Win32UpdatWindow(DeviceContext, X, Y, Width, Height);
             EndPaint(Window, &Paint);
         } break;
 
@@ -69,17 +104,16 @@ WinMain(HINSTANCE Instance,
 {
     WNDCLASS WindowClass = {};
 
-    WindowClass.style = CS_OWNDC|CS_HREDRAW|CS_VREDRAW;
-    WindowClass.lpfnWndProc = MainWindowCallback;
+    WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = Instance;
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 
 
-    if(RegisterClass(&WindowClass))
+    if(RegisterClassA(&WindowClass))
     {
         HWND WindowHandle = 
-            CreateWindowEx(
+            CreateWindowExA(
                 0,
                 WindowClass.lpszClassName,
                 "Game",
@@ -94,14 +128,15 @@ WinMain(HINSTANCE Instance,
                 0);
         if(WindowHandle)
         {
-            for(;;)
+            Running = true;
+            while(Running)
             {
                 MSG Message;
-                BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
+                BOOL MessageResult = GetMessageA(&Message, 0, 0, 0);
                 if(MessageResult > 0)
                 {
                     TranslateMessage(&Message);
-                    DispatchMessage(&Message);
+                    DispatchMessageA(&Message);
                 }
                 else
                 {
