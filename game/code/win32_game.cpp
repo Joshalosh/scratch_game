@@ -52,6 +52,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
     Buffer->Width = Width;
     Buffer->Height = Height;
+    Buffer->BytesPerPixel = 4;
 
     Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
     Buffer->Info.bmiHeader.biWidth = Buffer->Width;
@@ -210,6 +211,7 @@ WinMain(HINSTANCE Instance,
                 ReleaseDC(Window, DeviceContext);
 
                 ++XOffset;
+                YOffset += 2;
 
             }
         }
