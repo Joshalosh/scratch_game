@@ -99,8 +99,8 @@ Win32DisplayBufferInWindow(HDC DeviceContext,
                   X, Y, Width, Height,
                   X, Y, Width, Height,
                   */
-                  0, 0, Buffer.Width, Buffer.Height,
                   0, 0, WindowWidth, WindowHeight,
+                  0, 0, Buffer.Width, Buffer.Height,
                   Buffer.Memory,
                   &Buffer.Info,
                   DIB_RGB_COLORS, SRCCOPY);
@@ -118,8 +118,6 @@ Win32MainWindowCallback(HWND Window,
     {
         case WM_SIZE:
         {
-            win32_window_dimension Dimension =  Win32GetWindowDimension(Window);
-            Win32ResizeDIBSection(&GlobalBackbuffer, Dimension.Width, Dimension.Height);
         } break;
         
         case WM_CLOSE:
@@ -171,6 +169,8 @@ WinMain(HINSTANCE Instance,
         int ShowCode)
 {
     WNDCLASS WindowClass = {};
+
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
 
     WindowClass.style = CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
