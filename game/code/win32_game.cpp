@@ -73,6 +73,10 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
     Buffer->Height = Height;
     Buffer->BytesPerPixel = 4;
 
+    // When the biHeight field is negative, this is the clue to
+    // Windows to treat this bitmap as top-down, not bottom up, meaning that
+    // the first three bytes of the image are the colour for the top left pixel
+    // in the bitmap, not the bottom left
     Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
     Buffer->Info.bmiHeader.biWidth = Buffer->Width;
     Buffer->Info.bmiHeader.biHeight = -Buffer->Height;
@@ -82,10 +86,9 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
     int BitmapMemorySize = (Buffer->Width*Buffer->Height)*Buffer->BytesPerPixel;
     Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+    Buffer->Pitch = Width*Buffer->BytesPerPixel;
 
     // TBD: Probably clear this to black
-    
-    Buffer->Pitch = Width*Buffer->BytesPerPixel;
 }
 
 internal void
