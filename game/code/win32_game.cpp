@@ -22,7 +22,7 @@ struct win32_window_dimension
 };
 
 // TBD: This is a global for now
-global_variable bool Running;
+global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 
 win32_window_dimension
@@ -127,7 +127,7 @@ Win32MainWindowCallback(HWND Window,
         case WM_CLOSE:
         {
             // TBD: Handle this with a message to the user
-            Running = false;
+            GlobalRunning = false;
         } break;
  
         case WM_ACTIVATEAPP:
@@ -138,7 +138,7 @@ Win32MainWindowCallback(HWND Window,
         case WM_DESTROY:
         {
             // TBD: Handle this as an error - recreate window
-            Running = false;
+            GlobalRunning = false;
         } break;
 
         case WM_PAINT:
@@ -201,17 +201,19 @@ WinMain(HINSTANCE Instance,
                 0);
         if(Window)
         {
+            HDC DeviceContext = GetDC(Window);
+
             int XOffset = 0;
             int YOffset = 0;
-            Running = true;
-            while(Running)
+            GlobalRunning = true;
+            while(GlobalRunning)
             {
                 MSG Message;
                 while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
                 {
                    if(Message.message == WM_QUIT)
                    {
-                       Running = false;
+                       GlobalRunning = false;
                    }
 
                     TranslateMessage(&Message);
@@ -220,13 +222,10 @@ WinMain(HINSTANCE Instance,
 
                 RenderWeirdGradient(GlobalBackbuffer, XOffset, YOffset);
 
-                HDC DeviceContext = GetDC(Window);
-
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
                                            Dimension.Height, GlobalBackbuffer,
                                            0, 0, Dimension.Width, Dimension.Height);
-                ReleaseDC(Window, DeviceContext);
 
                 ++XOffset;
                 YOffset += 2;
