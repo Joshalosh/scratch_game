@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <xinput.h>
 
 #define internal static
 #define local_persist static
@@ -94,8 +95,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 internal void
 Win32DisplayBufferInWindow(HDC DeviceContext,
                            int WindowWidth, int WindowHeight,
-                           win32_offscreen_buffer Buffer,
-                           int X, int Y, int Width, int Height)
+                           win32_offscreen_buffer Buffer)
 {
     // TBD: Aspect ratio correction
     StretchDIBits(DeviceContext,
@@ -152,7 +152,7 @@ Win32MainWindowCallback(HWND Window,
 
             win32_window_dimension Dimension =  Win32GetWindowDimension(Window);
             Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height,
-                                       GlobalBackbuffer, X, Y, Width, Height);
+                                       GlobalBackbuffer);
             EndPaint(Window, &Paint);
         } break;
 
@@ -220,12 +220,28 @@ WinMain(HINSTANCE Instance,
                     DispatchMessageA(&Message);
                 }
 
+                // TBD: Should I poll this more freqently?
+                for (DWORD ControllerIndex = 0;
+                     ControllerIndex < XUSER_MAX_COUNT;
+                     ++ControllerIndex)
+
+                {
+                    XINPUT_STATE ControllerState;
+                    if(XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
+                    {
+                      // NOTE: This controller is plugged in
+                    }
+                    else
+                    {
+                      // NOTE: This controller is not available
+                    }
+                }
+
                 RenderWeirdGradient(GlobalBackbuffer, XOffset, YOffset);
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
-                                           Dimension.Height, GlobalBackbuffer,
-                                           0, 0, Dimension.Width, Dimension.Height);
+                                           Dimension.Height, GlobalBackbuffer);
 
                 ++XOffset;
                 YOffset += 2;
