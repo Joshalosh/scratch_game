@@ -233,22 +233,21 @@ WinMain(HINSTANCE Instance,
                       // TBD: See if ControllerState.dwPacketNumber increments too rapidly
                       XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
 
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool Up = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool Down = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
+                      bool Left = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
+                      bool Right = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+                      bool Start = (Pad->wButtons & XINPUT_GAMEPAD_START);
+                      bool Back = (Pad->wButtons & XINPUT_GAMEPAD_BACK);
+                      bool LeftShoulder = (Pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+                      bool RightShoulder = (Pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
+                      bool AButton = (Pad->wButtons & XINPUT_GAMEPAD_A);
+                      bool BButton = (Pad->wButtons & XINPUT_GAMEPAD_B);
+                      bool XButton = (Pad->wButtons & XINPUT_GAMEPAD_X);
+                      bool YButton = (Pad->wButtons & XINPUT_GAMEPAD_Y);
+
+                      int16_t StickX = Pad->sThumbLX;
+                      int16_t StickY = Pad->sThumbLY;
                     }
                     else
                     {
