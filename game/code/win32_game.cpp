@@ -230,6 +230,25 @@ WinMain(HINSTANCE Instance,
                     if(XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
                     {
                       // NOTE: This controller is plugged in
+                      // TBD: See if ControllerState.dwPacketNumber increments too rapidly
+                      XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
+
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                      bool DpadUp = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
                     }
                     else
                     {
