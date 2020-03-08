@@ -18,25 +18,56 @@ struct win32_offscreen_buffer
 
 struct win32_window_dimension
 {
-  int Width;
-  int Height;
+    int Width;
+    int Height;
 };
 
 // TBD: This is a global for now
 global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 
-win32_window_dimension
+// XInputGetState
+#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
+typedef X_INPUT_GET_STATE(x_input_get_state);
+X_INPUT_GET_STATE(XInputGetStateStub)
+{
+    return(0);
+}
+global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
+#define XInputGetState XInputGetState_
+
+// XInputSetState
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
+typedef X_INPUT_SET_STATE(x_input_set_state);
+X_INPUT_SET_STATE(XInputSetStateStub)
+{
+    return(0);
+}
+global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
+#define XInputSetState XInputSetState_
+
+internal void
+Win32LoadXInput(void)
+{
+    HMODULE XInputLibrary = LoadLibrary("xinput1_3.dll");
+    if(XInputLibrary)
+    {
+        XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
+        XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
+    }
+}
+
+internal win32_window_dimension
 Win32GetWindowDimension(HWND Window)
 {
-  win32_window_dimension Result;
+    win32_window_dimension Result;
 
-  RECT ClientRect;
-  GetClientRect(Window, &ClientRect);
-  Result.Width = ClientRect.right - ClientRect.left;
-  Result.Height = ClientRect.bottom - ClientRect.top;
+    RECT ClientRect;
+    GetClientRect(Window, &ClientRect);
+    Result.Width = ClientRect.right - ClientRect.left;
+    Result.Height = ClientRect.bottom - ClientRect.top;
 
-  return(Result);
+    return(Result);
 };
 
 internal void
@@ -50,7 +81,7 @@ RenderWeirdGradient(win32_offscreen_buffer Buffer, int BlueOffset, int GreenOffs
         for(int X = 0; X < Buffer.Width; ++X)
         {
             uint8_t Blue = (X + BlueOffset);
-            uint8_t Green = (X + GreenOffset);
+            uint8_t Green = (Y + GreenOffset);
 
             *Pixel++ = ((Green << 8) |  Blue);
         }
@@ -141,6 +172,13 @@ Win32MainWindowCallback(HWND Window,
             GlobalRunning = false;
         } break;
 
+        case WM_SYSKEYDOWN;
+        case WM_SYSKEYUP;
+        case WM_KEYDOWN;
+        case WM_KEYUP;
+        {
+        } break;
+
         case WM_PAINT:
         {
             PAINTSTRUCT Paint;
@@ -172,6 +210,8 @@ WinMain(HINSTANCE Instance,
         LPSTR CommandLine,
         int ShowCode)
 {
+    Win32LoadXInput();
+
     WNDCLASS WindowClass = {};
 
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
@@ -248,6 +288,11 @@ WinMain(HINSTANCE Instance,
 
                       int16_t StickX = Pad->sThumbLX;
                       int16_t StickY = Pad->sThumbLY;
+
+                      if(AButton)
+                      {
+                          YOffset += 2;
+                      }
                     }
                     else
                     {
@@ -255,6 +300,11 @@ WinMain(HINSTANCE Instance,
                     }
                 }
 
+                /* XINPUT_VIBRATION Vibration;
+                Vibration.wLeftMotorSpeed = 60000;
+                Vibration.wRightMotorSpeed = 60000;
+                XInputSetState(0, &Vibration);
+                */
                 RenderWeirdGradient(GlobalBackbuffer, XOffset, YOffset);
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
@@ -262,7 +312,6 @@ WinMain(HINSTANCE Instance,
                                            Dimension.Height, GlobalBackbuffer);
 
                 ++XOffset;
-                YOffset += 2;
 
             }
         }
