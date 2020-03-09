@@ -49,7 +49,7 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 internal void
 Win32LoadXInput(void)
 {
-    HMODULE XInputLibrary = LoadLibrary("xinput1_3.dll");
+    HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
@@ -71,14 +71,14 @@ Win32GetWindowDimension(HWND Window)
 };
 
 internal void
-RenderWeirdGradient(win32_offscreen_buffer Buffer, int BlueOffset, int GreenOffset)
+RenderWeirdGradient(win32_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
 {
 
-    uint8_t *Row = (uint8_t *)Buffer.Memory;
-    for(int Y = 0; Y < Buffer.Height; ++Y)
+    uint8_t *Row = (uint8_t *)Buffer->Memory;
+    for(int Y = 0; Y < Buffer->Height; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = 0; X < Buffer.Width; ++X)
+        for(int X = 0; X < Buffer->Width; ++X)
         {
             uint8_t Blue = (X + BlueOffset);
             uint8_t Green = (Y + GreenOffset);
@@ -86,7 +86,7 @@ RenderWeirdGradient(win32_offscreen_buffer Buffer, int BlueOffset, int GreenOffs
             *Pixel++ = ((Green << 8) |  Blue);
         }
 
-        Row += Buffer.Pitch;
+        Row += Buffer->Pitch;
     }
 }
 
@@ -124,9 +124,8 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 }
 
 internal void
-Win32DisplayBufferInWindow(HDC DeviceContext,
-                           int WindowWidth, int WindowHeight,
-                           win32_offscreen_buffer Buffer)
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
     // TBD: Aspect ratio correction
     StretchDIBits(DeviceContext,
@@ -135,9 +134,9 @@ Win32DisplayBufferInWindow(HDC DeviceContext,
                   X, Y, Width, Height,
                   */
                   0, 0, WindowWidth, WindowHeight,
-                  0, 0, Buffer.Width, Buffer.Height,
-                  Buffer.Memory,
-                  &Buffer.Info,
+                  0, 0, Buffer->Width, Buffer->Height,
+                  Buffer->Memory,
+                  &Buffer->Info,
                   DIB_RGB_COLORS, SRCCOPY);
 }
 
@@ -172,12 +171,64 @@ Win32MainWindowCallback(HWND Window,
             GlobalRunning = false;
         } break;
 
-        case WM_SYSKEYDOWN;
-        case WM_SYSKEYUP;
-        case WM_KEYDOWN;
-        case WM_KEYUP;
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+        case WM_KEYDOWN:
+        case WM_KEYUP:
         {
-        } break;
+            uint32_t VKCode = WParam;
+            bool WasDown = ((LParam & (1 << 30)) != 0);
+            bool IsDown = ((LParam & (1 << 31)) == 0);
+            if(WasDown != IsDown)
+            {
+                if(VKCode == 'W')
+                {
+                }
+                else if (VKCode == 'A')
+                {
+                }
+                else if (VKCode == 'S')
+                {
+                }
+                else if (VKCode == 'D')
+                {
+                }
+                else if (VKCode == 'Q')
+                {
+                }
+                else if (VKCode == 'E')
+                {
+                }
+                else if (VKCode == VK_UP)
+                {
+                }
+                else if (VKCode == VK_LEFT)
+                {
+                }
+                else if (VKCode == VK_DOWN)
+                {
+                }
+                else if (VKCode == VK_RIGHT)
+                {
+                }
+                else if (VKCode == VK_ESCAPE)
+                {
+                    OutputDebugStringA("Escape: ");
+                    if(IsDown)
+                    {
+                        OutputDebugStringA("Is Down ");
+                    }
+                    if(WasDown)
+                    {
+                        OutputDebugStringA("Was Down ");
+                    }
+                    OutputDebugStringA("\n");
+                }
+                else if (VKCode == VK_SPACE)
+                {
+                }
+            } break;
+        }
 
         case WM_PAINT:
         {
@@ -189,8 +240,8 @@ Win32MainWindowCallback(HWND Window,
             int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
 
             win32_window_dimension Dimension =  Win32GetWindowDimension(Window);
-            Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height,
-                                       GlobalBackbuffer);
+            Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
+                                       Dimension.Width, Dimension.Height);
             EndPaint(Window, &Paint);
         } break;
 
@@ -212,7 +263,7 @@ WinMain(HINSTANCE Instance,
 {
     Win32LoadXInput();
 
-    WNDCLASS WindowClass = {};
+    WNDCLASSA WindowClass = {};
 
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
 
@@ -305,11 +356,11 @@ WinMain(HINSTANCE Instance,
                 Vibration.wRightMotorSpeed = 60000;
                 XInputSetState(0, &Vibration);
                 */
-                RenderWeirdGradient(GlobalBackbuffer, XOffset, YOffset);
+                RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
-                Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
-                                           Dimension.Height, GlobalBackbuffer);
+                Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
+                                           Dimension.Width, Dimension.Height);
 
                 ++XOffset;
 
