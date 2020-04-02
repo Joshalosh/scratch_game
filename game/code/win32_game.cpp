@@ -1,10 +1,13 @@
 #include <windows.h>
 #include <stdint.h>
 #include <xinput.h>
+#include <dsound.h>
 
 #define internal static
 #define local_persist static
 #define global_variable static
+
+typedef int32_t bool32;
 
 struct win32_offscreen_buffer
 {
@@ -31,7 +34,7 @@ global_variable win32_offscreen_buffer GlobalBackbuffer;
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub)
 {
-    return(0);
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
@@ -41,15 +44,23 @@ global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub)
 {
-    return(0);
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuiDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
+typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
 internal void
 Win32LoadXInput(void)
 {
-    HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
+    // Test this on Windows 8
+    HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
+    if(!XInputLibrary)
+    {
+        XInputLibrary = LoadLibraryA("xinput1_3.dll");
+    }
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
@@ -57,6 +68,24 @@ Win32LoadXInput(void)
     }
 }
 
+internal void
+Win32InitDSound(void)
+{
+    // Load the library
+    HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
+    if(DSoundLibrary)
+    {
+        // Get a DirectionalSound object
+        direct_sound_create *DirectSoundCreate = (direct_sound_create *)
+            GetProcAddress(DSoundLibrary, "DirectSoundCreate");
+
+        // "Create" a primary buffer
+
+        // "Create a secondary buffer
+
+        // Start it playing
+    }
+}
 internal win32_window_dimension
 Win32GetWindowDimension(HWND Window)
 {
@@ -227,8 +256,14 @@ Win32MainWindowCallback(HWND Window,
                 else if (VKCode == VK_SPACE)
                 {
                 }
-            } break;
-        }
+            }
+
+            bool32 AltKeyWasDown = (LParam & (1 << 29));
+            if((VKCode == VK_F4) && AltKeyWasDown)
+            {
+                GlobalRunning = false;
+            }
+        } break;
 
         case WM_PAINT:
         {
@@ -296,6 +331,9 @@ WinMain(HINSTANCE Instance,
 
             int XOffset = 0;
             int YOffset = 0;
+
+            Win32InitDSound();
+
             GlobalRunning = true;
             while(GlobalRunning)
             {
@@ -351,11 +389,11 @@ WinMain(HINSTANCE Instance,
                     }
                 }
 
-                /* XINPUT_VIBRATION Vibration;
+                XINPUT_VIBRATION Vibration;
                 Vibration.wLeftMotorSpeed = 60000;
                 Vibration.wRightMotorSpeed = 60000;
                 XInputSetState(0, &Vibration);
-                */
+                
                 RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
