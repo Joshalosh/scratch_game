@@ -49,27 +49,37 @@ X_INPUT_SET_STATE(XInputSetStateStub)
 global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
-#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuiDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
 internal void
 Win32LoadXInput(void)
 {
-    // Test this on Windows 8
+    // TBD: Test this on Windows 8
     HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
     if(!XInputLibrary)
     {
+        // TBD: Diagnostic
         XInputLibrary = LoadLibraryA("xinput1_3.dll");
     }
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
+        if(!XInputGetState) {xInputGetState = XInputGetStateStub;}
+
         XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
+        if(!XInputSetState) {xInputSetState = XInputSetStateStub;}
+
+        // TBD: Diagnostic
+    }
+    else
+    {
+        // TBD: Diagnostic
     }
 }
 
 internal void
-Win32InitDSound(void)
+Win32InitDSound(HWND Window)
 {
     // Load the library
     HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
@@ -79,11 +89,32 @@ Win32InitDSound(void)
         direct_sound_create *DirectSoundCreate = (direct_sound_create *)
             GetProcAddress(DSoundLibrary, "DirectSoundCreate");
 
-        // "Create" a primary buffer
+        // TBD: Double check this works on XP, DirectSound8 or 7?
+        LPDIRECTSOUND DirectSound;
+        if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0)))
+        {
+            if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+            {
+            }
+            else
+            {
+                // TBD: Diagnostic
+            }
 
-        // "Create a secondary buffer
+            // "Create" a primary buffer
 
-        // Start it playing
+            // "Create a secondary buffer
+
+            // Start it playing
+        }
+        else
+        {
+            // TBD: Diagnostic
+        }
+    }
+    else
+    {
+        // TBD: Diagnostic
     }
 }
 internal win32_window_dimension
