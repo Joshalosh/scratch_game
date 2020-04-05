@@ -28,6 +28,7 @@ struct win32_window_dimension
 // TBD: This is a global for now
 global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
 // XInputGetState
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
@@ -97,9 +98,9 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
             WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
             WaveFormat.nChannels = 2;
             WaveFormat.nSamplesPerSec = SamplesPerSecond;
+            WaveFormat.wBitsPerSample = 16;
             WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign;
             WaveFormat.nBlockAlign = (WaveFormat.nChannels*WaveFormat.wBitsPerSample) / 8;
-            WaveFormat.wBitsPerSample = 16;
             WaveFormat.cbSize = 0;
 
             if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
@@ -132,13 +133,15 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
             {
                 // TBD: Diagnostic
             }
+
+            // TBD: DSBCAPS_GETCURRENTPOSTIION2?
             DSBUFFERDESC BufferDescription = {};
             BufferDescription.dwSize = sizeof(BufferDescription);
             BufferDescription.dwFlags = 0;
             BufferDescription.dwBufferBytes = BufferSize;
             BufferDescription.lpwfxFormat = &WaveFormat;
-            LPDIRECTSOUNDBUFFER SecondaryBuffer;
-            if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0)))
+            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
+            if(SUCCEEDED(Error))
             {
                 OutputDebugStringA("Secondary buffer created successfully.\n");
             }
@@ -153,6 +156,7 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
         // TBD: Diagnostic
     }
 }
+
 internal win32_window_dimension
 Win32GetWindowDimension(HWND Window)
 {
@@ -213,7 +217,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
     Buffer->Info.bmiHeader.biCompression = BI_RGB;
 
     int BitmapMemorySize = (Buffer->Width*Buffer->Height)*Buffer->BytesPerPixel;
-    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Buffer->Pitch = Width*Buffer->BytesPerPixel;
 
     // TBD: Probably clear this to black
@@ -462,6 +466,8 @@ WinMain(HINSTANCE Instance,
                 XInputSetState(0, &Vibration);
                 
                 RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
+
+                // DirectSound output test
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
