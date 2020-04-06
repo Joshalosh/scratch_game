@@ -400,10 +400,20 @@ WinMain(HINSTANCE Instance,
         {
             HDC DeviceContext = GetDC(Window);
 
+            // Graphics test
             int XOffset = 0;
             int YOffset = 0;
 
-            Win32InitDSound(Window, 48000, 48000*sizeof(int16_t)*2);
+            // Sound test
+            int SamplesPerSecond = 48000;
+            int ToneHz = 256;
+            uint32_t RunningSampleIndex = 0;
+            int SquareWavePeriod = SamplesPerSecond/ToneHz;
+            int HalfSquareWavePeriod = SqaureWavePeriod/2;
+            int BytesPerSample = sizeof(int16_t)*2;
+            int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
+
+            Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);
 
             GlobalRunning = true;
             while(GlobalRunning)
@@ -468,6 +478,27 @@ WinMain(HINSTANCE Instance,
                 RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
 
                 // DirectSound output test
+                DWORD PlayCursor;
+                DWORD WriteCursor;
+                if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                {
+                    DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
+                    DWORD ByteToWrite;
+                    if(ByteToLock > PlayCursor)
+                    {
+                        ByteToWrite = (SecondaryBufferSize - ByteToLock);
+                        ByteToWrite += PlayCursor;
+                    }
+                    else
+                    {
+                        ByteToWrite = PlayCursor - ByteToLock;
+                    }
+
+                    //  int16 int16  int16 ...
+                    // [LEFT  RIGHT] LEFT  RIGHT LEFT  RIGHT ...
+
+                    // TBD: Continue sound in game loop here
+                }
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
