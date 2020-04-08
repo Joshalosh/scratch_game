@@ -2,12 +2,15 @@
 #include <stdint.h>
 #include <xinput.h>
 #include <dsound.h>
+#include <math.h>
 
 #define internal static
 #define local_persist static
 #define global_variable static
 
 typedef int32_t bool32;
+typedef real32 float;
+typedef real64 double;
 
 struct win32_offscreen_buffer
 {
@@ -409,8 +412,8 @@ WinMain(HINSTANCE Instance,
             int ToneHz = 256;
             int16_t ToneVolume = 2000;
             uint32_t RunningSampleIndex = 0;
-            int SquareWavePeriod = SamplesPerSecond/ToneHz;
-            int HalfSquareWavePeriod = SquareWavePeriod/2;
+            int WavePeriod = SamplesPerSecond/ToneHz;
+            int HalfWavePeriod = WavePeriod/2;
             int BytesPerSample = sizeof(int16_t)*2;
             int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
 
@@ -486,7 +489,12 @@ WinMain(HINSTANCE Instance,
                 {
                     DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
                     DWORD BytesToWrite;
-                    if(ByteToLock > PlayCursor)
+                    // TBD: Need a more accurate check than ByteToLock == PlayCursor
+                    if(ByteToLock == PlayCursor)
+                    {
+                        BytesToWrite = SecondaryBufferSize;
+                    }
+                    else if(ByteToLock > PlayCursor)
                     {
                         BytesToWrite = (SecondaryBufferSize - ByteToLock);
                         BytesToWrite += PlayCursor;
@@ -510,7 +518,9 @@ WinMain(HINSTANCE Instance,
                         int16_t *SampleOut = (int16_t *)Region1;
                         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
                         {
-                            int16_t SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) 
+                            real32 SineValue = ;
+                            int16_t SampleValue = ????;
+                            int16_t SampleValue = ((RunningSampleIndex++ / HalfWavePeriod) 
                                                     % 2) ? ToneVolume : -ToneVolume;
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
