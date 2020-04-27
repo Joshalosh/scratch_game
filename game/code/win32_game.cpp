@@ -8,9 +8,11 @@
 #define local_persist static
 #define global_variable static
 
+#define Pi32 3.14159265359f
+
 typedef int32_t bool32;
-typedef real32 float;
-typedef real64 double;
+typedef float real32;
+typedef double real64;
 
 struct win32_offscreen_buffer
 {
@@ -413,7 +415,7 @@ WinMain(HINSTANCE Instance,
             int16_t ToneVolume = 2000;
             uint32_t RunningSampleIndex = 0;
             int WavePeriod = SamplesPerSecond/ToneHz;
-            int HalfWavePeriod = WavePeriod/2;
+//            int HalfWavePeriod = WavePeriod/2;
             int BytesPerSample = sizeof(int16_t)*2;
             int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
 
@@ -485,7 +487,8 @@ WinMain(HINSTANCE Instance,
                 // DirectSound output test
                 DWORD PlayCursor;
                 DWORD WriteCursor;
-                if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                if(!SoundIsPlaying &&
+                    SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
                 {
                     DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
                     DWORD BytesToWrite;
@@ -518,26 +521,36 @@ WinMain(HINSTANCE Instance,
                         int16_t *SampleOut = (int16_t *)Region1;
                         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
                         {
-                            real32 SineValue = ;
-                            int16_t SampleValue = ????;
-                            int16_t SampleValue = ((RunningSampleIndex++ / HalfWavePeriod) 
-                                                    % 2) ? ToneVolume : -ToneVolume;
+                            real32 t = 2.0f*Pi32*(real32)RunningIndexSample / (real32)WavePeriod;
+                            real32 SineValue = sinf(t);
+                            int16_t SampleValue = (int16_t)(SineVolume * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
+
+                            ++ RunningSampleIndex;
                         }
                         
                         DWORD Region2SampleCount = Region2Size/BytesPerSample;
                         SampleOut = (int16_t *)Region2;
                         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
                         {
-                            int16_t SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod)
-                                                    % 2) ? ToneVolume : -ToneVolume;
+                            real32 t = 2.0f*Pi32*(real32)RunningIndexSample / (real32)WavePeriod;
+                            real32 SineValue = sinf(t);
+                            int16_t SampleValue = (int16_t)(SineVolume * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
+
+                            ++ RunningSampleIndex;
                         }
                         
                         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
                     }
+                }
+
+                if(!SoundIsPlaying)
+                {
+                    GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+                    SoundIsPlaying = true;
                 }
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
