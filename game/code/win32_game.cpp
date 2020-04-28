@@ -420,7 +420,7 @@ WinMain(HINSTANCE Instance,
             int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
 
             Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);
-            GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+            bool32 SoundIsPlaying = false;
 
             GlobalRunning = true;
             while(GlobalRunning)
@@ -490,7 +490,7 @@ WinMain(HINSTANCE Instance,
                 if(!SoundIsPlaying &&
                     SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
                 {
-                    DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
+                    DWORD ByteToLock = (RunningSampleIndex*BytesPerSample) % SecondaryBufferSize;
                     DWORD BytesToWrite;
                     // TBD: Need a more accurate check than ByteToLock == PlayCursor
                     if(ByteToLock == PlayCursor)
@@ -521,9 +521,9 @@ WinMain(HINSTANCE Instance,
                         int16_t *SampleOut = (int16_t *)Region1;
                         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
                         {
-                            real32 t = 2.0f*Pi32*(real32)RunningIndexSample / (real32)WavePeriod;
+                            real32 t = 2.0f*Pi32*(real32)RunningSampleIndex / (real32)WavePeriod;
                             real32 SineValue = sinf(t);
-                            int16_t SampleValue = (int16_t)(SineVolume * ToneVolume);
+                            int16_t SampleValue = (int16_t)(SineValue * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
 
@@ -534,9 +534,9 @@ WinMain(HINSTANCE Instance,
                         SampleOut = (int16_t *)Region2;
                         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
                         {
-                            real32 t = 2.0f*Pi32*(real32)RunningIndexSample / (real32)WavePeriod;
+                            real32 t = 2.0f*Pi32*(real32)RunningSampleIndex / (real32)WavePeriod;
                             real32 SineValue = sinf(t);
-                            int16_t SampleValue = (int16_t)(SineVolume * ToneVolume);
+                            int16_t SampleValue = (int16_t)(SineValue * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
 
