@@ -366,6 +366,18 @@ Win32MainWindowCallback(HWND Window,
     return(Result);
 }
 
+struct win32_sound_output
+{
+        int SamplesPerSecond;
+        int ToneHz;
+        int16_t ToneVolume;
+        uint32_t RunningSampleIndex;
+        int WavePeriod;
+        int BytesPerSample;
+        int SecondaryBufferSize;
+};
+
+
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
@@ -408,18 +420,18 @@ WinMain(HINSTANCE Instance,
             // Graphics test
             int XOffset = 0;
             int YOffset = 0;
+        
+            win32_sound_output SoundOutput = {};
 
-            // Sound test
-            int SamplesPerSecond = 48000;
-            int ToneHz = 256;
-            int16_t ToneVolume = 2000;
-            uint32_t RunningSampleIndex = 0;
-            int WavePeriod = SamplesPerSecond/ToneHz;
-//            int HalfWavePeriod = WavePeriod/2;
-            int BytesPerSample = sizeof(int16_t)*2;
-            int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
+            SoundOutput.SamplesPerSecond = 48000;
+            SoundOutput.ToneHz = 256;
+            SoundOutput.ToneVolume = 2000;
+            SoundOutput.RunningSampleIndex = 0;
+            SoundOutput.WavePeriod = SamplesPerSecond/ToneHz;
+            SoundOutput.BytesPerSample = sizeof(int16_t)*2;
+            SoundOutput.SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
+            Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
 
-            Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);
             bool32 SoundIsPlaying = false;
 
             GlobalRunning = true;
@@ -495,7 +507,10 @@ WinMain(HINSTANCE Instance,
                     // TBD: Need a more accurate check than ByteToLock == PlayCursor
                     if(ByteToLock == PlayCursor)
                     {
-                        BytesToWrite = SecondaryBufferSize;
+                        if(!SoundIsPlaying)
+                        {
+                            BytesToWrite = SecondaryBufferSize;
+                        }
                     }
                     else if(ByteToLock > PlayCursor)
                     {
