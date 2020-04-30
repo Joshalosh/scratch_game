@@ -466,15 +466,15 @@ WinMain(HINSTANCE Instance,
             win32_sound_output SoundOutput = {};
 
             SoundOutput.SamplesPerSecond = 48000;
-            SoundOutput.ToneHz = 256;
-            SoundOutput.ToneVolume = 2000;
+            SoundOutput.ToneHz = 240;
+            SoundOutput.ToneVolume = 3000;
             SoundOutput.RunningSampleIndex = 0;
-            SoundOutput.WavePeriod = SamplesPerSecond/ToneHz;
+            SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
             SoundOutput.BytesPerSample = sizeof(int16_t)*2;
-            SoundOutput.SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
+            SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
             Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
-
-            bool32 SoundIsPlaying = false;
+            Win32FillSoundBuffer(&SoundOutput, 0,  SoundOutput.SecondaryBufferSize);
+            GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
             GlobalRunning = true;
             while(GlobalRunning)
@@ -520,40 +520,29 @@ WinMain(HINSTANCE Instance,
                       int16_t StickX = Pad->sThumbLX;
                       int16_t StickY = Pad->sThumbLY;
 
-                      if(AButton)
-                      {
-                          YOffset += 2;
-                      }
+                      XOffset += StickX >> 12;
+                      YOffset += StickY >> 12;
                     }
                     else
                     {
                       // NOTE: This controller is not available
                     }
                 }
-
-                XINPUT_VIBRATION Vibration;
-                Vibration.wLeftMotorSpeed = 60000;
-                Vibration.wRightMotorSpeed = 60000;
-                XInputSetState(0, &Vibration);
                 
                 RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
 
                 // DirectSound output test
                 DWORD PlayCursor;
                 DWORD WriteCursor;
-                if(!SoundIsPlaying &&
-                    SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
                 {
-                    DWORD ByteToLock = (SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample)
-                                        % SoundOutput.SecondaryBufferSize;
+                    DWORD ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample)
+                                        % SoundOutput.SecondaryBufferSize);
                     DWORD BytesToWrite;
                     // TBD: Need a more accurate check than ByteToLock == PlayCursor
                     if(ByteToLock == PlayCursor)
                     {
-                        if(!SoundIsPlaying)
-                        {
-                            BytesToWrite = SoundOutput.SecondaryBufferSize;
-                        }
+                        BytesToWrite = 0;
                     }
                     else if(ByteToLock > PlayCursor)
                     {
@@ -564,22 +553,14 @@ WinMain(HINSTANCE Instance,
                     {
                         BytesToWrite = PlayCursor - ByteToLock;
                     }
-
-                    Win32FillSoundBuffer(&SoundOutput, ByteToLock,  BytesToWrite)
                 }
 
-                if(!SoundIsPlaying)
-                {
-                    GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
-                    SoundIsPlaying = true;
-                }
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                            Dimension.Width, Dimension.Height);
 
                 ++XOffset;
-
             }
         }
         else
