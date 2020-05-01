@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <xinput.h>
 #include <dsound.h>
+
+// TBD: Implement my own sine function
 #include <math.h>
 
 #define internal static
@@ -468,7 +470,6 @@ WinMain(HINSTANCE Instance,
             SoundOutput.SamplesPerSecond = 48000;
             SoundOutput.ToneHz = 240;
             SoundOutput.ToneVolume = 3000;
-            SoundOutput.RunningSampleIndex = 0;
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
             SoundOutput.BytesPerSample = sizeof(int16_t)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
@@ -539,12 +540,10 @@ WinMain(HINSTANCE Instance,
                     DWORD ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample)
                                         % SoundOutput.SecondaryBufferSize);
                     DWORD BytesToWrite;
-                    // TBD: Need a more accurate check than ByteToLock == PlayCursor
-                    if(ByteToLock == PlayCursor)
-                    {
-                        BytesToWrite = 0;
-                    }
-                    else if(ByteToLock > PlayCursor)
+
+                    // TBD: Change this to using a lower latency offset from the
+                    // playcursor when we actually start having sound effects.
+                    if(ByteToLock > PlayCursor)
                     {
                         BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
                         BytesToWrite += PlayCursor;
