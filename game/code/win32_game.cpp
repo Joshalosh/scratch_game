@@ -377,6 +377,8 @@ struct win32_sound_output
         int WavePeriod;
         int BytesPerSample;
         int SecondaryBufferSize;
+        real32 tSine;
+        int LatencySampleCount;
 };
 
 internal void
@@ -396,12 +398,12 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
         int16_t *SampleOut = (int16_t *)Region1;
         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
         {
-            real32 t = 2.0f*Pi32*(real32)SoundOutput->RunningSampleIndex / (real32)SoundOutput->WavePeriod;
-            real32 SineValue = sinf(t);
+            real32 SineValue = sinf(SoundOutput->tSine);
             int16_t SampleValue = (int16_t)(SineValue * SoundOutput->ToneVolume);
             *SampleOut++ = SampleValue;
             *SampleOut++ = SampleValue;
 
+            SoundOutput->tSine += 2.0f*Pi32*1.0f / (real32)SoundOutput->WavePeriod;
             ++ SoundOutput->RunningSampleIndex;
         }
         
@@ -409,12 +411,12 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
         SampleOut = (int16_t *)Region2;
         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
         {
-            real32 t = 2.0f*Pi32*(real32)SoundOutput->RunningSampleIndex / (real32)SoundOutput->WavePeriod;
-            real32 SineValue = sinf(t);
+            real32 SineValue = sinf(SoundOutput->tSine);
             int16_t SampleValue = (int16_t)(SineValue * SoundOutput->ToneVolume);
             *SampleOut++ = SampleValue;
             *SampleOut++ = SampleValue;
 
+            SoundOutput->tSine += 2.0f*Pi32*1.0f / (real32)SoundOutput->WavePeriod;
             ++ SoundOutput->RunningSampleIndex;
         }
         
@@ -473,8 +475,9 @@ WinMain(HINSTANCE Instance,
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
             SoundOutput.BytesPerSample = sizeof(int16_t)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
+            SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
             Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
-            Win32FillSoundBuffer(&SoundOutput, 0,  SoundOutput.SecondaryBufferSize);
+            Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
             GlobalRunning = true;
@@ -521,8 +524,11 @@ WinMain(HINSTANCE Instance,
                       int16_t StickX = Pad->sThumbLX;
                       int16_t StickY = Pad->sThumbLY;
 
-                      XOffset += StickX >> 12;
-                      YOffset += StickY >> 12;
+                      XOffset += StickX / 12;
+                      YOffset += StickY / 12;
+
+                      SoundOutput.ToneHz = 480 + (int)(240.0f*((real32) StickY / 30000.0f));
+                      SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
                     }
                     else
                     {
@@ -539,18 +545,20 @@ WinMain(HINSTANCE Instance,
                 {
                     DWORD ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample)
                                         % SoundOutput.SecondaryBufferSize);
+                    DWORD TargetCursor = ((PlayCursor +
+                                         (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
+                                         SoundOutput.SecondaryBufferSize);
                     DWORD BytesToWrite;
-
                     // TBD: Change this to using a lower latency offset from the
                     // playcursor when we actually start having sound effects.
-                    if(ByteToLock > PlayCursor)
+                    if(ByteToLock > TargetCursor)
                     {
                         BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
-                        BytesToWrite += PlayCursor;
+                        BytesToWrite += TargetCursor;
                     }
                     else
                     {
-                        BytesToWrite = PlayCursor - ByteToLock;
+                        BytesToWrite = TargetCursor - ByteToLock;
                     }
                 }
 
