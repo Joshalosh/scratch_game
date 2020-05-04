@@ -68,8 +68,15 @@ Win32LoadXInput(void)
     if(!XInputLibrary)
     {
         // TBD: Diagnostic
+        XInputLibrary = LoadLibraryA("xinput9_1_0.dll");
+    }
+
+    if(!XInputLibrary)
+    {
+        // TBD: Diagnostic
         XInputLibrary = LoadLibraryA("xinput1_3.dll");
     }
+    
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
@@ -361,7 +368,7 @@ Win32MainWindowCallback(HWND Window,
         default:
         {
 //            OutputDebugStringA("default\n");
-              Result = DefWindowProc(Window, Message, WParam, LParam);
+              Result = DefWindowProcA(Window, Message, WParam, LParam);
         } break;
     }
     
@@ -524,8 +531,12 @@ WinMain(HINSTANCE Instance,
                       int16_t StickX = Pad->sThumbLX;
                       int16_t StickY = Pad->sThumbLY;
 
-                      XOffset += StickX / 12;
-                      YOffset += StickY / 12;
+                      // TBD: deadzone handling later using
+                      // XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
+                      // XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
+
+                      XOffset += StickX ;
+                      YOffset += StickY / 4096;
 
                       SoundOutput.ToneHz = 480 + (int)(240.0f*((real32) StickY / 30000.0f));
                       SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
