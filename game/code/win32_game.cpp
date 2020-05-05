@@ -535,7 +535,7 @@ WinMain(HINSTANCE Instance,
                       // XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
                       // XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
 
-                      XOffset += StickX ;
+                      XOffset += StickX / 4096;
                       YOffset += StickY / 4096;
 
                       SoundOutput.ToneHz = 480 + (int)(240.0f*((real32) StickY / 30000.0f));
@@ -556,6 +556,7 @@ WinMain(HINSTANCE Instance,
                 {
                     DWORD ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample)
                                         % SoundOutput.SecondaryBufferSize);
+
                     DWORD TargetCursor = ((PlayCursor +
                                          (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
                                          SoundOutput.SecondaryBufferSize);
