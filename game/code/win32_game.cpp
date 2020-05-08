@@ -429,6 +429,10 @@ WinMain(HINSTANCE Instance,
         LPSTR CommandLine,
         int ShowCode)
 {
+    LARGE_INTEGER PerfCountFrequencyResult;
+    QueryPerformanceFrequency(&PerfCountFrequencyResult);
+    int64_t PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+
     Win32LoadXInput();
 
     WNDCLASSA WindowClass = {};
@@ -440,7 +444,6 @@ WinMain(HINSTANCE Instance,
     WindowClass.hInstance = Instance;
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
-
 
     if(RegisterClassA(&WindowClass))
     {
@@ -480,6 +483,9 @@ WinMain(HINSTANCE Instance,
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
             GlobalRunning = true;
+
+            LARGE_INTEGER LastCounter;
+            QueryPerformanceCounter(&LastCounter);
             while(GlobalRunning)
             {
                 MSG Message;
@@ -572,6 +578,18 @@ WinMain(HINSTANCE Instance,
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                            Dimension.Width, Dimension.Height);
+                LARGE_INTEGER EndCounter;
+                QueryPerformanceCounter(&EndCounter);
+
+                // TBD: Display the value here
+                int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+                int32_t MillisecondsPerFrame = (int32_t)(((1000*CounterElapsed) / PerfCountFrequency));
+
+                char Buffer[256];
+                wsprintf(Buffer, "Milliseconds/Frame: %dms\n", MillisecondsPerFrame);
+                OutputDebugStringA(Buffer);
+
+                LastCounter = EndCounter;
             }
         }
         else
