@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
 
@@ -586,15 +587,15 @@ WinMain(HINSTANCE Instance,
                 QueryPerformanceCounter(&EndCounter);
 
                 // TBD: Display the value here
-                int64_t CyclesEl = EndCycleCount - LastCycleCount;
+                int64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
-                int32_t MillisecondsPerFrame = (int32_t)(((1000*CounterElapsed) / PerfCountFrequency));
-                int32_t FramesPerSecond = PerfCountFrequency / CounterElapsed;
-                int32_t MegaCyclesPerFrame = (int32_t)(CyclesElapsed / (1000*1000));
+                real32 MillisecondsPerFrame = (((1000.0f*(real32)CounterElapsed) / (real32)PerfCountFrequency));
+                real32 FramesPerSecond = (real32)PerfCountFrequency / (real32)CounterElapsed;
+                real32 MegaCyclesPerFrame = ((real32)CyclesElapsed / (1000.0f*1000.0f));
 
                 char Buffer[256];
-                wsprintf(Buffer, "%dms/f, %df/s, %dmc/f\n", MillisecondsPerFrame,
-                                                            FramesPerSecond, MegaCyclesPerFrame);
+                sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fmc/f\n", MillisecondsPerFrame,
+                                                           FramesPerSecond, MegaCyclesPerFrame);
                 OutputDebugStringA(Buffer);
 
                 LastCounter = EndCounter;
