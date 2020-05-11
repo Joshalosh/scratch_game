@@ -487,7 +487,7 @@ WinMain(HINSTANCE Instance,
 
             LARGE_INTEGER LastCounter;
             QueryPerformanceCounter(&LastCounter);
-            int64_t LastCycleCount = __rdtsc();
+            uint64_t LastCycleCount = __rdtsc();
             while(GlobalRunning)
             {
                 MSG Message;
@@ -581,21 +581,21 @@ WinMain(HINSTANCE Instance,
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                            Dimension.Width, Dimension.Height);
 
-                int64_t EndCycleCount = __rdtsc();
+                uint64_t EndCycleCount = __rdtsc();
 
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
 
                 // TBD: Display the value here
-                int64_t CyclesElapsed = EndCycleCount - LastCycleCount;
+                uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
-                real32 MillisecondsPerFrame = (((1000.0f*(real32)CounterElapsed) / (real32)PerfCountFrequency));
+                real64 MillisecondsPerFrame = (((1000.0f*(real64)CounterElapsed) / (real64)PerfCountFrequency));
                 real32 FramesPerSecond = (real32)PerfCountFrequency / (real32)CounterElapsed;
                 real32 MegaCyclesPerFrame = ((real32)CyclesElapsed / (1000.0f*1000.0f));
 
                 char Buffer[256];
                 sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fmc/f\n", MillisecondsPerFrame,
-                                                           FramesPerSecond, MegaCyclesPerFrame);
+                                                                    FramesPerSecond, MegaCyclesPerFrame);
                 OutputDebugStringA(Buffer);
 
                 LastCounter = EndCounter;
