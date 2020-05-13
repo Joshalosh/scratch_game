@@ -1,3 +1,22 @@
+/*
+TBD: Additional Platform Layer Code
+    - Saved game locations
+    - Getting a handle to our own executable file
+    - Asset loading path
+    - Threading (launch a thread)
+    - Raw Input (support for multple keyboards)
+    - Sleep/timeBeginPeriod
+    - ClipCursor() (for multimonitor support)
+    - Fullscreen support
+    - WM_SETCURSOR (control cursor visibility)
+    - QueryCanelAutoplay
+    - WM_ACTIVATEAPP (for when we are not the active application)
+    - Blit speed improvements (BitBlt?)
+    - Hardware acceleration (OpenGL or Direct3D or both?)
+    - GetKeyboardLayout (for French keyboards, internation WASD support)
+      etc...
+*/
+
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
