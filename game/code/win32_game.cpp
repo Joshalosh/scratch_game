@@ -1,4 +1,4 @@
-/*
+*
 TBD: Additional Platform Layer Code
     - Saved game locations
     - Getting a handle to our own executable file
@@ -31,6 +31,8 @@ TBD: Additional Platform Layer Code
 #define global_variable static
 
 #define Pi32 3.14159265359f
+
+#include "game.cpp"
 
 typedef int32_t bool32;
 typedef float real32;
@@ -553,7 +555,7 @@ WinMain(HINSTANCE Instance,
 
                         // TBD: deadzone handling later using
                         // XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
-                        // XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
+                        // XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 
 
                         XOffset += StickX / 4096;
                         YOffset += StickY / 4096;
@@ -567,7 +569,12 @@ WinMain(HINSTANCE Instance,
                     }
                 }
                 
-                RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
+                game_offscreen_buffer Buffer = {};
+                Buffer.Memory = GlobalBackbuffer.Memory;
+                Buffer.Width = GlobalBackbuffer.Width;
+                Buffer.Height = GlobalBackbuffer.Height;
+                Buffer.Pitch = GlobalBackbuffer.Pitch;
+                GameUpdateAndRender(&Buffer);
 
                 // DirectSound output test
                 DWORD PlayCursor;
@@ -581,8 +588,6 @@ WinMain(HINSTANCE Instance,
                                          (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
                                          SoundOutput.SecondaryBufferSize);
                     DWORD BytesToWrite;
-                    // TBD: Change this to using a lower latency offset from the
-                    // playcursor when we actually start having sound effects.
                     if(ByteToLock > TargetCursor)
                     {
                         BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
@@ -605,17 +610,18 @@ WinMain(HINSTANCE Instance,
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
 
-                // TBD: Display the value here
                 uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
                 real64 MillisecondsPerFrame = (((1000.0f*(real64)CounterElapsed) / (real64)PerfCountFrequency));
                 real32 FramesPerSecond = (real32)PerfCountFrequency / (real32)CounterElapsed;
                 real32 MegaCyclesPerFrame = ((real32)CyclesElapsed / (1000.0f*1000.0f));
 
+#if 0
                 char Buffer[256];
                 sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fmc/f\n", MillisecondsPerFrame,
                                                                     FramesPerSecond, MegaCyclesPerFrame);
                 OutputDebugStringA(Buffer);
+#endif
 
                 LastCounter = EndCounter;
                 LastCycleCount = EndCycleCount;
