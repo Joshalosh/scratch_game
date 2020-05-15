@@ -19,9 +19,7 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
     }
 }
 internal void
-GameUpdateAndRender(game_offscreen_buffer *Buffer)
+GameUpdateAndRender(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
 {
-    int BlueOffset = 0;
-    int GreenOffset = 0;
     RenderWeirdGradient(Buffer, BlueOffset, GreenOffset);
 }
