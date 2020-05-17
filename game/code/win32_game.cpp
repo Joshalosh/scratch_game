@@ -17,14 +17,9 @@ TBD: Additional Platform Layer Code
       etc...
 */
 
-#include <windows.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <xinput.h>
-#include <dsound.h>
-
 // TBD: Implement my own sine function
 #include <math.h>
+#include <stdint.h>
 
 #define internal static
 #define local_persist static
@@ -32,12 +27,17 @@ TBD: Additional Platform Layer Code
 
 #define Pi32 3.14159265359f
 
-#include "game.h"
-#include "game.cpp"
-
 typedef int32_t bool32;
 typedef float real32;
 typedef double real64;
+
+#include "game.h"
+#include "game.cpp"
+
+#include <windows.h>
+#include <stdio.h>
+#include <xinput.h>
+#include <dsound.h>
 
 struct win32_offscreen_buffer
 {
