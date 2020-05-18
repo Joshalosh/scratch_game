@@ -23,8 +23,8 @@ struct game_sound_output_buffer
     int16_t *Samples;
 };
 
-internal void GameUpdateAndRender(game_offscreen_buffer *Buffer, int BlueOffset, int
-GreenOffset, game_sound_output_buffer *SoundBuffer);
+internal void GameUpdateAndRender(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset,
+                                  game_sound_output_buffer *SoundBuffer);
 
 #define GAME_H
 #endif

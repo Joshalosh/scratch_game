@@ -209,26 +209,6 @@ Win32GetWindowDimension(HWND Window)
 }
 
 internal void
-RenderWeirdGradient(win32_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
-{
-
-    uint8_t *Row = (uint8_t *)Buffer->Memory;
-    for(int Y = 0; Y < Buffer->Height; ++Y)
-    {
-        uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = 0; X < Buffer->Width; ++X)
-        {
-            uint8_t Blue = (X + BlueOffset);
-            uint8_t Green = (Y + GreenOffset);
-
-            *Pixel++ = ((Green << 8) | Blue);
-        }
-
-        Row += Buffer->Pitch;
-    }
-}
-
-internal void
 Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 {
     // TBD: Bulletproof this
@@ -570,12 +550,18 @@ WinMain(HINSTANCE Instance,
                     }
                 }
                 
+                int16_t Samples[(48000/30) * 2];
+                game_sound_output_buffer SoundBuffer = {};
+                SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+                SoundBuffer.SampleCount = SoundBuffer.SamplesPerSecond / 30;
+                SoundBuffer.Samples = Samples;
+                
                 game_offscreen_buffer Buffer = {};
                 Buffer.Memory = GlobalBackbuffer.Memory;
                 Buffer.Width = GlobalBackbuffer.Width;
                 Buffer.Height = GlobalBackbuffer.Height;
                 Buffer.Pitch = GlobalBackbuffer.Pitch;
-                GameUpdateAndRender(&Buffer, XOffset, YOffset);
+                GameUpdateAndRender(&Buffer, XOffset, YOffset, &SoundBuffer);
 
                 // DirectSound output test
                 DWORD PlayCursor;
