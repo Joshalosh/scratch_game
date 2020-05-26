@@ -1,11 +1,10 @@
 #include "game.h"
 
 internal void
-GameOutputSound(game_sound_output_buffer *SoundBuffer)
+GameOutputSound(game_sound_output_buffer *SoundBuffer, int ToneHz)
 {
     local_persist real32 tSine;
     int16_t ToneVolume = 3000; 
-    int ToneHz = 240;
     int WavePeriod = SoundBuffer->SamplesPerSecond/ToneHz;
 
     int16_t *SampleOut = SoundBuffer->Samples; 
@@ -40,9 +39,9 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
 }
 internal void
 GameUpdateAndRender(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset,
-                    game_sound_output_buffer *SoundBuffer)
+                    game_sound_output_buffer *SoundBuffer, int ToneHz)
 {
     // TBD: Allow sample pffsets here for more robust platform options
-    GameOutputSound(SoundBuffer);
+    GameOutputSound(SoundBuffer, ToneHz);
     RenderWeirdGradient(Buffer, BlueOffset, GreenOffset);
 }

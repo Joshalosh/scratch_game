@@ -508,6 +508,9 @@ WinMain(HINSTANCE Instance,
 
             GlobalRunning = true;
 
+            int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize,
+                                MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+
             LARGE_INTEGER LastCounter;
             QueryPerformanceCounter(&LastCounter);
             uint64_t LastCycleCount = __rdtsc();
@@ -598,7 +601,6 @@ WinMain(HINSTANCE Instance,
                     SoundIsValid = true;
                 }
                 
-                int16_t Samples[(48000/30) * 2];
                 game_sound_output_buffer SoundBuffer = {};
                 SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
                 SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
@@ -609,7 +611,7 @@ WinMain(HINSTANCE Instance,
                 Buffer.Width = GlobalBackbuffer.Width;
                 Buffer.Height = GlobalBackbuffer.Height;
                 Buffer.Pitch = GlobalBackbuffer.Pitch;
-                GameUpdateAndRender(&Buffer, XOffset, YOffset, &SoundBuffer);
+                GameUpdateAndRender(&Buffer, XOffset, YOffset, &SoundBuffer, SoundOutput.ToneHz);
 
                 // DirectSound output test
                 if(SoundIsValid)
