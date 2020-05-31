@@ -38,9 +38,12 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
     }
 }
 internal void
-GameUpdateAndRender(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset,
-                    game_sound_output_buffer *SoundBuffer, int ToneHz)
+GameUpdateAndRender(game_offscreen_buffer *Buffer,bgame_sound_output_buffer *SoundBuffer)
 {
+    local_persist int BlueOffset = 0;
+    local_persist int GreenOffset = 0;
+    local_persist int ToneHz = 240;
+
     // TBD: Allow sample pffsets here for more robust platform options
     GameOutputSound(SoundBuffer, ToneHz);
     RenderWeirdGradient(Buffer, BlueOffset, GreenOffset);
