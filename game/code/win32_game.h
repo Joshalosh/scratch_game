@@ -18,7 +18,6 @@ struct win32_sound_output
 {
     int SamplesPerSecond;
     uint32_t RunningSampleIndex;
-    int WavePeriod;
     int BytesPerSample;
     int SecondaryBufferSize;
     real32 tSine;
