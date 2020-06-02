@@ -37,20 +37,32 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
         Row += Buffer->Pitch;
     }
 }
-internal void
-GameUpdateAndRender(game_offscreen_buffer *Buffer, game_sound_output_buffer *SoundBuffer)
+internal void 
+GameUpdateAndRender(game_input *Input, game_offscreen_buffer *Buffer,
+                    game_sound_output_buffer *SoundBuffer);
 {
     local_persist int BlueOffset = 0;
     local_persist int GreenOffset = 0;
     local_persist int ToneHz = 240;
 
-    if(Input.IsAnalogue)
+    game_controller_input *Input0 = &Input->Controllers[0];
+    if(Input0->IsAnalogue)
     {
         // Use analogue movement tuning
+        ToneHz = 240 + (int)(128.0f*(Input0->EndX));
+        BlueOffset += (int)(4.0f*(Input0->EndY));
+
     }
     else
     {
         // Use digital movement tuning
+    }
+
+    // Input.AButtonEndedDown
+    // Input.AButtonHalfTransitionCount
+    if(Input0->Down.EndedDown)
+    {
+        GreenOffset += 1;
     }
 
     // TBD: Allow sample pffsets here for more robust platform options

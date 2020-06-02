@@ -575,7 +575,7 @@ WinMain(HINSTANCE Instance,
                 Buffer.Width = GlobalBackbuffer.Width;
                 Buffer.Height = GlobalBackbuffer.Height;
                 Buffer.Pitch = GlobalBackbuffer.Pitch;
-                GameUpdateAndRender(&Buffer, &SoundBuffer);
+                GameUpdateAndRender(&Input, &Buffer, &SoundBuffer);
 
                 // DirectSound output test
                 if(SoundIsValid)
