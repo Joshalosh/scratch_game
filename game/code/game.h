@@ -1,4 +1,6 @@
 #if !defined(GAME_H)
+
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 /*
   Services that the platform layer provides to the game
 */
@@ -62,7 +64,7 @@ struct game_controller_input
 
 struct game_input
 {
-    game_controller_input Controller[4];
+    game_controller_input Controllers[4];
 };
 
 internal void GameUpdateAndRender(game_input *Input, game_offscreen_buffer *Buffer,
