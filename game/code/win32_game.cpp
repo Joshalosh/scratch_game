@@ -5,7 +5,7 @@ TODO: Additional Platform Layer Code
     - Getting a handle to our own executable file
     - Asset loading path
     - Threading (launch a thread)
-    - Raw Input (support for multple keyboards)
+    - Raw Input (support for multiple keyboards)
     - Sleep/timeBeginPeriod
     - ClipCursor() (for multimonitor support)
     - Fullscreen support
@@ -316,14 +316,14 @@ Win32MainWindowCallback(HWND Window,
                 }
                 else if(VKCode == VK_ESCAPE)
                 {
-                    OutputDebugStringA("Escape: ");
+                    OutputDebugStringA("ESCAPE: ");
                     if(IsDown)
                     {
-                        OutputDebugStringA("Is Down ");
+                        OutputDebugStringA("IsDown ");
                     }
                     if(WasDown)
                     {
-                        OutputDebugStringA("Was Down ");
+                        OutputDebugStringA("WasDown");
                     }
                     OutputDebugStringA("\n");
                 }
@@ -430,7 +430,6 @@ Win32ProcessXInputDigitalButton(DWORD XInputButtonState,
 {
     NewState->EndedDown = ((XInputButtonState & ButtonBit) == ButtonBit);
     NewState->HalfTransitionCount = (OldState->EndedDown != NewState->EndedDown) ? 1 : 0;
-
 }
 
 int CALLBACK
@@ -519,9 +518,8 @@ WinMain(HINSTANCE Instance,
                 }
 
                 for (DWORD ControllerIndex = 0;
-                     ControllerIndex < XUSER_MAX_COUNT;
+                     ControllerIndex < MaxControllerCount;
                      ++ControllerIndex)
-
                 {
                     game_controller_input *OldController = &OldInput->Controllers[ControllerIndex];
                     game_controller_input *NewController = &NewInput->Controllers[ControllerIndex];
@@ -539,7 +537,7 @@ WinMain(HINSTANCE Instance,
                         bool32 Left = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
                         bool32 Right = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
 
-                        NewController->isAnalogue = true;
+                        NewController->IsAnalogue = true;
                         NewController->StartX = OldController->EndX;
                         NewController->StartY = OldController->EndY;
 
@@ -593,8 +591,8 @@ WinMain(HINSTANCE Instance,
                                                         XINPUT_GAMEPAD_RIGHT_SHOULDER,
                                                         &NewController->RightShoulder);
 
-                        bool32 Start = (Pad->wButtons & XINPUT_GAMEPAD_START);
-                        bool32 Back = (Pad->wButtons & XINPUT_GAMEPAD_BACK);
+                        // bool32 Start = (Pad->wButtons & XINPUT_GAMEPAD_START);
+                        // bool32 Back = (Pad->wButtons & XINPUT_GAMEPAD_BACK);
                         bool32 LeftShoulder = (Pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
                         bool32 RightShoulder = (Pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
                         bool32 AButton = (Pad->wButtons & XINPUT_GAMEPAD_A);
@@ -608,11 +606,11 @@ WinMain(HINSTANCE Instance,
                     }
                 }
 
-                DWORD ByteToLock;
-                DWORD TargetCursor;
-                DWORD BytesToWrite;
-                DWORD PlayCursor;
-                DWORD WriteCursor;
+                DWORD ByteToLock = 0;
+                DWORD TargetCursor = 0;
+                DWORD BytesToWrite = 0;
+                DWORD PlayCursor = 0;
+                DWORD WriteCursor = 0;
                 bool32 SoundIsValid = false;
                 // TODO: Tighten up sound logic so that I know where I should be
                 // writing to and can anticipate the time spent in the game update.

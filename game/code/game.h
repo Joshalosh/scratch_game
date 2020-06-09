@@ -10,8 +10,12 @@
   (this may expand in the future - sound on seperate thread, etc)
 */
 
+// FOUR THINGS - timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
+
+// TODO: In the future, rendering _specifically_ will become a three-tiered abstraction
 struct game_offscreen_buffer
 {
+    // Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
     void *Memory;
     int Width;
     int Height;

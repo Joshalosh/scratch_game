@@ -37,6 +37,7 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
         Row += Buffer->Pitch;
     }
 }
+
 internal void 
 GameUpdateAndRender(game_input *Input, game_offscreen_buffer *Buffer,
                     game_sound_output_buffer *SoundBuffer)
@@ -49,7 +50,7 @@ GameUpdateAndRender(game_input *Input, game_offscreen_buffer *Buffer,
     if(Input0->IsAnalogue)
     {
         // Use analogue movement tuning
-        BlueOffset += (int)(4.0f*(Input0->EndX));
+        BlueOffset += (int)4.0f*(Input0->EndX);
         ToneHz = 240 + (int)(128.0f*(Input0->EndY));
 
     }
@@ -65,7 +66,7 @@ GameUpdateAndRender(game_input *Input, game_offscreen_buffer *Buffer,
         GreenOffset += 1;
     }
 
-    // TBD: Allow sample pffsets here for more robust platform options
+    // TBD: Allow sample offsets here for more robust platform options
     GameOutputSound(SoundBuffer, ToneHz);
     RenderWeirdGradient(Buffer, BlueOffset, GreenOffset);
 }
