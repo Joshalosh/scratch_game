@@ -1,10 +1,17 @@
 #if !defined(GAME_H)
 
+#if DEBUG
+#define Assert(Expression) if(!(Expression)) {*(int *) 0 = 0;}
+#else
+#define Assert(Expression)
+#endif
+    
 #define Kilobytes(Value) ((Value)*1024)
 #define Megabytes(Value) (Kilobytes(Value)*1024)
 #define Gigabytes(Value) (Megabytes(Value)*1024)
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+
 /*
   Services that the platform layer provides to the game
 */
@@ -78,8 +85,12 @@ struct game_input
 struct game_memory
 {
     bool32 IsInitialised;
+    
     uint64_t PermanentStorageSize;
-    void *PermanentStorage;
+    void *PermanentStorage; // Required to be cleared to zero at startup
+
+    uint64_t TransientStorageSize;
+    void *TransientStorage; // Required to be cleared to zero at startup
 };
 
 internal void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer,

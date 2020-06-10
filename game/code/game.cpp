@@ -42,12 +42,12 @@ internal void
 GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer,
                     game_sound_output_buffer *SoundBuffer)
 {
+    Assert(sizeof(game_state) <= Memory->PermanentStorage);
+    
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
     {
         GameState->ToneHz = 240;
-        GameState->GreenOffset = 0;
-        GameState->BlueOffset = 0;
 
         // TODO: May be better to do in the platform layer
         Memory->IsInitialised = true;

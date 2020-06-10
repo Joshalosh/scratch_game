@@ -492,9 +492,12 @@ WinMain(HINSTANCE Instance,
             GameMemory.PermanentStorageSize = Megabytes(64);
             GameMemory.PermanentStorage = VirtualAlloc(0, GameMemory.PermanentStorageSize,
                                                        MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            GameMemory.TransientStorageSize = Gigabytes((uint64_t)4);
+            GameMemory.TransientStorage = VirtualAlloc(0, GameMemory.TransientStorageSize,
+                                                       MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 
 
-            if(Samples && GameMemory.PermanentStorage)
+            if(Samples && GameMemory.PermanentStorage && GameMemory.TransientStorage)
             {
                 game_input Input[2] = {};
                 game_input *NewInput = &Input[0];
