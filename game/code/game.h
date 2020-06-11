@@ -1,14 +1,26 @@
 #if !defined(GAME_H)
 
-#if DEBUG
+/*
+  GAME_INTERNAL:
+    0 - Build for public release
+    1 - Build for developer only
+
+  GAME_SLOW:
+    0 - No slow code allowed
+    1 - Slow code
+*/
+
+#if GAME_SLOW
 #define Assert(Expression) if(!(Expression)) {*(int *) 0 = 0;}
 #else
 #define Assert(Expression)
 #endif
     
+// TODO: Should these always use 64-bit?
 #define Kilobytes(Value) ((Value)*1024)
 #define Megabytes(Value) (Kilobytes(Value)*1024)
 #define Gigabytes(Value) (Megabytes(Value)*1024)
+#define Terrabytes(Value) (Gigabytes(Value)*1024)
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
