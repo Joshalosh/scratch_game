@@ -17,16 +17,20 @@
 #endif
     
 // TODO: Should these always use 64-bit?
-#define Kilobytes(Value) ((Value)*1024)
-#define Megabytes(Value) (Kilobytes(Value)*1024)
-#define Gigabytes(Value) (Megabytes(Value)*1024)
-#define Terrabytes(Value) (Gigabytes(Value)*1024)
+#define Kilobytes(Value) ((Value)*1024LL)
+#define Megabytes(Value) (Kilobytes(Value)*1024LL)
+#define Gigabytes(Value) (Megabytes(Value)*1024LL)
+#define Terrabytes(Value) (Gigabytes(Value)*1024LL)
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
 /*
   Services that the platform layer provides to the game
 */
+#if GAME_INTERNAL
+void *DEBUGPlatformReadEntireFile(Filename);
+void DEBUGPlatformFreeFileMemory(void *BitmapMemory);
+#endif
 
 /*
   Services that the game provides to the platform layer

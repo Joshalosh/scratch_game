@@ -488,14 +488,14 @@ WinMain(HINSTANCE Instance,
             int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize,
                                 MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 #if GAME_INTERNAL
-            LPVOID BaseAddress = (LPVOID)Terrabytes((uint64_t)2);
+            LPVOID BaseAddress = (LPVOID)Terrabytes(2);
 #else
             LPVOID BaseAddress = 0;
 #endif
 
             game_memory GameMemory;
             GameMemory.PermanentStorageSize = Megabytes(64);
-            GameMemory.TransientStorageSize = Gigabytes((uint64_t)4);
+            GameMemory.TransientStorageSize = Gigabytes(4);
 
             uint64_t TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
             GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, TotalSize,
