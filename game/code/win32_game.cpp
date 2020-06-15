@@ -71,6 +71,67 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
+internal void *
+DEBBUGPlatformReadEntireFile(char *Filename)
+{
+    void *Result = 0;
+
+    HANDLE FileHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    if(FileHandle != INVALID_HANDLE_VALUE)
+    {
+        LARGE_INTEGER FileSize;
+        if(GetFileSizeEx(FileHandle, &FileSize))
+        {
+            uint32_t FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
+            Result = VirutalAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            if(Result)
+            {
+                DWORD BytesRead;
+                if(ReadFile(FileHandle, Result, FileSize32, &BytesRead, 0) &&
+                  (FileSize32 == BytesRead))
+                {
+                    // File read successfully
+                }
+                else
+                {
+                    DEBUGPlatformFreeFileMemory(Result);
+                    Result = 0;
+                }
+            }
+            else
+            {
+                // TODO: Logging
+            }
+        }
+        else
+        {
+            // TODO: Logging
+        }
+        
+        CloseHandle(FileHandle);
+    }
+    else
+    {
+        // TODO: Logging
+    }
+
+    return(Result);
+}
+
+internal void
+DEBBUGPlatformFreeFileMemory(void *Memory)
+{
+    if(Memory)
+    {
+        VirtualFree(Memory, 0, MEM_RELEASE);
+    }
+}
+
+internal void
+DEBBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory)
+{
+}
+
 internal void
 Win32LoadXInput(void)
 {

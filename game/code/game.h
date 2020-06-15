@@ -24,12 +24,22 @@
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
+inline uint32_t
+SafeTruncate64(uint64_t Value)
+{
+    // TODO: Define maximum values i.e UInt32Max
+    Assert(Value <= 0xFFFFFFFF);
+    uint32_t Result = (uint32)Value;
+    return(Result);
+}
+
 /*
   Services that the platform layer provides to the game
 */
 #if GAME_INTERNAL
-void *DEBUGPlatformReadEntireFile(Filename);
-void DEBUGPlatformFreeFileMemory(void *BitmapMemory);
+internal void *DEBUGPlatformReadEntireFile(char *Filename);
+internal void DEBUGPlatformFreeFileMemory(void *Memory);
+internal bool32 DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory);
 #endif
 
 /*
