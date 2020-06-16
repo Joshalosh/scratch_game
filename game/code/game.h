@@ -25,11 +25,11 @@
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
 inline uint32_t
-SafeTruncate64(uint64_t Value)
+SafeTruncateUInt64(uint64_t Value)
 {
     // TODO: Define maximum values i.e UInt32Max
     Assert(Value <= 0xFFFFFFFF);
-    uint32_t Result = (uint32)Value;
+    uint32_t Result = (uint32_t)Value;
     return(Result);
 }
 

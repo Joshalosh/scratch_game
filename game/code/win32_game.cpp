@@ -83,7 +83,7 @@ DEBBUGPlatformReadEntireFile(char *Filename)
         if(GetFileSizeEx(FileHandle, &FileSize))
         {
             uint32_t FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
-            Result = VirutalAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            Result = VirtualAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
             if(Result)
             {
                 DWORD BytesRead;
@@ -127,9 +127,33 @@ DEBBUGPlatformFreeFileMemory(void *Memory)
     }
 }
 
-internal void
+internal bool32
 DEBBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory)
 {
+    bool32 Result = false;
+
+    HANDLE FileHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+    if(FileHandle != INVALID_HANDLE_VALUE)
+    {
+        DWORD BytesWritten;
+        if(WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0))
+        {
+            // File read successfully
+            Result = (BytesWritten == MemorySize);
+        }
+        else
+        {
+            // TODO: Logging
+        }
+        
+        CloseHandle(FileHandle);
+    }
+    else
+    {
+        // TODO: Logging
+    }
+
+    return(Result);
 }
 
 internal void
