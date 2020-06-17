@@ -16,11 +16,10 @@
 #define Assert(Expression)
 #endif
     
-// TODO: Should these always use 64-bit?
 #define Kilobytes(Value) ((Value)*1024LL)
 #define Megabytes(Value) (Kilobytes(Value)*1024LL)
 #define Gigabytes(Value) (Megabytes(Value)*1024LL)
-#define Terrabytes(Value) (Gigabytes(Value)*1024LL)
+#define Terabytes(Value) (Gigabytes(Value)*1024LL)
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
@@ -37,7 +36,17 @@ SafeTruncateUInt64(uint64_t Value)
   Services that the platform layer provides to the game
 */
 #if GAME_INTERNAL
-internal void *DEBUGPlatformReadEntireFile(char *Filename);
+/* IMPORTANT
+
+   These are not for doing anything in the shipping game - they are
+   blocking and the write doesn't protect against lost data!
+ */
+struct debug_read_file_result
+{
+    uint32_t ContentsSize;
+    void *Contents;
+};
+internal debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
 internal void DEBUGPlatformFreeFileMemory(void *Memory);
 internal bool32 DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory);
 #endif

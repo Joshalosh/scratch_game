@@ -71,10 +71,10 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
-internal void *
-DEBBUGPlatformReadEntireFile(char *Filename)
+internal debug_read_file_result
+DEBUGPlatformReadEntireFile(char *Filename)
 {
-    void *Result = 0;
+    debug_read_file_result Result = {};
 
     HANDLE FileHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
     if(FileHandle != INVALID_HANDLE_VALUE)
@@ -83,19 +83,20 @@ DEBBUGPlatformReadEntireFile(char *Filename)
         if(GetFileSizeEx(FileHandle, &FileSize))
         {
             uint32_t FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
-            Result = VirtualAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
-            if(Result)
+            Result.Contents = VirtualAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            if(Result.Contents)
             {
                 DWORD BytesRead;
-                if(ReadFile(FileHandle, Result, FileSize32, &BytesRead, 0) &&
+                if(ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0) &&
                   (FileSize32 == BytesRead))
                 {
                     // File read successfully
+                    Result.ContentsSize = FileSize32;
                 }
                 else
                 {
-                    DEBUGPlatformFreeFileMemory(Result);
-                    Result = 0;
+                    DEBUGPlatformFreeFileMemory(Result.Contents);
+                    Result.Contents = 0;
                 }
             }
             else
@@ -119,7 +120,7 @@ DEBBUGPlatformReadEntireFile(char *Filename)
 }
 
 internal void
-DEBBUGPlatformFreeFileMemory(void *Memory)
+DEBUGPlatformFreeFileMemory(void *Memory)
 {
     if(Memory)
     {
@@ -128,7 +129,7 @@ DEBBUGPlatformFreeFileMemory(void *Memory)
 }
 
 internal bool32
-DEBBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory)
+DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory)
 {
     bool32 Result = false;
 
@@ -573,7 +574,7 @@ WinMain(HINSTANCE Instance,
             int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize,
                                 MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 #if GAME_INTERNAL
-            LPVOID BaseAddress = (LPVOID)Terrabytes(2);
+            LPVOID BaseAddress = (LPVOID)Terabytes(2);
 #else
             LPVOID BaseAddress = 0;
 #endif

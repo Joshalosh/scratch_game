@@ -49,10 +49,11 @@ GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffe
     {
         char *Filename = __FILE__;
 
-        void *BitmapMemory = DEBUGPlatformReadEntireFile(Filename);
-        if(BitmapMemory)
+        debug_read_file_result File = DEBUGPlatformReadEntireFile(Filename);
+        if(File.Contents)
         {
-            DEBUGPlatformFreeFileMemory(BitmapMemory);
+            DEBUGPlatformWriteEntireFile("test.out", File.ContentsSize, File.Contents);
+            DEBUGPlatformFreeFileMemory(File.Contents);
         }
 
         GameState->ToneHz = 240;
@@ -81,7 +82,7 @@ GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffe
         GameState->GreenOffset += 1;
     }
 
-    // TBD: Allow sample offsets here for more robust platform options
+    // TODO: Allow sample offsets here for more robust platform options
     GameOutputSound(SoundBuffer, GameState->ToneHz);
     RenderWeirdGradient(Buffer, GameState->BlueOffset, GameState->GreenOffset);
 }
