@@ -365,7 +365,7 @@ Win32MainWindowCallback(HWND Window,
         case WM_KEYDOWN:
         case WM_KEYUP:
         {
-            uint32_t VKCode = WParam;
+            uint32_t VKCode = (uint32_t)WParam;
             bool32 WasDown = ((LParam & (1 << 30)) != 0);
             bool32 IsDown = ((LParam & (1 << 31)) == 0);
             if(WasDown != IsDown)
@@ -581,10 +581,10 @@ WinMain(HINSTANCE Instance,
 
             game_memory GameMemory;
             GameMemory.PermanentStorageSize = Megabytes(64);
-            GameMemory.TransientStorageSize = Gigabytes(4);
+            GameMemory.TransientStorageSize = Gigabytes(1);
 
             uint64_t TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
-            GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, TotalSize,
+            GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, (size_t)TotalSize,
                                                        MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
             GameMemory.TransientStorage = ((uint8_t *)GameMemory.PermanentStorage +
                                             GameMemory.PermanentStorageSize);
@@ -614,7 +614,7 @@ WinMain(HINSTANCE Instance,
                     }
 
                     // TODO: Should I poll this more freqently?
-                    int MaxControllerCount = XUSER_MAX_COUNT;
+                    DWORD MaxControllerCount = XUSER_MAX_COUNT;
                     if(MaxControllerCount > ArrayCount(NewInput->Controllers))
                     {
                         MaxControllerCount = ArrayCount(NewInput->Controllers);
