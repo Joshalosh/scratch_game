@@ -365,65 +365,8 @@ Win32MainWindowCallback(HWND Window,
         case WM_KEYDOWN:
         case WM_KEYUP:
         {
-            uint32_t VKCode = (uint32_t)WParam;
-            bool32 WasDown = ((LParam & (1 << 30)) != 0);
-            bool32 IsDown = ((LParam & (1 << 31)) == 0);
-            if(WasDown != IsDown)
-            {
-                if(VKCode == 'W')
-                {
-                }
-                else if(VKCode == 'A')
-                {
-                }
-                else if(VKCode == 'S')
-                {
-                }
-                else if(VKCode == 'D')
-                {
-                }
-                else if(VKCode == 'Q')
-                {
-                }
-                else if(VKCode == 'E')
-                {
-                }
-                else if(VKCode == VK_UP)
-                {
-                }
-                else if(VKCode == VK_LEFT)
-                {
-                }
-                else if(VKCode == VK_DOWN)
-                {
-                }
-                else if(VKCode == VK_RIGHT)
-                {
-                }
-                else if(VKCode == VK_ESCAPE)
-                {
-                    OutputDebugStringA("ESCAPE: ");
-                    if(IsDown)
-                    {
-                        OutputDebugStringA("IsDown ");
-                    }
-                    if(WasDown)
-                    {
-                        OutputDebugStringA("WasDown");
-                    }
-                    OutputDebugStringA("\n");
-                }
-                else if(VKCode == VK_SPACE)
-                {
-                }
-            }
-
-            bool32 AltKeyWasDown = (LParam & (1 << 29));
-            if((VKCode == VK_F4) && AltKeyWasDown)
-            {
-                GlobalRunning = false;
-            }
-        } break;
+            Assert("Keyboard input came in through a non-dispatch message!");
+            
 
         case WM_PAINT:
         {
@@ -507,6 +450,13 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
         
         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
     }
+}
+
+internal void
+Win32ProcessKeyboardMessage(game_button_state *OldState, game_button_state *NewState, bool32 IsDown)
+{
+    NewState->EndedDown = IsDown;
+    ++NewState->HalfTransitionCount;
 }
 
 internal void
@@ -609,8 +559,77 @@ WinMain(HINSTANCE Instance,
                             GlobalRunning = false;
                         }
 
-                        TranslateMessage(&Message);
-                        DispatchMessageA(&Message);
+                        switch(Message.message)
+                        {
+                            case WM_SYSKEYDOWN;
+                            case WM_SYSKEYUP;
+                            case WM_KEYDOWN;
+                            case WM_KEYUP;
+                            {
+
+                                uint32_t VKCode = (uint32_t)WParam;
+                                bool32 WasDown = ((LParam & (1 << 30)) != 0);
+                                bool32 IsDown = ((LParam & (1 << 31)) == 0);
+                                if(WasDown != IsDown)
+                                {
+                                    if(VKCode == 'W')
+                                    {
+                                    }
+                                    else if(VKCode == 'A')
+                                    {
+                                    }
+                                    else if(VKCode == 'S')
+                                    {
+                                    }
+                                    else if(VKCode == 'D')
+                                    {
+                                    }
+                                    else if(VKCode == 'Q')
+                                    {
+                                        Win32ProcessKeyboardMessage(&NewController->LeftShoulder, IsDown);
+                                    }
+                                    else if(VKCode == 'E')
+                                    {
+                                        Win32ProcessKeyboardMessage(&NewController->RightShoulder, IsDown);
+                                    }
+                                    else if(VKCode == VK_UP)
+                                    {
+                                        Win32ProcessKeyboardMessage(&NewController->Up, IsDown);
+                                    }
+                                    else if(VKCode == VK_LEFT)
+                                    {
+                                        Win32ProcessKeyboardMessage(&NewController->Left, IsDown);
+                                    }
+                                    else if(VKCode == VK_DOWN)
+                                    {
+                                        Win32ProcessKeyboardMessage(&NewController->Down, IsDown);
+                                    }
+                                    else if(VKCode == VK_RIGHT)
+                                    {
+                                        Win32ProcessXInputDigitalButton(&NewController->Right, IsDown);
+                                    }
+                                    else if(VKCode == VK_ESCAPE)
+                                    {
+                                        GlobalRunning = false;
+                                    }
+                                    else if(VKCode == VK_SPACE)
+                                    {
+                                    }
+                                }
+
+                                bool32 AltKeyWasDown = (LParam & (1 << 29));
+                                if((VKCode == VK_F4) && AltKeyWasDown)
+                                {
+                                    GlobalRunning = false;
+                                }
+                            } break;
+
+                            default:
+                            {
+                                TranslateMessage(&Message);
+                                DispatchMessageA(&Message);
+                            } break;
+                        }
                     }
 
                     // TODO: Should I poll this more freqently?
