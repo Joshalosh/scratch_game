@@ -366,7 +366,7 @@ Win32MainWindowCallback(HWND Window,
         case WM_KEYUP:
         {
             Assert("Keyboard input came in through a non-dispatch message!");
-            
+        } break;    
 
         case WM_PAINT:
         {
@@ -453,7 +453,7 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
 }
 
 internal void
-Win32ProcessKeyboardMessage(game_button_state *OldState, game_button_state *NewState, bool32 IsDown)
+Win32ProcessKeyboardMessage(game_button_state *NewState, bool32 IsDown)
 {
     NewState->EndedDown = IsDown;
     ++NewState->HalfTransitionCount;
@@ -529,7 +529,7 @@ WinMain(HINSTANCE Instance,
             LPVOID BaseAddress = 0;
 #endif
 
-            game_memory GameMemory;
+            game_memory GameMemory = {};
             GameMemory.PermanentStorageSize = Megabytes(64);
             GameMemory.TransientStorageSize = Gigabytes(1);
 
@@ -552,24 +552,30 @@ WinMain(HINSTANCE Instance,
                 {
                     MSG Message;
 
-                    while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
-                    {
-                        if(Message.message == WM_QUIT)
-                        {
-                            GlobalRunning = false;
-                        }
+                    game_controller_input *KeyboardController = &NewInput->Controllers[0];
+                    // TODO: Zeroing macro
+                    // TODO: We can't zero everything because the up/down state will be
+                    // wrong
+                    game_controller_input ZeroController = {};
+                    *KeyboardController = ZeroController;
+
+                   while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
+                   {
+                       if(Message.message == WM_QUIT)
+                       {
+                           GlobalRunning = false;
+                       }
 
                         switch(Message.message)
                         {
-                            case WM_SYSKEYDOWN;
-                            case WM_SYSKEYUP;
-                            case WM_KEYDOWN;
-                            case WM_KEYUP;
+                            case WM_SYSKEYDOWN:
+                            case WM_SYSKEYUP:
+                            case WM_KEYDOWN:
+                            case WM_KEYUP:
                             {
-
-                                uint32_t VKCode = (uint32_t)WParam;
-                                bool32 WasDown = ((LParam & (1 << 30)) != 0);
-                                bool32 IsDown = ((LParam & (1 << 31)) == 0);
+                                uint32_t VKCode = (uint32_t)Message.wParam;
+                                bool32 WasDown = ((Message.lParam & (1 << 30)) != 0);
+                                bool32 IsDown = ((Message.lParam & (1 << 31)) == 0);
                                 if(WasDown != IsDown)
                                 {
                                     if(VKCode == 'W')
@@ -586,27 +592,27 @@ WinMain(HINSTANCE Instance,
                                     }
                                     else if(VKCode == 'Q')
                                     {
-                                        Win32ProcessKeyboardMessage(&NewController->LeftShoulder, IsDown);
+                                        Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
                                     }
                                     else if(VKCode == 'E')
                                     {
-                                        Win32ProcessKeyboardMessage(&NewController->RightShoulder, IsDown);
+                                        Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
                                     }
                                     else if(VKCode == VK_UP)
                                     {
-                                        Win32ProcessKeyboardMessage(&NewController->Up, IsDown);
+                                        Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
                                     }
                                     else if(VKCode == VK_LEFT)
                                     {
-                                        Win32ProcessKeyboardMessage(&NewController->Left, IsDown);
+                                        Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
                                     }
                                     else if(VKCode == VK_DOWN)
                                     {
-                                        Win32ProcessKeyboardMessage(&NewController->Down, IsDown);
+                                        Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
                                     }
                                     else if(VKCode == VK_RIGHT)
                                     {
-                                        Win32ProcessXInputDigitalButton(&NewController->Right, IsDown);
+                                        Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
                                     }
                                     else if(VKCode == VK_ESCAPE)
                                     {
@@ -617,7 +623,7 @@ WinMain(HINSTANCE Instance,
                                     }
                                 }
 
-                                bool32 AltKeyWasDown = (LParam & (1 << 29));
+                                bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
                                 if((VKCode == VK_F4) && AltKeyWasDown)
                                 {
                                     GlobalRunning = false;
