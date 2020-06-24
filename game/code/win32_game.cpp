@@ -455,6 +455,7 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
 internal void
 Win32ProcessKeyboardMessage(game_button_state *NewState, bool32 IsDown)
 {
+    Assert(NewState->EndedDown != IsDown);
     NewState->EndedDown = IsDown;
     ++NewState->HalfTransitionCount;
 }
@@ -638,11 +639,19 @@ WinMain(HINSTANCE Instance,
                     // TODO: Zeroing macro
                     // TODO: We can't zero everything because the up/down state will be
                     // wrong
-                    game_controller_input *KeyboardController = &NewInput->Controllers[0];
+                    game_controller_input *OldKeyboardController = &OldInput->Controllers[0];
+                    game_controller_input *NewKeyboardController = &NewInput->Controllers[0];
                     game_controller_input ZeroController = {};
-                    *KeyboardController = ZeroController;
+                    *NewKeyboardController = ZeroController;
+                    for(int ButtonIndex = 0;
+                        ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
+                        ++ButtonIndex)
+                    {
+                        NewKeyboardController->Buttons[ButtonIndex].EndedDown =
+                            OldKeyboardController->Buttons[ButtonIndex].EndedDown;
+                    }
 
-                    Win32ProcessPendingMessages(KeyboardController);
+                    Win32ProcessPendingMessages(NewKeyboardController);
 
                     // TODO: Should I poll this more freqently?
                     DWORD MaxControllerCount = 1 + XUSER_MAX_COUNT;
