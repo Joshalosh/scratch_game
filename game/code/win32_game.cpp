@@ -469,6 +469,23 @@ Win32ProcessXInputDigitalButton(DWORD XInputButtonState,
     NewState->HalfTransitionCount = (OldState->EndedDown != NewState->EndedDown) ? 1 : 0;
 }
 
+internal real32
+Win32ProcessXInputStickValue(short Value, short DeadzoneThreshold)
+{
+    real32 Result = 0;
+                            
+    if(Value < -DeadzoneThreshold)
+    {
+        Result = (real32)Value / 32768.0f;
+    }
+    else if(Value > DeadzoneThreshold)
+    {
+        Result = (real32)Result / 32767.0f;
+    }
+
+    return(Result);
+}
+
 internal void
 Win32ProcessPendingMessages(game_controller_input *KeyboardController)
 {
@@ -685,34 +702,13 @@ WinMain(HINSTANCE Instance,
                             NewController->StartX = OldController->EndX;
                             NewController->StartY = OldController->EndY;
 
-                            // TODO: deadzone processing
-                            // XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
-                            // XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 
-
-                            real32 X;
-                            if(Pad->sThumbLX < 0)
-                            {
-                                X = (real32)Pad->sThumbLX / 32768.0f;
-                            }
-                            else
-                            {
-                                X = (real32)Pad->sThumbLX / 32767.0f;
-                            }
-
                             // TODO: Min/Max macros
+                            real32 X  = Win32ProcessXInputStickValue(Pad->sThumbLX,
+                                                                    XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
                             NewController->MinX = NewController->MaxX = NewController->EndX = X;
                             
-                            real32 Y;
-                            if(Pad->sThumbLY < 0)
-                            {
-                                Y = (real32)Pad->sThumbLY / 32768.0f;
-                            }
-                            else
-                            {
-                                Y = (real32)Pad->sThumbLY / 32767.0f;
-                            }
-
-                            // TODO: Min/Max macros
+                            real32 Y = Win32ProcessXInputStickValue(Pad->sThumbLY,
+                                                                   XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
                             NewController->MinY = NewController->MaxY = NewController->EndY = Y;
                             
                             Win32ProcessXInputDigitalButton(Pad->wButtons,
