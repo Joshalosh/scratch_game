@@ -68,18 +68,27 @@ GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffe
         if(Controller->IsAnalogue)
         {
             // Use analogue movement tuning
-            GameState->BlueOffset += (int)(4.0f*Controller->EndX);
-            GameState->ToneHz = 240 + (int)(128.0f*(Controller->EndY));
+            GameState->BlueOffset += (int)(4.0f*Controller->StickAverageX);
+            GameState->ToneHz = 240 + (int)(128.0f*(Controller->StickAverageY));
 
         }
         else
         {
             // Use digital movement tuning
+            if(Controller->MoveLeft.EndedDown)
+            {
+                GameState->BlueOffset -= 1;
+            }
+
+            if(Controller->MoveRight.EndedDown)
+            {
+                GameState->BlueOffset += 1;
+            }
         }
 
         // Input.AButtonEndedDown
         // Input.AButtonHalfTransitionCount
-        if(Controller->Down.EndedDown)
+        if(Controller->ActionDown.EndedDown)
         {
             GameState->GreenOffset += 1;
         }
