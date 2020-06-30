@@ -476,11 +476,11 @@ Win32ProcessXInputStickValue(short Value, short DeadzoneThreshold)
                             
     if(Value < -DeadzoneThreshold)
     {
-        Result = (real32)Value / 32768.0f;
+        Result = (real32)((Value + DeadzoneThreshold) / (32768.0f - DeadzoneThreshold));
     }
     else if(Value > DeadzoneThreshold)
     {
-        Result = (real32)Result / 32767.0f;
+        Result = (real32)((Value - DeadzoneThreshold) / (32767.0f - DeadzoneThreshold));
     }
 
     return(Result);
@@ -702,27 +702,35 @@ WinMain(HINSTANCE Instance,
                             // TODO: See if ControllerState.dwPacketNumber increments too rapidly
                             XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
 
-                            NewController->IsAnalogue = true;
                             NewController->StickAverageX = Win32ProcessXInputStickValue(
                                 Pad->sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
                             NewController->StickAverageY = Win32ProcessXInputStickValue(
                                 Pad->sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+                            if((NewController->StickAverageX != 0.0f) ||
+                               (NewController->StickAverageY != 0.0f))
+                            {
+                                NewController->IsAnalogue = true;
+                            }
 
                             if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP)
                             {
                                 NewController->StickAverageY = 1.0f;
+                                NewController->IsAnalogue = false;
                             }
                             if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
                             {
                                 NewController->StickAverageY = -1.0f;
+                                NewController->IsAnalogue = false;
                             }
                             if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
                             {
                                 NewController->StickAverageX = -1.0f;
+                                NewController->IsAnalogue = false;
                             }
                             if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
                             {
                                 NewController->StickAverageX = 1.0f;
+                                NewController->IsAnalogue = false;
                             }
 
                             real32 Threshold = 0.5f;
@@ -732,16 +740,16 @@ WinMain(HINSTANCE Instance,
                                 &NewController->MoveLeft);
                             Win32ProcessXInputDigitalButton(
                                 (NewController->StickAverageX > Threshold) ? 1 : 0,
-                                &OldController->MoveLeft, 1,
-                                &NewController->MoveLeft);
+                                &OldController->MoveRight, 1,
+                                &NewController->MoveRight);
                             Win32ProcessXInputDigitalButton(
                                 (NewController->StickAverageY < -Threshold) ? 1 : 0,
-                                &OldController->MoveLeft, 1,
-                                &NewController->MoveLeft);
+                                &OldController->MoveDown, 1,
+                                &NewController->MoveDown);
                             Win32ProcessXInputDigitalButton(
                                 (NewController->StickAverageY > Threshold) ? 1 : 0,
-                                &OldController->MoveLeft, 1,
-                                &NewController->MoveLeft);
+                                &OldController->MoveUp, 1,
+                                &NewController->MoveUp);
 
                             Win32ProcessXInputDigitalButton(Pad->wButtons,
                                                             &OldController->ActionDown, XINPUT_GAMEPAD_A,
