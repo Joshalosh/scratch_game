@@ -551,10 +551,11 @@ Win32ProcessPendingMessages(game_controller_input *KeyboardController)
                     }
                     else if(VKCode == VK_ESCAPE)
                     {
-                        GlobalRunning = false;
+                        Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
                     }
                     else if(VKCode == VK_SPACE)
                     {
+                        Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
                     }
                 }
 
@@ -660,10 +661,11 @@ WinMain(HINSTANCE Instance,
                     // TODO: Zeroing macro
                     // TODO: We can't zero everything because the up/down state will be
                     // wrong
-                    game_controller_input *OldKeyboardController = &OldInput->Controllers[0];
-                    game_controller_input *NewKeyboardController = &NewInput->Controllers[0];
+                    game_controller_input *OldKeyboardController = GetController(OldInput, 0);
+                    game_controller_input *NewKeyboardController = GetController(NewInput, 0);
                     game_controller_input ZeroController = {};
                     *NewKeyboardController = ZeroController;
+                    NewKeyboardController->IsConnected = true;
                     for(int ButtonIndex = 0;
                         ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
                         ++ButtonIndex)
@@ -674,11 +676,13 @@ WinMain(HINSTANCE Instance,
 
                     Win32ProcessPendingMessages(NewKeyboardController);
 
+                    // TODO: Need to not poll disconnected controllers to avoid
+                    // xinput frame rate hit on older libraries
                     // TODO: Should I poll this more freqently?
-                    DWORD MaxControllerCount = 1 + XUSER_MAX_COUNT;
-                    if(MaxControllerCount > ArrayCount(NewInput->Controllers))
+                    DWORD MaxControllerCount = XUSER_MAX_COUNT;
+                    if(MaxControllerCount > (ArrayCount(NewInput->Controllers) -1))
                     {
-                        MaxControllerCount = ArrayCount(NewInput->Controllers);
+                        MaxControllerCount = (ArrayCount(NewInput->Controllers) -1);
                     }
 
                     for (DWORD ControllerIndex = 0;
@@ -686,27 +690,40 @@ WinMain(HINSTANCE Instance,
                          ++ControllerIndex)
                     {
                         DWORD OurControllerIndex = ControllerIndex + 1;
-                        game_controller_input *OldController = &OldInput->Controllers[OurControllerIndex];
-                        game_controller_input *NewController = &NewInput->Controllers[OurControllerIndex];
+                        game_controller_input *OldController = GetController(OldInput, OurControllerIndex);
+                        game_controller_input *NewController = GetController(NewInput, OurControllerIndex);
 
                         XINPUT_STATE ControllerState;
                         if(XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
                         {
+                            NewController->IsConnected = true;
+
                             // NOTE: This controller is plugged in
                             // TODO: See if ControllerState.dwPacketNumber increments too rapidly
                             XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
-
-                            // TODO: DPad
-                            bool32 Up = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                            bool32 Down = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-                            bool32 Left = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-                            bool32 Right = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
 
                             NewController->IsAnalogue = true;
                             NewController->StickAverageX = Win32ProcessXInputStickValue(
                                 Pad->sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
                             NewController->StickAverageY = Win32ProcessXInputStickValue(
                                 Pad->sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+
+                            if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP)
+                            {
+                                NewController->StickAverageY = 1.0f;
+                            }
+                            if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
+                            {
+                                NewController->StickAverageY = -1.0f;
+                            }
+                            if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
+                            {
+                                NewController->StickAverageX = -1.0f;
+                            }
+                            if(Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
+                            {
+                                NewController->StickAverageX = 1.0f;
+                            }
 
                             real32 Threshold = 0.5f;
                             Win32ProcessXInputDigitalButton(
@@ -757,6 +774,7 @@ WinMain(HINSTANCE Instance,
                         else
                         {
                           // NOTE: This controller is not available
+                          NewController->IsConnected = false;
                         }
                     }
 

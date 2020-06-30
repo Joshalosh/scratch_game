@@ -64,7 +64,7 @@ GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffe
 
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
-        game_controller_input *Controller = &Input->Controllers[ControllerIndex];
+        game_controller_input *Controller = GetController(Input, ControllerIndex);
         if(Controller->IsAnalogue)
         {
             // Use analogue movement tuning
