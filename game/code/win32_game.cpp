@@ -576,6 +576,21 @@ Win32ProcessPendingMessages(game_controller_input *KeyboardController)
 
 }
 
+global_variable int64 PerfCountFrequency;
+                    LARGE_INTEGER EndCounter;
+                    QueryPerformanceCounter(&EndCounter);
+
+                    uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
+                    int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+
+inline real32
+Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
+{
+    real32 Result = ((real32)(End.QuadPart - Start.QuadPart) / 
+                     (real32)PerfCountFrequency);
+    return(Result);
+}
+
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
@@ -584,7 +599,7 @@ WinMain(HINSTANCE Instance,
 {
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
-    int64_t PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+    PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 
     Win32LoadXInput();
 
@@ -597,6 +612,10 @@ WinMain(HINSTANCE Instance,
     WindowClass.hInstance = Instance;
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
+
+    int MonitorRefreshHz = 60;
+    int GameUpdateHz = MonitorRefreshHz / 2;
+    real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
 
     if(RegisterClassA(&WindowClass))
     {
@@ -663,8 +682,7 @@ WinMain(HINSTANCE Instance,
                     // wrong
                     game_controller_input *OldKeyboardController = GetController(OldInput, 0);
                     game_controller_input *NewKeyboardController = GetController(NewInput, 0);
-                    game_controller_input ZeroController = {};
-                    *NewKeyboardController = ZeroController;
+                    *NewKeyboardController = {};
                     NewKeyboardController->IsConnected = true;
                     for(int ButtonIndex = 0;
                         ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
@@ -839,11 +857,15 @@ WinMain(HINSTANCE Instance,
 
                     uint64_t EndCycleCount = __rdtsc();
 
-                    LARGE_INTEGER EndCounter;
-                    QueryPerformanceCounter(&EndCounter);
-
-                    uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
-                    int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+                    real32 SecondsElapsedForFrame = SecondsElapsedForWork;
+                    while(SecondsElapsedForFrame < TargetSecondsPerFrame)
+                    {
+                        LARGE_INTEGER EndCounter;
+                        QueryPerformanceCounter(&EndCounter);
+                        SecondsElapsedForFrame = ((real32)(EndCounter.QuadPart - LastCounter.QuadPart) /
+                                                  (real32)PerfCountFrequency);
+                    }
+                    
                     real64 MillisecondsPerFrame = (((1000.0f*(real64)CounterElapsed) / (real64)PerfCountFrequency));
                     real32 FramesPerSecond = (real32)PerfCountFrequency / (real32)CounterElapsed;
                     real32 MegaCyclesPerFrame = ((real32)CyclesElapsed / (1000.0f*1000.0f));
@@ -854,6 +876,8 @@ WinMain(HINSTANCE Instance,
                                                                         FramesPerSecond, MegaCyclesPerFrame);
                     OutputDebugStringA(Buffer);
 #endif
+
+                    QueryPerformanceCounter(&EndCounter);
 
                     LastCounter = EndCounter;
                     LastCycleCount = EndCycleCount;
