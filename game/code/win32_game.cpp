@@ -603,6 +603,11 @@ WinMain(HINSTANCE Instance,
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
     GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 
+    // Set the windows scheduler granularity to 1ms
+    // so that sleep can be more granular
+    UINT DesiredSchedulerMS = 1;
+    bool32 SleepIsGranular = (timeBeginPeriod(DesiredSchedulerMS) == TIMERR_NOERROR);
+
     Win32LoadXInput();
 
     WNDCLASSA WindowClass = {};
@@ -856,13 +861,21 @@ WinMain(HINSTANCE Instance,
                     LARGE_INTEGER WorkCounter = Win32GetWallClock();
                     real32 WorkSecondsElapsed = Win32GetSecondsElapsed(LastCounter, WorkCounter);
 
+                    // TODO: NOT TESTED YET! PROBABLY BUGGY!
                     real32 SecondsElapsedForFrame = WorkSecondsElapsed;
                     if(SecondsElapsedForFrame < TargetSecondsPerFrame)
                     {
+                        if(SleepIsGranular)
+                        {
+                            DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame - 
+                                                               SecondsElapsedForFrame));
+                            if(SleepMS > 0)
+                            {
+                                Sleep(SleepMS);
+                            }
+                        }
                         while(SecondsElapsedForFrame < TargetSecondsPerFrame)
                         {
-                            DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame - SecondsElapsedForFrame));
-                            Sleep(SleepMS);
                             SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
                                                                             Win32GetWallClock());
                         }
@@ -876,28 +889,29 @@ WinMain(HINSTANCE Instance,
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                Dimension.Width, Dimension.Height);
-#if 0
-                    real64 MillisecondsPerFrame = (((1000.0f*(real64)CounterElapsed) / (real64)PerfCountFrequency));
-                    real32 FramesPerSecond = (real32)PerfCountFrequency / (real32)CounterElapsed;
-                    real32 MegaCyclesPerFrame = ((real32)CyclesElapsed / (1000.0f*1000.0f));
-
-                    char Buffer[256];
-                    sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fmc/f\n", MillisecondsPerFrame,
-                                                                        FramesPerSecond, MegaCyclesPerFrame);
-                    OutputDebugStringA(Buffer);
-#endif
-
+                    
                     game_input *Temp = NewInput;
                     NewInput = OldInput;
                     OldInput = Temp;
                     // TODO: Should I clear these here?
 
                     LARGE_INTEGER EndCounter = Win32GetWallClock();
+                    real32 MillisecondsPerFrame = 1000.0f*Win32GetSecondsElapsed(LastCounter, EndCounter); 
                     LastCounter = EndCounter;
-
+                    
                     uint64_t EndCycleCount = __rdtsc();
                     uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                     LastCycleCount = EndCycleCount;
+
+                    real64 FramesPerSecond = 0.0f;
+                    real64 MegaCyclesPerFrame = ((real64)CyclesElapsed / (1000.0f*1000.0f));
+
+                    char FPSBuffer[256];
+                    _snprintf_s(FPSBuffer, sizeof(FPSBuffer), 
+                                "%.02fms/f, %.02ff/s, %.02fmc/f\n", 
+                                MillisecondsPerFrame,
+                                FramesPerSecond, MegaCyclesPerFrame);
+                    OutputDebugStringA(FPSBuffer);
                 }
             }
             else
