@@ -366,8 +366,8 @@ Win32MainWindowCallback(HWND Window,
         case WM_KEYDOWN:
         case WM_KEYUP:
         {
-            Assert("Keyboard input came in through a non-dispatch message!");
-        } break;    
+            Assert(!"Keyboard input came in through a non-dispatch message!");
+        } break;
 
         case WM_PAINT:
         {
@@ -439,7 +439,7 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
             *DestSample++ = *SourceSample++;
             ++SoundOutput->RunningSampleIndex;
         }
-        
+
         DWORD Region2SampleCount = Region2Size/SoundOutput->BytesPerSample;
         DestSample = (int16_t *)Region2;
         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
@@ -448,7 +448,7 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
             *DestSample++ = *SourceSample++;
             ++SoundOutput->RunningSampleIndex;
         }
-        
+
         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
     }
 }
@@ -471,17 +471,17 @@ Win32ProcessXInputDigitalButton(DWORD XInputButtonState,
 }
 
 internal real32
-Win32ProcessXInputStickValue(short Value, short DeadzoneThreshold)
+Win32ProcessXInputStickValue(SHORT Value, SHORT DeadZoneThreshold)
 {
     real32 Result = 0;
-                            
-    if(Value < -DeadzoneThreshold)
+
+    if(Value < -DeadZoneThreshold)
     {
-        Result = (real32)((Value + DeadzoneThreshold) / (32768.0f - DeadzoneThreshold));
+        Result = (real32)((Value + DeadZoneThreshold) / (32768.0f - DeadZoneThreshold));
     }
-    else if(Value > DeadzoneThreshold)
+    else if(Value > DeadZoneThreshold)
     {
-        Result = (real32)((Value - DeadzoneThreshold) / (32767.0f - DeadzoneThreshold));
+        Result = (real32)((Value - DeadZoneThreshold) / (32767.0f - DeadZoneThreshold));
     }
 
     return(Result);
@@ -490,9 +490,9 @@ Win32ProcessXInputStickValue(short Value, short DeadzoneThreshold)
 internal void
 Win32ProcessPendingMessages(game_controller_input *KeyboardController)
 {
-   MSG Message;
-   while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
-   {
+    MSG Message;
+    while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
+    {
         switch(Message.message)
         {
             case WM_QUIT:
@@ -588,7 +588,7 @@ Win32GetWallClock(void)
 inline real32
 Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
 {
-    real32 Result = ((real32)(End.QuadPart - Start.QuadPart) / 
+    real32 Result = ((real32)(End.QuadPart - Start.QuadPart) /
                      (real32)GlobalPerfCountFrequency);
     return(Result);
 }
@@ -671,7 +671,7 @@ WinMain(HINSTANCE Instance,
             GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, (size_t)TotalSize,
                                                        MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
             GameMemory.TransientStorage = ((uint8_t *)GameMemory.PermanentStorage +
-                                            GameMemory.PermanentStorageSize);
+                                           GameMemory.PermanentStorageSize);
 
             if(Samples && GameMemory.PermanentStorage && GameMemory.TransientStorage)
             {
@@ -705,9 +705,9 @@ WinMain(HINSTANCE Instance,
                     // xinput frame rate hit on older libraries
                     // TODO: Should I poll this more freqently?
                     DWORD MaxControllerCount = XUSER_MAX_COUNT;
-                    if(MaxControllerCount > (ArrayCount(NewInput->Controllers) -1))
+                    if(MaxControllerCount > (ArrayCount(NewInput->Controllers) - 1))
                     {
-                        MaxControllerCount = (ArrayCount(NewInput->Controllers) -1);
+                        MaxControllerCount = (ArrayCount(NewInput->Controllers) - 1);
                     }
 
                     for (DWORD ControllerIndex = 0;
@@ -806,8 +806,8 @@ WinMain(HINSTANCE Instance,
                         }
                         else
                         {
-                          // NOTE: This controller is not available
-                          NewController->IsConnected = false;
+                            // NOTE: This controller is not available
+                            NewController->IsConnected = false;
                         }
                     }
 
@@ -821,8 +821,8 @@ WinMain(HINSTANCE Instance,
                     // writing to and can anticipate the time spent in the game update.
                     if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
                     {
-                        ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample)
-                                            % SoundOutput.SecondaryBufferSize);
+                        ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
+                                      SoundOutput.SecondaryBufferSize);
 
                         TargetCursor = ((PlayCursor +
                                              (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
@@ -844,7 +844,7 @@ WinMain(HINSTANCE Instance,
                     SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
                     SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
                     SoundBuffer.Samples = Samples;
-                    
+
                     game_offscreen_buffer Buffer = {};
                     Buffer.Memory = GlobalBackbuffer.Memory;
                     Buffer.Width = GlobalBackbuffer.Width;
@@ -867,7 +867,7 @@ WinMain(HINSTANCE Instance,
                     {
                         if(SleepIsGranular)
                         {
-                            DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame - 
+                            DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame -
                                                                SecondsElapsedForFrame));
                             if(SleepMS > 0)
                             {
@@ -885,11 +885,11 @@ WinMain(HINSTANCE Instance,
                         // TODO: MISSED FRAME RATE!
                         // TODO: Logging
                     }
-                    
+
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                Dimension.Width, Dimension.Height);
-                    
+
                     game_input *Temp = NewInput;
                     NewInput = OldInput;
                     OldInput = Temp;

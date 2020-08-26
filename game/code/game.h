@@ -15,7 +15,7 @@
 #else
 #define Assert(Expression)
 #endif
-    
+
 #define Kilobytes(Value) ((Value)*1024LL)
 #define Megabytes(Value) (Kilobytes(Value)*1024LL)
 #define Gigabytes(Value) (Megabytes(Value)*1024LL)
@@ -40,7 +40,7 @@ SafeTruncateUInt64(uint64_t Value)
 
    These are not for doing anything in the shipping game - they are
    blocking and the write doesn't protect against lost data!
- */
+*/
 struct debug_read_file_result
 {
     uint32_t ContentsSize;
@@ -120,7 +120,7 @@ struct game_input
 {
     game_controller_input Controllers[5];
 };
-inline game_controller_input *GetController(game_input *Input, int unsigned ControllerIndex) 
+inline game_controller_input *GetController(game_input *Input, int unsigned ControllerIndex)
 {
     Assert(ControllerIndex < ArrayCount(Input->Controllers));
     
