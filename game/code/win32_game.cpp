@@ -681,6 +681,8 @@ WinMain(HINSTANCE Instance,
 
                 LARGE_INTEGER LastCounter = Win32GetWallClock();
 
+                DWORD DebugLastPlayCursor = 0;
+
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
@@ -889,6 +891,16 @@ WinMain(HINSTANCE Instance,
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                Dimension.Width, Dimension.Height);
+#if GAME_INTERNAL
+                    // Debug code
+                    {
+                        DWORD PlayCursor;
+                        DWORD WriteCursor;
+                        GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+
+                        DebugLastPlayCursor = PlayCursor;
+                    }
+#endif
 
                     game_input *Temp = NewInput;
                     NewInput = OldInput;
