@@ -593,6 +593,14 @@ Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
     return(Result);
 }
 
+internal void
+Win32DebugSyncDisplay(win32_offscreen_buffer *GlobalBackbuffer,
+                      int LastPlayCursorCount, DWORD *LastPlayCursor,
+                      win32_sound_output *SoundOutput, real32 TargetSecondsPerFrame)
+{
+    
+}
+
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
@@ -620,8 +628,8 @@ WinMain(HINSTANCE Instance,
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 
-    int MonitorRefreshHz = 60;
-    int GameUpdateHz = MonitorRefreshHz / 2;
+#define MonitorRefreshHz 60
+#define GameUpdateHz (MonitorRefreshHz / 2)
     real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
 
     if(RegisterClassA(&WindowClass))
@@ -681,7 +689,8 @@ WinMain(HINSTANCE Instance,
 
                 LARGE_INTEGER LastCounter = Win32GetWallClock();
 
-                DWORD DebugLastPlayCursor = 0;
+                int DebugLastPlayCursorIndex = 0;
+                DWORD DebugLastPlayCursor[GameUpdateHz];
 
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
@@ -889,6 +898,12 @@ WinMain(HINSTANCE Instance,
                     }
 
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+#if GAME_INTERNAL
+                    Win32DebugSyncDisplay(&GlobalBackbuffer,
+                                          ArrayCount(DebugLastPlayCursor),
+                                          DebugLastPlayCursor,
+                                          &SoundOutput, TargetSecondsPerFrame);
+#endif
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                Dimension.Width, Dimension.Height);
 #if GAME_INTERNAL
@@ -898,7 +913,11 @@ WinMain(HINSTANCE Instance,
                         DWORD WriteCursor;
                         GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
 
-                        DebugLastPlayCursor = PlayCursor;
+                        DebugLastPlayCursor[DebugLastPlayCursorIndex++] = PlayCursor;
+                        if(DebugLastPlayCursorIndex > ArrayCount(DebugLastPlayCursor))
+                        {
+                            DebugLastPlayCursor = 0;
+                        }
                     }
 #endif
 
