@@ -297,7 +297,9 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
     Buffer->Width = Width;
     Buffer->Height = Height;
+    
     int BytesPerPixel = 4;
+    Buffer->BytesPerPixel = BytesPerPixel;
 
     // When the biHeight field is negative, this is the clue to
     // Windows to treat this bitmap as top-down, not bottom up, meaning that
@@ -594,11 +596,36 @@ Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
 }
 
 internal void
+Win32DebugDrawVertical(win32_offscreen_buffer *GlobalBackbuffer,
+                       int X, int Top, int Bottom, uint32_t Colour)
+{
+    uint8_t *Pixel = ((uint8_t *)GlobalBackbuffer->Memory +
+                      X*GlobalBackbuffer->BytesPerPixel +
+                      Top*GlobalBackbuffer->Pitch);
+    for(int Y = Top; Y < Bottom; ++Y);
+    {
+        *(uint32 *)Pixel = Colour;
+        Pixel += GlobalBackbuffer->Pitch;
+    }
+}
+
+internal void
 Win32DebugSyncDisplay(win32_offscreen_buffer *GlobalBackbuffer,
                       int LastPlayCursorCount, DWORD *LastPlayCursor,
                       win32_sound_output *SoundOutput, real32 TargetSecondsPerFrame)
 {
-    
+    int PadX = 16;
+    int PadY = 16;
+
+    int Top = PadY;
+    int Bottom = GlobalBackbuffer->Height - PadY;
+
+    real32 C = (real32)(GlobalBackbuffer->Width - 2*PadX) / (real32)SoundOutput->SecondaryBufferSize;
+    for(int PlayCursorIndex = 0; PlayCursorIndex < LastPlayCursorCount; ++PlayCursorInderx)
+    {
+        int X = PadX + (int)(C * (real32)LastPlayCursor[PlayCursorIndex]);
+        Win32DebugDrawVertical(GlobalBackbuffer, X, Top, Bottom, 0xFFFFFFFF);
+    }
 }
 
 int CALLBACK
@@ -690,7 +717,7 @@ WinMain(HINSTANCE Instance,
                 LARGE_INTEGER LastCounter = Win32GetWallClock();
 
                 int DebugLastPlayCursorIndex = 0;
-                DWORD DebugLastPlayCursor[GameUpdateHz];
+                DWORD DebugLastPlayCursor[GameUpdateHz / 2] = {0};
 
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
