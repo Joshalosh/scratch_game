@@ -251,7 +251,7 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
             // TODO: DSBCAPS_GETCURRENTPOSTIION2?
             DSBUFFERDESC BufferDescription = {};
             BufferDescription.dwSize = sizeof(BufferDescription);
-            BufferDescription.dwFlags = 0;
+            BufferDescription.dwFlags = DSBCAPS_GETCURRENTPOSITION2;
             BufferDescription.dwBufferBytes = BufferSize;
             BufferDescription.lpwfxFormat = &WaveFormat;
             HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
@@ -611,7 +611,7 @@ Win32DebugDrawVertical(win32_offscreen_buffer *GlobalBackbuffer,
 
 internal void
 Win32DebugSyncDisplay(win32_offscreen_buffer *GlobalBackbuffer,
-                      int LastPlayCursorCount, DWORD *LastPlayCursor,
+                      int MarkerCount, win32_debug_time_marker *Markers,
                       win32_sound_output *SoundOutput, real32 TargetSecondsPerFrame)
 {
     int PadX = 16;
@@ -621,9 +621,12 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *GlobalBackbuffer,
     int Bottom = GlobalBackbuffer->Height - PadY;
 
     real32 C = (real32)(GlobalBackbuffer->Width - 2*PadX) / (real32)SoundOutput->SecondaryBufferSize;
-    for(int PlayCursorIndex = 0; PlayCursorIndex < LastPlayCursorCount; ++PlayCursorInderx)
+    for(int MarkerIndex = 0; MarkerIndex < MarkerCount; ++MarkerIndex)
     {
-        int X = PadX + (int)(C * (real32)LastPlayCursor[PlayCursorIndex]);
+        win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
+        Assert(ThisMarker->PlayCursor < SoundOutput->SecondaryBufferSize);
+        real32 XReal32 = (C * (real32)ThisMarker->PlayCursor);
+        int X = PadX + (int)XReal32;
         Win32DebugDrawVertical(GlobalBackbuffer, X, Top, Bottom, 0xFFFFFFFF);
     }
 }
@@ -716,8 +719,8 @@ WinMain(HINSTANCE Instance,
 
                 LARGE_INTEGER LastCounter = Win32GetWallClock();
 
-                int DebugLastPlayCursorIndex = 0;
-                DWORD DebugLastPlayCursor[GameUpdateHz / 2] = {0};
+                int DebugTimeMarkerIndex = 0;
+                win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {0};
 
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
@@ -912,6 +915,11 @@ WinMain(HINSTANCE Instance,
                                 Sleep(SleepMS);
                             }
                         }
+
+                        real32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
+                                                                                   Win32GetWallClock());
+                        Assert(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
+
                         while(SecondsElapsedForFrame < TargetSecondsPerFrame)
                         {
                             SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
@@ -924,11 +932,15 @@ WinMain(HINSTANCE Instance,
                         // TODO: Logging
                     }
 
+                    LARGE_INTEGER EndCounter = Win32GetWallClock();
+                    real32 MillisecondsPerFrame = 1000.0f*Win32GetSecondsElapsed(LastCounter, EndCounter); 
+                    LastCounter = EndCounter;
+                    
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
 #if GAME_INTERNAL
                     Win32DebugSyncDisplay(&GlobalBackbuffer,
-                                          ArrayCount(DebugLastPlayCursor),
-                                          DebugLastPlayCursor,
+                                          ArrayCount(DebugTimeMarkers),
+                                          DebugTimeMarkers,
                                           &SoundOutput, TargetSecondsPerFrame);
 #endif
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
@@ -936,15 +948,14 @@ WinMain(HINSTANCE Instance,
 #if GAME_INTERNAL
                     // Debug code
                     {
-                        DWORD PlayCursor;
-                        DWORD WriteCursor;
-                        GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
-
-                        DebugLastPlayCursor[DebugLastPlayCursorIndex++] = PlayCursor;
-                        if(DebugLastPlayCursorIndex > ArrayCount(DebugLastPlayCursor))
+                        win32_debug_time_marker *Marker = DebugTimeMarkers[DebugTimeMarkerIndex++];
+                        if(DebugTimMarkerIndex > ArrayCount(DebugTimeMarkers))
                         {
-                            DebugLastPlayCursor = 0;
+                            DebugTimeMarkerIndex = 0;
                         }
+
+                        GlobalSecondaryBuffer->GetCurrentPosition(&Marker->PlayCursor, &Marker->WriteCursor);
+
                     }
 #endif
 
@@ -953,10 +964,6 @@ WinMain(HINSTANCE Instance,
                     OldInput = Temp;
                     // TODO: Should I clear these here?
 
-                    LARGE_INTEGER EndCounter = Win32GetWallClock();
-                    real32 MillisecondsPerFrame = 1000.0f*Win32GetSecondsElapsed(LastCounter, EndCounter); 
-                    LastCounter = EndCounter;
-                    
                     uint64_t EndCycleCount = __rdtsc();
                     uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                     LastCycleCount = EndCycleCount;
