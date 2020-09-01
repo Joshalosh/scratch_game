@@ -609,8 +609,20 @@ Win32DebugDrawVertical(win32_offscreen_buffer *GlobalBackbuffer,
     }
 }
 
+inline void
+Win32DrawSoundBufferMarker(win32_offscreen_buffer *Backbuffer,
+                           win32_sound_output *SoundOutput,
+                           real32 C, int PadX, int Top, int Bottom,
+                           DWORD Value, uint32_t Colour)
+{
+    Assert(Value < SoundOutput->SecondaryBufferSize);
+    real32 XReal32 = (C * (real32)Value);
+    int X = PadX + (int)XReal32;
+    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, Colour);
+}
+
 internal void
-Win32DebugSyncDisplay(win32_offscreen_buffer *GlobalBackbuffer,
+Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
                       int MarkerCount, win32_debug_time_marker *Markers,
                       win32_sound_output *SoundOutput, real32 TargetSecondsPerFrame)
 {
@@ -618,16 +630,16 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *GlobalBackbuffer,
     int PadY = 16;
 
     int Top = PadY;
-    int Bottom = GlobalBackbuffer->Height - PadY;
+    int Bottom = Backbuffer->Height - PadY;
 
-    real32 C = (real32)(GlobalBackbuffer->Width - 2*PadX) / (real32)SoundOutput->SecondaryBufferSize;
+    real32 C = (real32)(Backbuffer->Width - 2*PadX) / (real32)SoundOutput->SecondaryBufferSize;
     for(int MarkerIndex = 0; MarkerIndex < MarkerCount; ++MarkerIndex)
     {
         win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
-        Assert(ThisMarker->PlayCursor < SoundOutput->SecondaryBufferSize);
-        real32 XReal32 = (C * (real32)ThisMarker->PlayCursor);
-        int X = PadX + (int)XReal32;
-        Win32DebugDrawVertical(GlobalBackbuffer, X, Top, Bottom, 0xFFFFFFFF);
+        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
+                                   ThisMarker->PlayCursor, 0XFFFFFFFF);
+        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
+                                   ThisMarker->WriteCursor, 0xFFFF0000);
     }
 }
 
