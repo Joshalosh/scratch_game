@@ -670,6 +670,7 @@ WinMain(HINSTANCE Instance,
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 
+#define FramesOfAudioLatency 2
 #define MonitorRefreshHz 60
 #define GameUpdateHz (MonitorRefreshHz / 2)
     real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
@@ -698,7 +699,7 @@ WinMain(HINSTANCE Instance,
             SoundOutput.SamplesPerSecond = 48000;
             SoundOutput.BytesPerSample = sizeof(int16_t)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
-            SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
+            SoundOutput.LatencySampleCount = FramesOfAudioLatency*(SoundOutput.SamplesPerSecond / GameUpdaateHz);
             Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
             Win32ClearBuffer(&SoundOutput);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
@@ -733,6 +734,10 @@ WinMain(HINSTANCE Instance,
 
                 int DebugTimeMarkerIndex = 0;
                 win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {0};
+
+                // Handle startup specially
+                DWORD LastPlayCursor = 0;
+                bool32 SoundIsValid = false;
 
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
@@ -864,22 +869,22 @@ WinMain(HINSTANCE Instance,
                         }
                     }
 
+                    // Compute how much sound to write and where
                     DWORD ByteToLock = 0;
                     DWORD TargetCursor = 0;
                     DWORD BytesToWrite = 0;
-                    DWORD PlayCursor = 0;
-                    DWORD WriteCursor = 0;
-                    bool32 SoundIsValid = false;
                     // TODO: Tighten up sound logic so that I know where I should be
                     // writing to and can anticipate the time spent in the game update.
-                    if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                    if(SoundIsValid)
                     {
+                        // If first time through, write from writecursor
+
                         ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
                                       SoundOutput.SecondaryBufferSize);
 
-                        TargetCursor = ((PlayCursor +
-                                             (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
-                                             SoundOutput.SecondaryBufferSize);
+                        TargetCursor = ((LastPlayCursor +
+                                         (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
+                                         SoundOutput.SecondaryBufferSize);
                         if(ByteToLock > TargetCursor)
                         {
                             BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
@@ -889,8 +894,6 @@ WinMain(HINSTANCE Instance,
                         {
                             BytesToWrite = TargetCursor - ByteToLock;
                         }
-
-                        SoundIsValid = true;
                     }
                     
                     game_sound_output_buffer SoundBuffer = {};
@@ -957,6 +960,19 @@ WinMain(HINSTANCE Instance,
 #endif
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                Dimension.Width, Dimension.Height);
+
+                    DWORD PlayCursor;
+                    DWORD WriteCursor;
+                    if(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
+                    {
+                        LastPlayCursor = PlayCursor;
+                        SoundIsValid = true;
+                    }
+                    else
+                    {
+                        SoundIsValid = false;
+                    }
+
 #if GAME_INTERNAL
                     // Debug code
                     {
@@ -965,9 +981,8 @@ WinMain(HINSTANCE Instance,
                         {
                             DebugTimeMarkerIndex = 0;
                         }
-
-                        GlobalSecondaryBuffer->GetCurrentPosition(&Marker->PlayCursor, &Marker->WriteCursor);
-
+                        Marker->PlayCursor = PlayCursor;
+                        Marker->WriteCursor = WriteCursor;
                     }
 #endif
 
