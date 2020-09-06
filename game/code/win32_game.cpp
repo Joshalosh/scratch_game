@@ -626,6 +626,8 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
                       int MarkerCount, win32_debug_time_marker *Markers,
                       win32_sound_output *SoundOutput, real32 TargetSecondsPerFrame)
 {
+    // Draw where sound is written
+
     int PadX = 16;
     int PadY = 16;
 
@@ -670,7 +672,7 @@ WinMain(HINSTANCE Instance,
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 
-#define FramesOfAudioLatency 2
+#define FramesOfAudioLatency 4
 #define MonitorRefreshHz 60
 #define GameUpdateHz (MonitorRefreshHz / 2)
     real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
@@ -706,8 +708,24 @@ WinMain(HINSTANCE Instance,
 
             GlobalRunning = true;
 
+#if 0
+            // This tests the PlayCursor/WriteCursor update frequency
+            // on the game machine, it was 480 samples
+            while(GlobalRunning)
+            {
+                DWORD PlayCursor;
+                DWORD WriteCursor;
+                GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+
+                char TextBuffer[256];
+                _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                            "PC:%u WC:%u\n", PlayCursor, WriteCursor);
+                OutputsDebugStringA(TextBuffer);
+            }
+#endif
             int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize,
                                 MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+
 #if GAME_INTERNAL
             LPVOID BaseAddress = (LPVOID)Terabytes(2);
 #else
@@ -735,7 +753,6 @@ WinMain(HINSTANCE Instance,
                 int DebugTimeMarkerIndex = 0;
                 win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {0};
 
-                // Handle startup specially
                 DWORD LastPlayCursor = 0;
                 bool32 SoundIsValid = false;
 
@@ -873,8 +890,6 @@ WinMain(HINSTANCE Instance,
                     DWORD ByteToLock = 0;
                     DWORD TargetCursor = 0;
                     DWORD BytesToWrite = 0;
-                    // TODO: Tighten up sound logic so that I know where I should be
-                    // writing to and can anticipate the time spent in the game update.
                     if(SoundIsValid)
                     {
                         // If first time through, write from writecursor
@@ -911,6 +926,16 @@ WinMain(HINSTANCE Instance,
                     // DirectSound output test
                     if(SoundIsValid)
                     {
+#if GAME_INTERNAL
+                        DWORD PlayCursor;
+                        DWORD WriteCursor;
+                        char TextBuffer[256];
+                        _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                                    "PC:%u BTL:%u TC:%u BTW%u\n",
+                                    LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
+                                    PlayCursor, WriteCursor);
+                        OutputDebugStringA(TextBuffer);
+#endif
                         Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
                     }
 
@@ -966,7 +991,11 @@ WinMain(HINSTANCE Instance,
                     if(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
                     {
                         LastPlayCursor = PlayCursor;
-                        SoundIsValid = true;
+                        if(!SoundIsValid)
+                        {
+                            SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
+                            SoundIsValid = true;
+                        }
                     }
                     else
                     {
