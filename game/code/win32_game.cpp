@@ -1,21 +1,21 @@
 /*
 TODO: Additional Platform Layer Code
 
-    - Saved game locations
-    - Getting a handle to our own executable file
-    - Asset loading path
-    - Threading (launch a thread)
-    - Raw Input (support for multiple keyboards)
-    - Sleep/timeBeginPeriod
-    - ClipCursor() (for multimonitor support)
-    - Fullscreen support
-    - WM_SETCURSOR (control cursor visibility)
-    - QueryCanelAutoplay
-    - WM_ACTIVATEAPP (for when we are not the active application)
-    - Blit speed improvements (BitBlt)
-    - Hardware acceleration (OpenGL or Direct3D or both?)
-    - GetKeyboardLayout (for French keyboards, internation WASD support)
-      etc...
+  - Saved game locations
+  - Getting a handle to our own executable file
+  - Asset loading path
+  - Threading (launch a thread)
+  - Raw Input (support for multiple keyboards)
+  - Sleep/timeBeginPeriod
+  - ClipCursor() (for multimonitor support)
+  - Fullscreen support
+  - WM_SETCURSOR (control cursor visibility)
+  - QueryCancelAutoplay
+  - WM_ACTIVATEAPP (for when we are not the active application)
+  - Blit speed improvements (BitBlt)
+  - Hardware acceleration (OpenGL or Direct3D or both?)
+  - GetKeyboardLayout (for French keyboards, internation WASD support)
+    etc...
 */
 
 // TODO: Implement my own sine function
@@ -109,7 +109,7 @@ DEBUGPlatformReadEntireFile(char *Filename)
         {
             // TODO: Logging
         }
-        
+
         CloseHandle(FileHandle);
     }
     else
@@ -147,7 +147,7 @@ DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory)
         {
             // TODO: Logging
         }
-        
+
         CloseHandle(FileHandle);
     }
     else
@@ -297,7 +297,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
     Buffer->Width = Width;
     Buffer->Height = Height;
-    
+
     int BytesPerPixel = 4;
     Buffer->BytesPerPixel = BytesPerPixel;
 
@@ -604,7 +604,7 @@ Win32DebugDrawVertical(win32_offscreen_buffer *GlobalBackbuffer,
                       Top*GlobalBackbuffer->Pitch);
     for(int Y = Top; Y < Bottom; ++Y);
     {
-        *(uint32 *)Pixel = Colour;
+        *(uint32_t *)Pixel = Colour;
         Pixel += GlobalBackbuffer->Pitch;
     }
 }
@@ -672,7 +672,11 @@ WinMain(HINSTANCE Instance,
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 
-#define FramesOfAudioLatency 4
+// TODO: Think about running non-frame quantised for audio latency
+// TODO: Use the write cursor delta from the play cursor to adjust
+// the target audio latency
+
+#define FramesOfAudioLatency 3
 #define MonitorRefreshHz 60
 #define GameUpdateHz (MonitorRefreshHz / 2)
     real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
@@ -701,7 +705,7 @@ WinMain(HINSTANCE Instance,
             SoundOutput.SamplesPerSecond = 48000;
             SoundOutput.BytesPerSample = sizeof(int16_t)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
-            SoundOutput.LatencySampleCount = FramesOfAudioLatency*(SoundOutput.SamplesPerSecond / GameUpdaateHz);
+            SoundOutput.LatencySampleCount = FramesOfAudioLatency*(SoundOutput.SamplesPerSecond / GameUpdateHz);
             Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
             Win32ClearBuffer(&SoundOutput);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
@@ -720,7 +724,7 @@ WinMain(HINSTANCE Instance,
                 char TextBuffer[256];
                 _snprintf_s(TextBuffer, sizeof(TextBuffer),
                             "PC:%u WC:%u\n", PlayCursor, WriteCursor);
-                OutputsDebugStringA(TextBuffer);
+                OutputDebugStringA(TextBuffer);
             }
 #endif
             int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize,
@@ -910,7 +914,7 @@ WinMain(HINSTANCE Instance,
                             BytesToWrite = TargetCursor - ByteToLock;
                         }
                     }
-                    
+
                     game_sound_output_buffer SoundBuffer = {};
                     SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
                     SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
@@ -929,9 +933,10 @@ WinMain(HINSTANCE Instance,
 #if GAME_INTERNAL
                         DWORD PlayCursor;
                         DWORD WriteCursor;
+                        GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
                         char TextBuffer[256];
                         _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                                    "PC:%u BTL:%u TC:%u BTW%u\n",
+                                    "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u\n",
                                     LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
                                     PlayCursor, WriteCursor);
                         OutputDebugStringA(TextBuffer);
@@ -1005,8 +1010,8 @@ WinMain(HINSTANCE Instance,
 #if GAME_INTERNAL
                     // Debug code
                     {
-                        win32_debug_time_marker *Marker = DebugTimeMarkers[DebugTimeMarkerIndex++];
-                        if(DebugTimMarkerIndex > ArrayCount(DebugTimeMarkers))
+                        win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
+                        if(DebugTimeMarkerIndex > ArrayCount(DebugTimeMarkers))
                         {
                             DebugTimeMarkerIndex = 0;
                         }
