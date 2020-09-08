@@ -963,7 +963,7 @@ WinMain(HINSTANCE Instance,
 
                         real32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
                                                                                    Win32GetWallClock());
-                        Assert(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
+                        //Assert(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
 
                         while(SecondsElapsedForFrame < TargetSecondsPerFrame)
                         {
@@ -1010,8 +1010,9 @@ WinMain(HINSTANCE Instance,
 #if GAME_INTERNAL
                     // Debug code
                     {
+                        Assert(DebugTimeMarker < ArrayCount(DebugTimeMarkers));
                         win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
-                        if(DebugTimeMarkerIndex > ArrayCount(DebugTimeMarkers))
+                        if(DebugTimeMarkerIndex == ArrayCount(DebugTimeMarkers))
                         {
                             DebugTimeMarkerIndex = 0;
                         }
