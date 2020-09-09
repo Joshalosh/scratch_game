@@ -672,15 +672,9 @@ WinMain(HINSTANCE Instance,
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 
-// TODO: Think about running non-frame quantised for audio latency
-// TODO: Use the write cursor delta from the play cursor to adjust
-// the target audio latency
-
-#define FramesOfAudioLatency 3
 #define MonitorRefreshHz 60
 #define GameUpdateHz (MonitorRefreshHz / 2)
     real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
-
     if(RegisterClassA(&WindowClass))
     {
         HWND Window =
@@ -705,7 +699,8 @@ WinMain(HINSTANCE Instance,
             SoundOutput.SamplesPerSecond = 48000;
             SoundOutput.BytesPerSample = sizeof(int16_t)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
-            SoundOutput.LatencySampleCount = FramesOfAudioLatency*(SoundOutput.SamplesPerSecond / GameUpdateHz);
+            // Get rid of LatencySampleCount
+            SoundOutput.LatencySampleCount = 3*(SoundOutput.SamplesPerSecond / GameUpdateHz);
             Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
             Win32ClearBuffer(&SoundOutput);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
@@ -759,6 +754,8 @@ WinMain(HINSTANCE Instance,
 
                 DWORD LastPlayCursor = 0;
                 bool32 SoundIsValid = false;
+                DWORD AudioLatencyBytes = 0;
+                real32 AudioLatencySeconds = 0;
 
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
@@ -934,11 +931,22 @@ WinMain(HINSTANCE Instance,
                         DWORD PlayCursor;
                         DWORD WriteCursor;
                         GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+
+                        DWORD UnwrappedWriteCursor = WriteCursor;
+                        if(UnwrappedWriteCursor < PlayCursor)
+                        {
+                            UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
+                        }
+                        AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+                        AudioLatencySeconds =
+                            (((real32)AudioLatencyBytes / (real32)SoundOutput.BytesPerSample) /
+                             (real32)SoundOutput.SamplesPerSecond);
+
                         char TextBuffer[256];
                         _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                                    "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u\n",
+                                    "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%fs)\n",
                                     LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
-                                    PlayCursor, WriteCursor);
+                                    PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
                         OutputDebugStringA(TextBuffer);
 #endif
                         Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
@@ -963,7 +971,7 @@ WinMain(HINSTANCE Instance,
 
                         real32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
                                                                                    Win32GetWallClock());
-                        //Assert(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
+                        Assert(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
 
                         while(SecondsElapsedForFrame < TargetSecondsPerFrame)
                         {
@@ -1010,7 +1018,7 @@ WinMain(HINSTANCE Instance,
 #if GAME_INTERNAL
                     // Debug code
                     {
-                        Assert(DebugTimeMarker < ArrayCount(DebugTimeMarkers));
+                        Assert(DebugTimeMarkers < ArrayCount(DebugTimeMarkers));
                         win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
                         if(DebugTimeMarkerIndex == ArrayCount(DebugTimeMarkers))
                         {
