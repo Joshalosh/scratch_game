@@ -753,6 +753,7 @@ WinMain(HINSTANCE Instance,
                 win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {0};
 
                 DWORD LastPlayCursor = 0;
+                DWORD LastWriteCursor = 0;
                 bool32 SoundIsValid = false;
                 DWORD AudioLatencyBytes = 0;
                 real32 AudioLatencySeconds = 0;
@@ -971,7 +972,10 @@ WinMain(HINSTANCE Instance,
 
                         real32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
                                                                                    Win32GetWallClock());
-                        Assert(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
+                        if(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
+                        {
+                            // TODO: Log missed sleep
+                        }
 
                         while(SecondsElapsedForFrame < TargetSecondsPerFrame)
                         {
@@ -1003,6 +1007,7 @@ WinMain(HINSTANCE Instance,
                     DWORD WriteCursor;
                     if(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
                     {
+                        LastWriteCursor = WriteCursor;
                         LastPlayCursor = PlayCursor;
                         if(!SoundIsValid)
                         {
