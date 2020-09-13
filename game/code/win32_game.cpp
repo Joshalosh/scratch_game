@@ -752,11 +752,9 @@ WinMain(HINSTANCE Instance,
                 int DebugTimeMarkerIndex = 0;
                 win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {0};
 
-                DWORD LastPlayCursor = 0;
-                DWORD LastWriteCursor = 0;
-                bool32 SoundIsValid = false;
                 DWORD AudioLatencyBytes = 0;
                 real32 AudioLatencySeconds = 0;
+                bool32 SoundIsValid = false;
 
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
@@ -888,31 +886,31 @@ WinMain(HINSTANCE Instance,
                         }
                     }
 
-                    // Compute how much sound to write and where
-                    DWORD ByteToLock = 0;
-                    DWORD TargetCursor = 0;
-                    DWORD BytesToWrite = 0;
-                    if(SoundIsValid)
-                    {
-                        // If first time through, write from writecursor
+                    /*
+                       Sound output computation works like this:
 
-                        ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
-                                      SoundOutput.SecondaryBufferSize);
+                       Define a safety value that is the number
+                       of samples the game update loop may vary 
+                       by (up tp 2ms).
 
-                        TargetCursor = ((LastPlayCursor +
-                                         (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
-                                         SoundOutput.SecondaryBufferSize);
-                        if(ByteToLock > TargetCursor)
-                        {
-                            BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
-                            BytesToWrite += TargetCursor;
-                        }
-                        else
-                        {
-                            BytesToWrite = TargetCursor - ByteToLock;
-                        }
-                    }
+                       When woken up to write audio, look 
+                       and see what the play cursor position is
+                       and forecast ahead where the play cursor
+                       will be on the next frame boundary.
 
+                       Then look to see if the write cursor is
+                       before that by at least the safety value.
+                       If it is, the target fill position is that
+                       frame boundary plus one frame. This gives
+                       perfect audio sync in the case of a card that
+                       has low latency.
+
+                       If the write cursor is _after_ that safety margin,
+                       then we assume we can never sync the audio
+                       perfectly, so will then write one frame's
+                       worth of audio plus the safety margin's worth
+                       of guard samples.
+                    */
                     game_sound_output_buffer SoundBuffer = {};
                     SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
                     SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
@@ -925,9 +923,44 @@ WinMain(HINSTANCE Instance,
                     Buffer.Pitch = GlobalBackbuffer.Pitch;
                     GameUpdateAndRender(&GameMemory, NewInput, &Buffer, &SoundBuffer);
 
-                    // DirectSound output test
-                    if(SoundIsValid)
+                    DWORD PlayCursor;
+                    DWORD WriteCursor;
+                    if(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
                     {
+                        if(!SoundIsValid)
+                        {
+                            SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
+                            SoundIsValid = true;
+                        }
+                        
+                        DWORD ByteToLock = 0;
+                        DWORD TargetCursor = 0;
+                        DWORD BytesToWrite = 0;
+                        ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
+                                      SoundOutput.SecondaryBufferSize);
+
+                        if()
+                        {
+                            TargetCursor = ((LastPlayCursor +
+                                             (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
+                                             SoundOutput.SecondaryBufferSize);
+                        }
+                        else
+                        {
+                        }
+
+                        if(ByteToLock > TargetCursor)
+                        {
+                            BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
+                            BytesToWrite += TargetCursor;
+                        }
+                        else
+                        {
+                            BytesToWrite = TargetCursor - ByteToLock;
+                        }
+
+                        Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
+
 #if GAME_INTERNAL
                         DWORD PlayCursor;
                         DWORD WriteCursor;
@@ -950,7 +983,10 @@ WinMain(HINSTANCE Instance,
                                     PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
                         OutputDebugStringA(TextBuffer);
 #endif
-                        Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
+                    }
+                    else
+                    {
+                        SoundIsValid = false;
                     }
 
                     LARGE_INTEGER WorkCounter = Win32GetWallClock();
@@ -1003,34 +1039,22 @@ WinMain(HINSTANCE Instance,
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                Dimension.Width, Dimension.Height);
 
-                    DWORD PlayCursor;
-                    DWORD WriteCursor;
-                    if(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
-                    {
-                        LastWriteCursor = WriteCursor;
-                        LastPlayCursor = PlayCursor;
-                        if(!SoundIsValid)
-                        {
-                            SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
-                            SoundIsValid = true;
-                        }
-                    }
-                    else
-                    {
-                        SoundIsValid = false;
-                    }
-
 #if GAME_INTERNAL
                     // Debug code
                     {
-                        Assert(DebugTimeMarkers < ArrayCount(DebugTimeMarkers));
-                        win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
-                        if(DebugTimeMarkerIndex == ArrayCount(DebugTimeMarkers))
+                        DWORD PlayCursor;
+                        DWORD WriteCursor;
+                        if(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
                         {
-                            DebugTimeMarkerIndex = 0;
+                            Assert(DebugTimeMarkers < ArrayCount(DebugTimeMarkers));
+                            win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
+                            if(DebugTimeMarkerIndex == ArrayCount(DebugTimeMarkers))
+                            {
+                                DebugTimeMarkerIndex = 0;
+                            }
+                            Marker->PlayCursor = PlayCursor;
+                            Marker->WriteCursor = WriteCursor;
                         }
-                        Marker->PlayCursor = PlayCursor;
-                        Marker->WriteCursor = WriteCursor;
                     }
 #endif
 
