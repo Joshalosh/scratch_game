@@ -911,11 +911,6 @@ WinMain(HINSTANCE Instance,
                        worth of audio plus the safety margin's worth
                        of guard samples.
                     */
-                    game_sound_output_buffer SoundBuffer = {};
-                    SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
-                    SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
-                    SoundBuffer.Samples = Samples;
-
                     game_offscreen_buffer Buffer = {};
                     Buffer.Memory = GlobalBackbuffer.Memory;
                     Buffer.Width = GlobalBackbuffer.Width;
@@ -933,22 +928,34 @@ WinMain(HINSTANCE Instance,
                             SoundIsValid = true;
                         }
                         
-                        DWORD ByteToLock = 0;
-                        DWORD TargetCursor = 0;
-                        DWORD BytesToWrite = 0;
-                        ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
-                                      SoundOutput.SecondaryBufferSize);
+                        DWORD ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
+                                            SoundOutput.SecondaryBufferSize);
 
-                        if()
+                        DWORD ExpectedFrameBoundaryByte = PlayCursor + ExpectedSoundBytesPerFrame;
+
+                        DWORD SafeWriteCursor = WriteCursor;
+                        if(SafeWriteCursor < PlayCursor)
                         {
-                            TargetCursor = ((LastPlayCursor +
-                                             (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
-                                             SoundOutput.SecondaryBufferSize);
+                            SafeWriteCursor += SoundOutput.SecondaryBufferSize;
+                        }
+                        Assert(SafeWriteCursor >= PlayCursor);
+                        SafeWriteCursor += SoundOutput.SafetyBytes;
+
+                        bool32 AudioCardIsLowLatency = (SafeWriteCursor < ExpectedFrameBoundaryByte);
+                        
+                        DWORD TargetCursor = 0;
+                        if(AudioCardIsLowLatency)
+                        {
+                            TargetCursor = (ExpectedFrameBoundaryByte + ExpectedSoundBytesPerFrame);
                         }
                         else
                         {
+                            TargetCursor = (WriteCursor + ExpectedSoundBytesPerFrame +
+                                            SoundOutput.SafetyBytes);
                         }
+                        TargetCursor = (TargetCursor % SoundOutput.SecondaryBufferSize);
 
+                        DWORD BytesToWrite = 0;
                         if(ByteToLock > TargetCursor)
                         {
                             BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
@@ -959,8 +966,11 @@ WinMain(HINSTANCE Instance,
                             BytesToWrite = TargetCursor - ByteToLock;
                         }
 
-                        Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
-
+                        game_sound_output_buffer SoundBuffer = {};
+                        SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+                        SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
+                        SoundBuffer.Samples = Samples;
+                        GameGetSoundSamples(&GameMemory, &SoundBuffer);
 #if GAME_INTERNAL
                         DWORD PlayCursor;
                         DWORD WriteCursor;
@@ -978,11 +988,12 @@ WinMain(HINSTANCE Instance,
 
                         char TextBuffer[256];
                         _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                                    "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%fs)\n",
-                                    LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
+                                    "BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%fs)\n",
+                                    ByteToLock, TargetCursor, BytesToWrite,
                                     PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
                         OutputDebugStringA(TextBuffer);
 #endif
+                        Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
                     }
                     else
                     {
