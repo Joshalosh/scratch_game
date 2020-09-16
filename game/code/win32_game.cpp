@@ -624,6 +624,7 @@ Win32DrawSoundBufferMarker(win32_offscreen_buffer *Backbuffer,
 internal void
 Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
                       int MarkerCount, win32_debug_time_marker *Markers,
+                      int CurrentMarkerIndex,
                       win32_sound_output *SoundOutput, real32 TargetSecondsPerFrame)
 {
     // Draw where sound is written
@@ -631,12 +632,21 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
     int PadX = 16;
     int PadY = 16;
 
-    int Top = PadY;
-    int Bottom = Backbuffer->Height - PadY;
+    int LineHeight = 64;
 
     real32 C = (real32)(Backbuffer->Width - 2*PadX) / (real32)SoundOutput->SecondaryBufferSize;
     for(int MarkerIndex = 0; MarkerIndex < MarkerCount; ++MarkerIndex)
     {
+        DWORD PlayColor = 0XFFFFFFFF;
+        DWORD WriteColor = 0XFFFF0000;
+
+        int Top = PadY;
+        int Bottom = PadY + LineHeight;
+        if(MarkerIndex == CurrentMarkerIndex)
+        {
+            Top += LineHeight + PadY;
+            Bottom += LineHeight + PadY;
+        }
         win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
         Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                    ThisMarker->PlayCursor, 0XFFFFFFFF);
@@ -1048,9 +1058,11 @@ WinMain(HINSTANCE Instance,
                     
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
 #if GAME_INTERNAL
+                    // TODO: Current is wrong on the zero'th element.
                     Win32DebugSyncDisplay(&GlobalBackbuffer,
                                           ArrayCount(DebugTimeMarkers),
                                           DebugTimeMarkers,
+                                          DebugTimeMarkerIndex - 1,
                                           &SoundOutput, TargetSecondsPerFrame);
 #endif
                     Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
