@@ -667,6 +667,7 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
         DWORD PlayColor = 0XFFFFFFFF;
         DWORD WriteColor = 0XFFFF0000;
         DWORD ExpectedFlipColor = 0XFFFFFF00;
+        DWORD PlayWindowColor = 0XFFFF00FF;
 
         int Top = PadY;
         int Bottom = PadY + LineHeight;
@@ -675,12 +676,12 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
             Top += LineHeight + PadY;
             Bottom += LineHeight + PadY;
 
+            int FirstTop = Bottom;
+
             Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                        ThisMarker->OutputPlayCursor, PlayColor);
             Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                        ThisMarker->OutputWriteCursor, WriteColor);
-            Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                       ThisMarker->ExpectedFlipPlayCursor, ExpectedFlipColor);
 
             Top += LineHeight + PadY;
             Bottom += LineHeight + PadY;
@@ -693,9 +694,15 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
 
             Top += LineHeight + PadY;
             Bottom += LineHeight + PadY;
+
+            Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, FirstTop, Bottom,
+                                       ThisMarker->ExpectedFlipPlayCursor, ExpectedFlipColor);
         }
+
         Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                    ThisMarker->FlipPlayCursor, PlayColor);
+        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
+                                   ThisMarker->FlipPlayCursor + 480*SoundOutput-.>BytesPerSample, PlayWindowColor);
         Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                    ThisMarker->FlipWriteCursor, WriteColor);
     }
@@ -807,6 +814,7 @@ WinMain(HINSTANCE Instance,
                 game_input *OldInput = &Input[1];
 
                 LARGE_INTEGER LastCounter = Win32GetWallClock();
+                LARGE_INTEGER FlipWallClock = Win32GetWallClock();
 
                 int DebugTimeMarkerIndex = 0;
                 win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {0};
@@ -954,6 +962,9 @@ WinMain(HINSTANCE Instance,
                         Buffer.Pitch = GlobalBackbuffer.Pitch;
                         GameUpdateAndRender(&GameMemory, NewInput, &Buffer);
 
+                        LARGE_INTEGER AudioWallClock = Win32GetWallClock();
+                        real32 FromBeginToAudioSeconds = Win32GetSecondsElapsed(FlipWallClock, AudioWallClock);
+
                         DWORD PlayCursor;
                         DWORD WriteCursor;
                         if(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
@@ -995,6 +1006,11 @@ WinMain(HINSTANCE Instance,
 
                             DWORD ExpectedSoundBytesPerFrame =
                                 (SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample) / GameUpdateHz;
+                            real32 SecondsLeftUntilFlip = (TargetSecondsPerFrame - FromBeginToAudioSeconds);
+                            DWORD ExpectedBytesUntilFlip =
+                                (DWORD)((SecondsLeftUntilFlip/TargetSecondsPerFrame) *
+                                (real32)ExpectedSoundBytesPerFrame);
+
                             DWORD ExpectedFrameBoundaryByte = PlayCursor + ExpectedSoundBytesPerFrame;
 
                             DWORD SafeWriteCursor = WriteCursor;
@@ -1118,7 +1134,7 @@ WinMain(HINSTANCE Instance,
 #endif
                         Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                    Dimension.Width, Dimension.Height);
-
+                        FlipWallClock = Win32GetWallClock();
 #if GAME_INTERNAL
                         {
                             DWORD PlayCursor;

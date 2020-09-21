@@ -1,5 +1,7 @@
 @echo off
 
+ctime -begin game.ctm
+
 set CommonCompilerFlags= -MT -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4459 -wd4456 -DGAME_INTERNAL=1 -DGAME_SLOW=1 -DGAME_WIN32=1 -FC -Z7 -Fmwin32_game.map
 set CommonLinkerFlags=  -opt:ref user32.lib gdi32.lib winmm.lib
 
@@ -12,3 +14,5 @@ REM cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link -subsystem:window
 REM 64-bit build
 cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link %CommonLinkerFlags%
 popd
+
+ctime -end game.ctm
