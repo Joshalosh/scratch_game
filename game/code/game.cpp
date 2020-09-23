@@ -16,6 +16,10 @@ GameOutputSound(game_sound_output_buffer *SoundBuffer, int ToneHz)
         *SampleOut++ = SampleValue;
 
         tSine += 2.0f*Pi32*1.0f/(real32)WavePeriod;
+        if(tSine > 2.0f*Pi32)
+        {
+            tSine -= 2.0f*Pi32;
+        }
     }
 }
 
@@ -57,7 +61,7 @@ GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffe
             DEBUGPlatformFreeFileMemory(File.Contents);
         }
 
-        GameState->ToneHz = 240;
+        GameState->ToneHz = 512;
 
         // TODO: May be better to do in the platform layer
         Memory->IsInitialised = true;
@@ -70,7 +74,7 @@ GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffe
         {
             // Use analogue movement tuning
             GameState->BlueOffset += (int)(4.0f*Controller->StickAverageX);
-            GameState->ToneHz = 240 + (int)(128.0f*(Controller->StickAverageY));
+            GameState->ToneHz = 512 + (int)(128.0f*(Controller->StickAverageY));
 
         }
         else

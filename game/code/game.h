@@ -10,6 +10,20 @@
     1 - Slow code
 */
 
+// TODO: Implement my own sine function
+#include <math.h>
+#include <stdint.h>
+
+#define internal static
+#define local_persist static
+#define global_variable static
+
+#define Pi32 3.14159265359f
+
+typedef int32_t bool32;
+typedef float real32;
+typedef double real64;
+
 #if GAME_SLOW
 #define Assert(Expression) if(!(Expression)) {*(int *) 0 = 0;}
 #else
