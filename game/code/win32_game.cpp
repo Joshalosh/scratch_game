@@ -58,7 +58,7 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
-internal debug_read_file_result
+debug_read_file_result
 DEBUGPlatformReadEntireFile(char *Filename)
 {
     debug_read_file_result Result = {};
@@ -106,7 +106,7 @@ DEBUGPlatformReadEntireFile(char *Filename)
     return(Result);
 }
 
-internal void
+void
 DEBUGPlatformFreeFileMemory(void *Memory)
 {
     if(Memory)
@@ -115,7 +115,7 @@ DEBUGPlatformFreeFileMemory(void *Memory)
     }
 }
 
-internal bool32
+bool32
 DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory)
 {
     bool32 Result = false;
@@ -139,6 +139,41 @@ DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory)
     else
     {
         // TODO: Logging
+    }
+
+    return(Result);
+}
+
+struct win32_game_code
+{
+    HMODULE GameCodeDLL; 
+    game_update_and_render *UpdateAndRender;
+    game_get_sound_samples *GetSoundSamples;
+
+    bool32 IsValid;
+};
+
+internal void
+Win32LoadGameCode(void)
+{
+    win32_game_code Result = {};
+
+    Result.UpdateAndRender = GameUpdateAndRenderStub;
+    Result.GetSoundSamples = GameGetSoundSamplesStub;
+    
+    Result.GameCodeDLL = LoadLibraryA("handmade.dll");
+    if(Result.GameCodeDLL)
+    {
+        Result.UpdateAndRender = (game_update_and_render *)
+            GetProcAddress(Result.GameCodeDLL, "GameUpdateAndRender");
+        Result.GetSoundSamples = (get_sound_samples *)
+            GetProcAddress(Result.GameCodeDLL, "GameGetSoundSamples");
+    }
+
+    if(Result.IsValid)
+    {
+        Result.UpdateAndRender = GameUpdateAndRenderStub;
+        Result.GetSoundSamples = GameGetSoundSamplesStub;
     }
 
     return(Result);
@@ -699,6 +734,8 @@ WinMain(HINSTANCE Instance,
         LPSTR CommandLine,
         int ShowCode)
 {
+    win32_game_code Game = Win32LoadGameCode();
+
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
     GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
@@ -945,7 +982,7 @@ WinMain(HINSTANCE Instance,
                         Buffer.Width = GlobalBackbuffer.Width;
                         Buffer.Height = GlobalBackbuffer.Height;
                         Buffer.Pitch = GlobalBackbuffer.Pitch;
-                        GameUpdateAndRender(&GameMemory, NewInput, &Buffer);
+                        Game.GameUpdateAndRender(&GameMemory, NewInput, &Buffer);
 
                         LARGE_INTEGER AudioWallClock = Win32GetWallClock();
                         real32 FromBeginToAudioSeconds = Win32GetSecondsElapsed(FlipWallClock, AudioWallClock);
@@ -1035,7 +1072,7 @@ WinMain(HINSTANCE Instance,
                             SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
                             SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
                             SoundBuffer.Samples = Samples;
-                            GameGetSoundSamples(&GameMemory, &SoundBuffer);
+                            Game.GameGetSoundSamples(&GameMemory, &SoundBuffer);
 #if GAME_INTERNAL
                             win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex];
                             Marker->OutputPlayCursor = PlayCursor;

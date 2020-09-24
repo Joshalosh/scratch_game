@@ -60,9 +60,9 @@ struct debug_read_file_result
     uint32_t ContentsSize;
     void *Contents;
 };
-internal debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
-internal void DEBUGPlatformFreeFileMemory(void *Memory);
-internal bool32 DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory);
+debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
+void DEBUGPlatformFreeFileMemory(void *Memory);
+bool32 DEBUGPlatformWriteEntireFile(char *Filename, uint32_t MemorySize, void *Memory);
 #endif
 
 /*
@@ -153,13 +153,22 @@ struct game_memory
     void *TransientStorage; // Required to be cleared to zero at startup
 };
 
-internal void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer);
+#define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
+{
+}
 
 // At the moment, this has to be a very fast function, it cannot be
 // more than a millisecond or so.
 // TODO: Reduce the pressure on this function's performance by measuring it
 // or asking about it, etc.
-internal void GameGetSoundSamples(game_memory *Memory, game_sound_output_buffer *SoundBuffer);
+
+#define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
+typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub)
+{
+}
 
 struct game_state
 {
