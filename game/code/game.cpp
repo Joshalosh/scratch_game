@@ -42,7 +42,7 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
     }
 }
 
-GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
+extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
            (ArrayCount(Input->Controllers[0].Buttons)));
@@ -100,8 +100,21 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     RenderWeirdGradient(Buffer, GameState->BlueOffset, GameState->GreenOffset);
 }
 
-GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
+extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     GameOutputSound(SoundBuffer, GameState->ToneHz);
 }
+
+#if GAME_WIN32
+#include "windows.h"
+BOOL WINAPI DllMain(
+    _In_ HINSTANCE hinstDll,
+    _In_ DWORD fdwReasson,
+    _In_ LPVOID lpvReserved
+                   )
+{
+    return(TRUE);
+}
+
+#endif

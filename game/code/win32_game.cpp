@@ -158,7 +158,7 @@ Win32LoadGameCode(void)
     Result.UpdateAndRender = GameUpdateAndRenderStub;
     Result.GetSoundSamples = GameGetSoundSamplesStub;
     
-    Result.GameCodeDLL = LoadLibraryA("handmade.dll");
+    Result.GameCodeDLL = LoadLibraryA("handmade.exe");
     if(Result.GameCodeDLL)
     {
         Result.UpdateAndRender = (game_update_and_render *)
@@ -170,13 +170,26 @@ Win32LoadGameCode(void)
                           Result.GetSoundSamples);
     }
 
-    if(Result.IsValid)
+    if(!Result.IsValid)
     {
         Result.UpdateAndRender = GameUpdateAndRenderStub;
         Result.GetSoundSamples = GameGetSoundSamplesStub;
     }
 
     return(Result);
+}
+
+internal void
+Win32UnloadGameCode(win32_game_code *GameCode)
+{
+    if(GameCode->GameCodeDLL)
+    {
+        FreeLibrary(GameCode->GameCodeDLL);
+    }
+
+    GameCode->IsValid = false;
+    GameCode-> UpdateAndRender = GameUpdateAndRenderStub;
+    GameCode->GetSoundSamples = GameGetSoundSamplesStub;
 }
 
 internal void
