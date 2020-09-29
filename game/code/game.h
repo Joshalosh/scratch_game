@@ -186,6 +186,8 @@ struct game_state
     int ToneHz;
     int GreenOffset;
     int BlueOffset;
+
+    real32 tSine;
 };
 
 #define GAME_H

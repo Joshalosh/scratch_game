@@ -155,10 +155,11 @@ Win32LoadGameCode(void)
 {
     win32_game_code Result = {};
 
-    Result.UpdateAndRender = GameUpdateAndRenderStub;
-    Result.GetSoundSamples = GameGetSoundSamplesStub;
-    
-    Result.GameCodeDLL = LoadLibraryA("handmade.exe");
+    //TODO: Need to get the proper path here.
+    //TOOD: Automatic determination of when updates are necessary.
+
+    CopyFile("game.dll", "game_temp.dll", FALSE);
+    Result.GameCodeDLL = LoadLibraryA("game_temp.dll");
     if(Result.GameCodeDLL)
     {
         Result.UpdateAndRender = (game_update_and_render *)
@@ -185,10 +186,11 @@ Win32UnloadGameCode(win32_game_code *GameCode)
     if(GameCode->GameCodeDLL)
     {
         FreeLibrary(GameCode->GameCodeDLL);
+        GameCode->GameCodeDLL = 0;
     }
 
     GameCode->IsValid = false;
-    GameCode-> UpdateAndRender = GameUpdateAndRenderStub;
+    GameCode->UpdateAndRender = GameUpdateAndRenderStub;
     GameCode->GetSoundSamples = GameGetSoundSamplesStub;
 }
 
@@ -747,8 +749,6 @@ WinMain(HINSTANCE Instance,
         LPSTR CommandLine,
         int ShowCode)
 {
-    win32_game_code Game = Win32LoadGameCode();
-
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
     GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
@@ -861,9 +861,19 @@ WinMain(HINSTANCE Instance,
                 real32 AudioLatencySeconds = 0;
                 bool32 SoundIsValid = false;
 
+                win32_game_code Game = Win32LoadGameCode();
+                uint32_t LoadCounter = 0;
+
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
+                    if(LoadCounter++ > 120)
+                    {
+                        Win32UnloadGameCode(&Game);
+                        Game = Win32LoadGameCode();
+                        LoadCounter = 0;
+                    }
+
                     // TODO: Zeroing macro
                     // TODO: We can't zero everything because the up/down state will be
                     // wrong
@@ -1212,6 +1222,7 @@ WinMain(HINSTANCE Instance,
                         }
 #endif
                     }
+                    
                 }
             }
             else
