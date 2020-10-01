@@ -141,25 +141,37 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
     return(Result);
 }
 
-struct win32_game_code
+inline FILETIME
+Win32GetLastWriteTime(char *Filename)
 {
-    HMODULE GameCodeDLL; 
-    game_update_and_render *UpdateAndRender;
-    game_get_sound_samples *GetSoundSamples;
+    FILETIME LastWriteTime = {};
 
-    bool32 IsValid;
-};
+    WIN32_FIND_DATA FindData;
+    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
+    if(FindHandle != INVALID_HANDLE_VALUE)
+    {
+        LastWriteTime = FindData.ftLastWriteTime;
+        FindClose(FindHandle);
+    }
+
+    return(LastWriteTime);
+}
 
 internal win32_game_code
-Win32LoadGameCode(void)
+Win32LoadGameCode(char *SourceDLLName)
 {
     win32_game_code Result = {};
 
     //TODO: Need to get the proper path here.
     //TOOD: Automatic determination of when updates are necessary.
 
-    CopyFile("game.dll", "game_temp.dll", FALSE);
-    Result.GameCodeDLL = LoadLibraryA("game_temp.dll");
+    char *TempDLLName = "game_temp.dll";
+
+    Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);
+
+    CopyFile(SourceDLLName, TempDLLName, FALSE);
+    
+    Result.GameCodeDLL = LoadLibraryA(TempDLLName);
     if(Result.GameCodeDLL)
     {
         Result.UpdateAndRender = (game_update_and_render *)
@@ -861,17 +873,17 @@ WinMain(HINSTANCE Instance,
                 real32 AudioLatencySeconds = 0;
                 bool32 SoundIsValid = false;
 
-                win32_game_code Game = Win32LoadGameCode();
-                uint32_t LoadCounter = 0;
+                char *SourceDLLName = "game.dll";
+                win32_game_code Game = Win32LoadGameCode(SourceDLLName);
 
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
-                    if(LoadCounter++ > 120)
+                    FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
+                    if(CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime) != 0)
                     {
                         Win32UnloadGameCode(&Game);
-                        Game = Win32LoadGameCode();
-                        LoadCounter = 0;
+                        Game = Win32LoadGameCode(SourceDLLName);
                     }
 
                     // TODO: Zeroing macro
