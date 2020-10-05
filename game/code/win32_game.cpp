@@ -758,6 +758,18 @@ CatStrings(size_t SourceACount, char *SourceA,
            size_t SourceBCount, char *SourceB,
            size_t DestCount, char *Dest)
 {
+    // TODO: Dest bounds checking.
+    for(int Index = 0; Index < SourceACount; ++Index)
+    {
+        *Dest++ = *SourceA++;
+    }
+
+    for(int Index = 0; Index < SourceBCount; ++Index)
+    {
+        *Dest++ = *SourceB++;
+    }
+
+    *Dest++ = 0;
 }
 
 int CALLBACK
@@ -782,13 +794,13 @@ WinMain(HINSTANCE Instance,
     char SourceGameCodeDLLFilename[] = "game.dll";
     char SourceGameCodeDLLFullPath[MAX_PATH];
     CatStrings(OnePastLastSlash - EXEFilename, EXEFilename,
-               sizeof(SourceGameCodeDLLFilename), SourceGameCodeDLLFilename,
+               sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename,
                sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
     
     char TempGameCodeDLLFilename[] = "game_temp.dll";
     char TempGameCodeDLLFullPath[MAX_PATH];
     CatStrings(OnePastLastSlash - EXEFilename, EXEFilename,
-               sizeof(TempGameCodeDLLFilename), TempGameCodeDLLFilename,
+               sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename,
                sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
 
 
