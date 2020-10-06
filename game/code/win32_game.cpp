@@ -654,7 +654,7 @@ internal void
 Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
                        int X, int Top, int Bottom, uint32_t Colour)
 {
-    if(Top <=0)
+    if(Top <= 0)
     {
         Top = 0;
     }
@@ -709,10 +709,10 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
         Assert(ThisMarker->FlipPlayCursor < SoundOutput->SecondaryBufferSize);
         Assert(ThisMarker->FlipWriteCursor < SoundOutput->SecondaryBufferSize);
 
-        DWORD PlayColor = 0XFFFFFFFF;
-        DWORD WriteColor = 0XFFFF0000;
-        DWORD ExpectedFlipColor = 0XFFFFFF00;
-        DWORD PlayWindowColor = 0XFFFF00FF;
+        DWORD PlayColor = 0xFFFFFFFF;
+        DWORD WriteColor = 0xFFFF0000;
+        DWORD ExpectedFlipColor = 0xFFFFFF00;
+        DWORD PlayWindowColor = 0xFFFF00FF;
 
         int Top = PadY;
         int Bottom = PadY + LineHeight;
@@ -1064,6 +1064,7 @@ WinMain(HINSTANCE Instance,
                         Buffer.Width = GlobalBackbuffer.Width;
                         Buffer.Height = GlobalBackbuffer.Height;
                         Buffer.Pitch = GlobalBackbuffer.Pitch;
+                        Buffer.BytesPerPixel = GlobalBackbuffer.BytesPerPixel;
                         Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
 
                         LARGE_INTEGER AudioWallClock = Win32GetWallClock();
