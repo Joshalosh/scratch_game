@@ -50,5 +50,10 @@ struct win32_game_code
     bool32 IsValid;
 };
 
+struct win32_state
+{
+    int InputRecordingIndex;
+    int InputPlayingIndex;
+};
 #define WIN32_GAME_H
 #endif

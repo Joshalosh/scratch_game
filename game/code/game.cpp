@@ -9,8 +9,12 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
     int16_t *SampleOut = SoundBuffer->Samples; 
     for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
     {
+#if 0
         real32 SineValue = sinf(GameState->tSine);
         int16_t SampleValue = (int16_t)(SineValue * ToneVolume);
+#else
+        int16_t SampleValue = 0;
+#endif
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
 
@@ -44,6 +48,10 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
 internal void
 RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
 {
+    uint8_t *EndOfBuffer = (uint8_t *)Buffer->Memory + 
+        Buffer->BytesPerPixel*Buffer->Width + 
+        Buffer->Pitch*Buffer->Height;
+
     uint32_t Colour = 0xFFFFFFFF;
     int Top = PlayerY;
     int Bottom = PlayerY+10;
@@ -54,8 +62,12 @@ RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
                           Top*Buffer->Pitch);
         for(int Y = Top; Y < Bottom; ++Y);
         {
-            *(uint32_t *)Pixel = Colour;
-            Pixel += Buffer->Pitch;
+            if((Pixel >= Buffer->Memory) &&
+               (Pixel < EndOfBuffer))
+            {
+                *(uint32_t *)Pixel = Colour;
+                Pixel += Buffer->Pitch;
+            }
         }
     }
 }
@@ -114,13 +126,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // Input.AButtonEndedDown
         // Input.AButtonHalfTransitionCount
-        if(Controller->ActionDown.EndedDown)
-        {
-            GameState->GreenOffset += 1;
-        }
 
         GameState->PlayerX += (int)(4.0f*Controller->StickAverageX);
-        GameState->PlayerY -= (int)(4.0f*Controller->StickAverageX);
+        GameState->PlayerY -= (int)(4.0f*Controller->StickAverageY);
+        if(Controller->ActionDown.EndedDown)
+        {
+            GameState->PlayerY -= 10;
+        }
     }
 
     RenderWeirdGradient(Buffer, GameState->BlueOffset, GameState->GreenOffset);

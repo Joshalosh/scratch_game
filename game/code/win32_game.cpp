@@ -536,7 +536,7 @@ Win32ProcessXInputStickValue(SHORT Value, SHORT DeadZoneThreshold)
 }
 
 internal void
-Win32ProcessPendingMessages(game_controller_input *KeyboardController)
+Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *KeyboardController)
 {
     MSG Message;
     while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
@@ -612,6 +612,18 @@ Win32ProcessPendingMessages(game_controller_input *KeyboardController)
                         if(IsDown)
                         {
                             GlobalPause = !GlobalPause;
+                        }
+                    }
+                    else if(VKCode == 'L')
+                    {
+                        if(Win32State->InputRecordingIndex == 0)
+                        {
+                            Win32State->InputRecordingIndex = 1;
+                        }
+                        else
+                        {
+                            Win32State->InputRecordingIndex = 0;
+                            Win32State->InputPlayingIndex = 1;
                         }
                     }
 #endif
@@ -861,6 +873,7 @@ WinMain(HINSTANCE Instance,
             Win32ClearBuffer(&SoundOutput);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
+            win32_state Win32State = {};
             GlobalRunning = true;
 
 #if 0

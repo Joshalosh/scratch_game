@@ -192,6 +192,7 @@ struct game_state
 
     int PlayerX;
     int PlayerY;
+    real32 tJump;
 };
 
 #define GAME_H
