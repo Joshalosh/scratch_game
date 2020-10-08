@@ -52,7 +52,10 @@ struct win32_game_code
 
 struct win32_state
 {
+    HANDLE RecordingHandle;
     int InputRecordingIndex;
+
+    HANDLE PlaybackHandle;
     int InputPlayingIndex;
 };
 #define WIN32_GAME_H

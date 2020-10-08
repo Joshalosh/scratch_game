@@ -536,6 +536,59 @@ Win32ProcessXInputStickValue(SHORT Value, SHORT DeadZoneThreshold)
 }
 
 internal void
+Win32BeginRecordingInput(win32_state *Win32State, int InputRecordingIndex)
+{
+    Win32State->InputRecordingIndex = InputRecordingIndex;
+
+    char *Filename = "foo.gi";
+    Win32State->RecordingHandle = 
+        CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+}
+
+internal void
+Win32EndRecordingInput(win32_state *Win32State)
+{
+    CloseHandle(Win32State->RecordingHandle);
+    Win32State->InputRecordingIndex = 0;
+}
+
+internal void
+Win32BeginInputPlayback(win32_state *Win32State, int InputPlayingIndex)
+{
+    Win32State->InputPlayingIndex = InputPlayingIndex;
+
+    char *Filename = "foo.gi";
+    Win32State->PlaybackHandle = 
+        CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+}
+
+internal void
+Win32EndInputPlayback(win32_state *Win32State)
+{
+    CloseHandle(Win32State->PlaybackHandle);
+    Win32State->InputPlayingIndex = 0;
+}
+
+internal void
+Win32RecordInput(win32_state *Win32State, game_input *NewInput)
+{
+    DWORD BytesWritten;
+    WriteFile(Win32State->RecordingHandle, NewInput, sizeof(*NewInput), &BytesWritten, 0);
+}
+
+internal void
+Win32PlaybackInput(win32_state *Win32State, game_input *NewInput)
+{
+    DWORD BytesRead;
+    if(ReadFile(Win32State->PlaybackHandle, NewInput, sizeof(*NewInput), &BytesRead, 0))
+    {
+        int PlayingIndex = Win32State->InputPlayingIndex;
+        Win32EndInputPlayback(Win32State);
+        Win32BeginInputPlayback(Win32State, PlayingIndex);
+    }
+}
+
+internal void
 Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *KeyboardController)
 {
     MSG Message;
@@ -618,12 +671,12 @@ Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *Keyb
                     {
                         if(Win32State->InputRecordingIndex == 0)
                         {
-                            Win32State->InputRecordingIndex = 1;
+                            Win32BeginRecordingInput(Win32State, 1);
                         }
                         else
                         {
-                            Win32State->InputRecordingIndex = 0;
-                            Win32State->InputPlayingIndex = 1;
+                            Win32EndRecordingInput(Win32State);
+                            Win32BeginInputPlayback(Win32State, 1);
                         }
                     }
 #endif
@@ -958,7 +1011,7 @@ WinMain(HINSTANCE Instance,
                             OldKeyboardController->Buttons[ButtonIndex].EndedDown;
                     }
 
-                    Win32ProcessPendingMessages(NewKeyboardController);
+                    Win32ProcessPendingMessages(&Win32State, NewKeyboardController);
 
                     if(!GlobalPause)
                     {
@@ -1078,6 +1131,17 @@ WinMain(HINSTANCE Instance,
                         Buffer.Height = GlobalBackbuffer.Height;
                         Buffer.Pitch = GlobalBackbuffer.Pitch;
                         Buffer.BytesPerPixel = GlobalBackbuffer.BytesPerPixel;
+
+                        if(Win32State.InputRecordingIndex)
+                        {
+                            Win32RecordInput(&Win32State, NewInput);
+                        }
+
+                        if(Win32State.InputPlayingIndex)
+                        {
+                            Win32PlaybackInput(&Win32State, NewInput);
+                        }
+
                         Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
 
                         LARGE_INTEGER AudioWallClock = Win32GetWallClock();
