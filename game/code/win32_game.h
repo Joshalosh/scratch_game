@@ -52,6 +52,9 @@ struct win32_game_code
 
 struct win32_state
 {
+    uint64_t TotalSize;
+    void *GameMemoryBlock;
+
     HANDLE RecordingHandle;
     int InputRecordingIndex;
 

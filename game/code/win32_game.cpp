@@ -582,6 +582,11 @@ Win32PlaybackInput(win32_state *Win32State, game_input *NewInput)
     DWORD BytesRead;
     if(ReadFile(Win32State->PlaybackHandle, NewInput, sizeof(*NewInput), &BytesRead, 0))
     {
+        // There's still input.
+    }
+    else
+    {
+        // Hit the end of stream, go back to the beginning.
         int PlayingIndex = Win32State->InputPlayingIndex;
         Win32EndInputPlayback(Win32State);
         Win32BeginInputPlayback(Win32State, PlayingIndex);
@@ -669,14 +674,17 @@ Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *Keyb
                     }
                     else if(VKCode == 'L')
                     {
-                        if(Win32State->InputRecordingIndex == 0)
+                        if(IsDown)
                         {
-                            Win32BeginRecordingInput(Win32State, 1);
-                        }
-                        else
-                        {
-                            Win32EndRecordingInput(Win32State);
-                            Win32BeginInputPlayback(Win32State, 1);
+                            if(Win32State->InputRecordingIndex == 0)
+                            {
+                                Win32BeginRecordingInput(Win32State, 1);
+                            }
+                            else
+                            {
+                                Win32EndRecordingInput(Win32State);
+                                Win32BeginInputPlayback(Win32State, 1);
+                            }
                         }
                     }
 #endif
@@ -960,9 +968,10 @@ WinMain(HINSTANCE Instance,
             GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
             GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
 
-            uint64_t TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
-            GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, (size_t)TotalSize,
-                                                       MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            Win32State.TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
+            Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
+                                                      MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
             GameMemory.TransientStorage = ((uint8_t *)GameMemory.PermanentStorage +
                                            GameMemory.PermanentStorageSize);
 
