@@ -543,6 +543,11 @@ Win32BeginRecordingInput(win32_state *Win32State, int InputRecordingIndex)
     char *Filename = "foo.gi";
     Win32State->RecordingHandle = 
         CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+
+    DWORD BytesToWrite = (DWORD)Win32State->TotalSize;
+    Assert(Win32State->TotalSize == BytesToWrite);
+    DWORD BytesWritten;
+    WriteFile(Win32State->RecordingHandle, Win32State->GameMemoryBlock, BytesToWrite, &BytesWritten, 0);
 }
 
 internal void
@@ -560,6 +565,11 @@ Win32BeginInputPlayback(win32_state *Win32State, int InputPlayingIndex)
     char *Filename = "foo.gi";
     Win32State->PlaybackHandle = 
         CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+    DWORD BytesToRead = (DWORD)Win32State->TotalSize;
+    Assert(Win32State->TotalSize == BytesToRead);
+    DWORD BytesRead;
+    ReadFile(Win32State->PlaybackHandle, Win32State->GameMemoryBlock, BytesToRead, &BytesRead, 0);
 }
 
 internal void
@@ -579,17 +589,16 @@ Win32RecordInput(win32_state *Win32State, game_input *NewInput)
 internal void
 Win32PlaybackInput(win32_state *Win32State, game_input *NewInput)
 {
-    DWORD BytesRead;
+    DWORD BytesRead = 0;
     if(ReadFile(Win32State->PlaybackHandle, NewInput, sizeof(*NewInput), &BytesRead, 0))
     {
-        // There's still input.
-    }
-    else
-    {
-        // Hit the end of stream, go back to the beginning.
-        int PlayingIndex = Win32State->InputPlayingIndex;
-        Win32EndInputPlayback(Win32State);
-        Win32BeginInputPlayback(Win32State, PlayingIndex);
+        if(BytesRead == 0)
+        {
+            // Hit the end of stream, go back to the beginning.
+            int PlayingIndex = Win32State->InputPlayingIndex;
+            Win32EndInputPlayback(Win32State);
+            Win32BeginInputPlayback(Win32State, PlayingIndex);
+        }
     }
 }
 

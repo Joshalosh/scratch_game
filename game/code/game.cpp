@@ -129,9 +129,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->PlayerX += (int)(4.0f*Controller->StickAverageX);
         GameState->PlayerY -= (int)(4.0f*Controller->StickAverageY);
+        if(GameState->tJump > 0)
+        {
+            GameState->PlayerY += (int)(10.0f*sinf(Pi32*GameState->tJump));
+        }
         if(Controller->ActionDown.EndedDown)
         {
-            GameState->PlayerY -= 10;
+            GameState->PlayerY = (int)2.0;
         }
     }
 
