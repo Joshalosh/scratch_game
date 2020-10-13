@@ -48,9 +48,7 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
 internal void
 RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
 {
-    uint8_t *EndOfBuffer = (uint8_t *)Buffer->Memory + 
-        Buffer->BytesPerPixel*Buffer->Width + 
-        Buffer->Pitch*Buffer->Height;
+    uint8_t *EndOfBuffer = (uint8_t *)Buffer->Memory + Buffer->Pitch*Buffer->Height;
 
     uint32_t Colour = 0xFFFFFFFF;
     int Top = PlayerY;
@@ -63,11 +61,12 @@ RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
         for(int Y = Top; Y < Bottom; ++Y);
         {
             if((Pixel >= Buffer->Memory) &&
-               (Pixel < EndOfBuffer))
+               ((Pixel + 4) <= EndOfBuffer))
             {
                 *(uint32_t *)Pixel = Colour;
-                Pixel += Buffer->Pitch;
             }
+
+            Pixel += Buffer->Pitch;
         }
     }
 }
@@ -131,11 +130,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerY -= (int)(4.0f*Controller->StickAverageY);
         if(GameState->tJump > 0)
         {
-            GameState->PlayerY += (int)(10.0f*sinf(Pi32*GameState->tJump));
+            GameState->PlayerY += (int)(5.0f*sinf(0.5f*Pi32*GameState->tJump));
         }
         if(Controller->ActionDown.EndedDown)
         {
-            GameState->PlayerY = (int)2.0;
+            GameState->PlayerY = (int)4.0;
         }
     }
 

@@ -400,7 +400,14 @@ Win32MainWindowCallback(HWND Window,
  
         case WM_ACTIVATEAPP:
         {
-            OutputDebugStringA("WM_ACTIVATEAPP\n");
+            if(WParam == TRUE)
+            {
+                SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 255, LWA_ALPHA);
+            }
+            else
+            {
+                SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 64, LWA_ALPHA);
+            }
         } break;
 
         case WM_DESTROY:
@@ -598,6 +605,7 @@ Win32PlaybackInput(win32_state *Win32State, game_input *NewInput)
             int PlayingIndex = Win32State->InputPlayingIndex;
             Win32EndInputPlayback(Win32State);
             Win32BeginInputPlayback(Win32State, PlayingIndex);
+            ReadFile(Win32State->PlaybackHandle, NewInput, sizeof(*NewInput), &BytesRead, 0);
         }
     }
 }
@@ -901,7 +909,7 @@ WinMain(HINSTANCE Instance,
 
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
 
-    WindowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
+    WindowClass.style = CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = Instance;
 //  WindowClass.hIcon;
@@ -914,7 +922,7 @@ WinMain(HINSTANCE Instance,
     {
         HWND Window =
             CreateWindowExA(
-                0,
+                WS_EX_TOPMOST|WS_EX_LAYERED,
                 WindowClass.lpszClassName,
                 "Game",
                 WS_OVERLAPPEDWINDOW|WS_VISIBLE,
@@ -928,7 +936,6 @@ WinMain(HINSTANCE Instance,
                 0);
         if(Window)
         {
-            HDC DeviceContext = GetDC(Window);
             win32_sound_output SoundOutput = {};
 
             SoundOutput.SamplesPerSecond = 48000;
@@ -1332,8 +1339,11 @@ WinMain(HINSTANCE Instance,
                                               DebugTimeMarkerIndex - 1,
                                               &SoundOutput, TargetSecondsPerFrame);
 #endif
+                        HDC DeviceContext = GetDC(Window);
                         Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                    Dimension.Width, Dimension.Height);
+                        ReleaseDC(Window, DeviceContext);
+
                         FlipWallClock = Win32GetWallClock();
 #if GAME_INTERNAL
                         {
