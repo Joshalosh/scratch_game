@@ -629,6 +629,9 @@ Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *Keyb
             case WM_KEYUP:
             {
                 uint32_t VKCode = (uint32_t)Message.wParam;
+                // Comparing WasDown to IsDown needs to use
+                // == and != to convert these but tests to 
+                // actual 0 or 1 values.
                 bool32 WasDown = ((Message.lParam & (1 << 30)) != 0);
                 bool32 IsDown = ((Message.lParam & (1 << 31)) == 0);
                 if(WasDown != IsDown)
@@ -1061,6 +1064,7 @@ WinMain(HINSTANCE Instance,
                             if(XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
                             {
                                 NewController->IsConnected = true;
+                                NewController->IsAnalogue = OldController->IsAnalogue;
 
                                 // NOTE: This controller is plugged in
                                 // TODO: See if ControllerState.dwPacketNumber increments too rapidly
@@ -1218,7 +1222,7 @@ WinMain(HINSTANCE Instance,
                                 (DWORD)((SecondsLeftUntilFlip/TargetSecondsPerFrame) *
                                 (real32)ExpectedSoundBytesPerFrame);
 
-                            DWORD ExpectedFrameBoundaryByte = PlayCursor + ExpectedSoundBytesPerFrame;
+                            DWORD ExpectedFrameBoundaryByte = PlayCursor + ExpectedBytesUntilFlip;
 
                             DWORD SafeWriteCursor = WriteCursor;
                             if(SafeWriteCursor < PlayCursor)
