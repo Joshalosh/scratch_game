@@ -201,12 +201,10 @@ Win32GetLastWriteTime(char *Filename)
 {
     FILETIME LastWriteTime = {};
 
-    WIN32_FIND_DATA FindData;
-    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
-    if(FindHandle != INVALID_HANDLE_VALUE)
+    WIN32_FILE_ATTRIBUTE_DATA Data;
+    if(GetFileAttributesEx(Filename, GetFileExInfoStandard, &Data))
     {
-        LastWriteTime = FindData.ftLastWriteTime;
-        FindClose(FindHandle);
+        LastWriteTime = Data.ftLastWriteTime;
     }
 
     return(LastWriteTime);
@@ -238,8 +236,8 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
 
     if(!Result.IsValid)
     {
-        Result.UpdateAndRender = GameUpdateAndRenderStub;
-        Result.GetSoundSamples = GameGetSoundSamplesStub;
+        Result.UpdateAndRender = 0;
+        Result.GetSoundSamples = 0;
     }
 
     return(Result);
@@ -255,8 +253,8 @@ Win32UnloadGameCode(win32_game_code *GameCode)
     }
 
     GameCode->IsValid = false;
-    GameCode->UpdateAndRender = GameUpdateAndRenderStub;
-    GameCode->GetSoundSamples = GameGetSoundSamplesStub;
+    GameCode->UpdateAndRender = 0;
+    GameCode->GetSoundSamples = 0;
 }
 
 internal void
@@ -450,6 +448,7 @@ Win32MainWindowCallback(HWND Window,
  
         case WM_ACTIVATEAPP:
         {
+#if 0
             if(WParam == TRUE)
             {
                 SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 255, LWA_ALPHA);
@@ -458,6 +457,7 @@ Win32MainWindowCallback(HWND Window,
             {
                 SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 64, LWA_ALPHA);
             }
+#endif
         } break;
 
         case WM_DESTROY:
@@ -628,7 +628,9 @@ Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
 {
     State->InputPlayingIndex = InputPlayingIndex;
 
-    char *Filename = "foo.gi";
+    char Filename[WIN32_STATE_FILE_NAME_COUNT];
+    Win32GetInputFileLocation(State, InputPlayingIndex, sizeof(Filename), Filename);
+
     State->PlaybackHandle = 
         CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
 
@@ -951,7 +953,7 @@ WinMain(HINSTANCE Instance,
     {
         HWND Window =
             CreateWindowExA(
-                WS_EX_TOPMOST|WS_EX_LAYERED,
+                0, // WS_EX_TOPMOST|WS_EX_LAYERED,
                 WindowClass.lpszClassName,
                 "Game",
                 WS_OVERLAPPEDWINDOW|WS_VISIBLE,
@@ -1196,7 +1198,10 @@ WinMain(HINSTANCE Instance,
                             Win32PlaybackInput(&Win32State, NewInput);
                         }
 
-                        Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
+                        if(Game.UpdateAndRender)
+                        {
+                            Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
+                        }
 
                         LARGE_INTEGER AudioWallClock = Win32GetWallClock();
                         real32 FromBeginToAudioSeconds = Win32GetSecondsElapsed(FlipWallClock, AudioWallClock);
@@ -1286,7 +1291,10 @@ WinMain(HINSTANCE Instance,
                             SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
                             SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
                             SoundBuffer.Samples = Samples;
-                            Game.GetSoundSamples(&GameMemory, &SoundBuffer);
+                            if(Game.GetSoundSamples)
+                            {
+                                Game.GetSoundSamples(&GameMemory, &SoundBuffer);
+                            }
 #if GAME_INTERNAL
                             win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex];
                             Marker->OutputPlayCursor = PlayCursor;
