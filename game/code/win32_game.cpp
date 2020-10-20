@@ -144,7 +144,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
                 }
                 else
                 {
-                    DEBUGPlatformFreeFileMemory(Result.Contents);
+                    DEBUGPlatformFreeFileMemory(Thread, Result.Contents);
                     Result.Contents = 0;
                 }
             }
@@ -946,9 +946,6 @@ WinMain(HINSTANCE Instance,
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 
-#define MonitorRefreshHz 60
-#define GameUpdateHz (MonitorRefreshHz / 2)
-    real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
     if(RegisterClassA(&WindowClass))
     {
         HWND Window =
@@ -969,14 +966,24 @@ WinMain(HINSTANCE Instance,
         {
             win32_sound_output SoundOutput = {};
 
+            int MonitorRefreshHz = 60;
+            HDC RefreshDC = GetDC(Window);
+            int Win32RefreshRate = GetDeviceCaps(RefreshDC, VREFRESH);
+            ReleaseDC(Window, RefreshDC);
+            if(Win32RefreshRate > 1)
+            {
+                MonitorRefreshHz = Win32RefreshRate;
+            }
+            real32 GameUpdateHz = (MonitorRefreshHz / 2.0f);
+            real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
+
             SoundOutput.SamplesPerSecond = 48000;
             SoundOutput.BytesPerSample = sizeof(int16_t)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
-            // TODO: Get rid of LatencySampleCount
-            SoundOutput.LatencySampleCount = 3*(SoundOutput.SamplesPerSecond / GameUpdateHz);
             // TODO: Actually compute this variance and see
             // what the lowest reasonable value is.
-            SoundOutput.SafetyBytes = (SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample / GameUpdateHz)/3;
+            SoundOutput.SafetyBytes = (int)(((real32)SoundOutput.SamplesPerSecond *
+                                      (real32)SoundOutput.BytesPerSample / GameUpdateHz) / 3.0f);
             Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
             Win32ClearBuffer(&SoundOutput);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
@@ -1031,7 +1038,7 @@ WinMain(HINSTANCE Instance,
                 LARGE_INTEGER FlipWallClock = Win32GetWallClock();
 
                 int DebugTimeMarkerIndex = 0;
-                win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {0};
+                win32_debug_time_marker DebugTimeMarkers[30] = {0};
 
                 DWORD AudioLatencyBytes = 0;
                 real32 AudioLatencySeconds = 0;
@@ -1070,6 +1077,15 @@ WinMain(HINSTANCE Instance,
 
                     if(!GlobalPause)
                     {
+                        POINT MouseP;
+                        GetCursorPos(&MouseP);
+                        NewInput->MouseX = MouseP.x;
+                        NewInput->MouseY = MouseP.y;
+                        NewInput->MouseZ = 0;
+//                        NewInput->MouseButtons[0];
+ //                       NewInput->MouseButtons[1];
+  //                      NewInput->MouseButtons[2];
+
                         // TODO: Need to not poll disconnected controllers to avoid
                         // xinput frame rate hit on older libraries
                         // TODO: Should I poll this more freqently?
@@ -1180,6 +1196,7 @@ WinMain(HINSTANCE Instance,
                                 NewController->IsConnected = false;
                             }
                         }
+                        thread_context Thread = {};
 
                         game_offscreen_buffer Buffer = {};
                         Buffer.Memory = GlobalBackbuffer.Memory;
@@ -1200,7 +1217,7 @@ WinMain(HINSTANCE Instance,
 
                         if(Game.UpdateAndRender)
                         {
-                            Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
+                            Game.UpdateAndRender(&Thread, &GameMemory, NewInput, &Buffer);
                         }
 
                         LARGE_INTEGER AudioWallClock = Win32GetWallClock();
@@ -1245,8 +1262,8 @@ WinMain(HINSTANCE Instance,
                             DWORD ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
                                                 SoundOutput.SecondaryBufferSize);
 
-                            DWORD ExpectedSoundBytesPerFrame =
-                                (SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample) / GameUpdateHz;
+                            DWORD ExpectedSoundBytesPerFrame = (int)((real32)(SoundOutput.SamplesPerSecond *
+                                                               SoundOutput.BytesPerSample) / GameUpdateHz);
                             real32 SecondsLeftUntilFlip = (TargetSecondsPerFrame - FromBeginToAudioSeconds);
                             DWORD ExpectedBytesUntilFlip =
                                 (DWORD)((SecondsLeftUntilFlip/TargetSecondsPerFrame) *
@@ -1293,7 +1310,7 @@ WinMain(HINSTANCE Instance,
                             SoundBuffer.Samples = Samples;
                             if(Game.GetSoundSamples)
                             {
-                                Game.GetSoundSamples(&GameMemory, &SoundBuffer);
+                                Game.GetSoundSamples(&Thread, &GameMemory, &SoundBuffer);
                             }
 #if GAME_INTERNAL
                             win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex];
