@@ -561,9 +561,11 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
 internal void
 Win32ProcessKeyboardMessage(game_button_state *NewState, bool32 IsDown)
 {
-    Assert(NewState->EndedDown != IsDown);
-    NewState->EndedDown = IsDown;
-    ++NewState->HalfTransitionCount;
+    if(NewState->EndedDown != IsDown)
+    {
+        NewState->EndedDown = IsDown;
+        ++NewState->HalfTransitionCount;
+    }
 }
 
 internal void
@@ -1079,12 +1081,20 @@ WinMain(HINSTANCE Instance,
                     {
                         POINT MouseP;
                         GetCursorPos(&MouseP);
+                        ScreenToClient(Window, &MouseP);
                         NewInput->MouseX = MouseP.x;
                         NewInput->MouseY = MouseP.y;
-                        NewInput->MouseZ = 0;
-//                        NewInput->MouseButtons[0];
- //                       NewInput->MouseButtons[1];
-  //                      NewInput->MouseButtons[2];
+                        NewInput->MouseZ = 0; //TODO: Support mousewheel.
+                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[0],
+                                                   GetKeyState(VK_LBUTTON) & (1 << 15));
+                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[1],
+                                                   GetKeyState(VK_MBUTTON) & (1 << 15));
+                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[2],
+                                                   GetKeyState(VK_RBUTTON) & (1 << 15));
+                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[3],
+                                                   GetKeyState(VK_XBUTTON1) & (1 << 15));
+                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[4],
+                                                   GetKeyState(VK_XBUTTON2) & (1 << 15));
 
                         // TODO: Need to not poll disconnected controllers to avoid
                         // xinput frame rate hit on older libraries

@@ -142,6 +142,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
 
     RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
+
+    for(int ButtonIndex = 0; ButtonIndex < ArrayCount(Input->MouseButtons); ++ButtonIndex)
+    {
+        if(Input->MouseButtons[ButtonIndex].EndedDown)
+        {
+            RenderPlayer(Buffer, 10 + 20*ButtonIndex, 10);
+        }
+    }
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
