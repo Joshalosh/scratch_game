@@ -601,21 +601,34 @@ Win32GetInputFileLocation(win32_state *State, int SlotIndex, int DestCount, char
     Win32BuildEXEPathFilename(State, "loop_edit.gi", DestCount, Dest);
 }
 
+internal win32_replay_buffer *
+Win32GetReplayBuffer(win32_state *State, int unsigned Index)
+{
+    Assert(Index < ArrayCount(State->ReplayBuffers));
+    win32_replay_buffer *Result = &State->ReplayBuffers[Index];
+    return(Result);
+}
+
 internal void
 Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
 {
-    State->InputRecordingIndex = InputRecordingIndex;
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);
+    if(ReplayBuffer->MemoryBlock)
+    {
+        State->InputRecordingIndex = InputRecordingIndex;
 
-    char Filename[WIN32_STATE_FILE_NAME_COUNT];
-    Win32GetInputFileLocation(State, InputRecordingIndex, sizeof(Filename), Filename);
+        char Filename[WIN32_STATE_FILE_NAME_COUNT];
+        Win32GetInputFileLocation(State, InputRecordingIndex, sizeof(Filename), Filename);
 
-    State->RecordingHandle = 
-        CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+        State->RecordingHandle = 
+            CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
 
-    DWORD BytesToWrite = (DWORD)State->TotalSize;
-    Assert(State->TotalSize == BytesToWrite);
-    DWORD BytesWritten;
-    WriteFile(State->RecordingHandle, State->GameMemoryBlock, BytesToWrite, &BytesWritten, 0);
+    //    WriteFile(State->RecordingHandle, State->GameMemoryBlock, BytesToWrite, &BytesWritten, 0);
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+        CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
+    }
 }
 
 internal void
@@ -1029,6 +1042,20 @@ WinMain(HINSTANCE Instance,
             GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
             GameMemory.TransientStorage = ((uint8_t *)GameMemory.PermanentStorage +
                                            GameMemory.PermanentStorageSize);
+
+            for(int ReplayIndex = 0; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
+            {
+                 win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
+                 ReplayBuffer->MemoryBlock = VirtualAlloc(0, (size_t)Win32State.TotalSize,
+                                                          MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+                if(ReplayBuffer->MemoryBlock)
+                {
+                }
+                else
+                {
+                    // TODO: Diagnostic
+                }
+            }
 
             if(Samples && GameMemory.PermanentStorage && GameMemory.TransientStorage)
             {
