@@ -597,8 +597,9 @@ Win32ProcessXInputStickValue(SHORT Value, SHORT DeadZoneThreshold)
 internal void
 Win32GetInputFileLocation(win32_state *State, int SlotIndex, int DestCount, char *Dest)
 {
-    Assert(SlotIndex == 1);
-    Win32BuildEXEPathFilename(State, "loop_edit.gi", DestCount, Dest);
+    char Temp[64];
+    wsprintf(Temp, "loop_edit_%d.hmi", SlotIndex);
+    Win32BuildEXEPathFilename(State, Temp, DestCount, Dest);
 }
 
 internal win32_replay_buffer *
@@ -616,17 +617,12 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
     if(ReplayBuffer->MemoryBlock)
     {
         State->InputRecordingIndex = InputRecordingIndex;
+        State->RecordingHandle = ReplayBuffer->FileHandle;
 
-        char Filename[WIN32_STATE_FILE_NAME_COUNT];
-        Win32GetInputFileLocation(State, InputRecordingIndex, sizeof(Filename), Filename);
-
-        State->RecordingHandle = 
-            CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
-
-    //    WriteFile(State->RecordingHandle, State->GameMemoryBlock, BytesToWrite, &BytesWritten, 0);
         LARGE_INTEGER FilePosition;
         FilePosition.QuadPart = State->TotalSize;
         SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+
         CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
     }
 }
@@ -645,18 +641,12 @@ Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
     if(ReplayBuffer->MemoryBlock)
     {
         State->InputPlayingIndex = InputPlayingIndex;
+        State->PlaybackHandle = ReplayBuffer->FileHandle;
 
-        char Filename[WIN32_STATE_FILE_NAME_COUNT];
-        Win32GetInputFileLocation(State, InputPlayingIndex, sizeof(Filename), Filename);
-
-        State->PlaybackHandle = 
-            CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-
-//        DWORD BytesRead;
-//        ReadFile(State->PlaybackHandle, State->GameMemoryBlock, BytesToRead, &BytesRead, 0);
         LARGE_INTEGER FilePosition;
         FilePosition.QuadPart = State->TotalSize;
         SetFilePointerEx(State->PlaybackHandle, FilePosition, 0, FILE_BEGIN);
+
         CopyMemory(State->GameMemoryBlock, ReplayBuffer->MemoryBlock, State->TotalSize);
     }
 }
@@ -1052,8 +1042,21 @@ WinMain(HINSTANCE Instance,
             for(int ReplayIndex = 0; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
             {
                  win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
-                 ReplayBuffer->MemoryBlock = VirtualAlloc(0, (size_t)Win32State.TotalSize,
-                                                          MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+                 
+                Win32GetInputFileLocation(&Win32State, ReplayIndex,
+                                          sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
+
+                ReplayBuffer->FileHandle = 
+                    CreateFileA(ReplayBuffer->Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+
+                 ReplayBuffer->MemoryMap = CreateFileMapping(
+                    ReplayBuffer->FileHandle, 0, PAGE_READWRITE,
+                    (Win32State.TotalSize >> 32),
+                    Win32State.TotalSize & 0xFFFFFFFF, 0);
+                 
+                 ReplayBuffer->MemoryBlock = MapViewOfFile(
+                    ReplayBuffer->MemoryMap, FILE_MAP_ALL_ACCESS, 0, 0, Win32State.TotalSize);
+
                 if(ReplayBuffer->MemoryBlock)
                 {
                 }
