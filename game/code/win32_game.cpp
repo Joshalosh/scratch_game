@@ -779,14 +779,21 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
                     {
                         if(IsDown)
                         {
-                            if(State->InputRecordingIndex == 0)
+                            if(State->InputPlayingIndex == 0)
                             {
-                                Win32BeginRecordingInput(State, 1);
+                                if(State->InputRecordingIndex == 0)
+                                {
+                                    Win32BeginRecordingInput(State, 1);
+                                }
+                                else
+                                {
+                                    Win32EndRecordingInput(State);
+                                    Win32BeginInputPlayback(State, 1);
+                                }
                             }
                             else
                             {
-                                Win32EndRecordingInput(State);
-                                Win32BeginInputPlayback(State, 1);
+                                Win32EndInputPlayback(State);
                             }
                         }
                     }
@@ -826,6 +833,7 @@ Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
     return(Result);
 }
 
+#if 0
 internal void
 Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
                        int X, int Top, int Bottom, uint32_t Colour)
@@ -928,6 +936,7 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
                                    ThisMarker->FlipWriteCursor, WriteColor);
     }
 }
+#endif
 
 int CALLBACK
 WinMain(HINSTANCE Instance,
@@ -1388,12 +1397,14 @@ WinMain(HINSTANCE Instance,
                                 (((real32)AudioLatencyBytes / (real32)SoundOutput.BytesPerSample) /
                                  (real32)SoundOutput.SamplesPerSecond);
 
+#if 0
                             char TextBuffer[256];
                             _snprintf_s(TextBuffer, sizeof(TextBuffer),
                                         "BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%fs)\n",
                                         ByteToLock, TargetCursor, BytesToWrite,
                                         PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
                             OutputDebugStringA(TextBuffer);
+#endif
 #endif
                             Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
                         }
@@ -1443,14 +1454,6 @@ WinMain(HINSTANCE Instance,
                         LastCounter = EndCounter;
                         
                         win32_window_dimension Dimension = Win32GetWindowDimension(Window);
-#if GAME_INTERNAL
-                        // TODO: Current is wrong on the zero'th element.
-                        Win32DebugSyncDisplay(&GlobalBackbuffer,
-                                              ArrayCount(DebugTimeMarkers),
-                                              DebugTimeMarkers,
-                                              DebugTimeMarkerIndex - 1,
-                                              &SoundOutput, TargetSecondsPerFrame);
-#endif
                         HDC DeviceContext = GetDC(Window);
                         Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                                    Dimension.Width, Dimension.Height);
@@ -1475,6 +1478,7 @@ WinMain(HINSTANCE Instance,
                         OldInput = Temp;
                         // TODO: Should I clear these here?
 
+#if 0
                         uint64_t EndCycleCount = __rdtsc();
                         uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                         LastCycleCount = EndCycleCount;
@@ -1488,6 +1492,8 @@ WinMain(HINSTANCE Instance,
                                     MillisecondsPerFrame,
                                     FramesPerSecond, MegaCyclesPerFrame);
                         OutputDebugStringA(FPSBuffer);
+#endif
+
 #if GAME_INTERNAL
                         ++DebugTimeMarkerIndex;
                         if(DebugTimeMarkerIndex == ArrayCount(DebugTimeMarkers))
