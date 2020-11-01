@@ -1061,7 +1061,7 @@ WinMain(HINSTANCE Instance,
 
             for(int ReplayIndex = 0; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
             {
-                 win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
+                win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
                  
                 Win32GetInputFileLocation(&Win32State, false, ReplayIndex,
                                           sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
@@ -1069,13 +1069,13 @@ WinMain(HINSTANCE Instance,
                 ReplayBuffer->FileHandle = 
                     CreateFileA(ReplayBuffer->Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
 
-                 DWORD MaxSizeHigh = (Win32State.TotalSize >> 32);
-                 DWORD MaxSizeLow = (Win32State.TotalSize & 0xFFFFFFFF);
-                 ReplayBuffer->MemoryMap = CreateFileMapping(ReplayBuffer->FileHandle, 0, PAGE_READWRITE,
-                                                             MaxSizeHigh, MaxSizeLow, 0);
-                 DWORD Error = GetLastError();
+                LARGE_INTEGER MaxSize;
+                MaxSize.QuadPart = Win32State.TotalSize;
+                ReplayBuffer->MemoryMap = CreateFileMapping(ReplayBuffer->FileHandle, 0, PAGE_READWRITE,
+                                                             MaxSize.HighPart, MaxSize.LowPart, 0);
+                DWORD Error = GetLastError();
                  
-                 ReplayBuffer->MemoryBlock = MapViewOfFile(
+                ReplayBuffer->MemoryBlock = MapViewOfFile(
                     ReplayBuffer->MemoryMap, FILE_MAP_ALL_ACCESS, 0, 0, Win32State.TotalSize);
 
                 if(ReplayBuffer->MemoryBlock)
