@@ -227,6 +227,7 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
     {
         Result.UpdateAndRender = (game_update_and_render *)
             GetProcAddress(Result.GameCodeDLL, "GameUpdateAndRender");
+        
         Result.GetSoundSamples = (game_get_sound_samples *)
             GetProcAddress(Result.GameCodeDLL, "GameGetSoundSamples");
 
@@ -814,7 +815,6 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
             } break;
         }
     }
-
 }
 
 inline LARGE_INTEGER
@@ -847,6 +847,7 @@ Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
     {
         Bottom = Backbuffer->Height;
     }
+    
     if((X >= 0) && (X < Backbuffer->Width))
     {
         uint8_t *Pixel = ((uint8_t *)Backbuffer->Memory +
@@ -1067,13 +1068,12 @@ WinMain(HINSTANCE Instance,
                                           sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
 
                 ReplayBuffer->FileHandle = 
-                    CreateFileA(ReplayBuffer->Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+                    CreateFileA(ReplayBuffer->Filename, GENERIC_WRITE|GENERIC_READ, 0, 0, CREATE_ALWAYS, 0, 0);
 
                 LARGE_INTEGER MaxSize;
                 MaxSize.QuadPart = Win32State.TotalSize;
                 ReplayBuffer->MemoryMap = CreateFileMapping(ReplayBuffer->FileHandle, 0, PAGE_READWRITE,
                                                              MaxSize.HighPart, MaxSize.LowPart, 0);
-                DWORD Error = GetLastError();
                  
                 ReplayBuffer->MemoryBlock = MapViewOfFile(
                     ReplayBuffer->MemoryMap, FILE_MAP_ALL_ACCESS, 0, 0, Win32State.TotalSize);
@@ -1092,6 +1092,7 @@ WinMain(HINSTANCE Instance,
                 game_input Input[2] = {};
                 game_input *NewInput = &Input[0];
                 game_input *OldInput = &Input[1];
+                NewInput->SecondsToAdvanceOverUpdate = TargetSecondsPerFrame;
 
                 LARGE_INTEGER LastCounter = Win32GetWallClock();
                 LARGE_INTEGER FlipWallClock = Win32GetWallClock();
@@ -1106,6 +1107,8 @@ WinMain(HINSTANCE Instance,
                 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                          TempGameCodeDLLFullPath);
 
+                uint32_t LoadCounter = 0;
+
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
@@ -1115,6 +1118,7 @@ WinMain(HINSTANCE Instance,
                         Win32UnloadGameCode(&Game);
                         Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                  TempGameCodeDLLFullPath);
+                        LoadCounter = 0;
                     }
 
                     // TODO: Zeroing macro
@@ -1143,15 +1147,15 @@ WinMain(HINSTANCE Instance,
                         NewInput->MouseY = MouseP.y;
                         NewInput->MouseZ = 0; //TODO: Support mousewheel.
                         Win32ProcessKeyboardMessage(&NewInput->MouseButtons[0],
-                                                   GetKeyState(VK_LBUTTON) & (1 << 15));
+                                                    GetKeyState(VK_LBUTTON) & (1 << 15));
                         Win32ProcessKeyboardMessage(&NewInput->MouseButtons[1],
-                                                   GetKeyState(VK_MBUTTON) & (1 << 15));
+                                                    GetKeyState(VK_MBUTTON) & (1 << 15));
                         Win32ProcessKeyboardMessage(&NewInput->MouseButtons[2],
-                                                   GetKeyState(VK_RBUTTON) & (1 << 15));
+                                                    GetKeyState(VK_RBUTTON) & (1 << 15));
                         Win32ProcessKeyboardMessage(&NewInput->MouseButtons[3],
-                                                   GetKeyState(VK_XBUTTON1) & (1 << 15));
+                                                    GetKeyState(VK_XBUTTON1) & (1 << 15));
                         Win32ProcessKeyboardMessage(&NewInput->MouseButtons[4],
-                                                   GetKeyState(VK_XBUTTON2) & (1 << 15));
+                                                    GetKeyState(VK_XBUTTON2) & (1 << 15));
 
                         // TODO: Need to not poll disconnected controllers to avoid
                         // xinput frame rate hit on older libraries
@@ -1379,6 +1383,7 @@ WinMain(HINSTANCE Instance,
                             {
                                 Game.GetSoundSamples(&Thread, &GameMemory, &SoundBuffer);
                             }
+
 #if GAME_INTERNAL
                             win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex];
                             Marker->OutputPlayCursor = PlayCursor;

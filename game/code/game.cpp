@@ -18,30 +18,13 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
 
+#if 0
         GameState->tSine += 2.0f*Pi32*1.0f/(real32)WavePeriod;
         if(GameState->tSine > 2.0f*Pi32)
         {
             GameState->tSine -= 2.0f*Pi32;
         }
-    }
-}
-
-internal void
-RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
-{
-    uint8_t *Row = (uint8_t *)Buffer->Memory;
-    for(int Y = 0; Y < Buffer->Height; ++Y)
-    {
-        uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = 0; X < Buffer->Width; ++X)
-        {
-            uint8_t Blue = (uint8_t)(X + BlueOffset);
-            uint8_t Green = (uint8_t)(Y + GreenOffset);
-
-            *Pixel++ = ((Green << 16) | Blue);
-        }
-
-        Row += Buffer->Pitch;
+#endif
     }
 }
 
@@ -80,22 +63,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
     {
-        char *Filename = __FILE__;
-
-        debug_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Thread, Filename);
-        if(File.Contents)
-        {
-            Memory->DEBUGPlatformWriteEntireFile(Thread, "test.out", File.ContentsSize, File.Contents);
-            Memory->DEBUGPlatformFreeFileMemory(Thread, File.Contents);
-        }
-
-        GameState->ToneHz = 512;
-        GameState->tSine = 0.0f;
-
-        GameState->PlayerX = 100;
-        GameState->PlayerY = 100;
-
-        // TODO: May be better to do in the platform layer
         Memory->IsInitialised = true;
     }
 
@@ -105,49 +72,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         if(Controller->IsAnalogue)
         {
             // Use analogue movement tuning
-            GameState->BlueOffset += (int)(4.0f*Controller->StickAverageX);
-            GameState->ToneHz = 512 + (int)(128.0f*Controller->StickAverageY);
-
         }
         else
         {
             // Use digital movement tuning
-            if(Controller->MoveLeft.EndedDown)
-            {
-                GameState->BlueOffset -= 1;
-            }
-
-            if(Controller->MoveRight.EndedDown)
-            {
-                GameState->BlueOffset += 1;
-            }
-        }
-
-        // Input.AButtonEndedDown
-        // Input.AButtonHalfTransitionCount
-
-        GameState->PlayerX += (int)(4.0f*Controller->StickAverageX);
-        GameState->PlayerY -= (int)(4.0f*Controller->StickAverageY);
-        if(GameState->tJump > 0)
-        {
-            GameState->PlayerY += (int)(5.0f*sinf(0.5f*Pi32*GameState->tJump));
-        }
-        if(Controller->ActionDown.EndedDown)
-        {
-            GameState->PlayerY = (int)4.0;
-        }
-    }
-
-    RenderWeirdGradient(Buffer, GameState->BlueOffset, GameState->GreenOffset);
-    RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
-
-    RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
-
-    for(int ButtonIndex = 0; ButtonIndex < ArrayCount(Input->MouseButtons); ++ButtonIndex)
-    {
-        if(Input->MouseButtons[ButtonIndex].EndedDown)
-        {
-            RenderPlayer(Buffer, 10 + 20*ButtonIndex, 10);
         }
     }
 }
@@ -155,5 +83,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
     game_state *GameState = (game_state *)Memory->PermanentStorage;
-    GameOutputSound(GameState, SoundBuffer, GameState->ToneHz);
+    GameOutputSound(GameState, SoundBuffer, 400);
 }
+
+/*
+internal void
+RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
+{
+    uint8_t *Row = (uint8_t *)Buffer->Memory;
+    for(int Y = 0; Y < Buffer->Height; ++Y)
+    {
+        uint32_t *Pixel = (uint32_t *)Row;
+        for(int X = 0; X < Buffer->Width; ++X)
+        {
+            uint8_t Blue = (uint8_t)(X + BlueOffset);
+            uint8_t Green = (uint8_t)(Y + GreenOffset);
+
+            *Pixel++ = ((Green << 16) | Blue);
+        }
+
+        Row += Buffer->Pitch;
+    }
+}
+*/
