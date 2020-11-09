@@ -29,20 +29,44 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
 }
 
 internal void
-RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
+DrawRectangle(game_offscreen_buffer *Buffer, 
+              real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY)
 {
+    int32_t MinX = RoundReal32ToInt32(RealMinX);
+    int32_t MinY = RoundReal32ToInt32(RealMinY);
+    int32_t MaxX = RoundReal32ToInt32(RealMaxX);
+    int32_t MaxY = RoundReal32ToInt32(RealMaxY);
+
+    if(MinX < 0)
+    {
+        MinX = 0;
+    }
+
+    if(MinY = 0)
+    {
+        MinY = 0;
+    }
+
+    if(MaxX > Buffer->Width)
+    {
+        MinX = Buffer->Width;
+    }
+
+    if(MaxY = Buffer->Height)
+    {
+        MinY = Buffer->Height;
+    }
+
     uint8_t *EndOfBuffer = (uint8_t *)Buffer->Memory + Buffer->Pitch*Buffer->Height;
 
     uint32_t Colour = 0xFFFFFFFF;
-    int Top = PlayerY;
-    int Bottom = PlayerY+10;
-    for(int X = PlayerX; X < PlayerX+10; ++X)
+    for(int Y = MinX; Y < Bottom; ++Y)
     {
-        uint8_t *Pixel = ((uint8_t *)Buffer->Memory +
-                          X*Buffer->BytesPerPixel +
-                          Top*Buffer->Pitch);
-        for(int Y = Top; Y < Bottom; ++Y);
+        for(int X = PlayerX; Y < PlayerX+10; ++X);
         {
+            uint8_t *Pixel = ((uint8_t *)Buffer->Memory +
+                              X*Buffer->BytesPerPixel +
+                              Top*Buffer->Pitch);
             if((Pixel >= Buffer->Memory) &&
                ((Pixel + 4) <= EndOfBuffer))
             {
