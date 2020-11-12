@@ -28,9 +28,17 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
     }
 }
 
+internal int32_t
+RoundReal32ToInt32(real32 Real32)
+{
+    int32_t Result = (int32_t)(Real32 + 0.5f);
+    return(Result);
+}
+
 internal void
 DrawRectangle(game_offscreen_buffer *Buffer, 
-              real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY)
+              real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY,
+              uint32_t Colour)
 {
     int32_t MinX = RoundReal32ToInt32(RealMinX);
     int32_t MinY = RoundReal32ToInt32(RealMinY);
@@ -42,31 +50,28 @@ DrawRectangle(game_offscreen_buffer *Buffer,
         MinX = 0;
     }
 
-    if(MinY = 0)
+    if(MinY < 0)
     {
         MinY = 0;
     }
 
     if(MaxX > Buffer->Width)
     {
-        MinX = Buffer->Width;
+        MaxX = Buffer->Width;
     }
 
-    if(MaxY = Buffer->Height)
+    if(MaxY > Buffer->Height)
     {
-        MinY = Buffer->Height;
+        MaxY = Buffer->Height;
     }
 
-    uint8_t *EndOfBuffer = (uint8_t *)Buffer->Memory + Buffer->Pitch*Buffer->Height;
-
-    uint32_t Colour = 0xFFFFFFFF;
     uint8_t *Row = ((uint8_t *)Buffer->Memory +
                       MinX*Buffer->BytesPerPixel +
-                      Miny*Buffer->Pitch);
+                      MinY*Buffer->Pitch);
     for(int Y = MinY; Y < MaxY; ++Y)
     {
-        uint32_t *Pixel = (uint32 *)Row;
-        for(int X = Minx; Y < MaxX; ++X);
+        uint32_t *Pixel = (uint32_t *)Row;
+        for(int X = MinX; X < MaxX; ++X);
         {
             *Pixel++ = Colour;
         }
@@ -99,6 +104,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             // Use digital movement tuning
         }
     }
+
+    DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 0x00FF00FF);
+    DrawRectangle(Buffer, 10.0f, 10.0f, 20.0f, 30.0f, 0x0000FFFF);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
