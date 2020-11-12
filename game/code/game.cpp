@@ -60,21 +60,18 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     uint8_t *EndOfBuffer = (uint8_t *)Buffer->Memory + Buffer->Pitch*Buffer->Height;
 
     uint32_t Colour = 0xFFFFFFFF;
-    for(int Y = MinX; Y < Bottom; ++Y)
+    uint8_t *Row = ((uint8_t *)Buffer->Memory +
+                      MinX*Buffer->BytesPerPixel +
+                      Miny*Buffer->Pitch);
+    for(int Y = MinY; Y < MaxY; ++Y)
     {
-        for(int X = PlayerX; Y < PlayerX+10; ++X);
+        uint32_t *Pixel = (uint32 *)Row;
+        for(int X = Minx; Y < MaxX; ++X);
         {
-            uint8_t *Pixel = ((uint8_t *)Buffer->Memory +
-                              X*Buffer->BytesPerPixel +
-                              Top*Buffer->Pitch);
-            if((Pixel >= Buffer->Memory) &&
-               ((Pixel + 4) <= EndOfBuffer))
-            {
-                *(uint32_t *)Pixel = Colour;
-            }
-
-            Pixel += Buffer->Pitch;
+            *Pixel++ = Colour;
         }
+
+        Row += Buffer->Pitch;
     }
 }
 
