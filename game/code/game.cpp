@@ -71,7 +71,7 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     for(int Y = MinY; Y < MaxY; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = MinX; X < MaxX; ++X);
+        for(int X = MinX; X < MaxX; ++X)
         {
             *Pixel++ = Colour;
         }
@@ -105,8 +105,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    uint32_t R     = 255 << 16;
+    uint32_t G     = 0 << 8;
+    uint32_t B     = 0 << 0;
+    uint32_t Color = R | G | B;
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 0x00FF00FF);
-    DrawRectangle(Buffer, 10.0f, 10.0f, 20.0f, 30.0f, 0x0000FFFF);
+    DrawRectangle(Buffer, 10.0f, 10.0f, 20.0f, 30.0f, Color);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
