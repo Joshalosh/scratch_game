@@ -35,10 +35,17 @@ RoundReal32ToInt32(real32 Real32)
     return(Result);
 }
 
+internal uint32_t
+RoundReal32ToUInt32(real32 Real32)
+{
+    uint32_t Result = (uint32_t)(Real32 + 0.5f);
+    return(Result);
+}
+
 internal void
 DrawRectangle(game_offscreen_buffer *Buffer, 
               real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY,
-              uint32_t Colour)
+              real32 R, real32 G, real32 B)
 {
     int32_t MinX = RoundReal32ToInt32(RealMinX);
     int32_t MinY = RoundReal32ToInt32(RealMinY);
@@ -65,6 +72,10 @@ DrawRectangle(game_offscreen_buffer *Buffer,
         MaxY = Buffer->Height;
     }
 
+    uint32_t Color = ((RoundReal32ToUInt32(R * 255.0f) << 16) |
+                      (RoundReal32ToUInt32(G * 255.0f) << 8) |
+                      (RoundReal32ToUInt32(B * 255.0f) << 0));
+
     uint8_t *Row = ((uint8_t *)Buffer->Memory +
                       MinX*Buffer->BytesPerPixel +
                       MinY*Buffer->Pitch);
@@ -73,7 +84,7 @@ DrawRectangle(game_offscreen_buffer *Buffer,
         uint32_t *Pixel = (uint32_t *)Row;
         for(int X = MinX; X < MaxX; ++X)
         {
-            *Pixel++ = Colour;
+            *Pixel++ = Color;
         }
 
         Row += Buffer->Pitch;
@@ -105,12 +116,40 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    uint32_t R     = 255 << 16;
-    uint32_t G     = 0 << 8;
-    uint32_t B     = 0 << 0;
-    uint32_t Color = R | G | B;
-    DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 0x00FF00FF);
-    DrawRectangle(Buffer, 10.0f, 10.0f, 20.0f, 30.0f, Color);
+    uint32 TileMap[9][16] =
+    {
+        {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0},
+        {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
+        {0, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0},
+        {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1},
+        {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0},
+        {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
+        {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0},
+        {0, 1, 1, 1,  1, 0, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
+        {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0}
+    };
+    DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height,
+                  1.0f, 0.5f, 1.0f);
+    for(int Row = 0; Row < 9; ++Row)
+    {
+        for(int Column = 0; Column < 16; ++Column)
+        {
+            uint32_t TileID = TileMap[Row][Column];
+            real32 Gray = 0.5f;
+            if(TileID == 1)
+            {
+                Gray = 1.0f;
+            }
+
+            real32MinX = ((real32)Column)*TileWidth;
+            real32MinY = ((real32)Row)*TileHeight;
+            real32MaxX = MinX + TileWidth;
+            real32MaxY = MinY + TileHeight;
+            DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
+        }
+    }
+    DrawRectangle(Buffer, 10.0f, 10.0f, 20.0f, 30.0f,
+                  0.0f, 1.0f, 1.0f);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
