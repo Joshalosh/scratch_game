@@ -189,6 +189,8 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 struct game_state
 {
+    real32 PlayerX;
+    real32 PlayerY;
 };
 
 #define GAME_H

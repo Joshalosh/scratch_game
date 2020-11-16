@@ -113,26 +113,54 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         else
         {
             // Use digital movement tuning
+            real32 dPlayerX = 0.0f;
+            real32 dPlayerY = 0.0f;
+
+            if(Controller->MoveUp.EndedDown)
+            {
+                dPlayerY = -1.0f;
+            }
+            if(Controller->MoveDown.EndedDown)
+            {
+                dPlayerY = 1.0f;
+            }
+            if(Controller->MoveLeft.EndedDown)
+            {
+                dPlayerX = -1.0f;
+            }
+            if(Controller->MoveRight.EndedDown)
+            {
+                dPlayerX = 1.0f;
+            }
+
+            GameState->PlayerX += dPlayerX;
+            GameState->PlayerY += dPlayerY;
         }
     }
 
-    uint32 TileMap[9][16] =
+    uint32_t TileMap[9][17] =
     {
-        {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0},
-        {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
-        {0, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0},
-        {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1},
-        {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0},
-        {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
-        {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0},
-        {0, 1, 1, 1,  1, 0, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
-        {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0}
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+        {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+        {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+        {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0},
+        {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
+        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
+        {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
     };
+
+    real32 UpperLeftX = -30;
+    real32 UpperLeftY = 0;
+    real32 TileWidth = 60;
+    real32 TileHeight = 60;
+
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height,
                   1.0f, 0.5f, 1.0f);
     for(int Row = 0; Row < 9; ++Row)
     {
-        for(int Column = 0; Column < 16; ++Column)
+        for(int Column = 0; Column < 17; ++Column)
         {
             uint32_t TileID = TileMap[Row][Column];
             real32 Gray = 0.5f;
@@ -141,15 +169,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 Gray = 1.0f;
             }
 
-            real32MinX = ((real32)Column)*TileWidth;
-            real32MinY = ((real32)Row)*TileHeight;
-            real32MaxX = MinX + TileWidth;
-            real32MaxY = MinY + TileHeight;
+            real32 MinX = UpperLeftX + ((real32)Column)*TileWidth;
+            real32 MinY = UpperLeftY + ((real32)Row)*TileHeight;
+            real32 MaxX = MinX + TileWidth;
+            real32 MaxY = MinY + TileHeight;
             DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
         }
     }
-    DrawRectangle(Buffer, 10.0f, 10.0f, 20.0f, 30.0f,
-                  0.0f, 1.0f, 1.0f);
+
+    real32 PlayerR = 1.0f;
+    real32 PlayerG = 1.0f;
+    real32 PlayerB = 0.0f;
+    real32 PlayerWidth = 0.75f*TileWidth;
+    real32 PlayerHeight = TileHeight;
+    real32 PlayerLeft = GameState->PlayerX - 0.5f*PlayerWidth;
+    real32 PlayerTop = GameState->PlayerY - PlayerHeight; 
+    DrawRectangle(Buffer,
+                  PlayerLeft, PlayerTop,
+                  PlayerLeft + PlayerWidth,
+                  PlayerTop + PlayerHeight,
+                  PlayerR, PlayerG, PlayerB);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
