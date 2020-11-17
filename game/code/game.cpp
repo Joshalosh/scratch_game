@@ -132,9 +132,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 dPlayerX = 1.0f;
             }
+            dPlayerX *= 64.0f;
+            dPlayerY *= 64.0f;
 
-            GameState->PlayerX += dPlayerX;
-            GameState->PlayerY += dPlayerY;
+            //TODO: Diagonal will be faster! Fix with vectors
+            GameState->PlayerX += Input->dtForFrame*dPlayerX;
+            GameState->PlayerY += Input->dtForFrame*dPlayerY;
         }
     }
 
