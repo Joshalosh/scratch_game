@@ -28,17 +28,24 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
     }
 }
 
-internal int32_t
+inline int32_t
 RoundReal32ToInt32(real32 Real32)
 {
     int32_t Result = (int32_t)(Real32 + 0.5f);
     return(Result);
 }
 
-internal uint32_t
+inline uint32_t
 RoundReal32ToUInt32(real32 Real32)
 {
     uint32_t Result = (uint32_t)(Real32 + 0.5f);
+    return(Result);
+}
+
+inline int32_t
+TruncateReal32ToInt32(real32 Real32)
+{
+    int32_t Result = (int32_t)Real32;
     return(Result);
 }
 
@@ -103,6 +110,25 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Memory->IsInitialised = true;
     }
 
+#define TILE_MAP_COUNT_X 17
+#define TILE_MAP_COUNT_Y 9
+    real32 UpperLeftX = -30;
+    real32 UpperLeftY = 0;
+    real32 TileWidth = 60;
+    real32 TileHeight = 60;
+    uint32_t TileMap[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+    {
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+        {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+        {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+        {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0},
+        {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
+        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
+        {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
+    };
+
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
@@ -136,28 +162,27 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             dPlayerY *= 64.0f;
 
             //TODO: Diagonal will be faster! Fix with vectors
-            GameState->PlayerX += Input->dtForFrame*dPlayerX;
-            GameState->PlayerY += Input->dtForFrame*dPlayerY;
+            real32 NewPlayerX = GameState->PlayerX + Input->dtForFrame*dPlayerX;
+            real32 NewPlayerY = GameState->PlayerY + Input->dtForFrame*dPlayerY;
+
+            int32_t PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);
+            int32_t PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);
+
+            bool32 IsValid = false;
+            if((PlayerTileX >= 0) && (PlayerTileX < TILE_MAP_COUNT_X) &&
+               (PlayerTileY >= 0) && (PlayerTileY < TILE_MAP_COUNT_Y))
+            {
+                uint32_t TileMapValue = TileMap[PlayerTileY][PlayerTileX];
+                IsValid = (TileMapValue == 0);
+            }
+
+            if(IsValid)
+            {
+                GameState->PlayerX = NewPlayerX;
+                GameState->PlayerY = NewPlayerY;
+            }
         }
     }
-
-    uint32_t TileMap[9][17] =
-    {
-        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
-        {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
-        {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
-        {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
-        {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0},
-        {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
-        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
-        {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
-        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
-    };
-
-    real32 UpperLeftX = -30;
-    real32 UpperLeftY = 0;
-    real32 TileWidth = 60;
-    real32 TileHeight = 60;
 
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height,
                   1.0f, 0.5f, 1.0f);
