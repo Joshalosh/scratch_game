@@ -104,8 +104,27 @@ GetTileValueUnchecked(tile_map *TileMap, int32_t TileX, int32_t TileY)
     uint32_t TileMapValue = TileMap->Tiles[TileY*TileMap->CountX + TileX];
     return(TileMapValue);
 }
+
 internal bool32
 IsTileMapPointEmpty(tile_map *TileMap, real32 TestX, real32 TestY)
+{
+    bool32 Empty = false;
+
+    int32_t PlayerTileX = TruncateReal32ToInt32((TestX - TileMap->UpperLeftX) / TileMap->TileWidth);
+    int32_t PlayerTileY = TruncateReal32ToInt32((TestY - TileMap->UpperLeftY) / TileMap->TileHeight);
+
+    if((PlayerTileX >= 0) && (PlayerTileX < TileMap->CountX) &&
+       (PlayerTileY >= 0) && (PlayerTileY < TileMap->CountY))
+    {
+        uint32_t TileMapValue = GetTileValueUnchecked(TileMap, PlayerTileX, PlayerTileY);
+        Empty = (TileMapValue == 0);
+    }
+
+    return(Empty);
+}
+
+internal bool32
+IsWorldPointEmpty(world *World, int32_t TileMapX, int32_t TileMapY, real32 TestX, real32 TestY)
 {
     bool32 Empty = false;
 
@@ -134,47 +153,82 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 UpperLeftY = 0;
     real32 TileWidth = 60;
     real32 TileHeight = 60;
-    uint32_t Tiles0[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+    uint32_t Tiles00[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
     {
         {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1},
         {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
         {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
         {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
-        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0},
         {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
         {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
         {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
         {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
     };
 
-    uint32_t Tiles1[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+    uint32_t Tiles01[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
     {
         {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
-        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
         {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1}
     };
 
-    tile_map TileMaps[2];
-    TileMaps[0].CountX  = TILE_MAP_COUNT_X;
-    TileMaps[0].CountY  = TILE_MAP_COUNT_Y;
+    uint32_t Tiles10[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+    {
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
+    };
 
-    TileMaps[0].UpperLeftX = -30;
-    TileMaps[0].UpperLeftY = 0;
-    TileMaps[0].TileWidth = 60;
-    TileMaps[0].TileHeight = 60;
+    uint32_t Tiles11[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+    {
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1}
+    };
 
-    TileMaps[0].Tiles = (uint32_t *)Tiles0;
+    tile_map TileMaps[2][2];
+    TileMaps[0][0].CountX  = TILE_MAP_COUNT_X;
+    TileMaps[0][0].CountY  = TILE_MAP_COUNT_Y;
 
-    TileMaps[1] = TileMaps[0];
-    TileMaps[1].Tiles = (uint32_t *)Tiles1;
+    TileMaps[0][0].UpperLeftX = -30;
+    TileMaps[0][0].UpperLeftY = 0;
+    TileMaps[0][0].TileWidth = 60;
+    TileMaps[0][0].TileHeight = 60;
 
-    tile_map *TileMap = &TileMaps[0];
+    TileMaps[0][0].Tiles = (uint32_t *)Tiles00;
+
+    TileMaps[0][1] = TileMaps[0][0];
+    TileMaps[0][1].Tiles = (uint32_t *)Tiles01;
+
+    TileMaps[1][0] = TileMaps[0][0];
+    TileMaps[1][0].Tiles = (uint32_t *)Tiles10;
+
+    TileMaps[1][1] = TileMaps[0][0];
+    TileMaps[1][1].Tiles = (uint32_t *)Tiles11;
+
+    tile_map *TileMap = &TileMaps[0][0];
+
+    world World;
+    World.TileMaps = (tile_map *)TileMaps;
 
     real32 PlayerWidth = 0.75f*TileMap->TileWidth;
     real32 PlayerHeight = TileMap->TileHeight;

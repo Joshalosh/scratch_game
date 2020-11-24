@@ -200,6 +200,11 @@ struct tile_map
     uint32_t *Tiles;
 };
 
+struct world
+{
+    tile_map *TileMaps;
+};
+
 struct game_state
 {
     real32 PlayerX;
