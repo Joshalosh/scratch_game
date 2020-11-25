@@ -98,6 +98,20 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     }
 }
 
+inline tile_map *
+GetTileMap(world *World, int32_t TileMapX, int32_t TileMapY)
+{
+    tile_map *TilemMap = 0;
+
+    if((TileMapX >= 0) && (TileMapX < World->TileMapCountX) &&
+       (TileMapY >= 0) && (TileMapY < World->TileMapCountY)
+    {
+        TileMap = &World->TileMaps[TileY*World->TileMapCountX + TileMapX];
+
+    }
+    return(TileMap);
+}
+
 inline uint32_t
 GetTileValueUnchecked(tile_map *TileMap, int32_t TileX, int32_t TileY)
 {
@@ -128,14 +142,19 @@ IsWorldPointEmpty(world *World, int32_t TileMapX, int32_t TileMapY, real32 TestX
 {
     bool32 Empty = false;
 
-    int32_t PlayerTileX = TruncateReal32ToInt32((TestX - TileMap->UpperLeftX) / TileMap->TileWidth);
-    int32_t PlayerTileY = TruncateReal32ToInt32((TestY - TileMap->UpperLeftY) / TileMap->TileHeight);
+    tile_map *TileMap = GetTileMap(World, TileMapX, TileMapY);
 
-    if((PlayerTileX >= 0) && (PlayerTileX < TileMap->CountX) &&
-       (PlayerTileY >= 0) && (PlayerTileY < TileMap->CountY))
+    if(TileMap)
     {
-        uint32_t TileMapValue = GetTileValueUnchecked(TileMap, PlayerTileX, PlayerTileY);
-        Empty = (TileMapValue == 0);
+        int32_t PlayerTileX = TruncateReal32ToInt32((TestX - TileMap->UpperLeftX) / TileMap->TileWidth);
+        int32_t PlayerTileY = TruncateReal32ToInt32((TestY - TileMap->UpperLeftY) / TileMap->TileHeight);
+
+        if((PlayerTileX >= 0) && (PlayerTileX < TileMap->CountX) &&
+           (PlayerTileY >= 0) && (PlayerTileY < TileMap->CountY))
+        {
+            uint32_t TileMapValue = GetTileValueUnchecked(TileMap, PlayerTileX, PlayerTileY);
+            Empty = (TileMapValue == 0);
+        }
     }
 
     return(Empty);
@@ -228,6 +247,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     tile_map *TileMap = &TileMaps[0][0];
 
     world World;
+    World.TileMapCountX = 2;
+    World.TileMapCountY = 2;
+
     World.TileMaps = (tile_map *)TileMaps;
 
     real32 PlayerWidth = 0.75f*TileMap->TileWidth;

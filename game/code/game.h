@@ -202,6 +202,9 @@ struct tile_map
 
 struct world
 {
+    int32_t TileMapCountX;
+    int32_t TileMapCountY;
+
     tile_map *TileMaps;
 };
 
