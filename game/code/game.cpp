@@ -101,14 +101,14 @@ DrawRectangle(game_offscreen_buffer *Buffer,
 inline tile_map *
 GetTileMap(world *World, int32_t TileMapX, int32_t TileMapY)
 {
-    tile_map *TilemMap = 0;
+    tile_map *TileMap = 0;
 
     if((TileMapX >= 0) && (TileMapX < World->TileMapCountX) &&
-       (TileMapY >= 0) && (TileMapY < World->TileMapCountY)
+       (TileMapY >= 0) && (TileMapY < World->TileMapCountY))
     {
-        TileMap = &World->TileMaps[TileY*World->TileMapCountX + TileMapX];
-
+        TileMap = &World->TileMaps[TileMapY*World->TileMapCountX + TileMapX];
     }
+
     return(TileMap);
 }
 
