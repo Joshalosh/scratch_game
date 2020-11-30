@@ -50,6 +50,11 @@ inline game_controller_input *GetController(game_input *Input, int unsigned Cont
 
 struct tile_map
 {
+    uint32_t *Tiles;
+};
+
+struct world
+{
     int32_t CountX;
     int32_t CountY;
 
@@ -58,11 +63,6 @@ struct tile_map
     real32 TileWidth;
     real32 TileHeight;
 
-    uint32_t *Tiles;
-};
-
-struct world
-{
     int32_t TileMapCountX;
     int32_t TileMapCountY;
 
@@ -71,6 +71,9 @@ struct world
 
 struct game_state
 {
+    int32_t PlayerTileMapX;
+    int32_t PlayerTileMapY;
+
     real32 PlayerX;
     real32 PlayerY;
 };
