@@ -141,47 +141,57 @@ IsTileMapPointEmpty(world *World, tile_map *TileMap, real32 TestTileX, real32 Te
     return(Empty);
 }
 
+inline canonical_position
+GetCanonicalPosition(world *World, raw_position Pos)
+{
+    canonical_position = Result;
+
+    Result.TileMapX = Pos.TileMapX
+    Result.TileMapY = Pos.TileMapY
+
+    real32 X = Pos.X - World->UpperLeftX;
+    real32 Y = Pos.Y - World->UpperLeftY;
+    Result.TileX = TruncateReal32ToInt32((X) / World->TileWidth);
+    Result.TileY = TruncateReal32ToInt32((Y) / World->TileHeight);
+
+    Result.X = Pos.X - Result.TileX*World->TileWidth;
+    Result.Y = Pos.Y - Result.TileY*World->TileHeight;
+
+    if(Result.TileX < 0)
+    {
+        Result.TileX = World->CountX + Result.TileX;
+        --Pos.TileMapX;
+    }
+    
+    if(Result.TileY < 0)
+    {
+        Result.TileY = World->CountY + Result.TileY;
+        --Pos.TileMapY;
+    }
+    
+    if(Result.TileX >= World->CountX)
+    {
+        Result.TileX = Result.TileX - World->CountX;
+        ++Pos.TileMapX;
+    }
+    
+    if(Result.TileY >= World->CountY)
+    {
+        Result.TileY = Result.TileY - World->CountY;
+        ++Pos.TileMapY;
+    }
+
+    return(Result);
+}
+
 internal bool32
-IsWorldPointEmpty(world *World, int32_t TestTileMapX, int32_t TestTileMapY, real32 TestX, real32 TestY)
+IsWorldPointEmpty(world *World, raw_position TestPos)
 {
     bool32 Empty = false;
 
-    int32_t TestTileX = TruncateReal32ToInt32((TestX - World->UpperLeftX) / World->TileWidth);
-    int32_t TestTileY = TruncateReal32ToInt32((TestY - World->UpperLeftY) / World->TileHeight);
-
-    if(TestTileX < 0)
-    {
-        TestTileX = World->CountX + TestTileX;
-        --TestTileMapX;
-    }
-    
-    if(TestTileY < 0)
-    {
-        TestTileY = World->CountY + TestTileY;
-        --TestTileMapY;
-    }
-    
-    if(TestTileX >= World->CountX)
-    {
-        TestTileX = TestTileX - World->CountX;
-        ++TestTileMapX;
-    }
-    
-    if(TestTileY >= World->CountY)
-    {
-        TestTileY = TestTileY - World->CountY;
-        ++TestTileMapY;
-    }
-    
-    tile_map *TileMap = GetTileMap(World, TestTileMapX, TestTileMapY);
-    IsTileMapPointEmpty(World, TileMap, TestTileX, TestTileY);
-
-    if((TestTileX >= 0) && (TestTileX < World->CountX) &&
-       (TestTileY >= 0) && (TestTileY < World->CountY))
-    {
-        uint32_t TileMapValue = GetTileValueUnchecked(World, TileMap, TestTileX, TestTileY);
-        Empty = (TileMapValue == 0);
-    }
+    canonical_position CanPos = GetCanonicalPosition(World, TestPos)
+    tile_map *TileMap = GetTileMap(World, CanPos.TileMapX, CanPos.TileMapY);
+    Empty = IsTileMapPointEmpty(World, TileMap, CanPos.TileX, CanPos.TileY);
 
     return(Empty);
 }
@@ -253,8 +263,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     tile_map TileMaps[2][2];
 
     TileMaps[0][0].Tiles = (uint32_t *)Tiles00;
-    TileMaps[0][1].Tiles = (uint32_t *)Tiles01;
-    TileMaps[1][0].Tiles = (uint32_t *)Tiles10;
+    TileMaps[0][1].Tiles = (uint32_t *)Tiles10;
+    TileMaps[1][0].Tiles = (uint32_t *)Tiles01;
     TileMaps[1][1].Tiles = (uint32_t *)Tiles11;
 
     world World;
