@@ -57,8 +57,8 @@ struct canonical_position
     int32_t TileY;
 
     // This is tile-relative X and Y.
-    real32 X;
-    real32 Y;
+    real32 TileRelX;
+    real32 TileRelY;
 };
 
 struct raw_position
