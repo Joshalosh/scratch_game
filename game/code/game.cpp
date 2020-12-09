@@ -121,50 +121,39 @@ IsTileMapPointEmpty(world *World, tile_map *TileMap, int32_t TestTileX, int32_t 
     return(Empty);
 }
 
-inline canonical_position
-GetCanonicalPosition(world *World, raw_position Pos)
+inline void 
+RecanonicaliseCoord(world *World, int32_t TileCount, int32_t *TileMap, int32_t *Tile, real32 *TileRel)
 {
-    canonical_position Result;
-
-    Result.TileMapX = Pos.TileMapX;
-    Result.TileMapY = Pos.TileMapY;
-
     real32 X = Pos.X - World->UpperLeftX;
     real32 Y = Pos.Y - World->UpperLeftY;
     Result.TileX = FloorReal32ToInt32(X / World->TileSideInPixels);
     Result.TileY = FloorReal32ToInt32(Y / World->TileSideInPixels);
 
-    Result.TileRelX = X - Result.TileX*World->TileSideInPixels;
-    Result.TileRelY = Y - Result.TileY*World->TileSideInPixels;
+    *TileRelX = X - *Tile*World->TileSideInPixels;
 
-    Assert(Result.TileRelX >= 0);
-    Assert(Result.TileRelY >= 0);
-    Assert(Result.TileRelX < World->TileSideInPixels);
-    Assert(Result.TileRelY < World->TileSideInPixels);
+    Assert(*TileRelX >= 0);
+    Assert(*TileRelX < World->TileSideInPixels);
 
-    if(Result.TileX < 0)
+    if(Result.Tile < 0)
     {
-        Result.TileX = World->CountX + Result.TileX;
-        --Result.TileMapX;
+        *TileX = TileCount + *Tile;
+        --*TileMap;
     }
     
-    if(Result.TileY < 0)
+    if(Result.TileY >= World->CountX)
     {
-        Result.TileY = World->CountY + Result.TileY;
-        --Result.TileMapY;
+        *Tile = TileCount - *Tile;
+        --*TileMap;
     }
-    
-    if(Result.TileX >= World->CountX)
-    {
-        Result.TileX = Result.TileX - World->CountX;
-        ++Result.TileMapX;
-    }
-    
-    if(Result.TileY >= World->CountY)
-    {
-        Result.TileY = Result.TileY - World->CountY;
-        ++Result.TileMapY;
-    }
+}
+
+inline canonical_position
+RecanonicalPosition(world *World, canonical_position Pos)
+{
+    canonical_position Result = Pos;
+
+    RecanonicaliseCoord(World, &Pos.TileMapX, &Pos.TileX, &Pos.TileRelX);
+    RecanonicaliseCoord(World, &Pos.TileMapY, &Pos.TileY, &Pos.TileRelY);
 
     return(Result);
 }
@@ -268,13 +257,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
     {
-        GameState->PlayerX = 175;
-        GameState->PlayerY = 150;
+        GameState->PlayerP.TileMapX = 0;
+        GameState->PlayerP.TileMapY = 0;
+        GameState->PlayerP.TileX = 3;
+        GameState->PlayerP.TileY = 3;
+        GameState->PlayerP.TileRelX = 5.0f;
+        GameState->PlayerP.TileRelY = 5.0f;
 
         Memory->IsInitialised = true;
     }
 
-    tile_map *TileMap = GetTileMap(&World, GameState->PlayerTileMapX, GameState->PlayerTileMapY);
+    tile_map *TileMap = GetTileMap(&World, GameState->PlayerP.TileMapX, GameState->PlayerP.TileMapY);
     Assert(TileMap);
 
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
@@ -310,16 +303,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             dPlayerY *= 64.0f;
 
             //TODO: Diagonal will be faster! Fix with vectors
-            real32 NewPlayerX = GameState->PlayerX + Input->dtForFrame*dPlayerX;
-            real32 NewPlayerY = GameState->PlayerY + Input->dtForFrame*dPlayerY;
+            real32 NewPlayerX = GameState->PlayerP.TileRelX + Input->dtForFrame*dPlayerX;
+            real32 NewPlayerY = GameState->PlayerP.TileRelY + Input->dtForFrame*dPlayerY;
 
-            raw_position PlayerPos =
-                {GameState->PlayerTileMapX, GameState->PlayerTileMapY,
-                 NewPlayerX, NewPlayerY};
-            raw_position PlayerLeft = PlayerPos;
-            PlayerLeft.X -= 0.5f*PlayerWidth;
-            raw_position PlayerRight = PlayerPos;
-            PlayerRight.X += 0.5f*PlayerWidth;
+            canonical_position PlayerLeft = GameState->PlayerP;
+            PlayerLeft.TileRelX -= 0.5f*PlayerWidth;
+            canonical_position PlayerRight = GameState->PlayerP;
+            PlayerRight.TileRelX += 0.5f*PlayerWidth;
 
             if(IsWorldPointEmpty(&World, PlayerPos) &&
                IsWorldPointEmpty(&World, PlayerLeft) &&
