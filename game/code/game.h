@@ -66,16 +66,6 @@ struct canonical_position
     real32 TileRelY;
 };
 
-struct raw_position
-{
-    int32_t TileMapX;
-    int32_t TileMapY;
-
-    // This is tile-map relative X and Y.
-    real32 X;
-    real32 Y;
-};
-
 struct tile_map
 {
     uint32_t *Tiles;
