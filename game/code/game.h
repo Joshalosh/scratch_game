@@ -61,7 +61,6 @@ struct canonical_position
     uint32_t _TileY;
 #endif
 
-    // This is tile-relative X and Y.
     real32 TileRelX;
     real32 TileRelY;
 };

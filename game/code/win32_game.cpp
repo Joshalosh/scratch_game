@@ -615,6 +615,7 @@ Win32GetInputFileLocation(win32_state *State, bool32 InputStream,
 internal win32_replay_buffer *
 Win32GetReplayBuffer(win32_state *State, int unsigned Index)
 {
+    Assert(Index > 0);
     Assert(Index < ArrayCount(State->ReplayBuffers));
     win32_replay_buffer *Result = &State->ReplayBuffers[Index];
     return(Result);
