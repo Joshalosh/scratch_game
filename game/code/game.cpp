@@ -144,10 +144,10 @@ RecanonicaliseCoord(world *World, int32_t TileCount, int32_t *TileMap, int32_t *
     }
 }
 
-inline canonical_position
-RecanonicalisePosition(world *World, canonical_position Pos)
+inline world_position
+RecanonicalisePosition(world *World, world_position Pos)
 {
-    canonical_position Result = Pos;
+    world_position Result = Pos;
 
     RecanonicaliseCoord(World, World->CountX, &Result.TileMapX, &Result.TileX, &Result.TileRelX);
     RecanonicaliseCoord(World, World->CountY, &Result.TileMapY, &Result.TileY, &Result.TileRelY);
@@ -156,7 +156,7 @@ RecanonicalisePosition(world *World, canonical_position Pos)
 }
 
 internal bool32
-IsWorldPointEmpty(world *World, canonical_position CanPos)
+IsWorldPointEmpty(world *World, world_position CanPos)
 {
     bool32 Empty = false;
 
@@ -243,8 +243,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     World.TileSideInPixels = 60;
     World.MetersToPixels = (real32)World.TileSideInPixels / (real32)World.TileSideInMeters;
     
-    World.UpperLeftX = -(real32)World.TileSideInPixels/2;
-    World.UpperLeftY = 0;
+    World.LowerLeftX = -(real32)World.TileSideInPixels/2;
+    World.LowerLeftY = (real32)Buffer->Height;
 
     real32 PlayerHeight = 1.4f;
     real32 PlayerWidth = 0.75f*PlayerHeight;
@@ -282,11 +282,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             if(Controller->MoveUp.EndedDown)
             {
-                dPlayerY = -1.0f;
+                dPlayerY = 1.0f;
             }
             if(Controller->MoveDown.EndedDown)
             {
-                dPlayerY = 1.0f;
+                dPlayerY = -1.0f;
             }
             if(Controller->MoveLeft.EndedDown)
             {
@@ -300,16 +300,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             dPlayerY *= 2.0f;
 
             //TODO: Diagonal will be faster! Fix with vectors
-            canonical_position NewPlayerP = GameState->PlayerP;
+            world_position NewPlayerP = GameState->PlayerP;
             NewPlayerP.TileRelX += Input->dtForFrame*dPlayerX;
             NewPlayerP.TileRelY += Input->dtForFrame*dPlayerY;
             NewPlayerP = RecanonicalisePosition(&World, NewPlayerP);
 
-            canonical_position PlayerLeft = NewPlayerP;
+            world_position PlayerLeft = NewPlayerP;
             PlayerLeft.TileRelX -= 0.5f*PlayerWidth;
             PlayerLeft = RecanonicalisePosition(&World, PlayerLeft);
 
-            canonical_position PlayerRight = NewPlayerP;
+            world_position PlayerRight = NewPlayerP;
             PlayerRight.TileRelX += 0.5f*PlayerWidth;
             PlayerRight = RecanonicalisePosition(&World, PlayerRight);
 
@@ -341,20 +341,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 Gray = 0.0f;
             }
 
-            real32 MinX = World.UpperLeftX + ((real32)Column)*World.TileSideInPixels;
-            real32 MinY = World.UpperLeftY + ((real32)Row)*World.TileSideInPixels;
+            real32 MinX = World.LowerLeftX + ((real32)Column)*World.TileSideInPixels;
+            real32 MinY = World.LowerLeftY - ((real32)Row)*World.TileSideInPixels;
             real32 MaxX = MinX + World.TileSideInPixels;
-            real32 MaxY = MinY + World.TileSideInPixels;
-            DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
+            real32 MaxY = MinY - World.TileSideInPixels;
+            DrawRectangle(Buffer, MinX, MaxY, MaxX, MinY, Gray, Gray, Gray);
         }
     }
 
     real32 PlayerR = 1.0f;
     real32 PlayerG = 1.0f;
     real32 PlayerB = 0.0f;
-    real32 PlayerLeft = World.UpperLeftX + World.TileSideInPixels*GameState->PlayerP.TileX +
+    real32 PlayerLeft = World.LowerLeftX + World.TileSideInPixels*GameState->PlayerP.TileX +
         World.MetersToPixels*GameState->PlayerP.TileRelX - 0.5f*World.MetersToPixels*PlayerWidth;
-    real32 PlayerTop = World.UpperLeftY + World.TileSideInPixels*GameState->PlayerP.TileY +
+    real32 PlayerTop = World.LowerLeftY - World.TileSideInPixels*GameState->PlayerP.TileY -
         World.MetersToPixels*GameState->PlayerP.TileRelY - World.MetersToPixels*PlayerHeight;
     DrawRectangle(Buffer,
                   PlayerLeft, PlayerTop,

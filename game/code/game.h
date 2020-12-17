@@ -48,7 +48,7 @@ inline game_controller_input *GetController(game_input *Input, int unsigned Cont
     return(Result);
 }
 
-struct canonical_position
+struct world_position
 {
 #if 1
     int32_t TileMapX;
@@ -79,8 +79,8 @@ struct world
     int32_t CountX;
     int32_t CountY;
 
-    real32 UpperLeftX;
-    real32 UpperLeftY;
+    real32 LowerLeftX;
+    real32 LowerLeftY;
 
     int32_t TileMapCountX;
     int32_t TileMapCountY;
@@ -90,7 +90,7 @@ struct world
 
 struct game_state
 {
-    canonical_position PlayerP;
+    world_position PlayerP;
 };
 
 #define GAME_H
