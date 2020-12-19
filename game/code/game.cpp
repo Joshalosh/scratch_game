@@ -122,26 +122,16 @@ IsTileMapPointEmpty(world *World, tile_map *TileMap, int32_t TestTileX, int32_t 
 }
 
 inline void 
-RecanonicaliseCoord(world *World, int32_t TileCount, int32_t *TileMap, int32_t *Tile, real32 *TileRel)
+RecanonicaliseCoord(world *World, uint32_t *Tile, real32 *TileRel)
 {
+    // NOTE: World is assumed to be toroidal topology, stepping off
+    // one end brings you back to the other.
     int32_t Offset = FloorReal32ToInt32(*TileRel / World->TileSideInMeters);
     *Tile += Offset;
     *TileRel -= Offset*World->TileSideInMeters;
 
     Assert(*TileRel >= 0);
     Assert(*TileRel <= World->TileSideInMeters);
-
-    if(*Tile < 0)
-    {
-        *Tile = TileCount + *Tile;
-        --*TileMap;
-    }
-
-    if(*Tile >= TileCount)
-    {
-        *Tile = *Tile - TileCount;
-        ++*TileMap;
-    }
 }
 
 inline world_position
@@ -149,19 +139,32 @@ RecanonicalisePosition(world *World, world_position Pos)
 {
     world_position Result = Pos;
 
-    RecanonicaliseCoord(World, World->CountX, &Result.TileMapX, &Result.TileX, &Result.TileRelX);
-    RecanonicaliseCoord(World, World->CountY, &Result.TileMapY, &Result.TileY, &Result.TileRelY);
+    RecanonicaliseCoord(World, &Result.TileX, &Result.TileRelX);
+    RecanonicaliseCoord(World, &Result.TileY, &Result.TileRelY);
 
     return(Result);
 }
 
+inline tile_chunk_position
+GetChunkPositionFor(uint32_t AbsTileX, uint32_t AbsTileY)
+{
+    tile_chunk_position Result;
+
+    Result.TileChunkX = AbsTileX >> World->ChunkShift;
+    Result.TileChunkY = AbsTileY >> World->ChunkShift;  
+    Result.RelTileX = AbsTileX & World->ChunkMask;
+    Result.RelTileY = AbsTileY & World->ChunkMask;
+
+    return(Result);
+};
 internal bool32
 IsWorldPointEmpty(world *World, world_position CanPos)
 {
     bool32 Empty = false;
 
-    tile_map *TileMap = GetTileMap(World, CanPos.TileMapX, CanPos.TileMapY);
-    Empty = IsTileMapPointEmpty(World, TileMap, CanPos.TileX, CanPos.TileY);
+    tile_chunk_position ChunkPos = GetChunkPositionFor(CanPos);
+    tile_chunk_position *TileMap = GetTileMap(World, ChunkPos.AbsTileX, ChunkPos.AbsTileY);
+    Empty = IsTileMapPointEmpty(World, TileMap, ChunkPos.TileX, ChunkPos.TileY);
 
     return(Empty);
 }
@@ -234,6 +237,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     TileMaps[1][1].Tiles = (uint32_t *)Tiles11;
 
     world World;
+    // NOTE: This is set to using 256x256 tile chunks.
+    World.ChunkShift = 8;
+    World.ChunkMask = 0xFF;
+
     World.TileMapCountX = 2;
     World.TileMapCountY = 2;
     World.CountX = TILE_MAP_COUNT_X;

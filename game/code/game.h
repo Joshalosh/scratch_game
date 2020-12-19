@@ -48,18 +48,18 @@ inline game_controller_input *GetController(game_input *Input, int unsigned Cont
     return(Result);
 }
 
+struct tile_chunk_position
+{
+    uint32_t TileChunkX;
+    uint32_t TileChunkY;
+
+    uint32_t RelTileX;
+    uint32_t RelTileY;
+};
 struct world_position
 {
-#if 1
-    int32_t TileMapX;
-    int32_t TileMapY;
-
-    int32_t TileX;
-    int32_t TileY;
-#else
-    uint32_t _TileX;
-    uint32_t _TileY;
-#endif
+    uint32_t AbsTileX;
+    uint32_t AbsTileY;
 
     real32 TileRelX;
     real32 TileRelY;
@@ -72,6 +72,9 @@ struct tile_map
 
 struct world
 {
+    uint32_t ChunkShift;
+    uint32_t ChunkMask;
+
     real32 TileSideInMeters;
     int32_t TileSideInPixels;
     real32 MetersToPixels;
