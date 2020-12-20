@@ -65,7 +65,7 @@ struct world_position
     real32 TileRelY;
 };
 
-struct tile_map
+struct tile_chunk
 {
     uint32_t *Tiles;
 };
@@ -74,21 +74,16 @@ struct world
 {
     uint32_t ChunkShift;
     uint32_t ChunkMask;
+    uint32_t ChunkDim;
 
     real32 TileSideInMeters;
     int32_t TileSideInPixels;
     real32 MetersToPixels;
 
-    int32_t CountX;
-    int32_t CountY;
+    int32_t TileChunkCountX;
+    int32_t TileChunkCountY;
 
-    real32 LowerLeftX;
-    real32 LowerLeftY;
-
-    int32_t TileMapCountX;
-    int32_t TileMapCountY;
-
-    tile_map *TileMaps;
+    tile_chunk *TileChunks;
 };
 
 struct game_state
