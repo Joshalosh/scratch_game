@@ -116,7 +116,7 @@ GetTileValue(world *World, tile_chunk *TileChunk, uint32_t TestTileX, uint32_t T
     return(TileChunkValue);
 }
 
-inline void 
+inline void
 RecanonicaliseCoord(world *World, uint32_t *Tile, real32 *TileRel)
 {
     // NOTE: World is assumed to be toroidal topology, stepping off
@@ -146,12 +146,12 @@ GetChunkPositionFor(world *World, uint32_t AbsTileX, uint32_t AbsTileY)
     tile_chunk_position Result;
 
     Result.TileChunkX = AbsTileX >> World->ChunkShift;
-    Result.TileChunkY = AbsTileY >> World->ChunkShift;  
+    Result.TileChunkY = AbsTileY >> World->ChunkShift;
     Result.RelTileX = AbsTileX & World->ChunkMask;
     Result.RelTileY = AbsTileY & World->ChunkMask;
 
     return(Result);
-};
+}
 
 internal uint32_t
 GetTileValue(world *World, uint32_t AbsTileX, uint32_t AbsTileY)
@@ -201,7 +201,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1}, 
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
     };
 
     world World;
@@ -307,9 +307,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             RelColumn < 20; 
             ++RelColumn)
         {
-            real32 Column = GameState->PlayerP.AbsTileX + RelColumn;
-            real32 Row = GameState->PlayerP.AbsTileY + RelRow;
-            real32 RelRow = (real32)Row - (real32)GameState->PlayerP.AbsTileY;
+            uint32_t Column = GameState->PlayerP.AbsTileX + RelColumn;
+            uint32_t Row = GameState->PlayerP.AbsTileY + RelRow;
             uint32_t TileID = GetTileValue(&World, Column, Row);
             real32 Gray = 0.5f;
             if(TileID == 1)
@@ -323,8 +322,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 Gray = 0.0f;
             }
 
-            real32 MinX = CentreX + ((real32)Column)*World.TileSideInPixels;
-            real32 MinY = CentreY - ((real32)Row)*World.TileSideInPixels;
+            real32 MinX = CentreX + ((real32)RelColumn)*World.TileSideInPixels;
+            real32 MinY = CentreY - ((real32)RelRow)*World.TileSideInPixels;
             real32 MaxX = MinX + World.TileSideInPixels;
             real32 MaxY = MinY - World.TileSideInPixels;
             DrawRectangle(Buffer, MinX, MaxY, MaxX, MinY, Gray, Gray, Gray);
