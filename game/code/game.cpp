@@ -121,12 +121,12 @@ RecanonicaliseCoord(world *World, uint32_t *Tile, real32 *TileRel)
 {
     // NOTE: World is assumed to be toroidal topology, stepping off
     // one end brings you back to the other.
-    int32_t Offset = FloorReal32ToInt32(*TileRel / World->TileSideInMeters);
+    int32_t Offset = RoundReal32ToInt32(*TileRel / World->TileSideInMeters);
     *Tile += Offset;
     *TileRel -= Offset*World->TileSideInMeters;
 
-    Assert(*TileRel >= 0);
-    Assert(*TileRel <= World->TileSideInMeters);
+    Assert(*TileRel >= -0.5f*World->TileSideInMeters);
+    Assert(*TileRel <= 0.5f*World->TileSideInMeters);
 }
 
 inline world_position
@@ -267,8 +267,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 dPlayerX = 1.0f;
             }
-            dPlayerX *= 2.0f;
-            dPlayerY *= 2.0f;
+            real32 PlayerSpeed = 2.0f;
+            if(Controller->ActionUp.EndedDown)
+            {
+                PlayerSpeed = 10.0f;
+            }
+
+            dPlayerX *= PlayerSpeed;
+            dPlayerY *= PlayerSpeed;
 
             //TODO: Diagonal will be faster! Fix with vectors
             world_position NewPlayerP = GameState->PlayerP;
@@ -296,8 +302,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height,
                   1.0f, 0.5f, 1.0f);
 
-    real32 CentreX = 0.5f*(Buffer->Width);
-    real32 CentreY = 0.5f*(Buffer->Height);
+    real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
+    real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
 
     for(int32_t RelRow = -10;
         RelRow < 10;
@@ -322,21 +328,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 Gray = 0.0f;
             }
 
-            real32 MinX = CentreX + ((real32)RelColumn)*World.TileSideInPixels;
-            real32 MinY = CentreY - ((real32)RelRow)*World.TileSideInPixels;
-            real32 MaxX = MinX + World.TileSideInPixels;
-            real32 MaxY = MinY - World.TileSideInPixels;
-            DrawRectangle(Buffer, MinX, MaxY, MaxX, MinY, Gray, Gray, Gray);
+            real32 CenX = ScreenCentreX - World.MetersToPixels*GameState->PlayerP.TileRelX + 
+                ((real32)RelColumn)*World.TileSideInPixels;
+            real32 CenY = ScreenCentreY + World.MetersToPixels*GameState->PlayerP.TileRelY - 
+                ((real32)RelRow)*World.TileSideInPixels;
+            real32 MinX = CenX - 0.5f*World.TileSideInPixels;
+            real32 MinY = CenY - 0.5f*World.TileSideInPixels;
+            real32 MaxX = CenX + 0.5f*World.TileSideInPixels;
+            real32 MaxY = CenY + 0.5f*World.TileSideInPixels;
+            DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
         }
     }
 
     real32 PlayerR = 1.0f;
     real32 PlayerG = 1.0f;
     real32 PlayerB = 0.0f;
-    real32 PlayerLeft = CentreX + World.MetersToPixels*GameState->PlayerP.TileRelX - 
-        0.5f*World.MetersToPixels*PlayerWidth;
-    real32 PlayerTop = CentreY - World.MetersToPixels*GameState->PlayerP.TileRelY - 
-        World.MetersToPixels*PlayerHeight;
+    real32 PlayerLeft = ScreenCentreX - 0.5f*World.MetersToPixels*PlayerWidth;
+    real32 PlayerTop = ScreenCentreY - World.MetersToPixels*PlayerHeight;
     DrawRectangle(Buffer,
                   PlayerLeft, PlayerTop,
                   PlayerLeft + World.MetersToPixels*PlayerWidth,
