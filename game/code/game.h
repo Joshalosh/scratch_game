@@ -55,6 +55,14 @@ inline game_controller_input *GetController(game_input *Input, int unsigned Cont
 #include "game_intrinsics.h"
 #include "game_tile.h"
 
+struct memory_arena
+{
+    memory_index Size;
+    uint8_t *Base;
+    memory_index Used;
+
+};
+
 struct world
 {
     tile_map *TileMap;
@@ -62,7 +70,9 @@ struct world
 
 struct game_state
 {
+    memory_arena WorldArena;
     world *World;
+
     tile_map_position PlayerP;
 };
 

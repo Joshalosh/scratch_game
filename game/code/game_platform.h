@@ -6,6 +6,8 @@ extern "C" {
 
 #include <stdint.h>
 
+typedef size_t memory_index;
+
 typedef int32_t bool32;
 typedef float real32;
 typedef double real64;

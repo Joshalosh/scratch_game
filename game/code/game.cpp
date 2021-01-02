@@ -79,6 +79,25 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     }
 }
 
+internal void
+InitialiseArena(memory_arena *Arena, memory_index Size, uint8_t *Base)
+{
+    Arena->Size = Size;
+    Arena->Base = Base;
+    Arena->Used = 0;
+}
+
+#define PushStruct(Arena, type) (type *)PushStruct_(Arena, sizeof(type))
+void *
+PushStruct_(memory_arena *Arena, memory_index Size)
+{
+    Assert((Arena->Used + Size) <= Arena->Size);
+    void *Result = Arena->Base + Arena->Used;
+    Arena->Used += Size;
+
+    return(Result);
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -96,9 +115,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.TileRelX = 5.0f;
         GameState->PlayerP.TileRelY = 5.0f;
 
-        GameState->World = PushStruct(world);
+        InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
+                        (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
+
+        GameState->World = PushStruct(&GameState->WorldArena, world);
         world *World = GameState->World;
-        World->TileMap = PushStruct(tile_map);
+        World->TileMap = PushStruct(&GameState->WorldArena, tile_map);
 
         tile_map *TileMap = World->TileMap;
 
@@ -109,10 +131,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         TileMap->TileChunkCountX = 1;
         TileMap->TileChunkCountY = 1;
-
-        tile_chunk TileChunk;
-        TileChunk.Tiles = (uint32_t *)TempTiles;
-        TileMap->TileChunks = &TileChunk;
 
         TileMap->TileSideInMeters = 1.4f;
         TileMap->TileSideInPixels = 60;
@@ -134,7 +152,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         uint32_t AbsTileX = ScreenX*TilesPerWidth + TileX;
                         uint32_t AbsTileY = ScreenY*TilesPerWidth + TileY;
 
-                        SetTileValue(World->TileMap, AbsTileX, AbsTileY, 0);
+                        SetTileValue(&GameState->WorldArena, World->TileMap, AbsTileX, AbsTileY, 0);
                     }
                 }
             }

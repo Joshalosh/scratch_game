@@ -40,4 +40,3 @@ struct tile_map
 
     tile_chunk *TileChunks;
 };
-
