@@ -87,9 +87,10 @@ InitialiseArena(memory_arena *Arena, memory_index Size, uint8_t *Base)
     Arena->Used = 0;
 }
 
-#define PushStruct(Arena, type) (type *)PushStruct_(Arena, sizeof(type))
+#define PushStruct(Arena, type) (type *)PushSize_(Arena, sizeof(type))
+#define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
 void *
-PushStruct_(memory_arena *Arena, memory_index Size)
+PushSize_(memory_arena *Arena, memory_index Size)
 {
     Assert((Arena->Used + Size) <= Arena->Size);
     void *Result = Arena->Base + Arena->Used;
@@ -129,8 +130,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileMap->ChunkMask = (1 << TileMap->ChunkShift) - 1;
         TileMap->ChunkDim = 256;
 
-        TileMap->TileChunkCountX = 1;
-        TileMap->TileChunkCountY = 1;
+        TileMap->TileChunks = PushArray(&GameState->WorldArena, 
+                                        TileMap->TileChunkCountX*TileMap->TileChunkCountY,
+                                        tile_chunk);
+
+        TileMap->TileChunkCountX = 16;
+        TileMap->TileChunkCountY = 16;
+        for(uint32_t Y = 0; Y < TileMap->TileChunkCountY; ++Y)
+        {
+            for(uint32_t X = 0; X < TileMap->TileChunkCountX; ++X)
+            {
+                TileMap->TileChunks[Y*TileMap->TileChunkCountX + X].Tiles = 
+                    PushArray(&GameState->WorldArena, TileMap->ChunkDim*TileMap->ChunkDim, uint32_t);
+            }
+        }
 
         TileMap->TileSideInMeters = 1.4f;
         TileMap->TileSideInPixels = 60;

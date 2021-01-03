@@ -1,4 +1,4 @@
-
+#if !defined(GAME_TILE_H)
 struct tile_map_position
 {
     // NOTE: These are fixed point tile locations. The high
@@ -35,8 +35,11 @@ struct tile_map
     int32_t TileSideInPixels;
     real32 MetersToPixels;
 
-    int32_t TileChunkCountX;
-    int32_t TileChunkCountY;
+    uint32_t TileChunkCountX;
+    uint32_t TileChunkCountY;
 
     tile_chunk *TileChunks;
 };
+
+#define GAME_TILE_H
+#endif

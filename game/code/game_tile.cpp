@@ -24,7 +24,7 @@ RecanonicalisePosition(tile_map *TileMap, tile_map_position Pos)
 }
 
 inline tile_chunk *
-GetTileChunk(tile_map *TileMap, int32_t TileChunkX, int32_t TileChunkY)
+GetTileChunk(tile_map *TileMap, uint32_t TileChunkX, uint32_t TileChunkY)
 {
     tile_chunk *TileChunk = 0;
 
