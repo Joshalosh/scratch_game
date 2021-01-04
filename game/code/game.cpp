@@ -111,7 +111,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
     {
-        GameState->PlayerP.AbsTileX = 3;
+        GameState->PlayerP.AbsTileX = 1;
         GameState->PlayerP.AbsTileY = 3;
         GameState->PlayerP.TileRelX = 5.0f;
         GameState->PlayerP.TileRelY = 5.0f;
@@ -126,16 +126,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         tile_map *TileMap = World->TileMap;
 
         // NOTE: This is set to using 256x256 tile chunks.
-        TileMap->ChunkShift = 8;
+        TileMap->ChunkShift = 4;
         TileMap->ChunkMask = (1 << TileMap->ChunkShift) - 1;
-        TileMap->ChunkDim = 256;
+        TileMap->ChunkDim = (1 << TileMap->ChunkShift);
 
+        TileMap->TileChunkCountX = 128;
+        TileMap->TileChunkCountY = 128;
         TileMap->TileChunks = PushArray(&GameState->WorldArena, 
                                         TileMap->TileChunkCountX*TileMap->TileChunkCountY,
                                         tile_chunk);
 
-        TileMap->TileChunkCountX = 16;
-        TileMap->TileChunkCountY = 16;
         for(uint32_t Y = 0; Y < TileMap->TileChunkCountY; ++Y)
         {
             for(uint32_t X = 0; X < TileMap->TileChunkCountX; ++X)
@@ -163,9 +163,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     for(uint32_t TileX = 0; TileX < TilesPerWidth; ++TileX)
                     {
                         uint32_t AbsTileX = ScreenX*TilesPerWidth + TileX;
-                        uint32_t AbsTileY = ScreenY*TilesPerWidth + TileY;
+                        uint32_t AbsTileY = ScreenY*TilesPerHeight + TileY;
 
-                        SetTileValue(&GameState->WorldArena, World->TileMap, AbsTileX, AbsTileY, 0);
+                        SetTileValue(&GameState->WorldArena, World->TileMap, AbsTileX, AbsTileY, 
+                                     (TileX == TileY) && (TileY % 2) ? 1 : 0);
                     }
                 }
             }
