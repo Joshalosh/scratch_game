@@ -14,7 +14,7 @@ REM cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link -subsystem:window
 REM 64-bit build
 del *.pdb > NUL 2> NUL
 REM Optimisation switches /O2 
-cl %CommonCompilerFlags% -O2 ..\game\code\game.cpp -Fmgame.map -LD /link -incremental:no -PDB:game_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender
+cl %CommonCompilerFlags% ..\game\code\game.cpp -Fmgame.map -LD /link -incremental:no -PDB:game_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender
 cl %CommonCompilerFlags% ..\game\code\win32_game.cpp -Fmwin32_game.map /link %CommonLinkerFlags%
 popd
 
