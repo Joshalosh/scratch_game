@@ -113,7 +113,7 @@ internal bool32
 IsTileMapPointEmpty(tile_map *TileMap, tile_map_position CanPos)
 {
     uint32_t TileChunkValue = GetTileValue(TileMap, CanPos.AbsTileX, CanPos.AbsTileY);
-    bool32 Empty = (TileChunkValue == 0);
+    bool32 Empty = (TileChunkValue == 1);
 
     return(Empty);
 }
