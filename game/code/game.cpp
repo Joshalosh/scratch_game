@@ -79,26 +79,6 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     }
 }
 
-internal void
-InitialiseArena(memory_arena *Arena, memory_index Size, uint8_t *Base)
-{
-    Arena->Size = Size;
-    Arena->Base = Base;
-    Arena->Used = 0;
-}
-
-#define PushStruct(Arena, type) (type *)PushSize_(Arena, sizeof(type))
-#define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
-void *
-PushSize_(memory_arena *Arena, memory_index Size)
-{
-    Assert((Arena->Used + Size) <= Arena->Size);
-    void *Result = Arena->Base + Arena->Used;
-    Arena->Used += Size;
-
-    return(Result);
-}
-
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -136,17 +116,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                         TileMap->TileChunkCountX*TileMap->TileChunkCountY,
                                         tile_chunk);
 
-        for(uint32_t Y = 0; Y < TileMap->TileChunkCountY; ++Y)
-        {
-            for(uint32_t X = 0; X < TileMap->TileChunkCountX; ++X)
-            {
-                TileMap->TileChunks[Y*TileMap->TileChunkCountX + X].Tiles = 
-                    PushArray(&GameState->WorldArena, TileMap->ChunkDim*TileMap->ChunkDim, uint32_t);
-            }
-        }
-
         TileMap->TileSideInMeters = 1.4f;
-        TileMap->TileSideInPixels = 6;
+        TileMap->TileSideInPixels = 60;
         TileMap->MetersToPixels = (real32)TileMap->TileSideInPixels / (real32)TileMap->TileSideInMeters;
         
         real32 LowerLeftX = -(real32)TileMap->TileSideInPixels/2;
@@ -157,8 +128,25 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t TilesPerHeight = 9;
         uint32_t ScreenX = 0;
         uint32_t ScreenY = 0;
+
+        bool32 DoorLeft = false;
+        bool32 DoorRight = false;
+        bool32 DoorTop = false;
+        bool32 DoorBottom = false;
         for(uint32_t ScreenIndex = 0; ScreenIndex < 100; ++ScreenIndex)
         {
+            Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
+            uint32_t RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
+
+            if(RandomChoice == 0)
+            {
+                DoorRight = true;
+            }
+            else
+            {
+                DoorTop = true;
+            }
+
             for(uint32_t TileY = 0; TileY < TilesPerHeight; ++TileY)
             {
                 for(uint32_t TileX = 0; TileX < TilesPerWidth; ++TileX)
@@ -167,27 +155,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     uint32_t AbsTileY = ScreenY*TilesPerHeight + TileY;
 
                     uint32_t TileValue = 1;
-                    if((TileX == 0) || (TileX == (TilesPerWidth - 1)))
+                    if((TileX == 0) && (!DoorLeft || (TileY != (TilesPerHeight/2))))
                     {
-                        if(TileY == (TilesPerHeight/2))
-                        {
-                            TileValue = 1;
-                        }
-                        else
-                        {
-                            TileValue = 2;
-                        }
+                        TileValue = 2;
                     }
-                    if((TileY == 0) || (TileY == (TilesPerHeight - 1)))
+
+                    if((TileX == (TilesPerWidth - 1)) && (!DoorRight || (TileY != (TilesPerHeight/2))))
                     {
-                        if(TileX == (TilesPerWidth/2))
-                        {
-                            TileValue = 1;
-                        }
-                        else
-                        {
-                            TileValue = 2;
-                        }
+                        TileValue = 2;
+                    }
+
+                    if((TileY == 0) && (!DoorBottom || (TileX != (TilesPerWidth/2))))
+                    {
+                        TileValue = 2;
+                    }
+
+                    if((TileY == (TilesPerHeight - 1)) && (!DoorTop || (TileX != (TilesPerWidth/2))))
+                    {
+                        TileValue = 2;
                     }
 
                     SetTileValue(&GameState->WorldArena, World->TileMap, AbsTileX, AbsTileY,
@@ -195,8 +180,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 }
             }
 
-            Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-            uint32_t RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
+            DoorLeft = DoorRight;
+            DoorBottom = DoorTop;
+
+            DoorRight = false;
+            DoorTop = false;
+
             if(RandomChoice == 0)
             {
                 ScreenX += 1;
@@ -280,12 +269,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
 
-    for(int32_t RelRow = -100;
-        RelRow < 100;
+    for(int32_t RelRow = -10;
+        RelRow < 10;
         ++RelRow)
     {
-        for(int32_t RelColumn = -200; 
-            RelColumn < 200; 
+        for(int32_t RelColumn = -20; 
+            RelColumn < 20; 
             ++RelColumn)
         {
             uint32_t Column = GameState->PlayerP.AbsTileX + RelColumn;
