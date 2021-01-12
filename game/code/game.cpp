@@ -131,12 +131,34 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         bool32 DoorRight = false;
         bool32 DoorTop = false;
         bool32 DoorBottom = false;
+        bool32 DoorUp = false;
+        bool32 DoorDown = false;
         for(uint32_t ScreenIndex = 0; ScreenIndex < 100; ++ScreenIndex)
         {
             Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-            uint32_t RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
+            
+            uint32_t RandomChoice; 
+            if(DoorUp || DoorDown)
+            {
+                RandomNumber = RandomNumberTable[RandomNumberIndex++] % 2;
+            }
+            else
+            {
+                RandomNumber = RandomNumberTable[RandomNumberIndex++] % 3;
+            }
 
-            if(RandomChoice == 0)
+            if(RandomChoice == 2)
+            {
+                if(AbsTileZ == 0)
+                {
+                    DoorUp = true;
+                }
+                else
+                {
+                    DoorDown = true;
+                }
+            }
+            else if(RandomChoice == 1)
             {
                 DoorRight = true;
             }
@@ -183,10 +205,37 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DoorLeft = DoorRight;
             DoorBottom = DoorTop;
 
+            if(DoorUp)
+            {
+                DoorDown = true;
+                DoorUp = false;
+            }
+            else if(DoorDown)
+            {
+                DoorUp = true;
+                DoorDown = false;
+            }
+            else
+            {
+                DoorUp = false;
+                DoorDown = false;
+            }
+
             DoorRight = false;
             DoorTop = false;
 
-            if(RandomChoice == 0)
+            if(RandomChoice == 2)
+            {
+                if(AbsTileZ == 0)
+                {
+                    AbsTileZ = 1;
+                }
+                else
+                {
+                    AbsTileZ = 0;
+                }
+            }
+            else if(RandomChoice == 1)
             {
                 ScreenX += 1;
             }
