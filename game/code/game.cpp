@@ -126,6 +126,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t TilesPerHeight = 9;
         uint32_t ScreenX = 0;
         uint32_t ScreenY = 0;
+        uint32_t AbsTileZ = 0;
 
         bool32 DoorLeft = false;
         bool32 DoorRight = false;
@@ -140,11 +141,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             uint32_t RandomChoice; 
             if(DoorUp || DoorDown)
             {
-                RandomNumber = RandomNumberTable[RandomNumberIndex++] % 2;
+                RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
             }
             else
             {
-                RandomNumber = RandomNumberTable[RandomNumberIndex++] % 3;
+                RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
             }
 
             if(RandomChoice == 2)
@@ -173,7 +174,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 {
                     uint32_t AbsTileX = ScreenX*TilesPerWidth + TileX;
                     uint32_t AbsTileY = ScreenY*TilesPerHeight + TileY;
-                    uint32_t AbsTileZ = 0;
 
                     uint32_t TileValue = 1;
                     if((TileX == 0) && (!DoorLeft || (TileY != (TilesPerHeight/2))))
@@ -194,6 +194,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     if((TileY == (TilesPerHeight - 1)) && (!DoorTop || (TileX != (TilesPerWidth/2))))
                     {
                         TileValue = 2;
+                    }
+
+                    if((TileX == 10) && (TileY == 6))
+                    {
+                        if(DoorUp)
+                        {
+                            TileValue = 3;
+                        }
+
+                        if(DoorDown)
+                        {
+                            TileValue = 4;
+                        }
                     }
 
                     SetTileValue(&GameState->WorldArena, World->TileMap,
@@ -342,6 +355,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 if(TileID == 2)
                 {
                     Gray = 1.0f;
+                }
+
+                if(TileID > 2)
+                {
+                    Gray = 0.25f;
                 }
 
                 if((Column == GameState->PlayerP.AbsTileX) &&
