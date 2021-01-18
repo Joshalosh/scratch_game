@@ -326,6 +326,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                IsTileMapPointEmpty(TileMap, PlayerLeft) &&
                IsTileMapPointEmpty(TileMap, PlayerRight))
             {
+                if(!AreOnSameTile(&GameState->PlayerP, &NewPlayerP))
+                {
+                    uint32_t NewTileValue = GetTileValue(TileMap, NewPlayerP);
+
+                    if(NewTileValue == 3)
+                    {
+                        ++NewPlayerP.AbsTileZ;
+                    }
+                    else if(NewTileValue == 4)
+                    {
+                        --NewPlayerP.AbsTileZ;
+                    }
+                }
+
                 GameState->PlayerP = NewPlayerP;
             }
         }
