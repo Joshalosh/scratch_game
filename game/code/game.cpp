@@ -79,6 +79,33 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     }
 }
 
+#pragma pack(push, 1)
+struct bitmap_header
+{
+    uint16_t FileType;
+    uint32_t FileSize;
+    uint16_t Reserved1;
+    uint16_t Reserved2;
+    uint32_t BitmapOffset;
+    uint32_t Size;
+    int32_t Width;
+    int32_t Height;
+    uint16_t Planes;
+    uint16_t BitsPerPixel;
+};
+#pragma pack(pop)
+
+internal void
+DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
+{
+    debug_read_file_result ReadResult = ReadEntireFile(Thread, Filename);
+    if(ReadResult.ContentsSize != 0)
+    {
+        bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
+        int Y = 0;
+    }
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -91,10 +118,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
     {
+        DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
         GameState->PlayerP.AbsTileX = 1;
         GameState->PlayerP.AbsTileY = 3;
-        GameState->PlayerP.TileRelX = 5.0f;
-        GameState->PlayerP.TileRelY = 5.0f;
+        GameState->PlayerP.OffsetX = 5.0f;
+        GameState->PlayerP.OffsetY = 5.0f;
 
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
                         (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
@@ -148,8 +176,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
             }
 
+            bool32 CreatedZDoor = false;
             if(RandomChoice == 2)
             {
+                CreatedZDoor = true;
                 if(AbsTileZ == 0)
                 {
                     DoorUp = true;
@@ -218,15 +248,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DoorLeft = DoorRight;
             DoorBottom = DoorTop;
 
-            if(DoorUp)
+            if(CreatedZDoor)
             {
-                DoorDown = true;
-                DoorUp = false;
-            }
-            else if(DoorDown)
-            {
-                DoorUp = true;
-                DoorDown = false;
+                DoorDown = !DoorDown;
+                DoorUp = !DoorUp;
             }
             else
             {
@@ -310,16 +335,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             //TODO: Diagonal will be faster! Fix with vectors
             tile_map_position NewPlayerP = GameState->PlayerP;
-            NewPlayerP.TileRelX += Input->dtForFrame*dPlayerX;
-            NewPlayerP.TileRelY += Input->dtForFrame*dPlayerY;
+            NewPlayerP.OffsetX += Input->dtForFrame*dPlayerX;
+            NewPlayerP.OffsetY += Input->dtForFrame*dPlayerY;
             NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
 
             tile_map_position PlayerLeft = NewPlayerP;
-            PlayerLeft.TileRelX -= 0.5f*PlayerWidth;
+            PlayerLeft.OffsetX -= 0.5f*PlayerWidth;
             PlayerLeft = RecanonicalisePosition(TileMap, PlayerLeft);
 
             tile_map_position PlayerRight = NewPlayerP;
-            PlayerRight.TileRelX += 0.5f*PlayerWidth;
+            PlayerRight.OffsetX += 0.5f*PlayerWidth;
             PlayerRight = RecanonicalisePosition(TileMap, PlayerRight);
 
             if(IsTileMapPointEmpty(TileMap, NewPlayerP) &&
@@ -382,9 +407,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     Gray = 0.0f;
                 }
 
-                real32 CenX = ScreenCentreX - MetersToPixels*GameState->PlayerP.TileRelX + 
+                real32 CenX = ScreenCentreX - MetersToPixels*GameState->PlayerP.OffsetX + 
                     ((real32)RelColumn)*TileSideInPixels;
-                real32 CenY = ScreenCentreY + MetersToPixels*GameState->PlayerP.TileRelY - 
+                real32 CenY = ScreenCentreY + MetersToPixels*GameState->PlayerP.OffsetY - 
                     ((real32)RelRow)*TileSideInPixels;
                 real32 MinX = CenX - 0.5f*TileSideInPixels;
                 real32 MinY = CenY - 0.5f*TileSideInPixels;

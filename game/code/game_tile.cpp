@@ -152,8 +152,8 @@ RecanonicalisePosition(tile_map *TileMap, tile_map_position Pos)
 {
     tile_map_position Result = Pos;
 
-    RecanonicaliseCoord(TileMap, &Result.AbsTileX, &Result.TileRelX);
-    RecanonicaliseCoord(TileMap, &Result.AbsTileY, &Result.TileRelY);
+    RecanonicaliseCoord(TileMap, &Result.AbsTileX, &Result.OffsetX);
+    RecanonicaliseCoord(TileMap, &Result.AbsTileY, &Result.OffsetY);
 
     return(Result);
 }
