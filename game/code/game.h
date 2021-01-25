@@ -94,6 +94,7 @@ struct game_state
     world *World;
 
     tile_map_position PlayerP;
+    uint32_t *PixelPointer;
 };
 
 #define GAME_H

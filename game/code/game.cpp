@@ -95,15 +95,33 @@ struct bitmap_header
 };
 #pragma pack(pop)
 
-internal void
+internal uint32_t *
 DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
 {
+    uint32_t *Result = 0;
+        
     debug_read_file_result ReadResult = ReadEntireFile(Thread, Filename);
     if(ReadResult.ContentsSize != 0)
     {
         bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
-        int Y = 0;
+        uint32_t *Pixels = (uint32_t *)((uint8_t *)ReadResult.Contents + Header->BitmapOffset);
+        Result = Pixels;
+
+#if 1
+        uint32_t *SourceDest = Pixels;
+        for(int32_t Y = 0; Y < Header->Width; ++Y)
+        {
+            for(int32_t X = 0; X < Header->Height; ++X)
+            {
+                *SourceDest = (*SourceDest >> 8) | (*SourceDest << 24);
+                ++SourceDest;
+            }
+        }
+#endif
+
     }
+
+    return(Result);
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -118,7 +136,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
     {
-        DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
+        GameState->PixelPointer = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile,
+                                               "test/test_background.bmp");
         GameState->PlayerP.AbsTileX = 1;
         GameState->PlayerP.AbsTileY = 3;
         GameState->PlayerP.OffsetX = 5.0f;
@@ -430,6 +449,37 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                   PlayerLeft + MetersToPixels*PlayerWidth,
                   PlayerTop + MetersToPixels*PlayerHeight,
                   PlayerR, PlayerG, PlayerB);
+
+#if 1
+    int32_t PixelWidth = 1024;
+    int32_t PixelHeight = 576;
+
+    int32_t BlitWidth = PixelWidth;
+    int32_t BlitHeight = PixelHeight;
+    if(BlitWidth > Buffer->Width)
+    {
+        BlitWidth = Buffer->Width;
+    }
+    if(BlitHeight > Buffer->Height)
+    {
+        BlitHeight = Buffer->Height;
+    }
+
+    uint32_t *SourceRow = GameState->PixelPointer + PixelWidth*(PixelHeight - 1);
+    uint8_t *DestRow = (uint8_t *)Buffer->Memory;
+    for(int32_t Y = 0; Y < BlitHeight; ++Y)
+    {
+        uint32_t *Dest = (uint32_t *)DestRow;
+        uint32_t *Source = SourceRow;
+        for(int32_t X = 0; X < BlitWidth; ++X)
+        {
+            *Dest++ = *Source++;
+        }
+
+        DestRow += Buffer->Pitch;
+        SourceRow -= PixelWidth;
+    }
+#endif
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
