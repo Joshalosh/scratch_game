@@ -139,6 +139,16 @@ struct bitmap_header
     int32_t Height;
     uint16_t Planes;
     uint16_t BitsPerPixel;
+    uint32_t Compression;
+    uint32_t SizeOfBitmap;
+    int32_t HorzResolution;
+    int32_t VertResolution;
+    uint32_t ColorsUsed;
+    uint32_t ColorsImportant;
+
+    uint32_t RedMask;
+    uint32_t GreenMask;
+    uint32_t BlueMask;
 };
 #pragma pack(pop)
 
@@ -158,9 +168,9 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
 
 #if 1
         uint32_t *SourceDest = Pixels;
-        for(int32_t Y = 0; Y < Header->Width; ++Y)
+        for(int32_t Y = 0; Y < Header->Height; ++Y)
         {
-            for(int32_t X = 0; X < Header->Height; ++X)
+            for(int32_t X = 0; X < Header->Width; ++X)
             {
                 *SourceDest = (*SourceDest >> 8) | (*SourceDest << 24);
                 ++SourceDest;
