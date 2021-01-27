@@ -152,6 +152,29 @@ struct bitmap_header
 };
 #pragma pack(pop)
 
+struct bit_scan_result
+{
+    bool32 Found;
+    uint32_t Index;
+};
+inline bit_scan_result
+FindLeastSignificantSetBit(uint32_t Value)
+{
+    bit_scan_result Result = {};
+    
+    for(uint32_t Test = 0; Test < 32; ++Test)
+    {
+        if(Value & (1 << Test))
+        {
+            Result.Index = Test;
+            Result.Found = true;
+            break;
+        }
+    }
+
+    return(Result);
+}
+
 internal loaded_bitmap
 DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
 {
@@ -166,18 +189,33 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Result.Width = Header->Width;
         Result.Height = Header->Height;
 
-#if 1
+        uint32_t RedMask = Header->RedMask;
+        uint32_t GreenMask = Header->GreenMask;
+        uint32_t BlueMask = Header->BlueMask;
+        uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
+
+        bit_scan_result RedShift = FindLeastSignificantSetBit(RedMask);
+        bit_scan_result GreenShift = FindLeastSignificantSetBit(GreenMask);
+        bit_scan_result BlueShift = FindLeastSignificantSetBit(BlueMask);
+        bit_scan_result AlphaShift = FindLeastSignificantSetBit(AlphaMask);
+
+        Assert(RedShift.Found);
+        Assert(GreenShift.Found);
+        Assert(BlueShift.Found);
+        Assert(AlphaShift.Found);
+
         uint32_t *SourceDest = Pixels;
         for(int32_t Y = 0; Y < Header->Height; ++Y)
         {
             for(int32_t X = 0; X < Header->Width; ++X)
             {
-                *SourceDest = (*SourceDest >> 8) | (*SourceDest << 24);
-                ++SourceDest;
+                uint32_t C = *SourceDest;
+                *SourceDest++ = ((((C >> AlphaShift.Index) & 0xFF) << 24) |
+                                 (((C >> RedShift.Index) & 0xFF) << 16) |
+                                 (((C >> GreenShift.Index) & 0xFF) << 8) |
+                                 (((C >> BlueShift.Index) & 0xFF) << 0));
             }
         }
-#endif
-
     }
 
     return(Result);
