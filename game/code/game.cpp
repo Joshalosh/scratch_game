@@ -152,29 +152,6 @@ struct bitmap_header
 };
 #pragma pack(pop)
 
-struct bit_scan_result
-{
-    bool32 Found;
-    uint32_t Index;
-};
-inline bit_scan_result
-FindLeastSignificantSetBit(uint32_t Value)
-{
-    bit_scan_result Result = {};
-    
-    for(uint32_t Test = 0; Test < 32; ++Test)
-    {
-        if(Value & (1 << Test))
-        {
-            Result.Index = Test;
-            Result.Found = true;
-            break;
-        }
-    }
-
-    return(Result);
-}
-
 internal loaded_bitmap
 DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
 {
