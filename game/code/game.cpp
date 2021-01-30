@@ -118,7 +118,25 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap, real32 RealX, r
         uint32_t *Source = SourceRow;
         for(int32_t X = MinX; X < MaxX; ++X)
         {
-            *Dest++ = *Source++;
+            real32 A = (real32)((*Source >> 24) & 0xFF) / 255.0f;
+            real32 SR = (real32)((*Source >> 16) & 0xFF);
+            real32 SG = (real32)((*Source >> 8) & 0xFF);
+            real32 SB = (real32)((*Source >> 0) & 0xFF);
+            
+            real32 DR = (real32)((*Dest >> 16) & 0xFF);
+            real32 DG = (real32)((*Dest >> 8) & 0xFF);
+            real32 DB = (real32)((*Dest >> 0) & 0xFF);
+            
+            real32 R = (1.0f-A)*DR + A*SR;
+            real32 G = (1.0f-A)*DG + A*SG;
+            real32 B = (1.0f-A)*DB + A*SB;
+
+            *Dest = (((uint32_t)(R + 0.5f) << 16) |
+                     ((uint32_t)(G + 0.5f) << 8) |
+                     ((uint32_t)(B + 0.5f) << 0));  
+
+            ++Dest;
+            ++Source;
         }
 
         DestRow += Buffer->Pitch;
@@ -135,14 +153,14 @@ struct bitmap_header
     uint16_t Reserved2;
     uint32_t BitmapOffset;
     uint32_t Size;
-    int32_t Width;
-    int32_t Height;
+    int32_t  Width;
+    int32_t  Height;
     uint16_t Planes;
     uint16_t BitsPerPixel;
     uint32_t Compression;
     uint32_t SizeOfBitmap;
-    int32_t HorzResolution;
-    int32_t VertResolution;
+    int32_t  HorzResolution;
+    int32_t  VertResolution;
     uint32_t ColorsUsed;
     uint32_t ColorsImportant;
 
