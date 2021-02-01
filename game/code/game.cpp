@@ -84,6 +84,9 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
            real32 RealX, real32 RealY,
            int32_t AlignX = 0, int32_t AlignY = 0)
 {
+    RealX -= (real32)AlignX;
+    RealY -= (real32)AlignY;
+
     int32_t MinX = RoundReal32ToInt32(RealX);
     int32_t MinY = RoundReal32ToInt32(RealY);
     int32_t MaxX = RoundReal32ToInt32(RealX + (real32)Bitmap->Width);
@@ -276,6 +279,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Bitmap->AlignY = 182;
         ++Bitmap;
             
+        GameState->CameraP.AbsTileX = 17/2;
+        GameState->CameraP.AbsTileY = 9/2;
+
         GameState->PlayerP.AbsTileX = 1;
         GameState->PlayerP.AbsTileY = 3;
         GameState->PlayerP.OffsetX = 5.0f;
@@ -544,9 +550,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             RelColumn < 20; 
             ++RelColumn)
         {
-            uint32_t Column = GameState->PlayerP.AbsTileX + RelColumn;
-            uint32_t Row = GameState->PlayerP.AbsTileY + RelRow;
-            uint32_t TileID = GetTileValue(TileMap, Column, Row, GameState->PlayerP.AbsTileZ);
+            uint32_t Column = GameState->CameraP.AbsTileX + RelColumn;
+            uint32_t Row = GameState->CameraP.AbsTileY + RelRow;
+            uint32_t TileID = GetTileValue(TileMap, Column, Row, GameState->CameraP.AbsTileZ);
 
             if(TileID > 1)
             {
@@ -561,15 +567,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     Gray = 0.25f;
                 }
 
-                if((Column == GameState->PlayerP.AbsTileX) &&
-                   (Row == GameState->PlayerP.AbsTileY))
+                if((Column == GameState->CameraP.AbsTileX) &&
+                   (Row == GameState->CameraP.AbsTileY))
                 {
                     Gray = 0.0f;
                 }
 
-                real32 CenX = ScreenCentreX - MetersToPixels*GameState->PlayerP.OffsetX + 
+                real32 CenX = ScreenCentreX - MetersToPixels*GameState->CameraP.OffsetX + 
                     ((real32)RelColumn)*TileSideInPixels;
-                real32 CenY = ScreenCentreY + MetersToPixels*GameState->PlayerP.OffsetY - 
+                real32 CenY = ScreenCentreY + MetersToPixels*GameState->CameraP.OffsetY - 
                     ((real32)RelRow)*TileSideInPixels;
                 real32 MinX = CenX - 0.5f*TileSideInPixels;
                 real32 MinY = CenY - 0.5f*TileSideInPixels;
@@ -580,11 +586,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    tile_map_difference Diff = Subtract(GameState->PlayerP, GameState->CameraP)
+
     real32 PlayerR = 1.0f;
     real32 PlayerG = 1.0f;
     real32 PlayerB = 0.0f;
-    real32 PlayerLeft = ScreenCentreX - 0.5f*MetersToPixels*PlayerWidth;
-    real32 PlayerTop = ScreenCentreY - MetersToPixels*PlayerHeight;
+    real32 PlayerGroundPointX = ScreenCentreX + Diff.dX;
+    real32 PlayerGroundPointY = ScreenCentreY + Diff.dY;
+    real32 PlayerLeft = PlayerGroundPointX - 0.5f*MetersToPixels*PlayerWidth;
+    real32 PlayerTop = PlayerGroundPointY - MetersToPixels*PlayerHeight;
     DrawRectangle(Buffer,
                   PlayerLeft, PlayerTop,
                   PlayerLeft + MetersToPixels*PlayerWidth,
@@ -592,9 +602,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                   PlayerR, PlayerG, PlayerB);
 
     hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[GameState->HeroFacingDirection];
-    DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerLeft, PlayerTop, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-    DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerLeft, PlayerTop, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-    DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerLeft, PlayerTop, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+    DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+    DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+    DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
