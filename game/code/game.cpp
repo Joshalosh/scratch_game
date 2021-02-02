@@ -534,6 +534,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 GameState->PlayerP = NewPlayerP;
             }
+
+            GameState->CameraP.AbsTileZ = GameState->PlayerP.AbsTileZ;
+
+            tile_map_difference Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
+            if(Diff.dX > (9.0f*TileMap->TileSideInMeters))
+            {
+                GameState->CameraP.AbsTileX += 17;
+            }
+            if(Diff.dX < -(9.0f*TileMap->TileSideInMeters))
+            {
+                GameState->CameraP.AbsTileX -= 17;
+            }
+            if(Diff.dY > (5.0f*TileMap->TileSideInMeters))
+            {
+                GameState->CameraP.AbsTileY += 9;
+            }
+            if(Diff.dY < -(5.0f*TileMap->TileSideInMeters))
+            {
+                GameState->CameraP.AbsTileY -= 9;
+            }
         }
     }
 
@@ -586,13 +606,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    tile_map_difference Diff = Subtract(GameState->PlayerP, GameState->CameraP)
+    tile_map_difference Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
 
     real32 PlayerR = 1.0f;
     real32 PlayerG = 1.0f;
     real32 PlayerB = 0.0f;
-    real32 PlayerGroundPointX = ScreenCentreX + Diff.dX;
-    real32 PlayerGroundPointY = ScreenCentreY + Diff.dY;
+    real32 PlayerGroundPointX = ScreenCentreX + MetersToPixels*Diff.dX;
+    real32 PlayerGroundPointY = ScreenCentreY - MetersToPixels*Diff.dY;
     real32 PlayerLeft = PlayerGroundPointX - 0.5f*MetersToPixels*PlayerWidth;
     real32 PlayerTop = PlayerGroundPointY - MetersToPixels*PlayerHeight;
     DrawRectangle(Buffer,
