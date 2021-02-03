@@ -92,13 +92,17 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
     int32_t MaxX = RoundReal32ToInt32(RealX + (real32)Bitmap->Width);
     int32_t MaxY = RoundReal32ToInt32(RealY + (real32)Bitmap->Height);
 
+    int32_t SourceOffsetX = 0;
     if(MinX < 0)
     {
+        SourceOffsetX = -MinX;
         MinX = 0;
     }
 
+    int32_t SourceOffsetY = 0;
     if(MinY < 0)
     {
+        SourceOffsetY = -MinY;
         MinY = 0;
     }
 
@@ -113,6 +117,7 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
     }
 
     uint32_t *SourceRow = Bitmap->Pixels + Bitmap->Width*(Bitmap->Height - 1);
+    SourceRow += -SourceOffsetY*Bitmap->Width + SourceOffsetX;
     uint8_t *DestRow = ((uint8_t *)Buffer->Memory +
                         MinX*Buffer->BytesPerPixel +
                         MinY*Buffer->Pitch);
@@ -138,7 +143,7 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
 
             *Dest = (((uint32_t)(R + 0.5f) << 16) |
                      ((uint32_t)(G + 0.5f) << 8) |
-                     ((uint32_t)(B + 0.5f) << 0));  
+                     ((uint32_t)(B + 0.5f) << 0));
 
             ++Dest;
             ++Source;
