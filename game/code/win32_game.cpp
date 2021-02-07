@@ -18,7 +18,7 @@ TODO: Additional Platform Layer Code
     etc...
 */
 
-#include "game.h"
+#include "game_platform.h"
 
 #include <windows.h>
 #include <stdio.h>
