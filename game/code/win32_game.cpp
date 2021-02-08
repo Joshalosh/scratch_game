@@ -6,7 +6,6 @@ TODO: Additional Platform Layer Code
   - Asset loading path
   - Threading (launch a thread)
   - Raw Input (support for multiple keyboards)
-  - Sleep/timeBeginPeriod
   - ClipCursor() (for multimonitor support)
   - Fullscreen support
   - WM_SETCURSOR (control cursor visibility)
@@ -34,6 +33,7 @@ global_variable bool32 GlobalPause;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable int64_t GlobalPerfCountFrequency;
+global_variable bool32 DEBUGGlobalShowCursor;
 
 // XInputGetState
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
@@ -456,6 +456,18 @@ Win32MainWindowCallback(HWND Window,
             GlobalRunning = false;
         } break;
  
+        case WM_SETCURSOR:
+        {
+            if(DEBUGGlobalShowCursor)
+            {
+                Result = DefWindowProcA(Window, Message, WParam, LParam);
+            }
+            else
+            {
+                SetCursor(0);
+            }
+        } break;
+
         case WM_ACTIVATEAPP:
         {
 #if 0
@@ -982,6 +994,9 @@ WinMain(HINSTANCE Instance,
 
     Win32LoadXInput();
 
+#if GAME_INTERNAL
+    DEBUGGlobalShowCursor = true;
+#endif
     WNDCLASSA WindowClass = {};
 
     Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
@@ -989,6 +1004,7 @@ WinMain(HINSTANCE Instance,
     WindowClass.style = CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = Instance;
+    WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
 //  WindowClass.hIcon;
     WindowClass.lpszClassName = "GameWindowClass";
 

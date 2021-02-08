@@ -22,7 +22,7 @@ struct win32_sound_output
     int BytesPerSample;
     DWORD SecondaryBufferSize;
     DWORD SafetyBytes;
-    real32 tSine;
+
     // TODO: Perhaps RunningSampleIndex should be in bytes
     // TODO: Add "bytes per second" field to make math simpler
 };
@@ -60,7 +60,6 @@ struct win32_replay_buffer
     char Filename[WIN32_STATE_FILE_NAME_COUNT];
     void *MemoryBlock;
 };
-
 
 struct win32_state
 {
