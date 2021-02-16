@@ -504,6 +504,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             dPlayerX *= PlayerSpeed;
             dPlayerY *= PlayerSpeed;
+            
+            if((dPlayerX != 0.0f) && ((dPlayerY != 0.0f)))
+            {
+                dPlayerX *= 0.707106781187f;
+                dPlayerY *= 0.707106781187f;
+            }
 
             //TODO: Diagonal will be faster! Fix with vectors
             tile_map_position NewPlayerP = GameState->PlayerP;
