@@ -473,28 +473,27 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         else
         {
             // Use digital movement tuning
-            real32 dPlayerX = 0.0f;
-            real32 dPlayerY = 0.0f;
+            v2 dPlayer = {};
 
             if(Controller->MoveUp.EndedDown)
             {
                 GameState->HeroFacingDirection = 1;
-                dPlayerY = 1.0f;
+                dPlayer.Y = 1.0f;
             }
             if(Controller->MoveDown.EndedDown)
             {
                 GameState->HeroFacingDirection = 3;
-                dPlayerY = -1.0f;
+                dPlayer.Y = -1.0f;
             }
             if(Controller->MoveLeft.EndedDown)
             {
                 GameState->HeroFacingDirection = 2;
-                dPlayerX = -1.0f;
+                dPlayer.X = -1.0f;
             }
             if(Controller->MoveRight.EndedDown)
             {
                 GameState->HeroFacingDirection = 0;
-                dPlayerX = 1.0f;
+                dPlayer.X = 1.0f;
             }
             real32 PlayerSpeed = 2.0f;
             if(Controller->ActionUp.EndedDown)
@@ -502,19 +501,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 PlayerSpeed = 10.0f;
             }
 
-            dPlayerX *= PlayerSpeed;
-            dPlayerY *= PlayerSpeed;
+            dPlayer *= PlayerSpeed;
             
-            if((dPlayerX != 0.0f) && ((dPlayerY != 0.0f)))
+            if((dPlayer.X != 0.0f) && ((dPlayer.Y != 0.0f)))
             {
-                dPlayerX *= 0.707106781187f;
-                dPlayerY *= 0.707106781187f;
+                dPlayer *= 0.707106781187f;
             }
 
             //TODO: Diagonal will be faster! Fix with vectors
             tile_map_position NewPlayerP = GameState->PlayerP;
-            NewPlayerP.OffsetX += Input->dtForFrame*dPlayerX;
-            NewPlayerP.OffsetY += Input->dtForFrame*dPlayerY;
+            NewPlayerP.Offset += Input->dtForFrame*dPlayer;
             NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
 
             tile_map_position PlayerLeft = NewPlayerP;
