@@ -1,14 +1,15 @@
 #if !defined(GAME_MATH_H)
-struct v2
+union v2
 {
-    real32 X, Y;
-    real32 &operator[](int index) {return((&X)[Index]);}
-
-    inline v2 &operator*=(real32 A);
-    inline v2 &operator+=(v2 A);
+    struct
+    {
+        real32 X, Y;
+    };
+    real32 E[2];
 };
 
-int v2 V2(real32 X, real32 Y)
+inline v2 
+V2(real32 X, real32 Y)
 {
     v2 Result;
 
@@ -18,7 +19,7 @@ int v2 V2(real32 X, real32 Y)
     return(Result);
 }
 
-inline v2 
+inline v2
 operator*(real32 A, v2 B)
 {
     v2 Result;
@@ -29,15 +30,23 @@ operator*(real32 A, v2 B)
     return(Result);
 }
 
-inline v2 &v2::
-operator*=(real32 A)
+inline v2
+operator*(v2 B, real32 A)
 {
-    *this = A * *this;
+    v2 Result = A*B;
 
-    return(*this);
+    return(Result);
 }
 
-inline v2 
+inline v2 &
+operator*=(v2 &B, real32 A)
+{
+    B = A * B;
+
+    return(B);
+}
+
+inline v2
 operator-(v2 A)
 {
     v2 Result;
@@ -48,7 +57,7 @@ operator-(v2 A)
     return(Result);
 }
 
-inline v2 
+inline v2
 operator+(v2 A, v2 B)
 {
     v2 Result;
@@ -59,15 +68,15 @@ operator+(v2 A, v2 B)
     return(Result);
 }
 
-inline v2 &v2::
-operator+=(v2 A)
+inline v2 &
+operator+=(v2 &A, v2 B)
 {
-    *this = *this + A;
+    A = A + B;
 
-    return(*this);
+    return(A);
 }
 
-inline v2 
+inline v2
 operator-(v2 A, v2 B)
 {
     v2 Result;
