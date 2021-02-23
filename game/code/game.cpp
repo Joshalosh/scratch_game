@@ -493,18 +493,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 GameState->HeroFacingDirection = 0;
                 dPlayer.X = 1.0f;
             }
+
+            if((dPlayer.X != 0.0f) && (dPlayer.Y != 0.0f))
+            {
+                dPlayer *= 0.707106781187f;
+            }
+
             real32 PlayerSpeed = 2.0f;
             if(Controller->ActionUp.EndedDown)
             {
                 PlayerSpeed = 10.0f;
             }
-
             dPlayer *= PlayerSpeed;
             
-            if((dPlayer.X != 0.0f) && (dPlayer.Y != 0.0f))
-            {
-                dPlayer *= 0.707106781187f;
-            }
 
             //TODO: Diagonal will be faster! Fix with vectors
             tile_map_position NewPlayerP = GameState->PlayerP;
