@@ -1,4 +1,5 @@
 #if !defined(GAME_MATH_H)
+
 union v2
 {
     struct
@@ -83,6 +84,14 @@ operator-(v2 A, v2 B)
 
     Result.X = A.X - B.X;
     Result.Y = A.Y - B.Y;
+
+    return(Result);
+}
+
+inline real32
+Square(real32 A)
+{
+    real32 Result = A*A;
 
     return(Result);
 }
