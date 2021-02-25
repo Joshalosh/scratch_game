@@ -126,7 +126,7 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
         uint32_t *Source = SourceRow;
         for(int32_t X = MinX; X < MaxX; ++X)
         {
-            real32 A = (real32)((*Source >> 24) & 0xFF) / 255.0f;
+            real32 A  = (real32)((*Source >> 24) & 0xFF) / 255.0f;
             real32 SR = (real32)((*Source >> 16) & 0xFF);
             real32 SG = (real32)((*Source >> 8) & 0xFF);
             real32 SB = (real32)((*Source >> 0) & 0xFF);
@@ -197,9 +197,9 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         uint32_t BlueMask = Header->BlueMask;
         uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
 
-        bit_scan_result RedShift = FindLeastSignificantSetBit(RedMask);
+        bit_scan_result RedShift   = FindLeastSignificantSetBit(RedMask);
         bit_scan_result GreenShift = FindLeastSignificantSetBit(GreenMask);
-        bit_scan_result BlueShift = FindLeastSignificantSetBit(BlueMask);
+        bit_scan_result BlueShift  = FindLeastSignificantSetBit(BlueMask);
         bit_scan_result AlphaShift = FindLeastSignificantSetBit(AlphaMask);
 
         Assert(RedShift.Found);
@@ -231,7 +231,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
     
     real32 PlayerHeight = 1.4f;
-    real32 PlayerWidth = 0.75f*PlayerHeight;
+    real32 PlayerWidth  = 0.75f*PlayerHeight;
 
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
