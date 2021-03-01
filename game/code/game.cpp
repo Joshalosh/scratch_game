@@ -546,6 +546,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 GameState->PlayerP = NewPlayerP;
             }
+            else
+            {
+                v2 r = {0, 1};
+
+                GameState->dPlayerP = GameState->dPlayerP - 2*Inner(GameState->dPlayerP, r)*r;
+
+            }
 
             GameState->CameraP.AbsTileZ = GameState->PlayerP.AbsTileZ;
 
