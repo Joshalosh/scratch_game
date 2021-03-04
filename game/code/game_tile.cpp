@@ -97,13 +97,22 @@ GetTileValue(tile_map *TileMap, tile_map_position Pos)
     return(TileChunkValue);
 }
 
+internal uint32_t
+IsTileValueEmpty(uint32_t TileValue)
+{
+    bool32 Empty = ((TileValue == 1) ||
+                    (TileValue == 3) ||
+                    (TileValue == 4));
+
+    return(Empty);
+}
+
 internal bool32
 IsTileMapPointEmpty(tile_map *TileMap, tile_map_position CanPos)
 {
     uint32_t TileChunkValue = GetTileValue(TileMap, CanPos.AbsTileX, CanPos.AbsTileY, CanPos.AbsTileZ);
-    bool32 Empty = ((TileChunkValue == 1) ||
-                    (TileChunkValue == 3) ||
-                    (TileChunkValue == 4));
+    bool32 Empty = IsTileValueEmpty(TileChunkValue);
+
     return(Empty);
 }
 
