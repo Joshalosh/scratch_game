@@ -510,15 +510,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             //TODO: Diagonal will be faster! Fix with vectors
             ddPlayer += -1.5f*GameState->dPlayerP;
 
-#if 0
             tile_map_position NewPlayerP = GameState->PlayerP;
-            NewPlayerP.Offset = (0.5f*ddPlayer*Square(Input->dtForFrame) +
-                                 GameState->dPlayerP*Input->dtForFrame +
-                                 NewPlayerP.Offset);
+            v2 PlayerDelta = (0.5f*ddPlayer*Square(Input->dtForFrame) +
+                              GameState->dPlayerP*Input->dtForFrame);
+            NewPlayerP.Offset += PlayerDelta; 
             GameState->dPlayerP = ddPlayer*Input->dtForFrame + GameState->dPlayerP;
-
             NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
 
+#if 1
             tile_map_position PlayerLeft = NewPlayerP;
             PlayerLeft.Offset.X -= 0.5f*PlayerWidth;
             PlayerLeft = RecanonicalisePosition(TileMap, PlayerLeft);
@@ -577,19 +576,28 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 uint32_t OnePastMaxTileX = 0;
                 uint32_t OnePastMaxTileY = 0;
                 uint32_t AbsTileZ = GameState->PlayerP.AbsTileZ;
+                tile_map_position BestPlayerP = GameState->PlayerP;
+                real32 BestDistanceSq = LengthSq(PlayerDelta);
 
                 for(uint32_t AbsTileY = MinTileY; AbsTileY != OnePastMaxTileY; ++AbsTileY)
                 {
-                    for(uint32_t AbsTileX = MinTileX; AbsTileX != OnePastMaxTile; ++AbsTileX)
+                    for(uint32_t AbsTileX = MinTileX; AbsTileX != OnePastMaxTileX; ++AbsTileX)
                     {
-                        uint32_t TileValue = GetTileValue(TileMap, AbsTileX, AbsTileY, AbsTileZ);
+                        tile_map_position TestTileP = CentredTilePoint(AbsTileX, AbsTileY, AbsTileZ);
+                        uint32_t TileValue = GetTileValue(TileMap, TestTileP);
                         if(IsTileValueEmpty(TileValue))
                         {
-                            v2 MinCorner = -0,5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
-                            v2 MaxCorner = 0,5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
+                            v2 MinCorner = -0.5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
+                            v2 MaxCorner = 0.5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
 
-                            tile_map_difference Diff = Subtract(TileMap, TestTileP, NewPlayerP);
+                            tile_map_difference RelNewPlayerP = Subtract(TileMap, &TestTileP, &NewPlayerP);
                             v2 TestP = ClosestPointInRectangle(MinCorner, MaxCorner, RelNewPlayerP);
+                            TestDistanceSq = ;
+                            if(BestDistanceSq > TestDistanceSq)
+                            {
+                                BestPlayerP = ;
+                                BestDistanceSq = ;
+                            }
                         }
                     }
                 }
