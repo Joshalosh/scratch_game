@@ -494,7 +494,111 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 GameState->HeroFacingDirection = 0;
                 ddPlayer.X = 1.0f;
             }
+        }
+    }
 
+    if(!AreOnSameTile(&OldPlayerP, &GameState->PlayerP))
+    {
+        uint32_t NewTileValue = GetTileValue(TileMap, GameState->PlayerP);
+
+        if(NewTileValue == 3)
+        {
+            ++GameState->PlayerP.AbsTileZ;
+        }
+        else if(NewTileValue == 4)
+        {
+            --GameState->PlayerP.AbsTileZ;
+        }
+    }
+
+    GameState->CameraP.AbsTileZ = GameState->PlayerP.AbsTileZ;
+
+    tile_map_difference Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
+    if(Diff.dXY.X > (9.0f*TileMap->TileSideInMeters))
+    {
+        GameState->CameraP.AbsTileX += 17;
+    }
+    if(Diff.dXY.X < -(9.0f*TileMap->TileSideInMeters))
+    {
+        GameState->CameraP.AbsTileX -= 17;
+    }
+    if(Diff.dXY.Y > (5.0f*TileMap->TileSideInMeters))
+    {
+        GameState->CameraP.AbsTileY += 9;
+    }
+    if(Diff.dXY.Y < -(5.0f*TileMap->TileSideInMeters))
+    {
+        GameState->CameraP.AbsTileY -= 9;
+    }
+    Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
+
+    DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
+
+    real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
+    real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
+
+    for(int32_t RelRow = -10;
+        RelRow < 10;
+        ++RelRow)
+    {
+        for(int32_t RelColumn = -20; 
+            RelColumn < 20; 
+            ++RelColumn)
+        {
+            uint32_t Column = GameState->CameraP.AbsTileX + RelColumn;
+            uint32_t Row = GameState->CameraP.AbsTileY + RelRow;
+            uint32_t TileID = GetTileValue(TileMap, Column, Row, GameState->CameraP.AbsTileZ);
+
+            if(TileID > 1)
+            {
+                real32 Gray = 0.5f;
+                if(TileID == 2)
+                {
+                    Gray = 1.0f;
+                }
+
+                if(TileID > 2)
+                {
+                    Gray = 0.25f;
+                }
+
+                if((Column == GameState->CameraP.AbsTileX) &&
+                   (Row == GameState->CameraP.AbsTileY))
+                {
+                    Gray = 0.0f;
+                }
+
+                v2 TileSide = {0.5f*TileSideInPixels, 0.5f*TileSideInPixels};
+                v2 Cen = {ScreenCentreX - MetersToPixels*GameState->CameraP.Offset.X + ((real32)RelColumn)*TileSideInPixels,
+                          ScreenCentreY + MetersToPixels*GameState->CameraP.Offset.Y - ((real32)RelRow)*TileSideInPixels};
+                v2 Min = Cen - TileSide;
+                v2 Max = Cen + TileSide;
+                DrawRectangle(Buffer, Min, Max, Gray, Gray, Gray);
+            }
+        }
+    }
+
+    real32 PlayerR = 1.0f;
+    real32 PlayerG = 1.0f;
+    real32 PlayerB = 0.0f;
+    real32 PlayerGroundPointX = ScreenCentreX + MetersToPixels*Diff.dXY.X;
+    real32 PlayerGroundPointY = ScreenCentreY - MetersToPixels*Diff.dXY.Y;
+    v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*PlayerWidth,
+                        PlayerGroundPointY - MetersToPixels*PlayerHeight};
+    v2 PlayerWidthHeight = {PlayerWidth, PlayerHeight};
+    DrawRectangle(Buffer,
+                  PlayerLeftTop,
+                  PlayerLeftTop + MetersToPixels*PlayerWidthHeight,
+                  PlayerR, PlayerG, PlayerB);
+
+    hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[GameState->HeroFacingDirection];
+    DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+    DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+    DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+}
+
+internal
+{
             if((ddPlayer.X != 0.0f) && (ddPlayer.Y != 0.0f))
             {
                 ddPlayer *= 0.707106781187f;
@@ -602,107 +706,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     }
                 }
 #endif
-        }
-    }
-
-    if(!AreOnSameTile(&OldPlayerP, &GameState->PlayerP))
-    {
-        uint32_t NewTileValue = GetTileValue(TileMap, GameState->PlayerP);
-
-        if(NewTileValue == 3)
-        {
-            ++GameState->PlayerP.AbsTileZ;
-        }
-        else if(NewTileValue == 4)
-        {
-            --GameState->PlayerP.AbsTileZ;
-        }
-    }
-
-    GameState->CameraP.AbsTileZ = GameState->PlayerP.AbsTileZ;
-
-    tile_map_difference Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
-    if(Diff.dXY.X > (9.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileX += 17;
-    }
-    if(Diff.dXY.X < -(9.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileX -= 17;
-    }
-    if(Diff.dXY.Y > (5.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileY += 9;
-    }
-    if(Diff.dXY.Y < -(5.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileY -= 9;
-    }
-    Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
-
-    DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
-
-    real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
-    real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
-
-    for(int32_t RelRow = -10;
-        RelRow < 10;
-        ++RelRow)
-    {
-        for(int32_t RelColumn = -20; 
-            RelColumn < 20; 
-            ++RelColumn)
-        {
-            uint32_t Column = GameState->CameraP.AbsTileX + RelColumn;
-            uint32_t Row = GameState->CameraP.AbsTileY + RelRow;
-            uint32_t TileID = GetTileValue(TileMap, Column, Row, GameState->CameraP.AbsTileZ);
-
-            if(TileID > 1)
-            {
-                real32 Gray = 0.5f;
-                if(TileID == 2)
-                {
-                    Gray = 1.0f;
-                }
-
-                if(TileID > 2)
-                {
-                    Gray = 0.25f;
-                }
-
-                if((Column == GameState->CameraP.AbsTileX) &&
-                   (Row == GameState->CameraP.AbsTileY))
-                {
-                    Gray = 0.0f;
-                }
-
-                v2 TileSide = {0.5f*TileSideInPixels, 0.5f*TileSideInPixels};
-                v2 Cen = {ScreenCentreX - MetersToPixels*GameState->CameraP.Offset.X + ((real32)RelColumn)*TileSideInPixels,
-                          ScreenCentreY + MetersToPixels*GameState->CameraP.Offset.Y - ((real32)RelRow)*TileSideInPixels};
-                v2 Min = Cen - TileSide;
-                v2 Max = Cen + TileSide;
-                DrawRectangle(Buffer, Min, Max, Gray, Gray, Gray);
-            }
-        }
-    }
-
-    real32 PlayerR = 1.0f;
-    real32 PlayerG = 1.0f;
-    real32 PlayerB = 0.0f;
-    real32 PlayerGroundPointX = ScreenCentreX + MetersToPixels*Diff.dXY.X;
-    real32 PlayerGroundPointY = ScreenCentreY - MetersToPixels*Diff.dXY.Y;
-    v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*PlayerWidth,
-                        PlayerGroundPointY - MetersToPixels*PlayerHeight};
-    v2 PlayerWidthHeight = {PlayerWidth, PlayerHeight};
-    DrawRectangle(Buffer,
-                  PlayerLeftTop,
-                  PlayerLeftTop + MetersToPixels*PlayerWidthHeight,
-                  PlayerR, PlayerG, PlayerB);
-
-    hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[GameState->HeroFacingDirection];
-    DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-    DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-    DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
