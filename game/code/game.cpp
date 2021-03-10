@@ -285,11 +285,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->CameraP.AbsTileX = 17/2;
         GameState->CameraP.AbsTileY = 9/2;
 
-        GameState->PlayerP.AbsTileX = 1;
-        GameState->PlayerP.AbsTileY = 3;
-        GameState->PlayerP.Offset.X = 5.0f;
-        GameState->PlayerP.Offset.Y = 5.0f;
-
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
                         (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
 
@@ -461,7 +456,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 LowerLeftX = -(real32)TileSideInPixels/2;
     real32 LowerLeftY = (real32)Buffer->Height;
 
-    tile_map_position OldPlayerP = GameState->PlayerP;
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
@@ -497,40 +491,30 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    if(!AreOnSameTile(&OldPlayerP, &GameState->PlayerP))
+    entity *CameraFollowingEntity = GetEntity(GameState, GameState->CameraFollowingEntityIndex); 
+    if(CameraFollowingEntity)
     {
-        uint32_t NewTileValue = GetTileValue(TileMap, GameState->PlayerP);
+        GameState->CameraP.AbsTileZ = CameraFollowingEntity->P.AbsTileZ;
 
-        if(NewTileValue == 3)
+        tile_map_difference Diff = Subtract(TileMap, &CameraFollowingEntity->PlayerP, &GameState->CameraP);
+        if(Diff.dXY.X > (9.0f*TileMap->TileSideInMeters))
         {
-            ++GameState->PlayerP.AbsTileZ;
+            GameState->CameraP.AbsTileX += 17;
         }
-        else if(NewTileValue == 4)
+        if(Diff.dXY.X < -(9.0f*TileMap->TileSideInMeters))
         {
-            --GameState->PlayerP.AbsTileZ;
+            GameState->CameraP.AbsTileX -= 17;
         }
-    }
+        if(Diff.dXY.Y > (5.0f*TileMap->TileSideInMeters))
+        {
+            GameState->CameraP.AbsTileY += 9;
+        }
+        if(Diff.dXY.Y < -(5.0f*TileMap->TileSideInMeters))
+        {
+            GameState->CameraP.AbsTileY -= 9;
+        }
 
-    GameState->CameraP.AbsTileZ = GameState->PlayerP.AbsTileZ;
-
-    tile_map_difference Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
-    if(Diff.dXY.X > (9.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileX += 17;
     }
-    if(Diff.dXY.X < -(9.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileX -= 17;
-    }
-    if(Diff.dXY.Y > (5.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileY += 9;
-    }
-    if(Diff.dXY.Y < -(5.0f*TileMap->TileSideInMeters))
-    {
-        GameState->CameraP.AbsTileY -= 9;
-    }
-    Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
 
     DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
 
@@ -578,27 +562,64 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    real32 PlayerR = 1.0f;
-    real32 PlayerG = 1.0f;
-    real32 PlayerB = 0.0f;
-    real32 PlayerGroundPointX = ScreenCentreX + MetersToPixels*Diff.dXY.X;
-    real32 PlayerGroundPointY = ScreenCentreY - MetersToPixels*Diff.dXY.Y;
-    v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*PlayerWidth,
-                        PlayerGroundPointY - MetersToPixels*PlayerHeight};
-    v2 PlayerWidthHeight = {PlayerWidth, PlayerHeight};
-    DrawRectangle(Buffer,
-                  PlayerLeftTop,
-                  PlayerLeftTop + MetersToPixels*PlayerWidthHeight,
-                  PlayerR, PlayerG, PlayerB);
+    for(uint32_t EntityIndex = 0; EntityIndex < GameState->EntityCount; ++EntityIndex)
+    {
+        if()
+        {
+            tile_map_difference Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
+            
+            real32 PlayerR = 1.0f;
+            real32 PlayerG = 1.0f;
+            real32 PlayerB = 0.0f;
+            real32 PlayerGroundPointX = ScreenCentreX + MetersToPixels*Diff.dXY.X;
+            real32 PlayerGroundPointY = ScreenCentreY - MetersToPixels*Diff.dXY.Y;
+            v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*PlayerWidth,
+                                PlayerGroundPointY - MetersToPixels*PlayerHeight};
+            v2 PlayerWidthHeight = {PlayerWidth, PlayerHeight};
+            DrawRectangle(Buffer,
+                          PlayerLeftTop,
+                          PlayerLeftTop + MetersToPixels*PlayerWidthHeight,
+                          PlayerR, PlayerG, PlayerB);
 
-    hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[GameState->HeroFacingDirection];
-    DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-    DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-    DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[GameState->HeroFacingDirection];
+            DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+        }
+    }
 }
 
-internal
+inline entity *
+GetEntity(game_state *GameState, uint32_t Index)
 {
+    entity *Entity = 0;
+
+    if((Index > 0) && (Index < ArrayCount(GameState->Entities)))
+    {
+        Entity = &GameState->Entities[Index];
+    }
+
+    return(Entity);
+}
+
+internal void
+InitialisePlayer(entity *Entity)
+{
+    Entity = {};
+
+    Entity->Exists = true;
+    Entity->P.AbsTileX = 1;
+    Entity->P.AbsTileY = 3;
+    Entity->P.Offset.X = 5.0f;
+    Entity->P.Offset.Y = 5.0f;
+
+}
+#if 0
+internal
+Foo(void)
+{
+            tile_map_position OldPlayerP = GameState->PlayerP;
+
             if((ddPlayer.X != 0.0f) && (ddPlayer.Y != 0.0f))
             {
                 ddPlayer *= 0.707106781187f;
@@ -706,7 +727,22 @@ internal
                     }
                 }
 #endif
+    if(!AreOnSameTile(&OldPlayerP, &GameState->PlayerP))
+    {
+        uint32_t NewTileValue = GetTileValue(TileMap, GameState->PlayerP);
+
+        if(NewTileValue == 3)
+        {
+            ++GameState->PlayerP.AbsTileZ;
+        }
+        else if(NewTileValue == 4)
+        {
+            --GameState->PlayerP.AbsTileZ;
+        }
+    }
+
 }
+#endif
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {

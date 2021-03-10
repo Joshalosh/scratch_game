@@ -69,14 +69,24 @@ struct hero_bitmaps
     loaded_bitmap Torso;
 };
 
+struct entity
+{
+    bool32 Exists;
+    tile_map_position P;
+    v2 dP;
+};
 struct game_state
 {
     memory_arena WorldArena;
     world *World;
 
+    // TODO: Allow split-screen?
+    uint32_t CameraFollowingEntityIndex;
     tile_map_position CameraP;
-    tile_map_position PlayerP;
-    v2 dPlayerP;
+
+    uint32_t PlayerIndexForController[ArrayCount(((game_input *)0)->Controllers)];
+    uint32_t EntityCount;
+    entity Entities[256];
 
     loaded_bitmap Backdrop;
     uint32_t HeroFacingDirection;
