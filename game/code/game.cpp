@@ -224,6 +224,32 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
     return(Result);
 }
 
+inline entity *
+GetEntity(game_state *GameState, uint32_t Index)
+{
+    entity *Entity = 0;
+
+    if((Index > 0) && (Index < ArrayCount(GameState->Entities)))
+    {
+        Entity = &GameState->Entities[Index];
+    }
+
+    return(Entity);
+}
+
+internal void
+InitialisePlayer(entity *Entity)
+{
+    Entity = {};
+
+    Entity->Exists = true;
+    Entity->P.AbsTileX = 1;
+    Entity->P.AbsTileY = 3;
+    Entity->P.Offset.X = 5.0f;
+    Entity->P.Offset.Y = 5.0f;
+
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -470,22 +496,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             if(Controller->MoveUp.EndedDown)
             {
-                GameState->HeroFacingDirection = 1;
                 ddPlayer.Y = 1.0f;
             }
             if(Controller->MoveDown.EndedDown)
             {
-                GameState->HeroFacingDirection = 3;
                 ddPlayer.Y = -1.0f;
             }
             if(Controller->MoveLeft.EndedDown)
             {
-                GameState->HeroFacingDirection = 2;
                 ddPlayer.X = -1.0f;
             }
             if(Controller->MoveRight.EndedDown)
             {
-                GameState->HeroFacingDirection = 0;
                 ddPlayer.X = 1.0f;
             }
         }
@@ -496,7 +518,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         GameState->CameraP.AbsTileZ = CameraFollowingEntity->P.AbsTileZ;
 
-        tile_map_difference Diff = Subtract(TileMap, &CameraFollowingEntity->PlayerP, &GameState->CameraP);
+        tile_map_difference Diff = Subtract(TileMap, &CameraFollowingEntity->P, &GameState->CameraP);
         if(Diff.dXY.X > (9.0f*TileMap->TileSideInMeters))
         {
             GameState->CameraP.AbsTileX += 17;
@@ -562,11 +584,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    for(uint32_t EntityIndex = 0; EntityIndex < GameState->EntityCount; ++EntityIndex)
+    entity *Entity = GameState->Entities;
+    for(uint32_t EntityIndex = 0; EntityIndex < GameState->EntityCount; ++EntityIndex, ++Entity)
     {
-        if()
+        if(Entity->Exists)
         {
-            tile_map_difference Diff = Subtract(TileMap, &GameState->PlayerP, &GameState->CameraP);
+            tile_map_difference Diff = Subtract(TileMap, &Entity->P, &GameState->CameraP);
             
             real32 PlayerR = 1.0f;
             real32 PlayerG = 1.0f;
@@ -581,7 +604,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                           PlayerLeftTop + MetersToPixels*PlayerWidthHeight,
                           PlayerR, PlayerG, PlayerB);
 
-            hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[GameState->HeroFacingDirection];
+            hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[Entity->FacingDirection];
             DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
             DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
             DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
@@ -589,31 +612,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 }
 
-inline entity *
-GetEntity(game_state *GameState, uint32_t Index)
-{
-    entity *Entity = 0;
-
-    if((Index > 0) && (Index < ArrayCount(GameState->Entities)))
-    {
-        Entity = &GameState->Entities[Index];
-    }
-
-    return(Entity);
-}
-
-internal void
-InitialisePlayer(entity *Entity)
-{
-    Entity = {};
-
-    Entity->Exists = true;
-    Entity->P.AbsTileX = 1;
-    Entity->P.AbsTileY = 3;
-    Entity->P.Offset.X = 5.0f;
-    Entity->P.Offset.Y = 5.0f;
-
-}
 #if 0
 internal
 Foo(void)
@@ -741,6 +739,28 @@ Foo(void)
         }
     }
 
+    if(AbsoluteValue(ddPlayer.X) > AbsoluteValue(ddPlayer.Y))
+    {
+        if(ddPlayer.X > 0)
+        {
+            GameState->HeroFacingDirection = 0;
+        }
+        else
+        {
+            GameState->HeroFacingDirection = 2;
+        }
+    }
+    else if(AbsoluteValue(ddPlayer.X) < AbsoluteValue(ddPlayer.Y))
+    {
+        if(ddPlayer.Y > 0)
+        {
+            GameState->HeroFacingDirection = 1;
+        }
+        else
+        {
+            GameState->HeroFacingDirection = 3;
+        }
+    }
 }
 #endif
 

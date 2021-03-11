@@ -74,6 +74,7 @@ struct entity
     bool32 Exists;
     tile_map_position P;
     v2 dP;
+    uint32_t FacingDirection;
 };
 struct game_state
 {
