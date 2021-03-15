@@ -75,6 +75,7 @@ struct entity
     tile_map_position P;
     v2 dP;
     uint32_t FacingDirection;
+    real32 Width, Height;
 };
 struct game_state
 {
