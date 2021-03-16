@@ -250,37 +250,39 @@ InitialisePlayer(entity *Entity)
 
 }
 
-internal entity *
+internal uint32_t
 AddEntity(game_state *GameState)
 {
+    uint32_t EntityIndex = GameState->EntityCount++;
+
     Assert(GameState->EntityCount < ArrayCount(GameState->Entities));
-    entity *Entity = &GameState->Entities[GameState->EntityCount++];
+    entity *Entity = &GameState->Entities[EntityIndex];
     *Entity = {};
 
-    return(Entity);
+    return(EntityIndex);
 }
 
 internal void
-MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddPlayer)
+MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
 {
     tile_map *TileMap = GameState->World->TileMap;
 
-    if((ddPlayer.X != 0.0f) && (ddPlayer.Y != 0.0f))
+    if((ddP.X != 0.0f) && (ddP.Y != 0.0f))
     {
-        ddPlayer *= 0.707106781187f;
+        ddP *= 0.707106781187f;
     }
 
-    real32 PlayerSpeed = 10.0f; // m/s^2
-    ddPlayer *= PlayerSpeed;
+    real32 PlayerSpeed = 50.0f; // m/s^2
+    ddP *= PlayerSpeed;
     
     //TODO: Diagonal will be faster! Fix with vectors
-    ddPlayer += -1.5f*Entity->dP;
+    ddP += -9.0f*Entity->dP;
 
     tile_map_position OldPlayerP = Entity->P;
     tile_map_position NewPlayerP = OldPlayerP;
-    v2 PlayerDelta = (0.5f*ddPlayer*Square(dt) + Entity->dP*dt);
+    v2 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
     NewPlayerP.Offset += PlayerDelta; 
-    Entity->dP = ddPlayer*dt + Entity->dP;
+    Entity->dP = ddP*dt + Entity->dP;
     NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
 
 #if 1
@@ -382,9 +384,9 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddPlayer)
         }
     }
 
-    if(AbsoluteValue(ddPlayer.X) > AbsoluteValue(ddPlayer.Y))
+    if(AbsoluteValue(Entity->dP.X) > AbsoluteValue(Entity->dP.Y))
     {
-        if(ddPlayer.X > 0)
+        if(Entity->dP.X > 0)
         {
             Entity->FacingDirection = 0;
         }
@@ -393,9 +395,9 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddPlayer)
             Entity->FacingDirection = 2;
         }
     }
-    else if(AbsoluteValue(ddPlayer.X) < AbsoluteValue(ddPlayer.Y))
+    else if(AbsoluteValue(Entity->dP.X) < AbsoluteValue(Entity->dP.Y))
     {
-        if(ddPlayer.Y > 0)
+        if(Entity->dP.Y > 0)
         {
             Entity->FacingDirection = 1;
         }
@@ -415,6 +417,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
     {
+        // NOTE: Reserve entity slot 0 for the null entity
+        AddEntity(GameState);
+
         GameState->Backdrop = 
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
 
@@ -642,40 +647,44 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                               GameState->PlayerIndexForController[ControllerIndex]);
         if(ControllingEntity)
         {
-            v2 ddPlayer = {};
+            v2 ddP = {};
 
             if(Controller->IsAnalogue)
             {
                 // Use analogue movement tuning
-                ddPlayer = v2{Controller->StickAverageX, Controller->StickAverageY};
+                ddP = v2{Controller->StickAverageX, Controller->StickAverageY};
             }
             else
             {
                 // Use digital movement tuning
                 if(Controller->MoveUp.EndedDown)
                 {
-                    ddPlayer.Y = 1.0f;
+                    ddP.Y = 1.0f;
                 }
                 if(Controller->MoveDown.EndedDown)
                 {
-                    ddPlayer.Y = -1.0f;
+                    ddP.Y = -1.0f;
                 }
                 if(Controller->MoveLeft.EndedDown)
                 {
-                    ddPlayer.X = -1.0f;
+                    ddP.X = -1.0f;
                 }
                 if(Controller->MoveRight.EndedDown)
                 {
-                    ddPlayer.X = 1.0f;
+                    ddP.X = 1.0f;
                 }
             }
+
+            MovePlayer(GameState, ControllingEntity, Input->dtForFrame, ddP);
         }
         else
         {
             if(Controller->Start.EndedDown)
             {
-                ControllingEntity = AddEntity(GameState);
+                uint32_t EntityIndex = AddEntity(GameState);
+                ControllingEntity = GetEntity(GameState, EntityIndex);
                 InitialisePlayer(ControllingEntity);
+                GameState->PlayerIndexForController[ControllerIndex] = EntityIndex;
             }
         }
     }

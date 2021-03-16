@@ -826,11 +826,11 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
                     }
                     else if(VKCode == VK_ESCAPE)
                     {
-                        Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
+                        Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
                     }
                     else if(VKCode == VK_SPACE)
                     {
-                        Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
+                        Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
                     }
 #if GAME_INTERNAL
                     else if(VKCode == 'P')
