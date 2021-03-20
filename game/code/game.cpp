@@ -197,15 +197,20 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         uint32_t BlueMask = Header->BlueMask;
         uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
 
-        bit_scan_result RedShift   = FindLeastSignificantSetBit(RedMask);
-        bit_scan_result GreenShift = FindLeastSignificantSetBit(GreenMask);
-        bit_scan_result BlueShift  = FindLeastSignificantSetBit(BlueMask);
-        bit_scan_result AlphaShift = FindLeastSignificantSetBit(AlphaMask);
+        bit_scan_result RedScan   = FindLeastSignificantSetBit(RedMask);
+        bit_scan_result GreenScan = FindLeastSignificantSetBit(GreenMask);
+        bit_scan_result BlueScan  = FindLeastSignificantSetBit(BlueMask);
+        bit_scan_result AlphaScan = FindLeastSignificantSetBit(AlphaMask);
 
-        Assert(RedShift.Found);
-        Assert(GreenShift.Found);
-        Assert(BlueShift.Found);
-        Assert(AlphaShift.Found);
+        Assert(RedScan.Found);
+        Assert(GreenScan.Found);
+        Assert(BlueScan.Found);
+        Assert(AlphaScan.Found);
+
+        int32_t RedShift = 16 - (int32_t)RedScan.Index;
+        int32_t GreenShift = 8 - (int32_t)GreenScan.Index;
+        int32_t BlueShift = 0 - (int32_t)BlueScan.Index;
+        int32_t AlphaShift = 24 - (int32_t)AlphaScan.Index;
 
         uint32_t *SourceDest = Pixels;
         for(int32_t Y = 0; Y < Header->Height; ++Y)
@@ -213,10 +218,17 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
             for(int32_t X = 0; X < Header->Width; ++X)
             {
                 uint32_t C = *SourceDest;
+#if 0
                 *SourceDest++ = ((((C >> AlphaShift.Index) & 0xFF) << 24) |
                                  (((C >> RedShift.Index) & 0xFF) << 16) |
                                  (((C >> GreenShift.Index) & 0xFF) << 8) |
                                  (((C >> BlueShift.Index) & 0xFF) << 0));
+#else
+                *SourceDest++ = (RotateLeft(C & RedMask, RedShift) |
+                                 RotateLeft(C & GreenMask, GreenShift) |
+                                 RotateLeft(C & BlueMask, BlueShift) |
+                                 RotateLeft(C & AlphaMask, AlphaShift));
+#endif
             }
         }
     }
