@@ -285,9 +285,10 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
 {
     tile_map *TileMap = GameState->World->TileMap;
 
-    if((ddP.X != 0.0f) && (ddP.Y != 0.0f))
+    real32 ddPLength = LengthSq(ddP);
+    if(ddPLength > 1.0f)
     {
-        ddP *= 0.707106781187f;
+        ddP *= (1.0f / SquareRoot(ddPLength));
     }
 
     real32 PlayerSpeed = 50.0f; // m/s^2
