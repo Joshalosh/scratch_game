@@ -281,6 +281,24 @@ AddEntity(game_state *GameState)
 }
 
 internal void
+TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 PlayerDeltaY,
+         real32 *tMin, real32 MinY, real32 MaxY)
+{
+    if(PlayerDeltaX != 0.0f)
+    {
+        real32 tResult = (WallX - RelX) / PlayerDeltaX;
+        real32 Y = RelY + tResult*PlayerDeltaY;
+        if((tResult >= 0.0f) && (*tMin > tResult))
+        {
+            if((Y >= MinY) && (Y <= MaxY))
+            {
+                *tMin = tResult;
+            }
+        }
+    }
+}
+
+internal void
 MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
 {
     tile_map *TileMap = GameState->World->TileMap;
@@ -298,13 +316,14 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
     ddP += -9.0f*Entity->dP;
 
     tile_map_position OldPlayerP = Entity->P;
-    tile_map_position NewPlayerP = OldPlayerP;
     v2 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
-    NewPlayerP.Offset += PlayerDelta; 
     Entity->dP = ddP*dt + Entity->dP;
+    tile_map_position NewPlayerP = OldPlayerP;
+    NewPlayerP.Offset += PlayerDelta; 
     NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
 
-#if 1
+#if 0
+
     tile_map_position PlayerLeft = NewPlayerP;
     PlayerLeft.Offset.X -= 0.5f*Entity->Width;
     PlayerLeft = RecanonicalisePosition(TileMap, PlayerLeft);
@@ -377,16 +396,27 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
                 v2 MinCorner = -0.5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
                 v2 MaxCorner = 0.5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
 
-                tile_map_difference RelNewPlayerP = Subtract(TileMap, &TestTileP, &NewPlayerP);
+                tile_map_difference RelOldPlayerP = Subtract(TileMap, &OldPlayerP, &TestTileP);
 
-                v2 Rel = RelNewPlayerP.dXY;
+                v2 Rel = RelOldPlayerP.dXY;
 
-                tResult = (WallX - RelNewPlayerP.X) / PlayerDelta.X;
-                TestWall(MinCorner.X, MinCorner.Y, MaxCorner.X, MaxCorner.Y, RelNewPlayerP.X);
-                }
+                TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                         &tMin, MinCorner.Y, MaxCorner.Y);
+                TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                         &tMin, MinCorner.Y, MaxCorner.Y);
+                TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                         &tMin, MinCorner.X, MaxCorner.X);
+                TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                         &tMin, MinCorner.X, MaxCorner.X);
+
+                // TestWall(MinCorner.X, MinCorner.Y, MaxCorner.X, MaxCorner.Y, RelOldPlayerP.X);
             }
         }
     }
+
+    NewPlayerP = OldPlayerP;
+    NewPlayerP.Offset += tMin*PlayerDelta; 
+    Entity->P = NewPlayerP;
 #endif
     if(!AreOnSameTile(&OldPlayerP, &Entity->P))
     {
