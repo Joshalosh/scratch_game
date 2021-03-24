@@ -286,13 +286,14 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 {
     if(PlayerDeltaX != 0.0f)
     {
+        real32 tEpsilon = 0.0001f;
         real32 tResult = (WallX - RelX) / PlayerDeltaX;
         real32 Y = RelY + tResult*PlayerDeltaY;
         if((tResult >= 0.0f) && (*tMin > tResult))
         {
             if((Y >= MinY) && (Y <= MaxY))
             {
-                *tMin = tResult;
+                *tMin = Maximum(0.0f, tResult - tEpsilon);
             }
         }
     }
@@ -417,6 +418,7 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
     NewPlayerP = OldPlayerP;
     NewPlayerP.Offset += tMin*PlayerDelta; 
     Entity->P = NewPlayerP;
+    NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
 #endif
     if(!AreOnSameTile(&OldPlayerP, &Entity->P))
     {
@@ -804,8 +806,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 v2 TileSide = {0.5f*TileSideInPixels, 0.5f*TileSideInPixels};
                 v2 Cen = {ScreenCentreX - MetersToPixels*GameState->CameraP.Offset.X + ((real32)RelColumn)*TileSideInPixels,
                           ScreenCentreY + MetersToPixels*GameState->CameraP.Offset.Y - ((real32)RelRow)*TileSideInPixels};
-                v2 Min = Cen - TileSide;
-                v2 Max = Cen + TileSide;
+                v2 Min = Cen - 0.9f*TileSide;
+                v2 Max = Cen + 0.9f*TileSide;
                 DrawRectangle(Buffer, Min, Max, Gray, Gray, Gray);
             }
         }
