@@ -378,17 +378,30 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
         Entity->P = NewPlayerP;
     }
 #else
+
+#if 0
     uint32_t MinTileX = Minimum(OldPlayerP.AbsTileX, NewPlayerP.AbsTileX);
     uint32_t MinTileY = Minimum(OldPlayerP.AbsTileY, NewPlayerP.AbsTileY);
     uint32_t OnePastMaxTileX = Maximum(OldPlayerP.AbsTileX, NewPlayerP.AbsTileX) + 1;
     uint32_t OnePastMaxTileY = Maximum(OldPlayerP.AbsTileY, NewPlayerP.AbsTileY) + 1;
+#else
+    uint32_t StartTileX = OldPlayerP.AbsTileX;
+    uint32_t StartTileY = OldPlayerP.AbsTileY;
+    uint32_t EndTileX = NewPlayerP.AbsTileX;
+    uint32_t EndTileY = NewPlayerP.AbsTileY;
+
+    int32_t DeltaX = EndTileX - StartTileX;
+    int32_t DeltaY = EndTileY - StartTileY;
+#endif
 
     uint32_t AbsTileZ = Entity->P.AbsTileZ;
     real32 tMin = 1.0f;
 
-    for(uint32_t AbsTileY = MinTileY; AbsTileY != OnePastMaxTileY; ++AbsTileY)
+    uint32_t AbstileY = MinTileY;
+    for(;;)
     {
-        for(uint32_t AbsTileX = MinTileX; AbsTileX != OnePastMaxTileX; ++AbsTileX)
+        uint32_AbsTileX = MinTileX;
+        for(;;)
         {
             tile_map_position TestTileP = CentredTilePoint(AbsTileX, AbsTileY, AbsTileZ);
             uint32_t TileValue = GetTileValue(TileMap, TestTileP);
@@ -409,9 +422,25 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
                          &tMin, MinCorner.X, MaxCorner.X);
                 TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                          &tMin, MinCorner.X, MaxCorner.X);
-
-                // TestWall(MinCorner.X, MinCorner.Y, MaxCorner.X, MaxCorner.Y, RelOldPlayerP.X);
             }
+
+            if(AbsTileX == EndTileX)
+            {
+                break;
+            }
+            else
+            {
+                AbsTileX += DeltaX;
+            }
+        }
+
+        if(AbsTileY == EndTileY)
+        {
+            break;
+        }
+        else
+        {
+            AbsTileY += DeltaY;
         }
     }
 
