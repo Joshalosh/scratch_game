@@ -2,6 +2,13 @@
 
 #include "math.h"
 
+inline int32_t
+SignOf(int32_t Value)
+{
+    int32_t Result = (Value >= 0) ? 1 : -1;
+    return(Result);
+}
+
 inline real32
 SquareRoot(real32 Real32)
 {

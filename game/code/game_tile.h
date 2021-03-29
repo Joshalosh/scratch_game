@@ -15,7 +15,7 @@ struct tile_map_position
     uint32_t AbsTileY;
     uint32_t AbsTileZ;
 
-    v2 Offset;
+    v2 Offset_;
 };
 
 struct tile_chunk_position

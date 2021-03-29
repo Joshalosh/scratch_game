@@ -257,8 +257,8 @@ InitialisePlayer(game_state *GameState, uint32_t EntityIndex)
     Entity->Exists = true;
     Entity->P.AbsTileX = 1;
     Entity->P.AbsTileY = 3;
-    Entity->P.Offset.X = 5.0f;
-    Entity->P.Offset.Y = 5.0f;
+    Entity->P.Offset.X = 0;
+    Entity->P.Offset.Y = 0;
     Entity->Height = 1.4f;
     Entity->Width  = 0.75f*Entity->Height;
 
@@ -390,17 +390,22 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
     uint32_t EndTileX = NewPlayerP.AbsTileX;
     uint32_t EndTileY = NewPlayerP.AbsTileY;
 
-    int32_t DeltaX = EndTileX - StartTileX;
-    int32_t DeltaY = EndTileY - StartTileY;
+    if(EndTileY > StartTileY)
+    {
+        int x = 4;
+    }
+
+    int32_t DeltaX = SignOf(EndTileX - StartTileX);
+    int32_t DeltaY = SignOf(EndTileY - StartTileY);
 #endif
 
     uint32_t AbsTileZ = Entity->P.AbsTileZ;
     real32 tMin = 1.0f;
 
-    uint32_t AbstileY = MinTileY;
+    uint32_t AbsTileY = StartTileY;
     for(;;)
     {
-        uint32_AbsTileX = MinTileX;
+        uint32_t AbsTileX = StartTileX;
         for(;;)
         {
             tile_map_position TestTileP = CentredTilePoint(AbsTileX, AbsTileY, AbsTileZ);
@@ -446,8 +451,8 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
 
     NewPlayerP = OldPlayerP;
     NewPlayerP.Offset += tMin*PlayerDelta; 
-    Entity->P = NewPlayerP;
     NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
+    Entity->P = NewPlayerP;
 #endif
     if(!AreOnSameTile(&OldPlayerP, &Entity->P))
     {
@@ -580,8 +585,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t RandomNumberIndex = 0;
         uint32_t TilesPerWidth = 17;
         uint32_t TilesPerHeight = 9;
+#if 0
+        uint32_t ScreenX = INT32_MAX / 2;
+        uint32_t ScreenY = INT32_MAX / 2;
+#else
         uint32_t ScreenX = 0;
         uint32_t ScreenY = 0;
+#endif
         uint32_t AbsTileZ = 0;
 
         bool32 DoorLeft   = false;
