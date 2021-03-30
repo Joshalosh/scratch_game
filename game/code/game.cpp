@@ -257,8 +257,8 @@ InitialisePlayer(game_state *GameState, uint32_t EntityIndex)
     Entity->Exists = true;
     Entity->P.AbsTileX = 1;
     Entity->P.AbsTileY = 3;
-    Entity->P.Offset.X = 0;
-    Entity->P.Offset.Y = 0;
+    Entity->P.Offset_.X = 0;
+    Entity->P.Offset_.Y = 0;
     Entity->Height = 1.4f;
     Entity->Width  = 0.75f*Entity->Height;
 
@@ -319,18 +319,16 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
     tile_map_position OldPlayerP = Entity->P;
     v2 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
     Entity->dP = ddP*dt + Entity->dP;
-    tile_map_position NewPlayerP = OldPlayerP;
-    NewPlayerP.Offset += PlayerDelta; 
-    NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
+    tile_map_position NewPlayerP = Offset(TileMap, OldPlayerP, PlayerDelta);
 
 #if 0
 
     tile_map_position PlayerLeft = NewPlayerP;
-    PlayerLeft.Offset.X -= 0.5f*Entity->Width;
+    PlayerLeft.Offset_.X -= 0.5f*Entity->Width;
     PlayerLeft = RecanonicalisePosition(TileMap, PlayerLeft);
 
     tile_map_position PlayerRight = NewPlayerP;
-    PlayerRight.Offset.X += 0.5f*Entity->Width;
+    PlayerRight.Offset_.X += 0.5f*Entity->Width;
     PlayerRight = RecanonicalisePosition(TileMap, PlayerRight);
 
     bool32 Collided = false;
@@ -449,11 +447,9 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
         }
     }
 
-    NewPlayerP = OldPlayerP;
-    NewPlayerP.Offset += tMin*PlayerDelta; 
-    NewPlayerP = RecanonicalisePosition(TileMap, NewPlayerP);
-    Entity->P = NewPlayerP;
+    Entity->P = Offset(TileMap, OldPlayerP, tMin*PlayerDelta);
 #endif
+
     if(!AreOnSameTile(&OldPlayerP, &Entity->P))
     {
         uint32_t NewTileValue = GetTileValue(TileMap, Entity->P);
@@ -843,8 +839,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 }
 
                 v2 TileSide = {0.5f*TileSideInPixels, 0.5f*TileSideInPixels};
-                v2 Cen = {ScreenCentreX - MetersToPixels*GameState->CameraP.Offset.X + ((real32)RelColumn)*TileSideInPixels,
-                          ScreenCentreY + MetersToPixels*GameState->CameraP.Offset.Y - ((real32)RelRow)*TileSideInPixels};
+                v2 Cen = {ScreenCentreX - MetersToPixels*GameState->CameraP.Offset_.X + ((real32)RelColumn)*TileSideInPixels,
+                          ScreenCentreY + MetersToPixels*GameState->CameraP.Offset_.Y - ((real32)RelRow)*TileSideInPixels};
                 v2 Min = Cen - 0.9f*TileSide;
                 v2 Max = Cen + 0.9f*TileSide;
                 DrawRectangle(Buffer, Min, Max, Gray, Gray, Gray);
@@ -885,24 +881,3 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     GameOutputSound(GameState, SoundBuffer, 400);
 }
-
-/*
-internal void
-RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
-{
-    uint8_t *Row = (uint8_t *)Buffer->Memory;
-    for(int Y = 0; Y < Buffer->Height; ++Y)
-    {
-        uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = 0; X < Buffer->Width; ++X)
-        {
-            uint8_t Blue = (uint8_t)(X + BlueOffset);
-            uint8_t Green = (uint8_t)(Y + GreenOffset);
-
-            *Pixel++ = ((Green << 16) | Blue);
-        }
-
-        Row += Buffer->Pitch;
-    }
-}
-*/
