@@ -410,8 +410,10 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
             uint32_t TileValue = GetTileValue(TileMap, TestTileP);
             if(!IsTileValueEmpty(TileValue))
             {
-                v2 MinCorner = -0.5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
-                v2 MaxCorner = 0.5*v2{TileMap->TileSideInMeters, TileMap->TileSideInMeters};
+                real32 DiameterW = TileMap->TileSideInMeters + Entity->Width;
+                real32 DiameterH = TileMap->TileSideInMeters + Entity->Height;
+                v2 MinCorner = -0.5*v2{DiameterW, DiameterH};
+                v2 MaxCorner = 0.5*v2{DiameterW, DiameterH};
 
                 tile_map_difference RelOldPlayerP = Subtract(TileMap, &OldPlayerP, &TestTileP);
 
