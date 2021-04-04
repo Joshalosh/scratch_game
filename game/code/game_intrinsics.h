@@ -59,6 +59,13 @@ FloorReal32ToInt32(real32 Real32)
 }
 
 inline int32_t
+CeilReal32ToInt32(real32 Real32)
+{
+    int32_t Result = (int32_t)ceilf(Real32);
+    return(Result);
+}
+
+inline int32_t
 TruncateReal32ToInt32(real32 Real32)
 {
     int32_t Result = (int32_t)Real32;
