@@ -288,7 +288,7 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 
     if(PlayerDeltaX != 0.0f)
     {
-        real32 tEpsilon = 0.0001f;
+        real32 tEpsilon = 0.00001f;
         real32 tResult = (WallX - RelX) / PlayerDeltaX;
         real32 Y = RelY + tResult*PlayerDeltaY;
         if((tResult >= 0.0f) && (*tMin > tResult))
@@ -400,7 +400,7 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
     real32 tRemaining = 1.0f;
     for(uint32_t Iteration = 0; Iteration < 4 &&(tRemaining > 0.0f); ++Iteration)
     {
-        real32 tMin = tRemaining;
+        real32 tMin = 1.0f;
         v2 WallNormal = {};
 
         Assert((MaxTileX - MinTileX) < 32);
@@ -452,7 +452,7 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
         Entity->P = Offset(TileMap, OldPlayerP, tMin*PlayerDelta);
         Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
         PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
-        tRemaining -= tMin;
+        tRemaining -= tMin*tRemaining;
     }
 #endif
 
