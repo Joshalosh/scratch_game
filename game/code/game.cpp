@@ -464,7 +464,6 @@ MovePlayer(game_state *GameState, entity *Entity, real32 dt, v2 ddP)
         {
             ++Entity->P.AbsTileZ;
         }
-        else if(NewTileValue == 4)
         {
             --Entity->P.AbsTileZ;
         }
@@ -805,7 +804,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             GameState->CameraP.AbsTileY -= 9;
         }
-
     }
 
     DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
