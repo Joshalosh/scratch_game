@@ -72,14 +72,40 @@ struct hero_bitmaps
     loaded_bitmap Torso;
 };
 
-struct entity
+struct high_entity
 {
     bool32 Exists;
-    tile_map_position P;
+    v2 P;
     v2 dP;
     uint32_t FacingDirection;
+};
+
+struct low_entity
+{
+};
+
+struct dormant_entity
+{
+    tile_map_position P;
     real32 Width, Height;
 };
+
+enum entity_residence
+{
+    EntityResidence_Nonexistant,
+    EntityResidence_Dormant,
+    EntityResidence_Low,
+    EntityResidence_High
+};
+
+struct entity
+{
+    uint32_t Residence;
+    low_entity *Low;
+    dormant_entity *Dormant;
+    high_entity *High;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -90,8 +116,12 @@ struct game_state
     tile_map_position CameraP;
 
     uint32_t PlayerIndexForController[ArrayCount(((game_input *)0)->Controllers)];
+
     uint32_t EntityCount;
-    entity Entities[256];
+    entity_residence EntityResidence[256];
+    high_entity HighEntities[256];
+    low_entity LowEntities[256];
+    dormant_entity DormantEntities[256];
 
     loaded_bitmap Backdrop;
     uint32_t HeroFacingDirection;
