@@ -92,7 +92,7 @@ struct dormant_entity
 
 enum entity_residence
 {
-    EntityResidence_Nonexistant,
+    EntityResidence_Nonexistent,
     EntityResidence_Dormant,
     EntityResidence_Low,
     EntityResidence_High

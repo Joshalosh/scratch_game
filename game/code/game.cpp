@@ -272,7 +272,7 @@ InitialisePlayer(game_state *GameState, uint32_t EntityIndex)
     ChangeEntityResidence(GameState, &Entity, EntityResidence_High);
 
     if(GetEntity(GameState, EntityResidence_Dormant, GameState->CameraFollowingEntityIndex).Residence ==
-       EntityResidence_Nonexistant)
+       EntityResidence_Nonexistent)
     {
         GameState->CameraFollowingEntityIndex = EntityIndex;
     }
@@ -699,7 +699,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         game_controller_input *Controller = GetController(Input, ControllerIndex);
         entity *ControllingEntity = GetEntity(GameState, EntityResidence_High,
                                               GameState->PlayerIndexForController[ControllerIndex]);
-        if(ControllingEntity.Residence != EntityResidence_Nonexistant)
+        if(ControllingEntity.Residence != EntityResidence_Nonexistent)
         {
             v2 ddP = {};
 
@@ -744,7 +744,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     entity CameraFollowingEntity = GetEntity(GameState, EntityResidence_High,
                                              GameState->CameraFollowingEntityIndex); 
-    if(CameraFollowingEntity.Residence != EntityResidence_Nonexistant)
+    if(CameraFollowingEntity.Residence != EntityResidence_Nonexistent)
     {
 #if 0
         GameState->CameraP.AbsTileZ = CameraFollowingEntity.Dormant->P.AbsTileZ;
