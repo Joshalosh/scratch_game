@@ -29,9 +29,8 @@ RotateLeft(uint32_t Value, int32_t Amount)
 #if COMPILER_MSVC
     uint32_t Result = _rotl(Value, Amount);
 #else
-    uint32_t Result = ((Amount > 0) ? 
-                       ((Value << Amount) | (Value >> (32 - Amount))) :
-                       ((Value >> -Amount) | (Value << (32 + Amount))));
+    Amount &= 31;
+    uint32_t Result = ((Value << Amount) | (Value >> (32 - Amount)));
 #endif
     return(Result);
 }
@@ -42,9 +41,8 @@ RotateRight(uint32_t Value, int32_t Amount)
 #if COMPILER_MSVC
     uint32_t Result = _rotl(Value, Amount);
 #else
-    uint32_t Result = ((Amount > 0) ? 
-                       ((Value >> Amount) | (Value << (32 - Amount))) :
-                       ((Value << -Amount) | (Value >> (32 + Amount))));
+    Amount &= 31;
+    uint32_t Result = ((Value >> Amount) | (Value << (32 - Amount)));
 #endif
     return(Result);
 }
