@@ -74,9 +74,9 @@ struct hero_bitmaps
 
 struct high_entity
 {
-    bool32 Exists;
     v2 P;
     v2 dP;
+    uint32_t AbsTileZ;
     uint32_t FacingDirection;
 };
 
@@ -88,6 +88,11 @@ struct dormant_entity
 {
     tile_map_position P;
     real32 Width, Height;
+
+    // This is for the stairs or whatever the "stairs"
+    // are going to be
+    bool32 Collides;
+    int32_t dAbsTileZ;
 };
 
 enum entity_residence
