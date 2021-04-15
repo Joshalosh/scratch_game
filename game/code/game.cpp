@@ -230,6 +230,29 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
     return(Result);
 }
 
+internal void
+ChangeEntityResidence(game_state *GameState, uint32_t EntityIndex, entity_residence Residence)
+{
+    if(Residence == EntityResidence_High)
+    {
+        if(GameState->EntityResidence[EntityIndex] != EntityResidence_High)
+        {
+            high_entity *EntityHigh = &GameState->HighEntities[EntityIndex];
+            dormant_entity *EntityDormant = &GameState->DormantEntities[EntityIndex];
+            
+            tile_map_difference Diff = Subtract(GameState->World->TileMap,
+                                                &EntityDormant->P, &GameState->CameraP);
+            EntityHigh->P = Diff.dXY;
+            EntityHigh->dP = V2(0, 0);
+            EntityHigh->AbsTileZ = EntityDormant->P.AbsTileZ;
+            EntityHigh->FacingDirection = 0;
+
+        }
+    }
+
+    GameState->EntityResidence[EntityIndex] = Residence;
+}
+
 inline entity
 GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
 {
@@ -237,6 +260,11 @@ GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
 
     if((Index > 0) && (Index < GameState->EntityCount))
     {
+        if(GameState->EntityResidence[Index] < Residence)
+        {
+            ChangeEntityResidence(GameState, Index, Residence);
+            Assert(GameState->EntityResidence[Index] >= Residence);
+        }
         Entity.Residence = Residence;
         Entity.Dormant = &GameState->DormantEntities[Index];
         Entity.Low = &GameState->LowEntities[Index];
@@ -244,24 +272,6 @@ GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
     }
 
     return(Entity);
-}
-
-internal void
-ChangeEntityResidence(game_state *GameState, entity Entity, entity_residence Residence)
-{
-    if(Residence == EntityResidence_High)
-    {
-        if(Entity.Residence != EntityResidence_High)
-        {
-            tile_map_difference Diff = Subtract(GameState->World->TileMap,
-                                                &Entity.Dormant->P, &GameState->CameraP);
-            Entity.High->P = Diff.dXY;
-            Entity.High->dP = V2(0, 0);
-            Entity.High->AbsTileZ = Entity.Dormant->P.AbsTileZ;
-            Entity.High->FacingDirection = 0;
-
-        }
-    }
 }
 
 internal void
@@ -275,8 +285,9 @@ InitialisePlayer(game_state *GameState, uint32_t EntityIndex)
     Entity.Dormant->P.Offset_.Y = 0;
     Entity.Dormant->Height = 0.5f;
     Entity.Dormant->Width  = 1.0f;
+    Entity.Dormant->Collides = true;
 
-    ChangeEntityResidence(GameState, Entity, EntityResidence_High);
+    ChangeEntityResidence(GameState, EntityIndex, EntityResidence_High);
 
     if(GetEntity(GameState, EntityResidence_Dormant, GameState->CameraFollowingEntityIndex).Residence ==
        EntityResidence_Nonexistent)
@@ -308,7 +319,7 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 {
     bool32 Hit = false;
 
-    real32 tEpsilon = 0.00001f;
+    real32 tEpsilon = 0.001f;
     if(PlayerDeltaX != 0.0f)
     {
         real32 tResult = (WallX - RelX) / PlayerDeltaX;
@@ -372,40 +383,48 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
         v2 WallNormal = {};
         uint32_t HitEntityIndex = 0;
 
-        for(uint32_t EntityIndex = 0; EntityIndex < GameState->EntityCount; ++EntityIndex)
+        for(uint32_t EntityIndex = 1; EntityIndex < GameState->EntityCount; ++EntityIndex)
         {
             entity TestEntity = GetEntity(GameState, EntityResidence_High, EntityIndex);
-            if(TestEntity.Dormant->Collides)
+            if(TestEntity.High != Entity.High)
             {
-                real32 DiameterW = TestEntity.Dormant->Width + Entity.Dormant->Width;
-                real32 DiameterH = TestEntity.Dormant->Height + Entity.Dormant->Height;
-                v2 MinCorner = -0.5f*v2{DiameterW, DiameterH};
-                v2 MaxCorner = 0.5f*v2{DiameterW, DiameterH};
-
-                v2 Rel = Entity.High->P - TestEntity.High->P;
-
-                if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
-                            &tMin, MinCorner.Y, MaxCorner.Y))
+                if(TestEntity.Dormant->Collides)
                 {
-                    WallNormal = v2{-1, 0};
-                }
+                    real32 DiameterW = TestEntity.Dormant->Width + Entity.Dormant->Width;
+                    real32 DiameterH = TestEntity.Dormant->Height + Entity.Dormant->Height;
 
-                if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
-                            &tMin, MinCorner.Y, MaxCorner.Y))
-                {
-                    WallNormal = v2{1, 0};
-                }
+                    v2 MinCorner = -0.5f*v2{DiameterW, DiameterH};
+                    v2 MaxCorner = 0.5f*v2{DiameterW, DiameterH};
 
-                if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
-                            &tMin, MinCorner.X, MaxCorner.X))
-                {
-                    WallNormal = v2{0, -1};
-                }
+                    v2 Rel = Entity.High->P - TestEntity.High->P;
 
-                if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
-                            &tMin, MinCorner.X, MaxCorner.X))
-                {
-                    WallNormal = v2{0, 1};
+                    if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                &tMin, MinCorner.Y, MaxCorner.Y))
+                    {
+                        WallNormal = v2{-1, 0};
+                        HitEntityIndex = EntityIndex;
+                    }
+
+                    if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                &tMin, MinCorner.Y, MaxCorner.Y))
+                    {
+                        WallNormal = v2{1, 0};
+                        HitEntityIndex = EntityIndex;
+                    }
+
+                    if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                &tMin, MinCorner.X, MaxCorner.X))
+                    {
+                        WallNormal = v2{0, -1};
+                        HitEntityIndex = EntityIndex;
+                    }
+
+                    if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                &tMin, MinCorner.X, MaxCorner.X))
+                    {
+                        WallNormal = v2{0, 1};
+                        HitEntityIndex = EntityIndex;
+                    }
                 }
             }
         }
@@ -424,7 +443,6 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
         {
             break;
         }
-
     }
 
     if((Entity.High->dP.X == 0.0f) && (Entity.High->dP.Y == 0.0f))
