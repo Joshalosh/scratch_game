@@ -80,7 +80,8 @@ DrawRectangle(game_offscreen_buffer *Buffer, v2 vMin, v2 vMax, real32 R, real32 
 internal void
 DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
            real32 RealX, real32 RealY,
-           int32_t AlignX = 0, int32_t AlignY = 0)
+           int32_t AlignX = 0, int32_t AlignY = 0,
+           real32 CAlpha = 1.0f)
 {
     RealX -= (real32)AlignX;
     RealY -= (real32)AlignY;
@@ -265,6 +266,7 @@ GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
             ChangeEntityResidence(GameState, Index, Residence);
             Assert(GameState->EntityResidence[Index] >= Residence);
         }
+
         Entity.Residence = Residence;
         Entity.Dormant = &GameState->DormantEntities[Index];
         Entity.Low = &GameState->LowEntities[Index];
@@ -284,7 +286,7 @@ InitialisePlayer(game_state *GameState, uint32_t EntityIndex)
     Entity.Dormant->P.Offset_.X = 0;
     Entity.Dormant->P.Offset_.Y = 0;
     Entity.Dormant->Height = 0.5f;
-    Entity.Dormant->Width  = 1.0f;
+    Entity.Dormant->Width = 1.0f;
     Entity.Dormant->Collides = true;
 
     ChangeEntityResidence(GameState, EntityIndex, EntityResidence_High);
@@ -356,7 +358,7 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
 
     v2 OldPlayerP = Entity.High->P;
     v2 PlayerDelta = (0.5f*ddP*Square(dt) + Entity.High->dP*dt);
-    Entity.High->dP = ddP*dt + Entity.High->P;
+    Entity.High->dP = ddP*dt + Entity.High->dP;
     v2 NewPlayerP = OldPlayerP + PlayerDelta;
 
     /*
@@ -365,8 +367,8 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
     uint32_t MaxTileX = Maximum(OldPlayerP.AbsTileX, NewPlayerP.AbsTileX);
     uint32_t MaxTileY = Maximum(OldPlayerP.AbsTileY, NewPlayerP.AbsTileY);
 
-    uint32_t EntityTileWidth  = CeilReal32ToInt32(Entity->Width / TileMap->TileSideInMeters);
-    uint32_t EntityTileHeight = CeilReal32ToInt32(Entity->Height / TileMap->TileSideInMeters);
+    uint32_t EntityTileWidth  = CeilReal32ToInt32(Entity.High->Width / TileMap->TileSideInMeters);
+    uint32_t EntityTileHeight = CeilReal32ToInt32(Entity.High->Height / TileMap->TileSideInMeters);
 
     MinTileX -= EntityTileWidth;
     MinTileY -= EntityTileHeight;
@@ -377,7 +379,7 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
     */
 
     real32 tRemaining = 1.0f;
-    for(uint32_t Iteration = 0; Iteration < 4 &&(tRemaining > 0.0f); ++Iteration)
+    for(uint32_t Iteration = 0; (Iteration < 4) &&(tRemaining > 0.0f); ++Iteration)
     {
         real32 tMin = 1.0f;
         v2 WallNormal = {};
@@ -489,50 +491,40 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->Backdrop = 
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
+        GameState->Shadow =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_shadow.bmp");
 
         hero_bitmaps * Bitmap;
 
         Bitmap = GameState->HeroBitmaps;
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile,
-                                    "test/test_hero_right_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_right_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_right_torso.bmp");
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_cape.bmp");
+        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_torso.bmp");
         Bitmap->AlignX = 72;
         Bitmap->AlignY = 182;
         ++Bitmap;
-            
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile,
-                                    "test/test_hero_back_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_back_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_back_torso.bmp");
+
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_cape.bmp");
+        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_torso.bmp");
         Bitmap->AlignX = 72;
         Bitmap->AlignY = 182;
         ++Bitmap;
-            
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile,
-                                    "test/test_hero_left_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_left_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_left_torso.bmp");
+
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_cape.bmp");
+        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_torso.bmp");
         Bitmap->AlignX = 72;
         Bitmap->AlignY = 182;
         ++Bitmap;
-            
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile,
-                                    "test/test_hero_front_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_front_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, 
-                                    "test/test_hero_front_torso.bmp");
+
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_cape.bmp");
+        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_torso.bmp");
         Bitmap->AlignX = 72;
         Bitmap->AlignY = 182;
         ++Bitmap;
-            
+
         GameState->CameraP.AbsTileX = 17/2;
         GameState->CameraP.AbsTileY = 9/2;
 
@@ -545,7 +537,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         tile_map *TileMap = World->TileMap;
 
-        // NOTE: This is set to using 256x256 tile chunks.
         TileMap->ChunkShift = 4;
         TileMap->ChunkMask = (1 << TileMap->ChunkShift) - 1;
         TileMap->ChunkDim = (1 << TileMap->ChunkShift);
@@ -582,7 +573,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         for(uint32_t ScreenIndex = 0; ScreenIndex < 100; ++ScreenIndex)
         {
             Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-            
+
             uint32_t RandomChoice; 
             if(DoorUp || DoorDown)
             {
@@ -747,6 +738,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 }
             }
 
+            if(Controller->ActionUp.EndedDown)
+            {
+                ControllingEntity.High->dZ = 3.0f;
+            }
+
             MovePlayer(GameState, ControllingEntity, Input->dtForFrame, ddP);
         }
         else
@@ -760,31 +756,34 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    v2 EntityOffsetForFrame = {};
     entity CameraFollowingEntity = GetEntity(GameState, EntityResidence_High,
                                              GameState->CameraFollowingEntityIndex);
     if(CameraFollowingEntity.Residence != EntityResidence_Nonexistent)
     {
-#if 0
+        tile_map_position OldCameraP = GameState->CameraP;
+
         GameState->CameraP.AbsTileZ = CameraFollowingEntity.Dormant->P.AbsTileZ;
 
-        tile_map_difference Diff = Subtract(TileMap, &CameraFollowingEntity->P, &GameState->CameraP);
-        if(Diff.dXY.X > (9.0f*TileMap->TileSideInMeters))
+        if(CameraFollowingEntity.High->P.X > (9.0f*TileMap->TileSideInMeters))
         {
             GameState->CameraP.AbsTileX += 17;
         }
-        if(Diff.dXY.X < -(9.0f*TileMap->TileSideInMeters))
+        if(CameraFollowingEntity.High->P.X < -(9.0f*TileMap->TileSideInMeters))
         {
             GameState->CameraP.AbsTileX -= 17;
         }
-        if(Diff.dXY.Y > (5.0f*TileMap->TileSideInMeters))
+        if(CameraFollowingEntity.High->P.Y > (5.0f*TileMap->TileSideInMeters))
         {
             GameState->CameraP.AbsTileY += 9;
         }
-        if(Diff.dXY.Y < -(5.0f*TileMap->TileSideInMeters))
+        if(CameraFollowingEntity.High->P.Y < -(5.0f*TileMap->TileSideInMeters))
         {
             GameState->CameraP.AbsTileY -= 9;
         }
-#endif
+
+        tile_map_difference dCameraP = Subtract(TileMap, &GameState->CameraP, &OldCameraP);
+        EntityOffsetForFrame = -dCameraP.dXY;
     }
 
     DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
@@ -840,24 +839,43 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             high_entity *HighEntity = &GameState->HighEntities[EntityIndex];
             low_entity *LowEntity = &GameState->LowEntities[EntityIndex];
             dormant_entity *DormantEntity = &GameState->DormantEntities[EntityIndex];
+
+            HighEntity->P += EntityOffsetForFrame;
+
+            real32 dt = Input->dtForFrame;
+            real32 ddZ = -9.8f;
+            HighEntity->Z = 0.5f*ddZ*Square(dt) + HighEntity->dZ*dt + HighEntity->Z;
+            HighEntity->dZ = ddZ*dt + HighEntity->dZ;
+            if(HighEntity->Z < 0)
+            {
+                HighEntity->Z = 0;
+            }
+            real32 CAlpha = 1.0f - 0.5f*HighEntity->Z;
+            if(CAlpha < 0)
+            {
+                CAlpha = 0.0f;
+            }
             
             real32 PlayerR = 1.0f;
             real32 PlayerG = 1.0f;
             real32 PlayerB = 0.0f;
             real32 PlayerGroundPointX = ScreenCentreX + MetersToPixels*HighEntity->P.X;
             real32 PlayerGroundPointY = ScreenCentreY - MetersToPixels*HighEntity->P.Y;
+            real32 Z = -MetersToPixels*HighEntity->Z;
             v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*DormantEntity->Width,
                                 PlayerGroundPointY - 0.5f*MetersToPixels*DormantEntity->Height};
             v2 EntityWidthHeight = {DormantEntity->Width, DormantEntity->Height};
+#if 0
             DrawRectangle(Buffer,
                           PlayerLeftTop,
                           PlayerLeftTop + MetersToPixels*EntityWidthHeight,
                           PlayerR, PlayerG, PlayerB);
-
+#endif
             hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[HighEntity->FacingDirection];
-            DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-            DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-            DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY, CAlpha);
+            DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY + Z, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
         }
     }
 }

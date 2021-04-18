@@ -78,6 +78,9 @@ struct high_entity
     v2 dP;
     uint32_t AbsTileZ;
     uint32_t FacingDirection;
+
+    real32 Z;
+    real32 dZ;
 };
 
 struct low_entity
@@ -100,7 +103,7 @@ enum entity_residence
     EntityResidence_Nonexistent,
     EntityResidence_Dormant,
     EntityResidence_Low,
-    EntityResidence_High
+    EntityResidence_High,
 };
 
 struct entity
@@ -129,7 +132,7 @@ struct game_state
     dormant_entity DormantEntities[256];
 
     loaded_bitmap Backdrop;
-    uint32_t HeroFacingDirection;
+    loaded_bitmap Shadow;
     hero_bitmaps HeroBitmaps[4];
 };
 
