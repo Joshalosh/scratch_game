@@ -88,8 +88,8 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
 
     int32_t MinX = RoundReal32ToInt32(RealX);
     int32_t MinY = RoundReal32ToInt32(RealY);
-    int32_t MaxX = RoundReal32ToInt32(RealX + (real32)Bitmap->Width);
-    int32_t MaxY = RoundReal32ToInt32(RealY + (real32)Bitmap->Height);
+    int32_t MaxX = MinX + Bitmap->Width;
+    int32_t MaxY = MinY + Bitmap->Height;
 
     int32_t SourceOffsetX = 0;
     if(MinX < 0)
@@ -477,6 +477,19 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
     Entity.Dormant->P = MapIntoTileSpace(GameState->World->TileMap, GameState->CameraP, Entity.High->P);
 }
 
+internal v2
+SetCamera(game_state *GameState, tile_map_position NewCameraP)
+{
+    tile_map *TileMap = GameState->World->TileMap;
+
+    tile_map_difference dCameraP = Subtract(TileMap, &NewCameraP, &GameState->CameraP);
+    GameState->CameraP = NewCameraP;
+
+    v2 EntityOffsetForFrame = -dCameraP.dXY;
+
+    return(EntityOffsetForFrame);
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -761,29 +774,28 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                              GameState->CameraFollowingEntityIndex);
     if(CameraFollowingEntity.Residence != EntityResidence_Nonexistent)
     {
-        tile_map_position OldCameraP = GameState->CameraP;
+        tile_map_position NewCameraP = GameState->CameraP;
 
-        GameState->CameraP.AbsTileZ = CameraFollowingEntity.Dormant->P.AbsTileZ;
+        NewCameraP.AbsTileZ = CameraFollowingEntity.Dormant->P.AbsTileZ;
 
         if(CameraFollowingEntity.High->P.X > (9.0f*TileMap->TileSideInMeters))
         {
-            GameState->CameraP.AbsTileX += 17;
+            NewCameraP.AbsTileX += 17;
         }
         if(CameraFollowingEntity.High->P.X < -(9.0f*TileMap->TileSideInMeters))
         {
-            GameState->CameraP.AbsTileX -= 17;
+            NewCameraP.AbsTileX -= 17;
         }
         if(CameraFollowingEntity.High->P.Y > (5.0f*TileMap->TileSideInMeters))
         {
-            GameState->CameraP.AbsTileY += 9;
+            NewCameraP.AbsTileY += 9;
         }
         if(CameraFollowingEntity.High->P.Y < -(5.0f*TileMap->TileSideInMeters))
         {
-            GameState->CameraP.AbsTileY -= 9;
+            NewCameraP.AbsTileY -= 9;
         }
 
-        tile_map_difference dCameraP = Subtract(TileMap, &GameState->CameraP, &OldCameraP);
-        EntityOffsetForFrame = -dCameraP.dXY;
+        EntityOffsetForFrame = SetCamera(GameState, NewCameraP);
     }
 
     DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
