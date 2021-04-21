@@ -477,7 +477,7 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
     Entity.Dormant->P = MapIntoTileSpace(GameState->World->TileMap, GameState->CameraP, Entity.High->P);
 }
 
-internal v2
+internal void
 SetCamera(game_state *GameState, tile_map_position NewCameraP)
 {
     tile_map *TileMap = GameState->World->TileMap;
@@ -485,9 +485,21 @@ SetCamera(game_state *GameState, tile_map_position NewCameraP)
     tile_map_difference dCameraP = Subtract(TileMap, &NewCameraP, &GameState->CameraP);
     GameState->CameraP = NewCameraP;
 
-    v2 EntityOffsetForFrame = -dCameraP.dXY;
+    rectangle2 CameraBounds = RectCenterDim(V2(0, 0),
+                                               TileMap->TileSideInMeters*V2(17*3, 9*3));
 
-    return(EntityOffsetForFrame);
+    v2 EntityOffsetForFrame = -dCameraP.dXY;
+    for(uint32_t EntityIndex = 1; EntityIndex < ArrayCount(GameState->HighEntities); ++EntityIndex)
+    {
+        high_entity *High = GameState->HighEntities + EntityIndex;
+
+        High->P += EntityOffsetForFrame;
+
+        if(!IsInRectangle(CameraBounds, High->P))
+        {
+            ChangeEntityResidence(GameState, EntityIndex, EntityResidence_Low);
+        }
+    }
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -795,7 +807,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             NewCameraP.AbsTileY -= 9;
         }
 
-        EntityOffsetForFrame = SetCamera(GameState, NewCameraP);
+        SetCamera(GameState, NewCameraP);
     }
 
     DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
