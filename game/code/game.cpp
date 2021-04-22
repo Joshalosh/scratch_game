@@ -276,9 +276,27 @@ GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
     return(Entity);
 }
 
-internal void
-InitialisePlayer(game_state *GameState, uint32_t EntityIndex)
+internal uint32_t
+AddEntity(game_state *GameState)
 {
+    uint32_t EntityIndex = GameState->EntityCount++;
+
+    Assert(GameState->EntityCount < ArrayCount(GameState->DormantEntities));
+    Assert(GameState->EntityCount < ArrayCount(GameState->LowEntities));
+    Assert(GameState->EntityCount < ArrayCount(GameState->HighEntities));
+
+    GameState->EntityResidence[EntityIndex] = EntityResidence_Dormant;
+    GameState->DormantEntities[EntityIndex] = {};
+    GameState->LowEntities[EntityIndex] = {};
+    GameState->HighEntities[EntityIndex] = {};
+    
+    return(EntityIndex);
+}
+
+internal uint32_t
+AddPlayer(game_state *GameState)
+{
+    uint32_t EntityIndex = AddEntity(GameState);
     entity Entity = GetEntity(GameState, EntityResidence_Dormant, EntityIndex);
 
     Entity.Dormant->P.AbsTileX = 1;
@@ -296,23 +314,7 @@ InitialisePlayer(game_state *GameState, uint32_t EntityIndex)
     {
         GameState->CameraFollowingEntityIndex = EntityIndex;
     }
-}
-
-internal uint32_t
-AddEntity(game_state *GameState)
-{
-    uint32_t EntityIndex = GameState->EntityCount++;
-
-    Assert(GameState->EntityCount < ArrayCount(GameState->DormantEntities));
-    Assert(GameState->EntityCount < ArrayCount(GameState->LowEntities));
-    Assert(GameState->EntityCount < ArrayCount(GameState->HighEntities));
-
-    GameState->EntityResidence[EntityIndex] = EntityResidence_Dormant;
-    GameState->DormantEntities[EntityIndex] = {};
-    GameState->LowEntities[EntityIndex] = {};
-    GameState->HighEntities[EntityIndex] = {};
-    
-    return(EntityIndex);
+     return(EntityIndex);
 }
 
 internal bool32
@@ -675,6 +677,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     SetTileValue(&GameState->WorldArena, World->TileMap,
                                  AbsTileX, AbsTileY, AbsTileZ,
                                  TileValue);
+                    // AddEntity();
                 }
             }
 
@@ -774,8 +777,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             if(Controller->Start.EndedDown)
             {
-                uint32_t EntityIndex = AddEntity(GameState);
-                InitialisePlayer(GameState, EntityIndex);
+                uint32_t EntityIndex = AddPlayer(GameState);
                 GameState->PlayerIndexForController[ControllerIndex] = EntityIndex;
             }
         }
