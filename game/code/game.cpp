@@ -277,7 +277,7 @@ GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
 }
 
 internal uint32_t
-AddEntity(game_state *GameState)
+AddEntity(game_state *GameState, entity_type Type)
 {
     uint32_t EntityIndex = GameState->EntityCount++;
 
@@ -289,14 +289,31 @@ AddEntity(game_state *GameState)
     GameState->DormantEntities[EntityIndex] = {};
     GameState->LowEntities[EntityIndex] = {};
     GameState->HighEntities[EntityIndex] = {};
+    GameState->DormantEntities[EntityIndex].Type = Type;
     
+    return(EntityIndex);
+}
+
+internal uint32_t
+AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+{
+    uint32_t EntityIndex = AddEntity(GameState, EntityType_Wall);
+    entity Entity = GetEntity(GameState, EntityResidence_Dormant, EntityIndex);
+
+    Entity.Dormant->P.AbsTileX = AbsTileX;
+    Entity.Dormant->P.AbsTileY = AbsTileY;
+    Entity.Dormant->P.AbsTileZ = AbsTileZ;
+    Entity.Dormant->Height = GameState->World->TileMap->TileSideInMeters;
+    Entity.Dormant->Width = Entity.Dormant->Height;
+    Entity.Dormant->Collides = true;
+
     return(EntityIndex);
 }
 
 internal uint32_t
 AddPlayer(game_state *GameState)
 {
-    uint32_t EntityIndex = AddEntity(GameState);
+    uint32_t EntityIndex = AddEntity(GameState, EntityType_Hero);
     entity Entity = GetEntity(GameState, EntityResidence_Dormant, EntityIndex);
 
     Entity.Dormant->P.AbsTileX = 1;
@@ -514,7 +531,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if(!Memory->IsInitialised)
     {
         // NOTE: Reserve entity slot 0 for the null entity
-        AddEntity(GameState);
+        AddEntity(GameState, EntityType_Null);
 
         GameState->Backdrop = 
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
@@ -677,7 +694,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     SetTileValue(&GameState->WorldArena, World->TileMap,
                                  AbsTileX, AbsTileY, AbsTileZ,
                                  TileValue);
-                    // AddEntity();
+                    if(TileValue == 2)
+                    {
+                        AddWall(GameState, AbsTileX, AbsTileY, AbsTileZ);
+                    }
                 }
             }
 
@@ -817,6 +837,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
 
+#if 0
     for(int32_t RelRow = -10;
         RelRow < 10;
         ++RelRow)
@@ -857,6 +878,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
     }
+#endif
 
     for(uint32_t EntityIndex = 0; EntityIndex < GameState->EntityCount; ++EntityIndex)
     {
@@ -891,17 +913,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*DormantEntity->Width,
                                 PlayerGroundPointY - 0.5f*MetersToPixels*DormantEntity->Height};
             v2 EntityWidthHeight = {DormantEntity->Width, DormantEntity->Height};
-#if 0
-            DrawRectangle(Buffer,
-                          PlayerLeftTop,
-                          PlayerLeftTop + MetersToPixels*EntityWidthHeight,
-                          PlayerR, PlayerG, PlayerB);
-#endif
+
+            if(DormantEntity->Type == EntityType_Hero)
+            {
             hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[HighEntity->FacingDirection];
-            DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY, HeroBitmaps->AlignX, HeroBitmaps->AlignY, CAlpha);
-            DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-            DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY + Z, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-            DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z, HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
+                       HeroBitmaps->AlignX, HeroBitmaps->AlignY, CAlpha);
+            DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z,
+                       HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY + Z,
+                       HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z,
+                       HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            }
+            else
+            {
+                DrawRectangle(Buffer,
+                              PlayerLeftTop,
+                              PlayerLeftTop + MetersToPixels*EntityWidthHeight,
+                              PlayerR, PlayerG, PlayerB);
+            }
         }
     }
 }
