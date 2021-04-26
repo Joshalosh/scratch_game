@@ -504,19 +504,46 @@ SetCamera(game_state *GameState, tile_map_position NewCameraP)
     tile_map_difference dCameraP = Subtract(TileMap, &NewCameraP, &GameState->CameraP);
     GameState->CameraP = NewCameraP;
 
+    uint32_t TileSpanX = 17*3;
+    uint32_t TileSpanY = 9*3;
     rectangle2 CameraBounds = RectCenterDim(V2(0, 0),
-                                               TileMap->TileSideInMeters*V2(17*3, 9*3));
+                                               TileMap->TileSideInMeters*V2((real32)TileSpanX,
+                                                                            (real32)TileSpanY));
 
     v2 EntityOffsetForFrame = -dCameraP.dXY;
     for(uint32_t EntityIndex = 1; EntityIndex < ArrayCount(GameState->HighEntities); ++EntityIndex)
     {
-        high_entity *High = GameState->HighEntities + EntityIndex;
-
-        High->P += EntityOffsetForFrame;
-
-        if(!IsInRectangle(CameraBounds, High->P))
+        if(GameState->EntityResidence[EntityIndex] == EntityResidence_High)
         {
-            ChangeEntityResidence(GameState, EntityIndex, EntityResidence_Low);
+            high_entity *High = GameState->HighEntities + EntityIndex;
+
+            High->P += EntityOffsetForFrame;
+
+            if(!IsInRectangle(CameraBounds, High->P))
+            {
+                ChangeEntityResidence(GameState, EntityIndex, EntityResidence_Dormant);
+            }
+        }
+    }
+
+    uint32_t MinTileX = NewCameraP.AbsTileX - TileSpanX/2;
+    uint32_t MaxTileX = NewCameraP.AbsTileX + TileSpanX/2;
+    uint32_t MinTileY = NewCameraP.AbsTileY - TileSpanY/2;
+    uint32_t MaxTileY = NewCameraP.AbsTileY + TileSpanY/2;
+    for(uint32_t EntityIndex = 1; EntityIndex < ArrayCount(GameState->DormantEntities); ++EntityIndex)
+    {
+        if(GameState->EntityResidence[EntityIndex] == EntityResidence_High)
+        {
+            dormant_entity *Dormant = GameState->DormantEntities + EntityIndex;
+
+            if((Dormant->P.AbsTileZ == NewCameraP.AbsTileZ) &&
+               (Dormant->P.AbsTileX >= MinTileX) &&
+               (Dormant->P.AbsTileX <= MaxTileX) &&
+               (Dormant->P.AbsTileY <= MinTileY) &&
+               (Dormant->P.AbsTileY >= MaxTileY))
+            {
+                ChangeEntityResidence(GameState, EntityIndex, EntityResidence_High);
+            }
         }
     }
 }
@@ -568,9 +595,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Bitmap->AlignX = 72;
         Bitmap->AlignY = 182;
         ++Bitmap;
-
-        GameState->CameraP.AbsTileX = 17/2;
-        GameState->CameraP.AbsTileY = 9/2;
 
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
                         (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
@@ -738,6 +762,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 ScreenY += 1;
             }
         }
+
+        tile_map_position NewCameraP = {};
+        NewCameraP.AbsTileX = 17/2;
+        NewCameraP.AbsTileY = 9/2;
+        SetCamera(GameState, NewCameraP);
 
         Memory->IsInitialised = true;
     }
