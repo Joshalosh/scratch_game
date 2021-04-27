@@ -128,14 +128,16 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
         for(int32_t X = MinX; X < MaxX; ++X)
         {
             real32 A  = (real32)((*Source >> 24) & 0xFF) / 255.0f;
+            A *= CAlpha;
+
             real32 SR = (real32)((*Source >> 16) & 0xFF);
             real32 SG = (real32)((*Source >> 8) & 0xFF);
-            real32 SB = (real32)((*Source >> 0) & 0xFF);
-            
+            real32 SB = (real32)((*Source >> 0) & 0xFF); 
+
             real32 DR = (real32)((*Dest >> 16) & 0xFF);
             real32 DG = (real32)((*Dest >> 8) & 0xFF);
             real32 DB = (real32)((*Dest >> 0) & 0xFF);
-            
+
             real32 R = (1.0f-A)*DR + A*SR;
             real32 G = (1.0f-A)*DG + A*SG;
             real32 B = (1.0f-A)*DB + A*SB;
@@ -183,7 +185,7 @@ internal loaded_bitmap
 DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
 {
     loaded_bitmap Result = {};
-        
+    
     debug_read_file_result ReadResult = ReadEntireFile(Thread, Filename);
     if(ReadResult.ContentsSize != 0)
     {
@@ -220,9 +222,9 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
             {
                 uint32_t C = *SourceDest;
 
-                *SourceDest++ = (RotateLeft(C & RedMask, RedShift) |
+                *SourceDest++ = (RotateLeft(C & RedMask,   RedShift)   |
                                  RotateLeft(C & GreenMask, GreenShift) |
-                                 RotateLeft(C & BlueMask, BlueShift) |
+                                 RotateLeft(C & BlueMask,  BlueShift)  |
                                  RotateLeft(C & AlphaMask, AlphaShift));
             }
         }
@@ -240,14 +242,13 @@ ChangeEntityResidence(game_state *GameState, uint32_t EntityIndex, entity_reside
         {
             high_entity *EntityHigh = &GameState->HighEntities[EntityIndex];
             dormant_entity *EntityDormant = &GameState->DormantEntities[EntityIndex];
-            
+
             tile_map_difference Diff = Subtract(GameState->World->TileMap,
                                                 &EntityDormant->P, &GameState->CameraP);
             EntityHigh->P = Diff.dXY;
             EntityHigh->dP = V2(0, 0);
             EntityHigh->AbsTileZ = EntityDormant->P.AbsTileZ;
             EntityHigh->FacingDirection = 0;
-
         }
     }
 
@@ -264,7 +265,7 @@ GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
         if(GameState->EntityResidence[Index] < Residence)
         {
             ChangeEntityResidence(GameState, Index, Residence);
-            Assert(GameState->EntityResidence[Index] >= Residence);
+            Assert(GameState->EntityResidence[Index] >= Residence)
         }
 
         Entity.Residence = Residence;
@@ -331,7 +332,8 @@ AddPlayer(game_state *GameState)
     {
         GameState->CameraFollowingEntityIndex = EntityIndex;
     }
-     return(EntityIndex);
+
+    return(EntityIndex);
 }
 
 internal bool32
@@ -354,7 +356,7 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
             }
         }
     }
-    
+
     return(Hit);
 }
 
@@ -397,12 +399,13 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
     uint32_t AbsTileZ = Entity.High->P.AbsTileZ;
     */
 
-    real32 tRemaining = 1.0f;
-    for(uint32_t Iteration = 0; (Iteration < 4) &&(tRemaining > 0.0f); ++Iteration)
+    for(uint32_t Iteration = 0; Iteration < 4; ++Iteration)
     {
         real32 tMin = 1.0f;
         v2 WallNormal = {};
         uint32_t HitEntityIndex = 0;
+
+        v2 DesiredPosition = Entity.High->P + PlayerDelta;
 
         for(uint32_t EntityIndex = 1; EntityIndex < GameState->EntityCount; ++EntityIndex)
         {
@@ -454,8 +457,8 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
         if(HitEntityIndex)
         {
             Entity.High->dP = Entity.High->dP - 1*Inner(Entity.High->dP, WallNormal)*WallNormal;
+            PlayerDelta = DesiredPosition - Entity.High->P;
             PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
-            tRemaining -= tMin*tRemaining;
 
             entity HitEntity = GetEntity(GameState, EntityResidence_Dormant, HitEntityIndex);
             Entity.High->AbsTileZ += HitEntity.Dormant->dAbsTileZ;
@@ -507,8 +510,8 @@ SetCamera(game_state *GameState, tile_map_position NewCameraP)
     uint32_t TileSpanX = 17*3;
     uint32_t TileSpanY = 9*3;
     rectangle2 CameraBounds = RectCenterDim(V2(0, 0),
-                                               TileMap->TileSideInMeters*V2((real32)TileSpanX,
-                                                                            (real32)TileSpanY));
+                                            TileMap->TileSideInMeters*V2((real32)TileSpanX,
+                                                                         (real32)TileSpanY));
 
     v2 EntityOffsetForFrame = -dCameraP.dXY;
     for(uint32_t EntityIndex = 1; EntityIndex < ArrayCount(GameState->HighEntities); ++EntityIndex)
@@ -532,7 +535,7 @@ SetCamera(game_state *GameState, tile_map_position NewCameraP)
     uint32_t MaxTileY = NewCameraP.AbsTileY + TileSpanY/2;
     for(uint32_t EntityIndex = 1; EntityIndex < ArrayCount(GameState->DormantEntities); ++EntityIndex)
     {
-        if(GameState->EntityResidence[EntityIndex] == EntityResidence_High)
+        if(GameState->EntityResidence[EntityIndex] == EntityResidence_Dormant)
         {
             dormant_entity *Dormant = GameState->DormantEntities + EntityIndex;
 
@@ -638,19 +641,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         bool32 DoorBottom = false;
         bool32 DoorUp     = false;
         bool32 DoorDown   = false;
-        for(uint32_t ScreenIndex = 0; ScreenIndex < 100; ++ScreenIndex)
+        for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
         {
             Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
 
             uint32_t RandomChoice; 
-            if(DoorUp || DoorDown)
+//            if(DoorUp || DoorDown)
             {
                 RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
             }
+#if 0
             else
             {
                 RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
             }
+#endif
 
             bool32 CreatedZDoor = false;
             if(RandomChoice == 2)
@@ -784,7 +789,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
         entity ControllingEntity = GetEntity(GameState, EntityResidence_High,
-                                              GameState->PlayerIndexForController[ControllerIndex]);
+                                             GameState->PlayerIndexForController[ControllerIndex]);
         if(ControllingEntity.Residence != EntityResidence_Nonexistent)
         {
             v2 ddP = {};
@@ -841,6 +846,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         NewCameraP.AbsTileZ = CameraFollowingEntity.Dormant->P.AbsTileZ;
 
+#if 1
         if(CameraFollowingEntity.High->P.X > (9.0f*TileMap->TileSideInMeters))
         {
             NewCameraP.AbsTileX += 17;
@@ -857,7 +863,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             NewCameraP.AbsTileY -= 9;
         }
+#else
 
+#endif
         SetCamera(GameState, NewCameraP);
     }
 
@@ -909,7 +917,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 #endif
 
-    for(uint32_t EntityIndex = 0; EntityIndex < GameState->EntityCount; ++EntityIndex)
+    for(uint32_t EntityIndex = 1; EntityIndex < GameState->EntityCount; ++EntityIndex)
     {
         if(GameState->EntityResidence[EntityIndex] == EntityResidence_High)
         {
