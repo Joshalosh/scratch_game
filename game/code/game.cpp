@@ -237,12 +237,12 @@ internal void
 MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
 {
     low_entity *EntityLow = &GameState->LowEntities[LowIndex];
-    if(EntityLow->HighEntityIndex)
+    if(!EntityLow->HighEntityIndex)
     {
         if(GameState->HighEntityCount < ArrayCount(GameState->HighEntities_))
         {
             uint32_t HighIndex = GameState->HighEntityCount++;
-            high_entity *EntityHigh = &GameState->HighEntities[HighIndex];
+            high_entity *EntityHigh = &GameState->HighEntities_[HighIndex];
 
             tile_map_difference Diff = Subtract(GameState->World->TileMap,
                                                 &EntityLow->P, &GameState->CameraP);
@@ -264,8 +264,20 @@ internal void
 MakeEntityLowFrequency(game_state *GameState, uint32_t LowIndex)
 {
     low_entity *EntityLow = &GameState->LowEntities[LowIndex];
-    if(EntityLow->HighEntityIndex && (GameState->HighEntityCount < ArrayCount(HighEntities_)))
+    uint32_t HighIndex = EntityLow->HighEntityIndex;
+    if(HighIndex)
     {
+        uint32_t LastHighIndex = GameState->HighEntityCount - 1;
+        if(HighIndex != LastHighIndex)
+        {
+            high_entity *LastEntity = GameSTate->HighEntities_ + LastHighIndex;
+            high_entity *DelEntity = GameState->HighEntities_ + HighIndex;
+            
+            *DelEntity = *LastEntity;
+            GameState->LowEntities[LastEntity->LowEntityIndex].HighEntityIndex = HighIndex;
+        }
+        --GameState->HighEntityCount;
+        EntityLow->HighEntityIndex = 0;
     }
 }
 
