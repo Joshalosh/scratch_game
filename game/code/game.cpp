@@ -233,6 +233,34 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
     return(Result);
 }
 
+inline low_entity *
+GetLowEntity(game_state *GameState, uint32_t Index)
+{
+
+    low_entity *Result = 0;
+
+    if((Index > 0) && (Index < GameState->EntityCount))
+    {
+        Result = GameState->HighEntities + Index;
+    }
+
+    return(Result);
+}
+
+inline high_entity *
+GetHighEntity(game_state *GameState, uint32_t Index)
+{
+
+    high_entity *Result = 0;
+
+    if((Index > 0) && (Index < GameState->EntityCount))
+    {
+        Result = GameState->HighEntities_ + Index;
+    }
+
+    return(Result);
+}
+
 internal void
 MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
 {
@@ -281,41 +309,13 @@ MakeEntityLowFrequency(game_state *GameState, uint32_t LowIndex)
     }
 }
 
-inline entity
-GetEntity(game_state *GameState, entity_residence Residence, uint32_t Index)
-{
-    entity Entity {};
-
-    if((Index > 0) && (Index < GameState->EntityCount))
-    {
-        if(GameState->EntityResidence[Index] < Residence)
-        {
-            ChangeEntityResidence(GameState, Index, Residence);
-            Assert(GameState->EntityResidence[Index] >= Residence)
-        }
-
-        Entity.Residence = Residence;
-        Entity.Low = &GameState->LowEntities[Index];
-        Entity.Low = &GameState->LowEntities[Index];
-        Entity.High = &GameState->HighEntities[Index];
-    }
-
-    return(Entity);
-}
-
 internal uint32_t
-AddEntity(game_state *GameState, entity_type Type)
+AddLowEntity(game_state *GameState, entity_type Type)
 {
-    uint32_t EntityIndex = GameState->EntityCount++;
+    Assert(GameState->LowEntityCount < ArrayCount(GameState->LowEntities));
+    uint32_t EntityIndex = GameState->LowEntityCount++;
 
-    Assert(GameState->EntityCount < ArrayCount(GameState->LowEntities));
-    Assert(GameState->EntityCount < ArrayCount(GameState->LowEntities));
-    Assert(GameState->EntityCount < ArrayCount(GameState->HighEntities));
-
-    GameState->EntityResidence[EntityIndex] = EntityResidence_Low;
     GameState->LowEntities[EntityIndex] = {};
-    GameState->LowEntities[EntityIndex] = {};
-    GameState->HighEntities[EntityIndex] = {};
     GameState->LowEntities[EntityIndex].Type = Type;
     
     return(EntityIndex);
@@ -324,15 +324,15 @@ AddEntity(game_state *GameState, entity_type Type)
 internal uint32_t
 AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
-    uint32_t EntityIndex = AddEntity(GameState, EntityType_Wall);
-    entity Entity = GetEntity(GameState, EntityResidence_Low, EntityIndex);
+    uint32_t EntityIndex = AddLowEntity(GameState, EntityType_Wall);
+    low_entity *EntityLow = GetLowEntity(GameState, EntityIndex);
 
-    Entity.Low->P.AbsTileX = AbsTileX;
-    Entity.Low->P.AbsTileY = AbsTileY;
-    Entity.Low->P.AbsTileZ = AbsTileZ;
-    Entity.Low->Height = GameState->World->TileMap->TileSideInMeters;
-    Entity.Low->Width = Entity.Low->Height;
-    Entity.Low->Collides = true;
+    EntityLow->P.AbsTileX = AbsTileX;
+    EntityLow->P.AbsTileY = AbsTileY;
+    EntityLow->P.AbsTileZ = AbsTileZ;
+    EntityLow->Height = GameState->World->TileMap->TileSideInMeters;
+    EntityLow->Width = EntityLow->Height;
+    EntityLow->Collides = true;
 
     return(EntityIndex);
 }
@@ -340,21 +340,18 @@ AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t Ab
 internal uint32_t
 AddPlayer(game_state *GameState)
 {
-    uint32_t EntityIndex = AddEntity(GameState, EntityType_Hero);
-    entity Entity = GetEntity(GameState, EntityResidence_Low, EntityIndex);
+    uint32_t EntityIndex = AddLowEntity(GameState, EntityType_Hero);
+    low_entity *EntityLow = GetLowEntity(GameState, EntityIndex);
 
-    Entity.Low->P.AbsTileX = 1;
-    Entity.Low->P.AbsTileY = 3;
-    Entity.Low->P.Offset_.X = 0;
-    Entity.Low->P.Offset_.Y = 0;
-    Entity.Low->Height = 0.5f;
-    Entity.Low->Width = 1.0f;
-    Entity.Low->Collides = true;
+    EntityLow->P.AbsTileX = 1;
+    EntityLow->P.AbsTileY = 3;
+    EntityLow->P.Offset_.X = 0;
+    EntityLow->P.Offset_.Y = 0;
+    EntityLow->Height = 0.5f;
+    EntityLow->Width = 1.0f;
+    EntityLow->Collides = true;
 
-    ChangeEntityResidence(GameState, EntityIndex, EntityResidence_High);
-
-    if(GetEntity(GameState, EntityResidence_Low, GameState->CameraFollowingEntityIndex).Residence ==
-       EntityResidence_Nonexistent)
+    if(GameState->CameraFollowingEntityIndex == 0)
     {
         GameState->CameraFollowingEntityIndex = EntityIndex;
     }
@@ -387,7 +384,7 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 }
 
 internal void
-MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
+MovePlayer(game_state *GameState, high_entity *HighEntity, real32 dt, v2 ddP)
 {
     tile_map *TileMap = GameState->World->TileMap;
 
@@ -433,9 +430,9 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
 
         v2 DesiredPosition = Entity.High->P + PlayerDelta;
 
-        for(uint32_t EntityIndex = 1; EntityIndex < GameState->EntityCount; ++EntityIndex)
+        for(uint32_t EntityIndex = 1; EntityIndex < GameState->HighEntityCount; ++EntityIndex)
         {
-            entity TestEntity = GetEntity(GameState, EntityResidence_High, EntityIndex);
+            entity TestEntity = GameState->HighEntities_ + EntityIndex;
             if(TestEntity.High != Entity.High)
             {
                 if(TestEntity.Low->Collides)
