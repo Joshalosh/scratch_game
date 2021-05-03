@@ -278,6 +278,7 @@ MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
             EntityHigh->dP = V2(0, 0);
             EntityHigh->AbsTileZ = EntityLow->P.AbsTileZ;
             EntityHigh->FacingDirection = 0;
+            EntityHigh->LowEntityIndex = LowIndex;
 
             EntityLow->HighEntityIndex = HighIndex;
         }
@@ -384,7 +385,7 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 }
 
 internal void
-MovePlayer(game_state *GameState, high_entity *HighEntity, real32 dt, v2 ddP)
+MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
 {
     tile_map *TileMap = GameState->World->TileMap;
 
@@ -426,15 +427,18 @@ MovePlayer(game_state *GameState, high_entity *HighEntity, real32 dt, v2 ddP)
     {
         real32 tMin = 1.0f;
         v2 WallNormal = {};
-        uint32_t HitEntityIndex = 0;
+        uint32_t HitHighEntityIndex = 0;
 
         v2 DesiredPosition = Entity.High->P + PlayerDelta;
 
-        for(uint32_t EntityIndex = 1; EntityIndex < GameState->HighEntityCount; ++EntityIndex)
+        for(uint32_t TestHighEntityIndex = 1; TestHighEntityIndex < GameState->HighEntityCount; ++TestHighEntityIndex)
         {
-            entity TestEntity = GameState->HighEntities_ + EntityIndex;
-            if(TestEntity.High != Entity.High)
+            if(TestHighEntityIndex != Entity.Low->HighEntityCount)
             {
+                entity TestEntity;
+                TestEntity.High = GameState->HighEntities_ + TestHighEntityIndex;
+                TestEntity.LowIndex = TestEntity.High->LowEntityIndex;
+                TestEntity.Low = GameState->LowEntities + TestEntity.LowIndex;
                 if(TestEntity.Low->Collides)
                 {
                     real32 DiameterW = TestEntity.Low->Width + Entity.Low->Width;
@@ -449,41 +453,42 @@ MovePlayer(game_state *GameState, high_entity *HighEntity, real32 dt, v2 ddP)
                                 &tMin, MinCorner.Y, MaxCorner.Y))
                     {
                         WallNormal = v2{-1, 0};
-                        HitEntityIndex = EntityIndex;
+                        HitHighEntityIndex = TestHighEntityIndex;
                     }
 
                     if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                 &tMin, MinCorner.Y, MaxCorner.Y))
                     {
                         WallNormal = v2{1, 0};
-                        HitEntityIndex = EntityIndex;
+                        HitHighEntityIndex = TestHighEntityIndex;
                     }
 
                     if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                 &tMin, MinCorner.X, MaxCorner.X))
                     {
                         WallNormal = v2{0, -1};
-                        HitEntityIndex = EntityIndex;
+                        HitHighEntityIndex = TestHighEntityIndex;
                     }
 
                     if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                 &tMin, MinCorner.X, MaxCorner.X))
                     {
                         WallNormal = v2{0, 1};
-                        HitEntityIndex = EntityIndex;
+                        HitHighEntityIndex = TestHighEntityIndex;
                     }
                 }
             }
         }
 
         Entity.High->P += tMin*PlayerDelta;
-        if(HitEntityIndex)
+        if(HitHighEntityIndex)
         {
             Entity.High->dP = Entity.High->dP - 1*Inner(Entity.High->dP, WallNormal)*WallNormal;
             PlayerDelta = DesiredPosition - Entity.High->P;
             PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
 
-            entity HitEntity = GetEntity(GameState, EntityResidence_Low, HitEntityIndex);
+            high_entity *HitHigh = GameState->HighEntities_ + HitHighEntityIndex;
+            low_entity *HitLow = GameState->LowEntities + HitHigh->LowEntityIndex;
             Entity.High->AbsTileZ += HitEntity.Low->dAbsTileZ;
         }
         else
