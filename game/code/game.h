@@ -58,8 +58,8 @@ struct world
 
 struct loaded_bitmap
 {
-    int32_t Width;
-    int32_t Height;
+    int32_t  Width;
+    int32_t  Height;
     uint32_t *Pixels;
 };
 
@@ -70,14 +70,6 @@ struct hero_bitmaps
     loaded_bitmap Head;
     loaded_bitmap Cape;
     loaded_bitmap Torso;
-};
-
-enum entity_type
-{
-    EntityType_Null,
-
-    EntityType_Hero,
-    EntityType_Wall,
 };
 
 struct high_entity
@@ -91,6 +83,14 @@ struct high_entity
     real32 dZ;
 
     uint32_t LowEntityIndex;
+};
+
+enum entity_type
+{
+    EntityType_Null,
+
+    EntityType_Hero,
+    EntityType_Wall,
 };
 
 struct low_entity
@@ -129,7 +129,7 @@ struct game_state
     uint32_t LowEntityCount;
     low_entity LowEntities[4096];
 
-    uint32_t HighEnitityCount;
+    uint32_t HighEntityCount;
     high_entity HighEntities_[256];
 
     loaded_bitmap Backdrop;
