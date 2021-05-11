@@ -63,8 +63,8 @@ DrawRectangle(game_offscreen_buffer *Buffer, v2 vMin, v2 vMax, real32 R, real32 
                       (RoundReal32ToUInt32(B * 255.0f) << 0));
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory +
-                      MinX*Buffer->BytesPerPixel +
-                      MinY*Buffer->Pitch);
+                    MinX*Buffer->BytesPerPixel +
+                    MinY*Buffer->Pitch);
     for(int Y = MinY; Y < MaxY; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
@@ -195,6 +195,7 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Result.Width = Header->Width;
         Result.Height = Header->Height;
 
+        Assert(Header->Compression == 3);
         uint32_t RedMask = Header->RedMask;
         uint32_t GreenMask = Header->GreenMask;
         uint32_t BlueMask = Header->BlueMask;
@@ -285,7 +286,6 @@ MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
 inline entity
 GetHighEntity(game_state *GameState, uint32_t LowIndex)
 {
-
     entity Result = {};
 
     if((LowIndex > 0) && (LowIndex < GameState->LowEntityCount))
@@ -322,7 +322,9 @@ MakeEntityLowFrequency(game_state *GameState, uint32_t LowIndex)
 inline void
 OffsetAndCheckFrequencyByArea(game_state *GameState, v2 Offset, rectangle2 CameraBounds)
 {
-    for(uint32_t EntityIndex = 1; EntityIndex < GameState->HighEntityCount;)
+    for(uint32_t EntityIndex = 1;
+        EntityIndex < GameState->HighEntityCount;
+        )
     {
         high_entity *High = GameState->HighEntities_ + EntityIndex;
 
@@ -430,7 +432,8 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
     ddP += -9.0f*Entity.High->dP;
 
     v2 OldPlayerP = Entity.High->P;
-    v2 PlayerDelta = (0.5f*ddP*Square(dt) + Entity.High->dP*dt);
+    v2 PlayerDelta = (0.5f*ddP*Square(dt) +
+                      Entity.High->dP*dt);
     Entity.High->dP = ddP*dt + Entity.High->dP;
     v2 NewPlayerP = OldPlayerP + PlayerDelta;
 
@@ -568,7 +571,6 @@ SetCamera(game_state *GameState, tile_map_position NewCameraP)
     rectangle2 CameraBounds = RectCenterDim(V2(0, 0),
                                             TileMap->TileSideInMeters*V2((real32)TileSpanX,
                                                                          (real32)TileSpanY));
-
     v2 EntityOffsetForFrame = -dCameraP.dXY;
     OffsetAndCheckFrequencyByArea(GameState, EntityOffsetForFrame, CameraBounds);
 
@@ -763,9 +765,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         }
                     }
 
-                    SetTileValue(&GameState->WorldArena, World->TileMap,
-                                 AbsTileX, AbsTileY, AbsTileZ,
+                    SetTileValue(&GameState->WorldArena, World->TileMap, AbsTileX, AbsTileY, AbsTileZ,
                                  TileValue);
+
                     if(TileValue == 2)
                     {
                         AddWall(GameState, AbsTileX, AbsTileY, AbsTileZ);
