@@ -1,20 +1,52 @@
+#define TILE_CHUNK_SAFE_MARGIN 256
 
 inline tile_chunk *
-GetTileChunk(tile_map *TileMap, uint32_t TileChunkX, uint32_t TileChunkY, uint32_t TileChunkZ)
+GetTileChunk(tile_map *TileMap, uint32_t TileChunkX, uint32_t TileChunkY, uint32_t TileChunk,
+             memory_arena *Arena = 0)
 {
-    tile_chunk *TileChunk = 0;
+    Assert(TileChunkX > TILE_CHUNK_SAFE_MARGIN);
+    Assert(TileChunkY > TILE_CHUNK_SAFE_MARGIN);
+    Assert(TileChunkZ > TILE_CHUNK_SAFE_MARGIN);
+    Assert(TileChunkX < (UINT32_MAX - TILE_CHUNK_SAFE_MARGIN));
+    Assert(TileChunkY < (UINT32_MAX - TILE_CHUNK_SAFE_MARGIN));
+    Assert(TileChunkZ < (UINT32_MAX - TILE_CHUNK_SAFE_MARGIN));
 
-    if((TileChunkX >= 0) && (TileChunkX < TileMap->TileChunkCountX) &&
-       (TileChunkY >= 0) && (TileChunkY < TileMap->TileChunkCountY) &&
-       (TileChunkZ >= 0) && (TileChunkZ < TileMap->TileChunkCountZ))
+    uint32_t HashValue = 19*TileChunkX + 7*TileChunkY + 3*TileChunkZ;
+    uint32_t HashSlot = HashValue & (ArrayCount(TileMap->TileChunkHash) - 1);
+    Assert(HashSlot < ArrayCount(TileMap->TileChunkHash);
+
+    tile_chunk *Chunk = TileMap->TileChunkHash + HashSlot;
+    do
     {
-        TileChunk = &TileMap->TileChunks[
-            TileChunkZ*TileMap->TileChunkCountY*TileMap->TileChunkCountX +
-            TileChunkY*TileMap->TileChunkCountX +
-            TileChunkX];
-    }
+        if((TileChunkX == Chunk->TileChunkX) &&
+           (TileChunkY == Chunk->TileChunkY) &&
+           (TileChunkZ == Chunk->TileChunkZ))
+        {
+            break;
+        }
 
-    return(TileChunk);
+        if(Arena && (Chunk->TileChunkX != 0) && (!Chunk->NextInHash))
+        {
+            Chunk->NextInHash = Push(Arena, tile_chunk);
+            Chunk->TileChunkX = 0;
+            Chunk = Chunk->NextInHash;
+        }
+
+        if(Arena && (Chunk->TileChunkX == 0))
+        {
+            NewChunk->Tiles = PushArray(Arena, TileCount, uint32_t);
+            for(uint32_t TileIndex = 0; TileIndex < TileCount; ++TileIndex)
+            {
+                TileChunk->Tiles[TileIndex] = 1;
+            }
+
+            break;
+        }
+
+        Chunk = Chunk->NextInHash;
+    } while(Chunk);
+
+    return(Chunk);
 }
 
 inline uint32_t

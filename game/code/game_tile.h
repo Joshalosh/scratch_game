@@ -30,7 +30,13 @@ struct tile_chunk_position
 
 struct tile_chunk
 {
+    uint32_t TileChunkX;
+    uint32_t TileChunkY;
+    uint32_t TileChunkZ;
+
     uint32_t *Tiles;
+
+    tile_chunk *NextInHash;
 };
 
 struct tile_map
@@ -41,11 +47,7 @@ struct tile_map
 
     real32 TileSideInMeters;
 
-    uint32_t TileChunkCountX;
-    uint32_t TileChunkCountY;
-    uint32_t TileChunkCountZ;
-
-    tile_chunk *TileChunks;
+    tile_chunk *TileChunkHash[4096];
 };
 
 #define GAME_TILE_H
