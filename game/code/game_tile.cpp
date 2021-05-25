@@ -1,7 +1,8 @@
-#define TILE_CHUNK_SAFE_MARGIN 256
+#define TILE_CHUNK_SAFE_MARGIN (INT32_MAX/64)
+#define TILE_CHUNK_UNINITIALISED INT32_MAX
 
 inline tile_chunk *
-GetTileChunk(tile_map *TileMap, uint32_t TileChunkX, uint32_t TileChunkY, uint32_t TileChunkZ,
+GetTileChunk(tile_map *TileMap, int32_t TileChunkX, int32_t TileChunkY, int32_t TileChunkZ,
              memory_arena *Arena = 0)
 {
     Assert(TileChunkX > -TILE_CHUNK_SAFE_MARGIN);
@@ -58,7 +59,7 @@ GetTileChunk(tile_map *TileMap, uint32_t TileChunkX, uint32_t TileChunkY, uint32
 }
 
 inline uint32_t
-GetTileValueUnchecked(tile_map *TileMap, tile_chunk *TileChunk, uint32_t TileX, uint32_t TileY)
+GetTileValueUnchecked(tile_map *TileMap, tile_chunk *TileChunk, int32_t TileX, int32_t TileY)
 {
     Assert(TileChunk);
     Assert(TileX < TileMap->ChunkDim);
@@ -69,7 +70,7 @@ GetTileValueUnchecked(tile_map *TileMap, tile_chunk *TileChunk, uint32_t TileX, 
 }
 
 inline void
-SetTileValueUnchecked(tile_map *TileMap, tile_chunk *TileChunk, uint32_t TileX, uint32_t TileY,
+SetTileValueUnchecked(tile_map *TileMap, tile_chunk *TileChunk, int32_t TileX, int32_t TileY,
                       uint32_t TileValue)
 {
     Assert(TileChunk);
@@ -187,7 +188,7 @@ InitialiseTileMap(tile_map *TileMap, real32 TileSideInMeters)
 //
 
 inline void
-RecanonicaliseCoord(tile_map *TileMap, uint32_t *Tile, real32 *TileRel)
+RecanonicaliseCoord(tile_map *TileMap, int32_t *Tile, real32 *TileRel)
 {
     // NOTE: TileMap is assumed to be toroidal topology, stepping off
     // one end brings you back to the other.
