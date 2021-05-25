@@ -11,28 +11,28 @@ struct tile_map_position
     // NOTE: These are fixed point tile locations. The high
     // bits are the tile_chunk index, and the low bits are
     // the tile index in the chunk.
-    uint32_t AbsTileX;
-    uint32_t AbsTileY;
-    uint32_t AbsTileZ;
+    int32_t AbsTileX;
+    int32_t AbsTileY;
+    int32_t AbsTileZ;
 
     v2 Offset_;
 };
 
 struct tile_chunk_position
 {
-    uint32_t TileChunkX;
-    uint32_t TileChunkY;
-    uint32_t TileChunkZ;
+    int32_t TileChunkX;
+    int32_t TileChunkY;
+    int32_t TileChunkZ;
 
-    uint32_t RelTileX;
-    uint32_t RelTileY;
+    int32_t RelTileX;
+    int32_t RelTileY;
 };
 
 struct tile_chunk
 {
-    uint32_t TileChunkX;
-    uint32_t TileChunkY;
-    uint32_t TileChunkZ;
+    int32_t TileChunkX;
+    int32_t TileChunkY;
+    int32_t TileChunkZ;
 
     uint32_t *Tiles;
 
@@ -41,13 +41,13 @@ struct tile_chunk
 
 struct tile_map
 {
-    uint32_t ChunkShift;
-    uint32_t ChunkMask;
-    uint32_t ChunkDim;
+    int32_t ChunkShift;
+    int32_t ChunkMask;
+    int32_t ChunkDim;
 
     real32 TileSideInMeters;
 
-    tile_chunk *TileChunkHash[4096];
+    tile_chunk TileChunkHash[4096];
 };
 
 #define GAME_TILE_H
