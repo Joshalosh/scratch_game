@@ -115,6 +115,12 @@ struct entity
     high_entity *High;
 };
 
+struct low_entity_chunk_reference
+{
+    uint32_t *TileChunk;
+    uint32_t EntityIndexInChunk;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -127,7 +133,7 @@ struct game_state
     uint32_t PlayerIndexForController[ArrayCount(((game_input *)0)->Controllers)];
 
     uint32_t LowEntityCount;
-    low_entity LowEntities[4096];
+    low_entity LowEntities[100000];
 
     uint32_t HighEntityCount;
     high_entity HighEntities_[256];
