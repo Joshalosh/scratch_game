@@ -49,12 +49,7 @@ PushSize_(memory_arena *Arena, memory_index Size)
 
 #include "game_math.h"
 #include "game_intrinsics.h"
-#include "game_tile.h"
-
-struct world
-{
-    tile_map *TileMap;
-};
+#include "game_world.h"
 
 struct loaded_bitmap
 {
@@ -97,7 +92,7 @@ struct low_entity
 {
     entity_type Type;
 
-    tile_map_position P;
+    world_position P;
     real32 Width, Height;
 
     // This is for the stairs or whatever the "stairs"
@@ -115,12 +110,6 @@ struct entity
     high_entity *High;
 };
 
-struct low_entity_chunk_reference
-{
-    uint32_t *TileChunk;
-    uint32_t EntityIndexInChunk;
-};
-
 struct game_state
 {
     memory_arena WorldArena;
@@ -128,7 +117,7 @@ struct game_state
 
     // TODO: Allow split-screen?
     uint32_t CameraFollowingEntityIndex;
-    tile_map_position CameraP;
+    world_position CameraP;
 
     uint32_t PlayerIndexForController[ArrayCount(((game_input *)0)->Controllers)];
 
