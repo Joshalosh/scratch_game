@@ -11,9 +11,9 @@ struct world_position
     // NOTE: These are fixed point tile locations. The high
     // bits are the tile_chunk index, and the low bits are
     // the tile index in the chunk.
-    int32_t AbsTileX;
-    int32_t AbsTileY;
-    int32_t AbsTileZ;
+    int32_t ChunkX;
+    int32_t ChunkY;
+    int32_t ChunkZ;
 
     v2 Offset_;
 };
@@ -38,11 +38,8 @@ struct world_chunk
 
 struct world
 {
-    real32 TileSideInMeters;
+    real32 ChunkSideInMeters;
 
-    int32_t ChunkShift;
-    int32_t ChunkMask;
-    int32_t ChunkDim;
     world_chunk ChunkHash[4096];
 };
 

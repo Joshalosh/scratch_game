@@ -152,3 +152,20 @@ CentredTilePoint(uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
     return(Result);
 }
 
+inline void
+ChangeEntityLocation(world *World, uint32 LowEntityIndex,
+                     world_position *OldP, world_position *NewP)
+{
+    if(OldP && AreInSameChunk(*OldP, *NewP))
+    {
+    }
+    else
+    {
+        if(OldP)
+        {
+        }
+
+        world_chunk *GetWorldChunk(world, *World, int32_t ChunkX, int32_t ChunkY,
+                                   int32_t ChunkZ, memory_arena *Arena = 0)
+    }
+}

@@ -131,20 +131,20 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
             A *= CAlpha;
 
             real32 SR = (real32)((*Source >> 16) & 0xFF);
-            real32 SG = (real32)((*Source >> 8) & 0xFF);
-            real32 SB = (real32)((*Source >> 0) & 0xFF);
+            real32 SG = (real32)((*Source >>  8) & 0xFF);
+            real32 SB = (real32)((*Source >>  0) & 0xFF);
 
             real32 DR = (real32)((*Dest >> 16) & 0xFF);
-            real32 DG = (real32)((*Dest >> 8) & 0xFF);
-            real32 DB = (real32)((*Dest >> 0) & 0xFF);
+            real32 DG = (real32)((*Dest >>  8) & 0xFF);
+            real32 DB = (real32)((*Dest >>  0) & 0xFF);
 
             real32 R = (1.0f-A)*DR + A*SR;
             real32 G = (1.0f-A)*DG + A*SG;
             real32 B = (1.0f-A)*DB + A*SB;
 
             *Dest = (((uint32_t)(R + 0.5f) << 16) |
-                     ((uint32_t)(G + 0.5f) << 8) |
-                     ((uint32_t)(B + 0.5f) << 0));
+                     ((uint32_t)(G + 0.5f) <<  8) |
+                     ((uint32_t)(B + 0.5f) <<  0));
 
             ++Dest;
             ++Source;
@@ -192,13 +192,13 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
         uint32_t *Pixels = (uint32_t *)((uint8_t *)ReadResult.Contents + Header->BitmapOffset);
         Result.Pixels = Pixels;
-        Result.Width = Header->Width;
+        Result.Width  = Header->Width;
         Result.Height = Header->Height;
 
         Assert(Header->Compression == 3);
         uint32_t RedMask = Header->RedMask;
         uint32_t GreenMask = Header->GreenMask;
-        uint32_t BlueMask = Header->BlueMask;
+        uint32_t BlueMask  = Header->BlueMask;
         uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
 
         bit_scan_result RedScan   = FindLeastSignificantSetBit(RedMask);
@@ -212,8 +212,8 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Assert(AlphaScan.Found);
 
         int32_t RedShift   = 16 - (int32_t)RedScan.Index;
-        int32_t GreenShift = 8  - (int32_t)GreenScan.Index;
-        int32_t BlueShift  = 0  - (int32_t)BlueScan.Index;
+        int32_t GreenShift =  8 - (int32_t)GreenScan.Index;
+        int32_t BlueShift  =  0 - (int32_t)BlueScan.Index;
         int32_t AlphaShift = 24 - (int32_t)AlphaScan.Index;
 
         uint32_t *SourceDest = Pixels;
@@ -649,8 +649,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->World = PushStruct(&GameState->WorldArena, world);
         world *World = GameState->World;
-        World = PushStruct(&GameState->WorldArena, world);
-
         InitialiseWorld(World, 1.4f);
 
         uint32_t RandomNumberIndex = 0;
@@ -670,7 +668,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         bool32 DoorBottom = false;
         bool32 DoorUp     = false;
         bool32 DoorDown   = false;
-        for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
+        for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
         {
             Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
 
