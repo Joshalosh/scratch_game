@@ -153,7 +153,7 @@ CentredTilePoint(uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 }
 
 inline void
-ChangeEntityLocation(world *World, uint32 LowEntityIndex,
+ChangeEntityLocation(memory_arena *Arena, world *World, uint32 LowEntityIndex,
                      world_position *OldP, world_position *NewP)
 {
     if(OldP && AreInSameChunk(*OldP, *NewP))
@@ -163,9 +163,58 @@ ChangeEntityLocation(world *World, uint32 LowEntityIndex,
     {
         if(OldP)
         {
+            world_chunk *Chunk = GetWorldChunk(World, OldP->ChunkX, OldP->ChunkY, OldP->ChunkZ);
+            Assert(Chunk);
+            if(Chunk)
+            {
+                world_entity_bloxk *FirstBlock = &Chunk->FirstBlock;
+                for(world_entity_block *Block = &Chunk->FirstBlock; Block; Block = Block->Next)
+                {
+                    for(uint32_t Index = 0; Index < Block->EntityCount; ++Index)
+                    {
+                        if(Block->LowEntityIndex[Index] == LowEntityIndex)
+                        {
+                            Block->LowEntityIndex[Index] = FirstBlock->LowEntityIndex[--FirstBlock->EntityCount];
+                            if(FirstBlock->EntityCount == 0)
+                            {
+                                if(FirstBlock->Next)
+                                {
+                                    world_entity_block *NextBlock = FirstBlock->Next;
+                                    *FirstBlock = *NextBlock;
+
+                                    NextBlock->Next = World->FirstFree;
+                                    World->FirstFree = NextBlock;
+                                }
+                            }
+
+                            Block = 0;
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
-        world_chunk *GetWorldChunk(world, *World, int32_t ChunkX, int32_t ChunkY,
-                                   int32_t ChunkZ, memory_arena *Arena = 0)
+        world_chunk *Chunk = GetWorldChunk(World, NewP->ChunkX, NewP->ChunkY, NewP->ChunkZ, Arena);
+        world_entry_block = *Block = &Chunk->FirstBlock;
+        if(Block->EntityCount == ArrayCount(Block->LowEntityIndex))
+        {
+            world_entity_block *OldBlock = World->FirstFree;
+            if(OldBlock)
+            {
+                World->FirstFree = OldBlock->Next;
+            }
+            else
+            {
+                OldBlock = PushStruct(Arena, world_entity_block);
+            }
+
+            *OldBlock = *Block;
+            Block->Next = OldBlock;
+            Block->EntityCount = 0;
+        }
+
+        Assert(Block->EntityCount < ArrayCount(Block->LowEntityIndex));
+        Block->LowEntityIndex[Block->EntityCount++] = LowEntityIndex;
     }
 }
