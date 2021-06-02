@@ -71,7 +71,7 @@ struct high_entity
 {
     v2 P;
     v2 dP;
-    uint32_t AbsTileZ;
+    uint32_t ChunkZ;
     uint32_t FacingDirection;
 
     real32 Z;
