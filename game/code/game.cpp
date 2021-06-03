@@ -223,9 +223,9 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
             {
                 uint32_t C = *SourceDest;
 
-                *SourceDest++ = (RotateLeft(C & RedMask,   RedShift)   |
+                *SourceDest++ = (RotateLeft(C & RedMask, RedShift) |
                                  RotateLeft(C & GreenMask, GreenShift) |
-                                 RotateLeft(C & BlueMask,  BlueShift)  |
+                                 RotateLeft(C & BlueMask, BlueShift) |
                                  RotateLeft(C & AlphaMask, AlphaShift));
             }
         }
@@ -265,7 +265,7 @@ MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
             EntityHigh = GameState->HighEntities_ + HighIndex;
 
             world_difference Diff = Subtract(GameState->World,
-                                                &EntityLow->P, &GameState->CameraP);
+                                             &EntityLow->P, &GameState->CameraP);
             EntityHigh->P = Diff.dXY;
             EntityHigh->dP = V2(0, 0);
             EntityHigh->ChunkZ = EntityLow->P.ChunkZ;
@@ -806,6 +806,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                    ScreenBaseY * TilesPerHeight + 9/2,
                                                    ScreenBaseZ);
         SetCamera(GameState, NewCameraP);
+
         Memory->IsInitialised = true;
     }
 
