@@ -247,8 +247,17 @@ GetLowEntity(game_state *GameState, uint32_t Index)
     return(Result);
 }
 
+inline v2
+GetCameraSpace(game_state *GameState, lowEntity *EntityLow)
+{
+    world_difference Diff = Subtract(GameState->World, &EntityLow->P, &GameState->CameraP);
+    v2 Result = Diff.dXY;
+
+    return(Result);
+}
+
 inline high_entity *
-MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
+MakeEntityHighFrequency(game_state *GameState, low_entity *EntityLow, uint32_t LowIndex, v2 CameraSpaceP)
 {
     high_entity *EntityHigh = 0;
 
@@ -264,9 +273,7 @@ MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
             uint32_t HighIndex = GameState->HighEntityCount++;
             EntityHigh = GameState->HighEntities_ + HighIndex;
 
-            world_difference Diff = Subtract(GameState->World,
-                                             &EntityLow->P, &GameState->CameraP);
-            EntityHigh->P = Diff.dXY;
+            EntityHigh->P = CameraSpaceP;
             EntityHigh->dP = V2(0, 0);
             EntityHigh->ChunkZ = EntityLow->P.ChunkZ;
             EntityHigh->FacingDirection = 0;
@@ -281,6 +288,11 @@ MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
     }
 
     return(EntityHigh);
+}
+
+inline high_entity *
+MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
+{
 }
 
 inline entity
@@ -571,28 +583,36 @@ SetCamera(game_state *GameState, world_position NewCameraP)
     v2 EntityOffsetForFrame = -dCameraP.dXY;
     OffsetAndCheckFrequencyByArea(GameState, EntityOffsetForFrame, CameraBounds);
 
-#if 0
-    //TODO: This needs to be accelerated and optimised.
-    int32_t MinTileX = NewCameraP.AbsTileX - TileSpanX/2;
-    int32_t MaxTileX = NewCameraP.AbsTileX + TileSpanX/2;
-    int32_t MinTileY = NewCameraP.AbsTileY - TileSpanY/2;
-    int32_t MaxTileY = NewCameraP.AbsTileY + TileSpanY/2;
-    for(uint32_t EntityIndex = 1; EntityIndex < GameState->LowEntityCount; ++EntityIndex)
+    world_position MinChunkP = MapIntoChunkSpace(World, NewCameraP, GetMinCorner(CameraBounds));
+    world_position MaxChunkP = MapIntoChunkSpace(World, NewCameraP, GetMaxCorner(CameraBounds));
+    for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
     {
-        low_entity *Low = GameState->LowEntities + EntityIndex;
-        if(Low->HighEntityIndex == 0)
+        for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
         {
-            if((Low->P.AbsTileZ == NewCameraP.AbsTileZ) &&
-               (Low->P.AbsTileX >= MinTileX) &&
-               (Low->P.AbsTileX <= MaxTileX) &&
-               (Low->P.AbsTileY >= MinTileY) &&
-               (Low->P.AbsTileY <= MaxTileY))
+            world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, NewCameraP.ChunkZ);
+            if(Chunk)
             {
-                MakeEntityHighFrequency(GameState, EntityIndex);
+                for(world_entity_block *Block = &Chunk->FirstBlock; Block; Block = Block->Next)
+                {
+                    for(uint32_t EntityIndex = 0; EntityIndex < Block->EntityCount; ++EntityIndex)
+                    {
+                        low_entity *Low = GameState->LowEntities + Block->LowEntityIndex[EntityIndex];
+                        if(Low->HighEntityIndex == 0)
+                        {
+                            if((Low->P.AbsTileZ == NewCameraP.AbsTileZ) &&
+                               (Low->P.AbsTileX >= MinTileX) &&
+                               (Low->P.AbsTileX <= MaxTileX) &&
+                               (Low->P.AbsTileY >= MinTileY) &&
+                               (Low->P.AbsTileY <= MaxTileY))
+                            {
+                                MakeEntityHighFrequency(GameState, EntityIndex);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-#endif
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)

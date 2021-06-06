@@ -109,7 +109,7 @@ RecanonicaliseCoord(world *World, int32_t *Tile, real32 *TileRel)
 }
 
 inline world_position
-MapIntoTileSpace(world *World, world_position BasePos, v2 Offset)
+MapIntoChunkSpace(world *World, world_position BasePos, v2 Offset)
 {
     world_position Result = BasePos;
 
