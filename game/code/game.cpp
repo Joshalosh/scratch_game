@@ -248,7 +248,7 @@ GetLowEntity(game_state *GameState, uint32_t Index)
 }
 
 inline v2
-GetCameraSpace(game_state *GameState, lowEntity *EntityLow)
+GetCameraSpaceP(game_state *GameState, low_entity *EntityLow)
 {
     world_difference Diff = Subtract(GameState->World, &EntityLow->P, &GameState->CameraP);
     v2 Result = Diff.dXY;
@@ -261,12 +261,8 @@ MakeEntityHighFrequency(game_state *GameState, low_entity *EntityLow, uint32_t L
 {
     high_entity *EntityHigh = 0;
 
-    low_entity *EntityLow = &GameState->LowEntities[LowIndex];
-    if(EntityLow->HighEntityIndex)
-    {
-        EntityHigh = GameState->HighEntities_ + EntityLow->HighEntityIndex;
-    }
-    else
+    Assert(EntityLow->HighEntityIndex == 0);
+    if(EntityLow->HighEntityIndex == 0)
     {
         if(GameState->HighEntityCount < ArrayCount(GameState->HighEntities_))
         {
@@ -293,6 +289,20 @@ MakeEntityHighFrequency(game_state *GameState, low_entity *EntityLow, uint32_t L
 inline high_entity *
 MakeEntityHighFrequency(game_state *GameState, uint32_t LowIndex)
 {
+    high_entity *EntityHigh = 0;
+
+    low_entity *EntityLow = &GameState->LowEntities[LowIndex];
+    if(EntityLow->HighEntityIndex)
+    {
+        EntityHigh = GameState->HighEntities_ + EntityLow->HighEntityIndex;
+    }
+    else
+    {
+        v2 CameraSpaceP = GetCameraSpaceP(GameState, EntityLow);
+        EntityHigh = MakeEntityHighFrequency(GameState, EntityLow, LowIndex, CameraSpaceP);
+    }
+
+    return(EntityHigh);
 }
 
 inline entity
@@ -564,7 +574,7 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
         }
     }
 
-    Entity.Low->P = MapIntoTileSpace(GameState->World, GameState->CameraP, Entity.High->P);
+    Entity.Low->P = MapIntoChunkSpace(GameState->World, GameState->CameraP, Entity.High->P);
 }
 
 internal void
@@ -599,13 +609,10 @@ SetCamera(game_state *GameState, world_position NewCameraP)
                         low_entity *Low = GameState->LowEntities + Block->LowEntityIndex[EntityIndex];
                         if(Low->HighEntityIndex == 0)
                         {
-                            if((Low->P.AbsTileZ == NewCameraP.AbsTileZ) &&
-                               (Low->P.AbsTileX >= MinTileX) &&
-                               (Low->P.AbsTileX <= MaxTileX) &&
-                               (Low->P.AbsTileY >= MinTileY) &&
-                               (Low->P.AbsTileY <= MaxTileY))
+                            v2 CameraSpaceP = GetCameraSpaceP(GameState, Low);
+                            if(IsInRectangle(CameraBounds, CameraSpaceP))
                             {
-                                MakeEntityHighFrequency(GameState, EntityIndex);
+                                MakeEntityHighFrequency(GameState, Low, EntityIndex, CameraSpaceP);
                             }
                         }
                     }
