@@ -177,10 +177,11 @@ ChangeEntityLocation(memory_arena *Arena, world *World, uint32_t LowEntityIndex,
             Assert(Chunk);
             if(Chunk)
             {
+                bool32 NotFound = true;
                 world_entity_block *FirstBlock = &Chunk->FirstBlock;
-                for(world_entity_block *Block = FirstBlock; Block; Block = Block->Next)
+                for(world_entity_block *Block = FirstBlock; Block && NotFound; Block = Block->Next)
                 {
-                    for(uint32_t Index = 0; Index < Block->EntityCount; ++Index)
+                    for(uint32_t Index = 0; (Index < Block->EntityCount) && NotFound; ++Index)
                     {
                         if(Block->LowEntityIndex[Index] == LowEntityIndex)
                         {
@@ -198,8 +199,7 @@ ChangeEntityLocation(memory_arena *Arena, world *World, uint32_t LowEntityIndex,
                                 }
                             }
 
-                            Block = 0;
-                            break;
+                            NotFound = false;
                         }
                     }
                 }
