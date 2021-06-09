@@ -341,6 +341,23 @@ MakeEntityLowFrequency(game_state *GameState, uint32_t LowIndex)
     }
 }
 
+inline bool32
+ValidateEntityPairs(game_state *GameState)
+{
+    bool32 Valid = true;
+
+    for(uint32_t HighEntityIndex = 1;
+        HighEntityIndex < GameState->HighEntityCount;
+        ++HighEntityIndex)
+    {
+        high_entity *High = GameState->HighEntities_ + HighEntityIndex;
+        Valid = Valid && 
+            (GameState->LowEntities[High->LowEntityIndex].HighEntityIndex == HighEntityIndex);
+    }
+    
+    return(Valid);
+}
+
 inline void
 OffsetAndCheckFrequencyByArea(game_state *GameState, v2 Offset, rectangle2 HighFrequencyBounds)
 {
@@ -592,6 +609,8 @@ SetCamera(game_state *GameState, world_position NewCameraP)
 {
     world *World = GameState->World;
 
+    Assert(ValidateEntityPairs(GameState));
+
     world_difference dCameraP = Subtract(World, &NewCameraP, &GameState->CameraP);
     GameState->CameraP = NewCameraP;
 
@@ -602,6 +621,8 @@ SetCamera(game_state *GameState, world_position NewCameraP)
                                                                          (real32)TileSpanY));
     v2 EntityOffsetForFrame = -dCameraP.dXY;
     OffsetAndCheckFrequencyByArea(GameState, EntityOffsetForFrame, CameraBounds);
+
+    Assert(ValidateEntityPairs(GameState));
 
     world_position MinChunkP = MapIntoChunkSpace(World, NewCameraP, GetMinCorner(CameraBounds));
     world_position MaxChunkP = MapIntoChunkSpace(World, NewCameraP, GetMaxCorner(CameraBounds));
@@ -614,15 +635,18 @@ SetCamera(game_state *GameState, world_position NewCameraP)
             {
                 for(world_entity_block *Block = &Chunk->FirstBlock; Block; Block = Block->Next)
                 {
-                    for(uint32_t EntityIndex = 0; EntityIndex < Block->EntityCount; ++EntityIndex)
+                    for(uint32_t EntityIndexIndex = 0;
+                        EntityIndexIndex < Block->EntityCount;
+                        ++EntityIndexIndex)
                     {
-                        low_entity *Low = GameState->LowEntities + Block->LowEntityIndex[EntityIndex];
+                        uint32_t LowEntityIndex = Block->LowEntityIndex[EntityIndexIndex];
+                        low_entity *Low = GameState->LowEntities + LowEntityIndex;
                         if(Low->HighEntityIndex == 0)
                         {
                             v2 CameraSpaceP = GetCameraSpaceP(GameState, Low);
                             if(IsInRectangle(CameraBounds, CameraSpaceP))
                             {
-                                MakeEntityHighFrequency(GameState, Low, EntityIndex, CameraSpaceP);
+                                MakeEntityHighFrequency(GameState, Low, LowEntityIndex, CameraSpaceP);
                             }
                         }
                     }
@@ -630,6 +654,8 @@ SetCamera(game_state *GameState, world_position NewCameraP)
             }
         }
     }
+
+    Assert(ValidateEntityPairs(GameState));
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -649,6 +675,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
         GameState->Shadow =
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_shadow.bmp");
+        GameState->Tree =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tree00.bmp");
 
         hero_bitmaps *Bitmap;
 
@@ -938,7 +966,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         SetCamera(GameState, NewCameraP);
     }
 
+#if 1
+    DrawRectangle(Buffer, V2(0.0f, 0.0f), V2((real32)Buffer->Width, (real32)Buffer->Height), 0.5f, 0.5f, 0.5f);
+#else
     DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
+#endif
 
     real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
@@ -1031,10 +1063,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         else
         {
-            DrawRectangle(Buffer,
-                          PlayerLeftTop,
-                          PlayerLeftTop + MetersToPixels*EntityWidthHeight,
-                          PlayerR, PlayerG, PlayerB);
+#if 0
+            DrawRectangle(Buffer, PlayerLeftTop, PlayerLeftTop + 0.9f*MetersToPixels*EntityWidthHeight,
+                          1.0f, 1.0f, 0.0f);
+#endif
+            DrawBitmap(Buffer, &GameState->Tree,
+                       PlayerGroundPointX, PlayerGroundPointY + Z,
+                       40, 80);
         }
     }
 }
