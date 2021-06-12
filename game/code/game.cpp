@@ -59,8 +59,8 @@ DrawRectangle(game_offscreen_buffer *Buffer, v2 vMin, v2 vMax, real32 R, real32 
     }
 
     uint32_t Color = ((RoundReal32ToUInt32(R * 255.0f) << 16) |
-                      (RoundReal32ToUInt32(G * 255.0f) << 8) |
-                      (RoundReal32ToUInt32(B * 255.0f) << 0));
+                      (RoundReal32ToUInt32(G * 255.0f) <<  8) |
+                      (RoundReal32ToUInt32(B * 255.0f) <<  0));
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory +
                     MinX*Buffer->BytesPerPixel +
@@ -517,36 +517,36 @@ MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
                     real32 DiameterW = TestEntity.Low->Width + Entity.Low->Width;
                     real32 DiameterH = TestEntity.Low->Height + Entity.Low->Height;
 
-                    v2 MinCorner = -0.5f*v2{DiameterW, DiameterH};
-                    v2 MaxCorner = 0.5f*v2{DiameterW, DiameterH};
+                    v2 MinCorner = -0.5f*V2(DiameterW, DiameterH);
+                    v2 MaxCorner = 0.5f*V2(DiameterW, DiameterH);
 
                     v2 Rel = Entity.High->P - TestEntity.High->P;
 
                     if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                 &tMin, MinCorner.Y, MaxCorner.Y))
                     {
-                        WallNormal = v2{-1, 0};
+                        WallNormal = V2(-1, 0);
                         HitHighEntityIndex = TestHighEntityIndex;
                     }
 
                     if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                 &tMin, MinCorner.Y, MaxCorner.Y))
                     {
-                        WallNormal = v2{1, 0};
+                        WallNormal = V2(1, 0);
                         HitHighEntityIndex = TestHighEntityIndex;
                     }
 
                     if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                 &tMin, MinCorner.X, MaxCorner.X))
                     {
-                        WallNormal = v2{0, -1};
+                        WallNormal = V2(0, -1);
                         HitHighEntityIndex = TestHighEntityIndex;
                     }
 
                     if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                 &tMin, MinCorner.X, MaxCorner.X))
                     {
-                        WallNormal = v2{0, 1};
+                        WallNormal = V2(0, 1);
                         HitHighEntityIndex = TestHighEntityIndex;
                     }
                 }
@@ -903,7 +903,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             if(Controller->IsAnalogue)
             {
                 // Use analogue movement tuning
-                ddP = v2{Controller->StickAverageX, Controller->StickAverageY};
+                ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
             }
             else
             {
