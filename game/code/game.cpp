@@ -380,7 +380,12 @@ OffsetAndCheckFrequencyByArea(game_state *GameState, v2 Offset, rectangle2 HighF
     }
 }
 
-internal uint32_t
+struct add_low_entity_result
+{
+    low_entity *Low;
+    uint32_t LowIndex;
+};
+internal add_low_entity_result
 AddLowEntity(game_state *GameState, entity_type Type, world_position *P)
 {
     Assert(GameState->LowEntityCount < ArrayCount(GameState->LowEntities));
@@ -395,41 +400,69 @@ AddLowEntity(game_state *GameState, entity_type Type, world_position *P)
         EntityLow->P = *P;
         ChangeEntityLocation(&GameState->WorldArena, GameState->World, EntityIndex, 0, P);
     }
+
+    add_low_entity_result Result;
+    Result.Low = EntityLow;
+    Result.LowIndex = EntityIndex;
     
-    return(EntityIndex);
+    return(Result);
 }
 
-internal uint32_t
+internal add_low_entity_result
 AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    uint32_t EntityIndex = AddLowEntity(GameState, EntityType_Wall, &P);
-    low_entity *EntityLow = GetLowEntity(GameState, EntityIndex);
+    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Wall, &P);
 
-    EntityLow->Height = GameState->World->TileSideInMeters;
-    EntityLow->Width = EntityLow->Height;
-    EntityLow->Collides = true;
+    Entity.Low->Height = GameState->World->TileSideInMeters;
+    Entity.Low->Width = Entity.Low->Height;
+    Entity.Low->Collides = true;
 
-    return(EntityIndex);
+    return(Entity);
 }
 
-internal uint32_t
+internal add_low_entity_result
 AddPlayer(game_state *GameState)
 {
     world_position P = GameState->CameraP;
-    uint32_t EntityIndex = AddLowEntity(GameState, EntityType_Hero, &P);
-    low_entity *EntityLow = GetLowEntity(GameState, EntityIndex);
+    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Hero, &P);
 
-    EntityLow->Height = 0.5f;
-    EntityLow->Width = 1.0f;
-    EntityLow->Collides = true;
+    Entity.Low->Height = 0.5f;
+    Entity.Low->Width = 1.0f;
+    Entity.Low->Collides = true;
 
     if(GameState->CameraFollowingEntityIndex == 0)
     {
-        GameState->CameraFollowingEntityIndex = EntityIndex;
+        GameState->CameraFollowingEntityIndex = Entity.LowIndex;
     }
 
-    return(EntityIndex);
+    return(Entity);
+}
+
+internal add_low_entity_result
+AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+{
+    world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
+    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Monster, &P);
+
+    Entity.Low->Height = 0.5f;
+    Entity.Low->Width = 1.0f;
+    Entity.Low->Collides = true;
+
+    return(Entity);
+}
+
+internal add_low_entity_result
+AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+{
+    world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
+    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Familiar, &P);
+
+    Entity.Low->Height = 0.5f;
+    Entity.Low->Width = 1.0f;
+    Entity.Low->Collides = false;
+
+    return(Entity);
 }
 
 internal bool32
@@ -866,10 +899,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
 
         world_position NewCameraP = {};
+        uint32_t CameraTileX = ScreenBaseX * TilesPerWidth  + 17/2;
+        uint32_t CameraTileY = ScreenBaseY * TilesPerHeight +  9/2;
+        uint32_t CameraTileZ = ScreenBaseZ;
         NewCameraP = ChunkPositionFromTilePosition(GameState->World,
-                                                   ScreenBaseX * TilesPerWidth  + 17/2,
-                                                   ScreenBaseY * TilesPerHeight + 9/2,
-                                                   ScreenBaseZ);
+                                                   CameraTileX,
+                                                   CameraTileY,
+                                                   CameraTileZ);
+        AddMonster(GameState, CameraTileX + 2, CameraTileY + 2, CameraTileZ);
+        AddFamiliar(GameState, CameraTileX - 2, CameraTileY + 2, CameraTileZ);
         SetCamera(GameState, NewCameraP);
 
         Memory->IsInitialised = true;
@@ -891,7 +929,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             if(Controller->Start.EndedDown)
             {
-                uint32_t EntityIndex = AddPlayer(GameState);
+                uint32_t EntityIndex = AddPlayer(GameState).LowIndex;
                 GameState->PlayerIndexForController[ControllerIndex] = EntityIndex;
             }
         }
@@ -1049,27 +1087,52 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             PlayerGroundPointY - 0.5f*MetersToPixels*LowEntity->Height};
         v2 EntityWidthHeight = {LowEntity->Width, LowEntity->Height};
 
-        if(LowEntity->Type == EntityType_Hero)
+        hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[HighEntity->FacingDirection];
+        switch(LowEntity->Type)
         {
-            hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[HighEntity->FacingDirection];
-            DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
-                       HeroBitmaps->AlignX, HeroBitmaps->AlignY, CAlpha);
-            DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z,
-                       HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-            DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY + Z,
-                       HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-            DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z,
-                       HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-        }
-        else
-        {
+            case EntityType_Hero:
+            {
+                DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY, CAlpha);
+                DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+                DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY + Z,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+                DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            } break;
+
+            case EntityType_Wall:
+            {
 #if 0
-            DrawRectangle(Buffer, PlayerLeftTop, PlayerLeftTop + 0.9f*MetersToPixels*EntityWidthHeight,
-                          1.0f, 1.0f, 0.0f);
+                DrawRectangle(Buffer, PlayerLeftTop, PlayerLeftTop + 0.9f*MetersToPixels*EntityWidthHeight,
+                              1.0f, 1.0f, 0.0f);
 #endif
-            DrawBitmap(Buffer, &GameState->Tree,
-                       PlayerGroundPointX, PlayerGroundPointY + Z,
-                       40, 80);
+                DrawBitmap(Buffer, &GameState->Tree,
+                           PlayerGroundPointX, PlayerGroundPointY + Z,
+                           40, 80);
+            } break;
+
+            case EntityType_Familiar:
+            {
+                DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY, CAlpha);
+                DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            } break;
+
+            case EntityType_Monster:
+            {
+                DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY, CAlpha);
+                DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z,
+                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+            } break;
+
+            default:
+            {
+                InvalidCodePath;
+            } break;
         }
     }
 }
