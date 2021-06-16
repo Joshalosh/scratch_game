@@ -973,7 +973,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    v2 EntityOffsetForFrame = {};
     entity CameraFollowingEntity = GetHighEntity(GameState, GameState->CameraFollowingEntityIndex);
     if(CameraFollowingEntity.High)
     {
@@ -1013,55 +1012,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
 
-#if 0
-    for(int32_t RelRow = -10;
-        RelRow < 10;
-        ++RelRow)
-    {
-        for(int32_t RelColumn = -20; 
-            RelColumn < 20; 
-            ++RelColumn)
-        {
-            uint32_t Column = GameState->CameraP.AbsTileX + RelColumn;
-            uint32_t Row    = GameState->CameraP.AbsTileY + RelRow;
-            uint32_t TileID = GetTileValue(World, Column, Row, GameState->CameraP.AbsTileZ);
-
-            if(TileID > 1)
-            {
-                real32 Gray = 0.5f;
-                if(TileID == 2)
-                {
-                    Gray = 1.0f;
-                }
-
-                if(TileID > 2)
-                {
-                    Gray = 0.25f;
-                }
-
-                if((Column == GameState->CameraP.AbsTileX) &&
-                   (Row == GameState->CameraP.AbsTileY))
-                {
-                    Gray = 0.0f;
-                }
-
-                v2 TileSide = {0.5f*TileSideInPixels, 0.5f*TileSideInPixels};
-                v2 Cen = {ScreenCentreX - MetersToPixels*GameState->CameraP.Offset_.X + ((real32)RelColumn)*TileSideInPixels,
-                          ScreenCentreY + MetersToPixels*GameState->CameraP.Offset_.Y - ((real32)RelRow)*TileSideInPixels};
-                v2 Min = Cen - 0.9f*TileSide;
-                v2 Max = Cen + 0.9f*TileSide;
-                DrawRectangle(Buffer, Min, Max, Gray, Gray, Gray);
-            }
-        }
-    }
-#endif
-
     for(uint32_t HighEntityIndex = 1; HighEntityIndex < GameState->HighEntityCount; ++HighEntityIndex)
     {
         high_entity *HighEntity = GameState->HighEntities_ + HighEntityIndex;
         low_entity *LowEntity = GameState->LowEntities + HighEntity->LowEntityIndex;
 
-        HighEntity->P += EntityOffsetForFrame;
+        entity Entity;
+        Entity.LowIndex = HighEntity->LowIndex;
+        Entity.Low = LowEntity;
+        Entity.High = HighEntity;
+        UpdateEntity(GameState, Entity, dt);
 
         real32 dt = Input->dtForFrame;
         real32 ddZ = -9.8f;
@@ -1077,11 +1037,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             CAlpha = 0.0f;
         }
         
-        real32 PlayerR = 1.0f;
-        real32 PlayerG = 1.0f;
-        real32 PlayerB = 0.0f;
         real32 PlayerGroundPointX = ScreenCentreX + MetersToPixels*HighEntity->P.X;
         real32 PlayerGroundPointY = ScreenCentreY - MetersToPixels*HighEntity->P.Y;
+
         real32 Z = -MetersToPixels*HighEntity->Z;
         v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*LowEntity->Width,
                             PlayerGroundPointY - 0.5f*MetersToPixels*LowEntity->Height};
