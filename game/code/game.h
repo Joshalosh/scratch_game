@@ -112,6 +112,20 @@ struct entity
     high_entity *High;
 };
 
+struct entity_visible_pieces
+{
+    loaded_bitmap *Bitmap;
+    v2 Offset;
+    real32 OffsetZ;
+    real32 Alpha;
+};
+
+struct entity_visible_piece_group
+{
+    uint32_t Count;
+    entity_visible_piece Pieces[8];
+};
+
 struct game_state
 {
     memory_arena WorldArena;
