@@ -79,13 +79,8 @@ DrawRectangle(game_offscreen_buffer *Buffer, v2 vMin, v2 vMax, real32 R, real32 
 
 internal void
 DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
-           real32 RealX, real32 RealY,
-           int32_t AlignX = 0, int32_t AlignY = 0,
-           real32 CAlpha = 1.0f)
+           real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
 {
-    RealX -= (real32)AlignX;
-    RealY -= (real32)AlignY;
-
     int32_t MinX = RoundReal32ToInt32(RealX);
     int32_t MinY = RoundReal32ToInt32(RealY);
     int32_t MaxX = MinX + Bitmap->Width;
@@ -691,6 +686,18 @@ SetCamera(game_state *GameState, world_position NewCameraP)
     Assert(ValidateEntityPairs(GameState));
 }
 
+inline void
+PushPiece(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
+          v2 Offset, real32 OffsetZ, v2 Align, real32 Alpha = 1.0f)
+{
+    Assert(Group->PieceCount < ArrayCount(Group->Pieces));
+    entity_visible_piece *Piece = Group->Pieces + Group->PieceCount++;
+    Piece->Bitmap = Bitmap;
+    Piece->Offset = Oddset - Align;
+    Piece->OffsetZ = OffsetZ;
+    Piece->Alpha - Alpha;
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -717,29 +724,25 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_head.bmp");
         Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_torso.bmp");
-        Bitmap->AlignX = 72;
-        Bitmap->AlignY = 182;
+        Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
         Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_head.bmp");
         Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_torso.bmp");
-        Bitmap->AlignX = 72;
-        Bitmap->AlignY = 182;
+        Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
         Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_head.bmp");
         Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_torso.bmp");
-        Bitmap->AlignX = 72;
-        Bitmap->AlignY = 182;
+        Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
         Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_head.bmp");
         Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_torso.bmp");
-        Bitmap->AlignX = 72;
-        Bitmap->AlignY = 182;
+        Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
@@ -813,7 +816,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                     uint32_t TileValue = 1;
                     if((TileX == 0) && (!DoorLeft || (TileY != (TilesPerHeight/2))))
-                    {
                         TileValue = 2;
                     }
 
@@ -1013,6 +1015,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;
 
     entity_visible_piece_group PieceGroup;
+    PieceGroup.PieceCount = 0;
     for(uint32_t HighEntityIndex = 1; HighEntityIndex < GameState->HighEntityCount; ++HighEntityIndex)
     {
         high_entity *HighEntity = GameState->HighEntities_ + HighEntityIndex;
@@ -1032,10 +1035,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             HighEntity->Z = 0;
         }
-        real32 CAlpha = 1.0f - 0.5f*HighEntity->Z;
-        if(CAlpha < 0)
+        real32 ShadowAlpha = 1.0f - 0.5f*HighEntity->Z;
+        if(ShadowAlpha < 0)
         {
-            CAlpha = 0.0f;
+            ShadowAlpha = 0.0f;
         }
         
         hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[HighEntity->FacingDirection];
@@ -1044,41 +1047,27 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             case EntityType_Hero:
             {
-                AddPiece(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY, ShadowAlpha);
-                DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-                DrawBitmap(Buffer, &HeroBitmaps->Cape, PlayerGroundPointX, PlayerGroundPointY + Z,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
-                DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+                PushPiece(&PieceGroup, &GameState->Shadow,  V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha);
+                PushPiece(&PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
+                PushPiece(&PieceGroup, &HeroBitmaps->Cape,  V2(0, 0), 0, HeroBitmaps->Align);
+                PushPiece(&PieceGroup, &HeroBitmaps->Head,  V2(0, 0), 0, HeroBitmaps->Align);
             } break;
 
             case EntityType_Wall:
             {
-#if 0
-                DrawRectangle(Buffer, PlayerLeftTop, PlayerLeftTop + 0.9f*MetersToPixels*EntityWidthHeight,
-                              1.0f, 1.0f, 0.0f);
-#endif
-                DrawBitmap(Buffer, &GameState->Tree,
-                           PlayerGroundPointX, PlayerGroundPointY + Z,
-                           40, 80);
+                PushPiece(&PieceGroup, &GameState->Tree, V2(0, 0), 0, V2(40, 80));
             } break;
 
             case EntityType_Familiar:
             {
-                DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY, ShadowAlpha);
-                DrawBitmap(Buffer, &HeroBitmaps->Head, PlayerGroundPointX, PlayerGroundPointY + Z,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+                PushPiece(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha);
+                PushPiece(&PieceGroup, &HeroBitmaps->Head, V2(0, 0), 0, HeroBitmaps->Align);
             } break;
 
             case EntityType_Monster:
             {
-                DrawBitmap(Buffer, &GameState->Shadow, PlayerGroundPointX, PlayerGroundPointY,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY, ShadowAlpha);
-                DrawBitmap(Buffer, &HeroBitmaps->Torso, PlayerGroundPointX, PlayerGroundPointY + Z,
-                           HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+                PushPiece(&PieceGroup, &GameState->Shadow,  V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha);
+                PushPiece(&PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
             } break;
 
             default:
@@ -1089,20 +1078,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         real32 EntityGroundPointX = ScreenCentreX + MetersToPixels*HighEntity->P.X;
         real32 EntityGroundPointY = ScreenCentreY - MetersToPixels*HighEntity->P.Y;
-
-        real32 Z = -MetersToPixels*HighEntity->Z;
+        real32 EntityZ = -MetersToPixels*HighEntity->Z;
+#if 0
         v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*LowEntity->Width,
                             PlayerGroundPointY - 0.5f*MetersToPixels*LowEntity->Height};
         v2 EntityWidthHeight = {LowEntity->Width, LowEntity->Height};
-
-
-        for(uint32_t PieceIndex = 0; PieceIndex < PieceGroup.Count; ++PieceIndex)
+        DrawRectangle(Buffer, PlayerLeftTop, PlayerLeftTop + 0.9f*MetersToPixels*EntityWidthHeight,
+                      1.0f, 1.0f, 0.0f);
+#endif
+        for(uint32_t PieceIndex = 0; PieceIndex < PieceGroup.PieceCount; ++PieceIndex)
         {
             entity_visible_piece *Piece = PieceGroup.Pieces[PieceIndex];
             DrawBitmap(Buffer, Piece->Bitmap,
                        EntityGroundPointX + Piece->Offset.X,
-                       EntityGroundPointY + Piece->Offset.Y + Piece->OffsetZ,
-                       HeroBitmaps->AlignX, HeroBitmaps->AlignY);
+                       EntityGroundPointY + Piece->Offset.Y + Piece->OffsetZ + EntityZ,
+                       Piece->Alpha);
         }
     }
 }

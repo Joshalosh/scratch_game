@@ -60,8 +60,7 @@ struct loaded_bitmap
 
 struct hero_bitmaps
 {
-    int32_t AlignX;
-    int32_t AlignY;
+    v2 Align;
     loaded_bitmap Head;
     loaded_bitmap Cape;
     loaded_bitmap Torso;
@@ -122,7 +121,7 @@ struct entity_visible_pieces
 
 struct entity_visible_piece_group
 {
-    uint32_t Count;
+    uint32_t PieceCount;
     entity_visible_piece Pieces[8];
 };
 
