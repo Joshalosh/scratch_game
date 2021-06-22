@@ -122,7 +122,7 @@ struct entity_visible_pieces
 struct entity_visible_piece_group
 {
     uint32_t PieceCount;
-    entity_visible_piece Pieces[8];
+    entity_visible_pieces Pieces[8];
 };
 
 struct game_state
