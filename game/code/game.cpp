@@ -485,7 +485,7 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 }
 
 internal void
-MovePlayer(game_state *GameState, entity Entity, real32 dt, v2 ddP)
+MoveEntity(game_state *GameState, entity Entity, real32 dt, v2 ddP)
 {
     world *World = GameState->World;
 
@@ -698,11 +698,27 @@ PushPiece(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
     Piece->Alpha = Alpha;
 }
 
+inline entity
+EntityFromHighIndex(game_state *GameState, uint32_t HighEntityIndex)
+{
+    entity Result = {};
+
+    if(HighEntityIndex)
+    {
+        Assert(HighEntityIndex < ArrayCount(GameState->HighEntities_));
+        Result.High = GameState->HighEntities_ + HighEntityIndex;
+        Result.LowIndex = Result.High->LowEntityIndex;
+        Result.Low = GameState->LowEntities + Result.LowIndex;
+    }
+
+    return(Result);
+}
+
 inline void
 UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
 {
     entity ClosestHero = {};
-    real32 ClosestHeroD = 10.0f;
+    real32 ClosestHeroDSq = Square(10.0f);
     for(uint32_t HighEntityIndex = 1;
         HighEntityIndex < GameState->HighEntityCount;
         ++HighEntityIndex)
@@ -711,7 +727,21 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
 
         if(TestEntity.Low->Type == EntityType_Hero)
         {
+            real32 TestDSq = LengthSq(TestEntity.High->P - Entity.High->P);
+            if(ClosestHeroDSq > TestDSq)
+            {
+                ClosestHero = TestEntity;
+                ClosestHeroDSq = TestDSq;
+            }
         }
+    }
+
+    if(ClosestHero.High)
+    {
+        real32 Acceleration = 0.5f;
+        real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
+        v2 ddP = OneOverLength*(ClosestHero.High->P - Entity.High->P);
+        MoveEntity(GameState, Entity, dt, ddP);
     }
 }
 
@@ -994,7 +1024,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 ControllingEntity.High->dZ = 3.0f;
             }
 
-            MovePlayer(GameState, ControllingEntity, Input->dtForFrame, ddP);
+            MoveEntity(GameState, ControllingEntity, Input->dtForFrame, ddP);
         }
     }
 
