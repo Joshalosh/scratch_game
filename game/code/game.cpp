@@ -728,6 +728,11 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
         if(TestEntity.Low->Type == EntityType_Hero)
         {
             real32 TestDSq = LengthSq(TestEntity.High->P - Entity.High->P);
+            if(TestEntity.Low->Type == EntityType_Hero)
+            {
+                TestDSq *= 0.75f;
+            }
+
             if(ClosestHeroDSq > TestDSq)
             {
                 ClosestHero = TestEntity;
@@ -964,7 +969,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                    CameraTileY,
                                                    CameraTileZ);
         AddMonster(GameState, CameraTileX + 2, CameraTileY + 2, CameraTileZ);
-        for(int FamiliarIndex = 0; FamiliarIndex < 20; ++FamiliarIndex)
+        for(int FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
         {
             int32_t FamiliarOffsetX = (RandomNumberTable[RandomNumberIndex++] % 10) - 7;
             int32_t FamiliarOffsetY = (RandomNumberTable[RandomNumberIndex++] % 10) - 3;
