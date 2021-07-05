@@ -91,6 +91,13 @@ enum entity_type
     EntityType_Monster,
 };
 
+#define HIT_POINT_SUB_COUNT 4
+struct hit_point
+{
+    uint8 Flags;
+    uint8 FilledAmount;
+};
+
 struct low_entity
 {
     entity_type Type;
@@ -104,6 +111,9 @@ struct low_entity
     int32_t dAbsTileZ;
 
     uint32_t HighEntityIndex;
+
+    uint32_t HitPointMax;
+    hit_point HitPoint[16];
 };
 
 struct entity
@@ -118,8 +128,10 @@ struct entity_visible_pieces
     loaded_bitmap *Bitmap;
     v2 Offset;
     real32 OffsetZ;
-    real32 Alpha;
     real32 EntityZC;
+
+    real32 R, G, B, A;
+    v2 Dim;
 };
 
 struct entity_visible_piece_group

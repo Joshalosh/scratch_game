@@ -422,6 +422,10 @@ AddPlayer(game_state *GameState)
     world_position P = GameState->CameraP;
     add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Hero, &P);
 
+    Entity.Low->HitPointMax = 3;
+    Entity.Low->HitPoint[2].FilledAmount = HIT_POINT_SUB_COUNT;
+    Entity.Low->HitPoint[0] = Entity.Low->HitPoint[1] = Entity.Low->HitPoint[2];
+
     Entity.Low->Height = 0.5f;
     Entity.Low->Width = 1.0f;
     Entity.Low->Collides = true;
@@ -695,7 +699,7 @@ PushPiece(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
     Piece->Bitmap = Bitmap;
     Piece->Offset = Offset - Align;
     Piece->OffsetZ = OffsetZ;
-    Piece->Alpha = Alpha;
+    Piece->A = Alpha;
     Piece->EntityZC = EntityZC;
 }
 
@@ -743,7 +747,7 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
     }
 
     v2 ddP = {};
-    if(ClosestHero.High && (ClosestHeroDSq > 0.1f))
+    if(ClosestHero.High && (ClosestHeroDSq > Square(3.0f)))
     {
         real32 Acceleration = 0.5f;
         real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
@@ -1169,10 +1173,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         for(uint32_t PieceIndex = 0; PieceIndex < PieceGroup.PieceCount; ++PieceIndex)
         {
             entity_visible_pieces *Piece = PieceGroup.Pieces + PieceIndex;
-            DrawBitmap(Buffer, Piece->Bitmap,
-                       EntityGroundPointX + Piece->Offset.X,
-                       EntityGroundPointY + Piece->Offset.Y + Piece->OffsetZ + Piece->EntityZC*EntityZ,
-                       Piece->Alpha);
+            v2 Center = {EntityGroundPointX + Piece->Offset.X,
+                         EntityGroundPointY + PiecePffset.Y + Piece->OffsetZ + Piece->EntityZC*EntityZ};
+            if(Piece->Bitmap)
+            {
+                DrawBitmap(Buffer, Piece->Bitmap, Center.X, Center.Y, Piece->A);
+            }
+            else
+            {
+                v2 HalfDim = 0.5f*MetersToPixels*Piece->Dim;
+                DrawRectangle(Buffer, Center - HalfDim, Center + HalDim, Piece->R, Piece->G, Piece->B);
+            }
         }
     }
 }
