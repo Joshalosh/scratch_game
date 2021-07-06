@@ -94,8 +94,8 @@ enum entity_type
 #define HIT_POINT_SUB_COUNT 4
 struct hit_point
 {
-    uint8 Flags;
-    uint8 FilledAmount;
+    uint8_t Flags;
+    uint8_t FilledAmount;
 };
 
 struct low_entity
@@ -123,7 +123,7 @@ struct entity
     high_entity *High;
 };
 
-struct entity_visible_pieces
+struct entity_visible_piece
 {
     loaded_bitmap *Bitmap;
     v2 Offset;
@@ -132,12 +132,6 @@ struct entity_visible_pieces
 
     real32 R, G, B, A;
     v2 Dim;
-};
-
-struct entity_visible_piece_group
-{
-    uint32_t PieceCount;
-    entity_visible_pieces Pieces[8];
 };
 
 struct game_state
@@ -162,6 +156,14 @@ struct game_state
     hero_bitmaps HeroBitmaps[4];
 
     loaded_bitmap Tree;
+    real32 MetersToPixels;
+};
+
+struct entity_visible_piece_group
+{
+    game_state *GameState;
+    uint32_t PieceCount;
+    entity_visible_piece Pieces[32];
 };
 
 #define GAME_H
