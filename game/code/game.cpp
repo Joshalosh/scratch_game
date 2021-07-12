@@ -848,12 +848,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t ScreenY  = ScreenBaseY;
         uint32_t AbsTileZ = ScreenBaseZ;
 
-        bool32 DoorLeft   = false;
-        bool32 DoorRight  = false;
-        bool32 DoorTop    = false;
+        bool32 DoorLeft  = false;
+        bool32 DoorRight = false;
+        bool32 DoorTop = false;
         bool32 DoorBottom = false;
-        bool32 DoorUp     = false;
-        bool32 DoorDown   = false;
+        bool32 DoorUp = false;
+        bool32 DoorDown = false;
         for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
         {
             Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));

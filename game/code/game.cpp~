@@ -1115,7 +1115,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         entity Entity;
         Entity.LowIndex = HighEntity->LowEntityIndex;
-        Entity.Low = LowEntity;
+        Entity.Low  = LowEntity;
         Entity.High = HighEntity;
 
         real32 dt = Input->dtForFrame;
