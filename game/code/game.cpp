@@ -834,7 +834,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         world *World = GameState->World;
         InitialiseWorld(World, 1.4f);
 
-        int32_t TileSideInPixels = 60;
+        int32_t TileSideInPixels  = 60;
         GameState->MetersToPixels = (real32)TileSideInPixels / (real32)World->TileSideInMeters;
 
         uint32_t RandomNumberIndex = 0;
