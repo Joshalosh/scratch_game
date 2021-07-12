@@ -692,8 +692,7 @@ SetCamera(game_state *GameState, world_position NewCameraP)
 
 inline void
 PushPiece(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
-          v2 Offset, real32 OffsetZ, v2 Align, v2 Dim, real32 R,
-          real32 G, real32 B, real32 Alpha, real32 EntityZC)
+          v2 Offset, real32 OffsetZ, v2 Align, v2 Dim, v4 Color, real32 EntityZC)
 {
     Assert(Group->PieceCount < ArrayCount(Group->Pieces));
     entity_visible_piece *Piece = Group->Pieces + Group->PieceCount++;
@@ -701,24 +700,24 @@ PushPiece(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
     Piece->Offset = Group->GameState->MetersToPixels*V2(Offset.X, -Offset.Y) - Align;
     Piece->OffsetZ  = Group->GameState->MetersToPixels*OffsetZ;
     Piece->EntityZC = EntityZC;
-    Piece->R = R;
-    Piece->G = G;
-    Piece->B = B;
-    Piece->A = Alpha;
+    Piece->R = Color.R;
+    Piece->G = Color.G;
+    Piece->B = Color.B;
+    Piece->A = Color.A;
     Piece->Dim = Dim;
 }
 inline void
 PushBitmap(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
           v2 Offset, real32 OffsetZ, v2 Align, real32 Alpha = 1.0f, real32 EntityZC = 1.0f)
 {
-    PushPiece(Group, Bitmap, Offset, OffsetZ, Align, V2(0, 0), 1.0f, 1.0f, 1.0f, Alpha, EntityZC);
+    PushPiece(Group, Bitmap, Offset, OffsetZ, Align, V2(0, 0), V4(1.0f, 1.0f, 1.0f, Alpha), EntityZC);
 }
 
 inline void
 PushRect(entity_visible_piece_group *Group, v2 Offset, real32 OffsetZ,
-         v2 Dim, real32 R, real32 G, real32 B, real32 Alpha = 1.0f, real32 EntityZC = 1.0f)
+         v2 Dim, v4 Color, real32 EntityZC = 1.0f)
 {
-    PushPiece(Group, 0, Offset, OffsetZ, V2(0, 0), Dim, R, G, B, Alpha, EntityZC);
+    PushPiece(Group, 0, Offset, OffsetZ, V2(0, 0), Dim, Color, EntityZC);
 }
 
 inline entity
@@ -1149,17 +1148,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         ++HealthIndex)
                     {
                         hit_point *HitPoint = LowEntity->HitPoint + HealthIndex;
-                        real32 R = 1.0f;
-                        real32 G = 0.0f;
-                        real32 B = 0.0f;
+                        v4 Color = {1.0f, 0.0f, 0.0f, 1.0f};
                         if(HitPoint->FilledAmount == 0)
                         {
-                            R = 0.2f;
-                            G = 0.2f;
-                            B = 0.2f;
+                            Color = V4(0.2f, 0.2f, 0.2f, 1.0f);
                         }
 
-                        PushRect(&PieceGroup, HitP, 0, HealthDim, R, G, B, 1.0f, 0.0f);
+                        PushRect(&PieceGroup, HitP, 0, HealthDim, Color, 0.0f);
                         HitP += dHitP;
                     }
                 }
