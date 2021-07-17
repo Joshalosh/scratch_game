@@ -441,6 +441,9 @@ AddPlayer(game_state *GameState)
 
     InitHitPoints(Entity.Low, 3);
 
+    add_low_entity_result Sword = AddSword(GameState);
+    Entity.Low->SwordLowIndex = Sword.LowIndex;
+
     if(GameState->CameraFollowingEntityIndex == 0)
     {
         GameState->CameraFollowingEntityIndex = Entity.LowIndex;
@@ -460,6 +463,18 @@ AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t
     Entity.Low->Collides = true;
 
     InitHitPoints(Entity.Low, 3);
+
+    return(Entity);
+}
+
+internal add_low_entity_result
+AddSword(game_state *GameState)
+{
+    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Sword, 0);
+
+    Entity.Low->Height = 0.5f;
+    Entity.Low->Width = 1.0f;
+    Entity.Low->Collides = false;
 
     return(Entity);
 }
@@ -839,6 +854,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_shadow.bmp");
         GameState->Tree =
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tree00.bmp");
+        GameState->Sword =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock03.bmp");
 
         hero_bitmaps *Bitmap;
 
@@ -1183,6 +1200,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             case EntityType_Wall:
             {
                 PushBitmap(&PieceGroup, &GameState->Tree, V2(0, 0), 0, V2(40, 80));
+            } break;
+
+            case EntityType_Sword:
+            {
+                PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
+                PushBitmap(&PieceGroup, &GameState->Sword, V2(0, 0), 0, V2(29, 10));
             } break;
 
             case EntityType_Familiar:
