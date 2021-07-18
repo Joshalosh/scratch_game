@@ -430,6 +430,18 @@ InitHitPoints(low_entity *EntityLow, uint32_t HitPointCount)
 }
 
 internal add_low_entity_result
+AddSword(game_state *GameState)
+{
+    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Sword, 0);
+
+    Entity.Low->Height = 0.5f;
+    Entity.Low->Width = 1.0f;
+    Entity.Low->Collides = false;
+
+    return(Entity);
+}
+
+internal add_low_entity_result
 AddPlayer(game_state *GameState)
 {
     world_position P = GameState->CameraP;
@@ -463,18 +475,6 @@ AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t
     Entity.Low->Collides = true;
 
     InitHitPoints(Entity.Low, 3);
-
-    return(Entity);
-}
-
-internal add_low_entity_result
-AddSword(game_state *GameState)
-{
-    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Sword, 0);
-
-    Entity.Low->Height = 0.5f;
-    Entity.Low->Width = 1.0f;
-    Entity.Low->Collides = false;
 
     return(Entity);
 }
@@ -1113,12 +1113,39 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 }
             }
 
-            if(Controller->ActionUp.EndedDown)
+            if(Controller->Start.EndedDown)
             {
                 ControllingEntity.High->dZ = 3.0f;
             }
 
+            v2 dSword = {};
+            if(Controller->ActionUp.EndedDown)
+            {
+                dSword = V2(0.0f, 1.0f);
+            }
+            if(Controller->ActionDown.EndedDown)
+            {
+                dSword = V2(0.0f, -1.0f);
+            }
+            if(Controller->ActionLeft.EndedDown)
+            {
+                dSword = V2(-1.0f, 0.0f);
+            }
+            if(Controller->ActionRight.EndedDown)
+            {
+                dSword = V2(1.0f, 0.0f);
+            }
+
             MoveEntity(GameState, ControllingEntity, Input->dtForFrame, ddP);
+            if((dSword.X != 0.0f) || (dSword.Y != 0.0f))
+            {
+                low_entity *Sword = GetLowEntity(GameState, ControllingEntity.Low->SwordLowIndex);
+                if(Sword)
+                {
+                    world_position SwordP = ControllingEntity.Low->P;
+                    ChangeEntityLocation(GameState, GameState->world, ControllingEntity.Low->SwordLowIndex, 0, P);
+                }
+            }
         }
     }
 
