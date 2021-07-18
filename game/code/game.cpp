@@ -390,11 +390,7 @@ AddLowEntity(game_state *GameState, entity_type Type, world_position *P)
     *EntityLow = {};
     EntityLow->Type = Type;
 
-    if(P)
-    {
-        EntityLow->P = *P;
-        ChangeEntityLocation(&GameState->WorldArena, GameState->World, EntityIndex, 0, P);
-    }
+    ChangeEntityLocation(&GameState->WorldArena, GameState->World, EntityIndex, EntityLow, 0, P);
 
     add_low_entity_result Result;
     Result.Low = EntityLow;
@@ -660,8 +656,7 @@ MoveEntity(game_state *GameState, entity Entity, real32 dt, v2 ddP)
     world_position NewP = MapIntoChunkSpace(GameState->World, GameState->CameraP, Entity.High->P);
 
     ChangeEntityLocation(&GameState->WorldArena, GameState->World, Entity.LowIndex,
-                         &Entity.Low->P, &NewP);
-    Entity.Low->P = NewP;
+                         Entity.Low, &Entity.Low->P, &NewP);
 }
 
 internal void
@@ -1140,10 +1135,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             if((dSword.X != 0.0f) || (dSword.Y != 0.0f))
             {
                 low_entity *Sword = GetLowEntity(GameState, ControllingEntity.Low->SwordLowIndex);
-                if(Sword)
+                if(Sword && !IsValid(Sword->P))
                 {
                     world_position SwordP = ControllingEntity.Low->P;
-                    ChangeEntityLocation(GameState, GameState->world, ControllingEntity.Low->SwordLowIndex, 0, P);
+                    ChangeEntityLocation(&GameState->WorldArena, GameState->World,
+                                         ControllingEntity.Low->SwordLowIndex, Sword, 0, &SwordP);
                 }
             }
         }
