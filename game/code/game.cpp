@@ -512,22 +512,42 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
     return(Hit);
 }
 
+struct move_spec
+{
+    bool UnitMaxAccelVector;
+    real32 Speed;
+    real32 Drag;
+};
+inline move_spec
+DefaultMoveSpec()
+{
+    move_spec Result;
+
+    Result.UnitMaxAccelVector = false;
+    Result.Speed = 1.0f;
+    Result.Drag  = 0.0f;
+
+    return(Result);
+}
+
 internal void
-MoveEntity(game_state *GameState, entity Entity, real32 dt, v2 ddP)
+MoveEntity(game_state *GameState, entity Entity, real32 dt, move_spec *MoveSpec, v2 ddP)
 {
     world *World = GameState->World;
 
-    real32 ddPLength = LengthSq(ddP);
-    if(ddPLength > 1.0f)
+    if(MoveSpec->UnitMaxAccelVector)
     {
-        ddP *= (1.0f / SquareRoot(ddPLength));
+        real32 ddPLength = LengthSq(ddP);
+        if(ddPLength > 1.0f)
+        {
+            ddP *= (1.0f / SquareRoot(ddPLength));
+        }
     }
 
-    real32 PlayerSpeed = 50.0f; // m/s^2
-    ddP *= PlayerSpeed;
+    ddP *= MoveSpec->Speed;
     
     //TODO: Diagonal will be faster! Fix with vectors
-    ddP += -9.0f*Entity.High->dP;
+    ddP += -MoveSpec->Drag*Entity.High->dP;
 
     v2 OldPlayerP  = Entity.High->P;
     v2 PlayerDelta = (0.5f*ddP*Square(dt) +
@@ -786,19 +806,23 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
             {
             ClosestHero = TestEntity;
             ClosestHeroDSq = TestDSq;
+            }
         }
     }
-}
 
-v2 ddP = {};
-if(ClosestHero.High && (ClosestHeroDSq > Square(3.0f)))
-{
-    real32 Acceleration = 0.5f;
-    real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
-    ddP = OneOverLength*(ClosestHero.High->P - Entity.High->P);
-}
+    v2 ddP = {};
+    if(ClosestHero.High && (ClosestHeroDSq > Square(3.0f)))
+    {
+        real32 Acceleration = 0.5f;
+        real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
+        ddP = OneOverLength*(ClosestHero.High->P - Entity.High->P);
+    }
 
-MoveEntity(GameState, Entity, dt, ddP);
+    move_spec MoveSpec = DefaultMoveSpec();
+    MoveSpec.UnitMaxAccelVector = true;
+    MoveSpec.Speed = 50.0f;
+    MoveSpec.Drag  =  9.0f;
+    MoveEntity(GameState, Entity, dt, &MoveSpec, ddP);
 }
 
 inline void
@@ -809,7 +833,11 @@ UpdateMonster(game_state *GameState, entity Entity, real32 dt)
 inline void
 UpdateSword(game_state *GameState, entity Entity, real32 dt)
 {
-    MoveEntity(GameState, Entity, dt, V2(0, 0));
+    move_spec MoveSpec = DefaultMoveSpec();
+    MoveSpec.UnitMaxAccelVector = false;
+    MoveSpec.Speed = 0.0f;
+    MoveSpec.Drag  = 0.0f;
+    MoveEntity(GameState, Entity, dt, &MoveSpec, V2(0, 0));
 }
 
 internal void
@@ -1140,7 +1168,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 dSword = V2(1.0f, 0.0f);
             }
 
-            MoveEntity(GameState, ControllingEntity, Input->dtForFrame, ddP);
+            move_spec MoveSpec = DefaultMoveSpec();
+            MoveSpec.UnitMaxAccelVector = true;
+            MoveSpec.Speed = 50.0f;
+            MoveSpec.Drag  =  9.0f;
+            MoveEntity(GameState, ControllingEntity, Input->dtForFrame, &MoveSpec, ddP);
             if((dSword.X != 0.0f) || (dSword.Y != 0.0f))
             {
                 low_entity *LowSword = GetLowEntity(GameState, ControllingEntity.Low->SwordLowIndex);
