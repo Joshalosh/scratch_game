@@ -50,7 +50,7 @@ AreInSameChunk(world *World, world_position *A, world_position *B)
 
 inline world_chunk *
 GetWorldChunk(world *World, int32_t ChunkX, int32_t ChunkY, int32_t ChunkZ,
-             memory_arena *Arena = 0)
+              memory_arena *Arena = 0)
 {
     Assert(ChunkX > -TILE_CHUNK_SAFE_MARGIN);
     Assert(ChunkY > -TILE_CHUNK_SAFE_MARGIN);
@@ -196,12 +196,12 @@ CentredChunkPoint(uint32_t ChunkX, uint32_t ChunkY, uint32_t ChunkZ)
 
 inline void
 ChangeEntityLocationRaw(memory_arena *Arena, world *World, uint32_t LowEntityIndex,
-                     world_position *OldP, world_position *NewP)
+                        world_position *OldP, world_position *NewP)
 {
     Assert(!OldP || IsValid(*OldP));
     Assert(!NewP || IsValid(*NewP));
 
-    if(OldP && AreInSameChunk(World, OldP, NewP))
+    if(OldP && NewP && AreInSameChunk(World, OldP, NewP))
     {
     }
     else
@@ -245,7 +245,7 @@ ChangeEntityLocationRaw(memory_arena *Arena, world *World, uint32_t LowEntityInd
         {
             world_chunk *Chunk = GetWorldChunk(World, NewP->ChunkX, NewP->ChunkY, NewP->ChunkZ, Arena);
             Assert(Chunk);
-            
+        
             world_entity_block *Block = &Chunk->FirstBlock;
             if(Block->EntityCount == ArrayCount(Block->LowEntityIndex))
             {

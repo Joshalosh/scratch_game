@@ -361,9 +361,10 @@ OffsetAndCheckFrequencyByArea(game_state *GameState, v2 Offset, rectangle2 HighF
         )
     {
         high_entity *High = GameState->HighEntities_ + HighEntityIndex;
+        low_entity *Low = GameState->LowEntities + High->LowEntityIndex;
 
         High->P += Offset;
-        if(IsInRectangle(HighFrequencyBounds, High->P))
+        if(IsValid(Low->P) && IsInRectangle(HighFrequencyBounds, High->P))
         {
             ++HighEntityIndex;
         }
@@ -696,7 +697,7 @@ SetCamera(game_state *GameState, world_position NewCameraP)
     uint32_t TileSpanY = 9*3;
     rectangle2 CameraBounds = RectCenterDim(V2(0, 0),
                                             World->TileSideInMeters*V2((real32)TileSpanX,
-                                                                         (real32)TileSpanY));
+                                                                       (real32)TileSpanY));
     v2 EntityOffsetForFrame = -dCameraP.dXY;
     OffsetAndCheckFrequencyByArea(GameState, EntityOffsetForFrame, CameraBounds);
 
@@ -755,7 +756,7 @@ PushPiece(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
 
 inline void
 PushBitmap(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
-          v2 Offset, real32 OffsetZ, v2 Align, real32 Alpha = 1.0f, real32 EntityZC = 1.0f)
+           v2 Offset, real32 OffsetZ, v2 Align, real32 Alpha = 1.0f, real32 EntityZC = 1.0f)
 {
     PushPiece(Group, Bitmap, Offset, OffsetZ, Align, V2(0, 0), V4(1.0f, 1.0f, 1.0f, Alpha), EntityZC);
 }
@@ -804,8 +805,8 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
 
             if(ClosestHeroDSq > TestDSq)
             {
-            ClosestHero = TestEntity;
-            ClosestHeroDSq = TestDSq;
+                ClosestHero = TestEntity;
+                ClosestHeroDSq = TestDSq;
             }
         }
     }
@@ -837,7 +838,17 @@ UpdateSword(game_state *GameState, entity Entity, real32 dt)
     MoveSpec.UnitMaxAccelVector = false;
     MoveSpec.Speed = 0.0f;
     MoveSpec.Drag  = 0.0f;
+
+    v2 OldP = Entity.High->P;
     MoveEntity(GameState, Entity, dt, &MoveSpec, V2(0, 0));
+    real32 DistanceTravelled = Length(Entity.High->P - OldP);
+
+    Entity.Low->DistanceRemaining -= DistanceTravelled;
+    if(Entity.Low->DistanceRemaining < 0.0f)
+    {
+        ChangeEntityLocation(&GameState->WorldArena, GameState->World,
+                             Entity.LowIndex, Entity.Low, &Entity.Low->P, 0);
+    }
 }
 
 internal void
@@ -847,8 +858,7 @@ DrawHitPoints(low_entity *LowEntity, entity_visible_piece_group *PieceGroup)
     {
         v2 HealthDim = {0.2f, 0.2f};
         real32 SpacingX = 1.5f*HealthDim.X;
-        real32 FirstX = 0.5f*(LowEntity->HitPointMax - 1)*SpacingX;
-        v2 HitP  = {-0.5f*(LowEntity->HitPointMax - 1)*SpacingX, -0.2f};
+        v2 HitP = {-0.5f*(LowEntity->HitPointMax - 1)*SpacingX, -0.25f};
         v2 dHitP = {SpacingX, 0.0f};
         for(uint32_t HealthIndex = 0;
             HealthIndex < LowEntity->HitPointMax;
@@ -937,12 +947,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t ScreenY  = ScreenBaseY;
         uint32_t AbsTileZ = ScreenBaseZ;
 
-        bool32 DoorLeft  = false;
-        bool32 DoorRight = false;
-        bool32 DoorTop = false;
+        bool32 DoorLeft   = false;
+        bool32 DoorRight  = false;
+        bool32 DoorTop    = false;
         bool32 DoorBottom = false;
-        bool32 DoorUp = false;
-        bool32 DoorDown = false;
+        bool32 DoorUp     = false;
+        bool32 DoorDown   = false;
         for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
         {
             Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
@@ -1184,7 +1194,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     entity Sword = ForceEntityIntoHigh(GameState, ControllingEntity.Low->SwordLowIndex);
 
                     Sword.Low->DistanceRemaining = 5.0f;
-                    Sword.High->dP = 2.0f*dSword;
+                    Sword.High->dP = 5.0f*dSword;
                 }
             }
         }

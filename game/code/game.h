@@ -47,8 +47,8 @@ PushSize_(memory_arena *Arena, memory_index Size)
     return(Result);
 }
 
-#include "game_math.h"
 #include "game_intrinsics.h"
+#include "game_math.h"
 #include "game_world.h"
 
 struct loaded_bitmap
