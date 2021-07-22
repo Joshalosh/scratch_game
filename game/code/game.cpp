@@ -1039,22 +1039,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 }
             }
 
-            DoorLeft = DoorRight;
+            DoorLeft   = DoorRight;
             DoorBottom = DoorTop;
 
             if(CreatedZDoor)
             {
                 DoorDown = !DoorDown;
-                DoorUp = !DoorUp;
+                DoorUp   = !DoorUp;
             }
             else
             {
-                DoorUp = false;
+                DoorUp   = false;
                 DoorDown = false;
             }
 
             DoorRight = false;
-            DoorTop = false;
+            DoorTop   = false;
 
             if(RandomChoice == 2)
             {
