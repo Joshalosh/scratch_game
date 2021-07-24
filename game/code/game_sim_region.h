@@ -1,5 +1,9 @@
 #if !defined(GAME_SIM_REGION_H)
 
+struct sim_entity
+{
+};
+
 struct sim_region
 {
     uint32_t MaxEntityCount;

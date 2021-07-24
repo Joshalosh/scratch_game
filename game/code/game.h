@@ -109,8 +109,6 @@ struct low_entity
     bool32 Collides;
     int32_t dAbsTileZ;
 
-    uint32_t HighEntityIndex;
-
     uint32_t HitPointMax;
     hit_point HitPoint[16];
 
