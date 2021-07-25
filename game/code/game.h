@@ -50,6 +50,7 @@ PushSize_(memory_arena *Arena, memory_index Size)
 #include "game_intrinsics.h"
 #include "game_math.h"
 #include "game_world.h"
+#include "game_sim_region.h"
 
 struct loaded_bitmap
 {
@@ -91,6 +92,9 @@ struct low_entity
     world_position P;
     v2 dP;
     real32 Width, Height;
+
+    uint32_t FacingDirection;
+    real32 tBob;
 
     bool32 Collides;
     int32_t dAbsTileZ;

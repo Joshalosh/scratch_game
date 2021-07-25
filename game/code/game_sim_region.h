@@ -6,9 +6,6 @@ struct sim_entity
 
     v2 P;
     uint32_t ChunkZ;
-    uint32_t FacingDirection;
-
-    real32 tBob;
 
     real32 Z;
     real32 dZ;

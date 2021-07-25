@@ -17,7 +17,7 @@ AddEntity(sim_region *SimRegion)
 }
 
 inline v2
-GetSimSpaceP(sim_region *SimRegion, stored_entity *Stored)
+GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
 {
     world_difference Diff = Subtract(SimRegion->World, &Stored->P, &SimRegion->Origin);
     v2 Result = Diff.dXY;
@@ -26,7 +26,7 @@ GetSimSpaceP(sim_region *SimRegion, stored_entity *Stored)
 }
 
 internal sim_entity *
-AddEntity(sim_region *SimRegion, stored_entity *Source, v2 *SimP)
+AddEntity(sim_region *SimRegion, low_entity *Source, v2 *SimP)
 {
     sim_entity *Dest = AddEntity(SimRegion);
     if(Dest)
@@ -43,11 +43,16 @@ AddEntity(sim_region *SimRegion, stored_entity *Source, v2 *SimP)
 }
 
 internal sim_region *
-BeginSim(world *World, world_position Origin, rectangle2 Bounds)
+BeginSim(memory_arena *SimArena, world *World, world_position Origin, rectangle2 Bounds)
 {
+    sim_region *SimRegion = PushStruct(SimArena, sim_region);
+
     SimRegion->World  = World;
     SimRegion->Origin = Origin;
     SimRegion->Bounds = Bounds;
+    SimRegion->MaxEntityCount = 4096;
+    SimRegion->EntityCount = 0;
+    SimRegion->Entities = PushArray(SimArena, SimRegion->MaxEntityCount, sim_entity);
 
     world_position MinChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMinCorner(SimRegion->Bounds));
     world_position MaxChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMaxCorner(SimRegion->Bounds));
@@ -79,10 +84,45 @@ BeginSim(world *World, world_position Origin, rectangle2 Bounds)
 }
 
 internal void
-EndSim(sim_region *Region)
+EndSim(sim_region *Region, game_state *GameState)
 {
     entity *Entities = Region->Entities;
     for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
     {
+        low_entity *Stored = GameState->StoredEntities[Entity->StorageIndex];
+
+        world_position NewP = MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
+        ChangeEntityLocation(&GameState->WorldArena, GameState->World. Entity->StorageIndex,
+                             Stored, &Stored-P, &NewP);
+
+        entity CameraFollowingEntity = ForceEntityIntoHigh(GameState, GameState->CameraFollowingEntityIndex);
+        if(CameraFollowingEntity.High)
+        {
+            world_position NewCameraP = GameState->CameraP;
+
+            NewCameraP.ChunkZ = CameraFollowingEntity.Low->P.ChunkZ;
+
+#if 0
+            if(CameraFollowingEntity.High->P.X > (9.0f*World->TileSideInMeters))
+            {
+                NewCameraP.AbsTileX += 17;
+            }
+            if(CameraFollowingEntity.High->P.X < -(9.0f*World->TileSideInMeters))
+            {
+                NewCameraP.AbsTileX -= 17;
+            }
+            if(CameraFollowingEntity.High->P.Y > (5.0f*World->TileSideInMeters))
+            {
+                NewCameraP.AbsTileY += 9;
+            }
+            if(CameraFollowingEntity.High->P.Y < -(5.0f*World->TileSideInMeters))
+            {
+                NewCameraP.AbsTileY -= 9;
+            }
+#else
+            NewCameraP = CameraFollowingEntity.Low->P;
+#endif
+            SetCamera(GameState, NewCameraP);
+        }
     }
 }
