@@ -66,21 +66,6 @@ struct hero_bitmaps
     loaded_bitmap Torso;
 };
 
-struct high_entity
-{
-    v2 P;
-    v2 dP;
-    uint32_t ChunkZ;
-    uint32_t FacingDirection;
-
-    real32 tBob;
-
-    real32 Z;
-    real32 dZ;
-
-    uint32_t LowEntityIndex;
-};
-
 enum entity_type
 {
     EntityType_Null,
@@ -104,6 +89,7 @@ struct low_entity
     entity_type Type;
 
     world_position P;
+    v2 dP;
     real32 Width, Height;
 
     bool32 Collides;

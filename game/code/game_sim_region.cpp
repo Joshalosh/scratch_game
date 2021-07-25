@@ -16,16 +16,46 @@ AddEntity(sim_region *SimRegion)
     return(Entity);
 }
 
-internal sim_region *
-BeginSim(world_position RegionCentre, rectangle2 RegionBounds)
+inline v2
+GetSimSpaceP(sim_region *SimRegion, stored_entity *Stored)
 {
-    world_position MinChunkP = MapIntoChunkSpace(World, RegionCentre, GetMinCorner(RegionBounds));
-    world_position MaxChunkP = MapIntoChunkSpace(World, RegionCentre, GetMaxCorner(RegionBounds));
+    world_difference Diff = Subtract(SimRegion->World, &Stored->P, &SimRegion->Origin);
+    v2 Result = Diff.dXY;
+
+    return(Result);
+}
+
+internal sim_entity *
+AddEntity(sim_region *SimRegion, stored_entity *Source, v2 *SimP)
+{
+    sim_entity *Dest = AddEntity(SimRegion);
+    if(Dest)
+    {
+        if(SimP)
+        {
+            Dest->P = SimP;
+        }
+        else
+        {
+            Dest->P = GetSimSpaceP(SimRegion, Low);
+        }
+    }
+}
+
+internal sim_region *
+BeginSim(world *World, world_position Origin, rectangle2 Bounds)
+{
+    SimRegion->World  = World;
+    SimRegion->Origin = Origin;
+    SimRegion->Bounds = Bounds;
+
+    world_position MinChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMinCorner(SimRegion->Bounds));
+    world_position MaxChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMaxCorner(SimRegion->Bounds));
     for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
     {
         for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
         {
-            world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, RegionCentre.ChunkZ);
+            world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, SimRegion->Origin.ChunkZ);
             if(Chunk)
             {
                 for(world_entity_block *Block = &Chunk->FirstBlock; Block; Block = Block->Next)
@@ -36,10 +66,10 @@ BeginSim(world_position RegionCentre, rectangle2 RegionBounds)
                     {
                         uint32_t LowEntityIndex = Block->LowEntityIndex[EntityIndexIndex];
                         low_entity *Low = GameState->LowEntities + LowEntityIndex;
-                        v2 CameraSpaceP = GetCameraSpaceP(GameState, Low);
-                        if(IsInRectangle(RegionBounds, CameraSpaceP))
+                        v2 SimSpaceP = GetSimSpaceP(SimRegion, Low);
+                        if(IsInRectangle(SimRegion->Bounds, SimSpaceP))
                         {
-                           AddEntity(SimRegion, Low, CameraSpaceP);
+                           AddEntity(SimRegion, Low, &SimSpaceP);
                         }
                     }
                 }
