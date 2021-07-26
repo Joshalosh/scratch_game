@@ -87,30 +87,7 @@ struct hit_point
 
 struct low_entity
 {
-    entity_type Type;
-
-    world_position P;
-    v2 dP;
-    real32 Width, Height;
-
-    uint32_t FacingDirection;
-    real32 tBob;
-
-    bool32 Collides;
-    int32_t dAbsTileZ;
-
-    uint32_t HitPointMax;
-    hit_point HitPoint[16];
-
-    uint32_t SwordLowIndex;
-    real32 DistanceRemaining;
-};
-
-struct entity
-{
-    uint32_t LowIndex;
-    low_entity *Low;
-    high_entity *High;
+    sim_entity Stored;
 };
 
 struct entity_visible_piece

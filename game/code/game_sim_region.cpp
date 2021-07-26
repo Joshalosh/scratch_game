@@ -5,7 +5,7 @@ AddEntity(sim_region *SimRegion)
 
     if(SimRegion->EntityCount < SimRegion->MaxEntityCount)
     {
-        Entity = SimRegion->Entities[SimRegion->EntityCount++];
+        Entity = SimRegion->Entities + SimRegion->EntityCount++;
         Entity = {};
     }
     else
@@ -33,17 +33,17 @@ AddEntity(sim_region *SimRegion, low_entity *Source, v2 *SimP)
     {
         if(SimP)
         {
-            Dest->P = SimP;
+            Dest->P = *SimP;
         }
         else
         {
-            Dest->P = GetSimSpaceP(SimRegion, Low);
+            Dest->P = GetSimSpaceP(SimRegion, Source);
         }
     }
 }
 
 internal sim_region *
-BeginSim(memory_arena *SimArena, world *World, world_position Origin, rectangle2 Bounds)
+BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_position Origin, rectangle2 Bounds)
 {
     sim_region *SimRegion = PushStruct(SimArena, sim_region);
 
@@ -86,10 +86,10 @@ BeginSim(memory_arena *SimArena, world *World, world_position Origin, rectangle2
 internal void
 EndSim(sim_region *Region, game_state *GameState)
 {
-    entity *Entities = Region->Entities;
+    sim_entity *Entities = Region->Entities;
     for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
     {
-        low_entity *Stored = GameState->StoredEntities[Entity->StorageIndex];
+        low_entity *Stored = GameState->LowEntities + Entity->StorageIndex;
 
         world_position NewP = MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
         ChangeEntityLocation(&GameState->WorldArena, GameState->World. Entity->StorageIndex,
