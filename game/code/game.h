@@ -67,26 +67,9 @@ struct hero_bitmaps
     loaded_bitmap Torso;
 };
 
-enum entity_type
-{
-    EntityType_Null,
-
-    EntityType_Hero,
-    EntityType_Wall,
-    EntityType_Familiar,
-    EntityType_Monster,
-    EntityType_Sword,
-};
-
-#define HIT_POINT_SUB_COUNT 4
-struct hit_point
-{
-    uint8_t Flags;
-    uint8_t FilledAmount;
-};
-
 struct low_entity
 {
+    world_position P;
     sim_entity Stored;
 };
 

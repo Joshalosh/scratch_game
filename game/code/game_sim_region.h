@@ -1,5 +1,29 @@
 #if !defined(GAME_SIM_REGION_H)
 
+enum entity_type
+{
+    EntityType_Null,
+
+    EntityType_Hero,
+    EntityType_Wall,
+    EntityType_Familiar,
+    EntityType_Monster,
+    EntityType_Sword,
+};
+
+#define HIT_POINT_SUB_COUNT 4
+struct hit_point
+{
+    uint8_t Flags;
+    uint8_t FilledAmount;
+};
+
+union entity_reference
+{
+    sim_entity *Ptr;
+    uint32_t Index;
+};
+
 struct sim_entity
 {
     uint32_t StorageIndex;
@@ -12,7 +36,6 @@ struct sim_entity
     real32 Z;
     real32 dZ;
 
-    world_position P;
     v2 dP;
     real32 Width, Height;
 
@@ -25,7 +48,7 @@ struct sim_entity
     uint32_t HitPointMax;
     hit_point HitPoint[16];
 
-    uint32_t SwordLowIndex;
+    entity_reference Sword;
     real32 DistanceRemaining;
 };
 

@@ -1,12 +1,38 @@
+inline void
+LoadEntityReference(sim_region *SimRegion, entity_reference *Ref)
+{
+    if(Ref->Index != 0)
+    {
+        sim_entity *Ptr = GetSimEntityFromIndex(Ref->Index);
+        Assert(Ptr);
+
+        Ref->Ptr = Ptr;
+    }
+}
+
+inline void
+StoreEntityReference(entity_reference *Ref)
+{
+    if(Ref->Ptr != 0)
+    {
+        Ref->Index = Ref->Ptr->StorageIndex;
+    }
+}
+
 internal sim_entity *
-AddEntity(sim_region *SimRegion)
+AddEntity(sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
 {
     sim_entity *Entity = 0;
 
     if(SimRegion->EntityCount < SimRegion->MaxEntityCount)
     {
         Entity = SimRegion->Entities + SimRegion->EntityCount++;
-        Entity = {};
+
+        if(Source)
+        {
+            *Entity = Source->Sim;
+            Entity->StorageIndex = StorageIndex;
+        }
     }
     else
     {
@@ -26,7 +52,7 @@ GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
 }
 
 internal sim_entity *
-AddEntity(sim_region *SimRegion, low_entity *Source, v2 *SimP)
+AddEntity(sim_region *SimRegion, uint32_t LowEntityIndex, low_entity *Source, v2 *SimP)
 {
     sim_entity *Dest = AddEntity(SimRegion);
     if(Dest)
@@ -74,7 +100,7 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
                         v2 SimSpaceP = GetSimSpaceP(SimRegion, Low);
                         if(IsInRectangle(SimRegion->Bounds, SimSpaceP))
                         {
-                           AddEntity(SimRegion, Low, &SimSpaceP);
+                           AddEntity(SimRegion, LowEntityIndex, Low, &SimSpaceP);
                         }
                     }
                 }
@@ -90,6 +116,9 @@ EndSim(sim_region *Region, game_state *GameState)
     for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
     {
         low_entity *Stored = GameState->LowEntities + Entity->StorageIndex;
+
+        Stored->Sim = *Entity;
+        StoredEntityReference(&Stored->Sim->Sword);
 
         world_position NewP = MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
         ChangeEntityLocation(&GameState->WorldArena, GameState->World. Entity->StorageIndex,
