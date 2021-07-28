@@ -114,5 +114,18 @@ struct entity_visible_piece_group
     entity_visible_piece Pieces[32];
 };
 
+inline low_entity *
+GetLowEntity(game_state *GameState, uint32_t Index)
+{
+    low_entity *Result = 0;
+
+    if((Index > 0) && (Index < GameState->LowEntityCount))
+    {
+        Result = GameState->LowEntities + Index;
+    }
+
+    return(Result);
+}
+
 #define GAME_H
 #endif

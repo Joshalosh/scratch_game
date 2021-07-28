@@ -230,19 +230,6 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
     return(Result);
 }
 
-inline low_entity *
-GetLowEntity(game_state *GameState, uint32_t Index)
-{
-    low_entity *Result = 0;
-
-    if((Index > 0) && (Index < GameState->LowEntityCount))
-    {
-        Result = GameState->LowEntities + Index;
-    }
-
-    return(Result);
-}
-
 inline v2
 GetCameraSpaceP(game_state *GameState, low_entity *EntityLow)
 {

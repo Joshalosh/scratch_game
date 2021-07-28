@@ -62,6 +62,8 @@ struct sim_region
     uint32_t MaxEntityCount;
     uint32_t EntityCount;
     entity *Entities;
+
+    sim_entity_hash Hash[4096];
 };
 
 #define GAME_SIM_REGION_H

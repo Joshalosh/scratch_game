@@ -1,12 +1,45 @@
+internal sim_entity_hash *
+GetHashFromStorageIndex(sim_region *SimRegion, uint32_t StorageIndex)
+{
+    Assert(StorageIndex);
+
+    sim_entity_hash *Result = 0;
+
+    uint32_t HashValue = StorageIndex;
+    for(uint32_t Offset = 0; Offset < ArrayCount(SimRegion->Hash); ++Offset)
+    {
+        sim_entity *Entry = SimRegion->Hash + (HashValue + Offset) & (ArrayCount(SimRegion->Hash) - 1);
+        if((Entry->Index == StorageIndex) || (Entry->Index == StorageIndex))
+        {
+            Result = Entry;
+            break;
+        }
+    }
+
+    return(Result);
+}
+
+internal void
+MapStorageIndexToEntity(sim_region *SimRegion, uint32_t StorageIndex, sim_entity *Entity)
+{
+    sim_entity_hash *Entry = GetHashFromStorageIndex(SimRegion, StorageIndex);
+    Assert((Entry->Index == 0) || (Entry->Index == StorageIndex));
+    Entry->Index = StorageIndex;
+    Entry->Ptr = Entity;
+}
+
 inline void
 LoadEntityReference(sim_region *SimRegion, entity_reference *Ref)
 {
-    if(Ref->Index != 0)
+    if(Ref->Index)
     {
-        sim_entity *Ptr = GetSimEntityFromIndex(Ref->Index);
-        Assert(Ptr);
+        sim_entity_hash *Entry = GetHashFromStorageIndex(SimRegion, Ref->Index);
+        if(Entry->Ptr == 0)
+        {
+            AddEntity(SimRegion, Ref->Index, );
+        }
 
-        Ref->Ptr = Ptr;
+        Ref->Ptr = Entry->Ptr;
     }
 }
 
@@ -22,6 +55,7 @@ StoreEntityReference(entity_reference *Ref)
 internal sim_entity *
 AddEntity(sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
 {
+    Assert(StorageIndex);
     sim_entity *Entity = 0;
 
     if(SimRegion->EntityCount < SimRegion->MaxEntityCount)
@@ -31,8 +65,10 @@ AddEntity(sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
         if(Source)
         {
             *Entity = Source->Sim;
-            Entity->StorageIndex = StorageIndex;
         }
+
+        Entity->StorageIndex = StorageIndex;
+        MapStorageIndexToEntity(SimRegion, StorageIndex, Entity);
     }
     else
     {
