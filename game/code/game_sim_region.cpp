@@ -8,7 +8,7 @@ GetHashFromStorageIndex(sim_region *SimRegion, uint32_t StorageIndex)
     uint32_t HashValue = StorageIndex;
     for(uint32_t Offset = 0; Offset < ArrayCount(SimRegion->Hash); ++Offset)
     {
-        sim_entity *Entry = SimRegion->Hash + (HashValue + Offset) & (ArrayCount(SimRegion->Hash) - 1);
+        sim_entity *Entry = SimRegion->Hash + ((HashValue + Offset) & (ArrayCount(SimRegion->Hash) - 1));
         if((Entry->Index == StorageIndex) || (Entry->Index == StorageIndex))
         {
             Result = Entry;
@@ -28,15 +28,25 @@ MapStorageIndexToEntity(sim_region *SimRegion, uint32_t StorageIndex, sim_entity
     Entry->Ptr = Entity;
 }
 
+inline sim_entity *
+GetEntityByStorageIndex(sim_region *SimRegion, uint32_t StorageIndex)
+{
+    sim_entity_hash *Entry = GetHashFromStorageIndex(SimRegion, StorageIndex);
+    sim_entity *Result = Entry->Ptr;
+    return(Result);
+}
+
+internal sim_entity *
+AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source);
 inline void
-LoadEntityReference(sim_region *SimRegion, entity_reference *Ref)
+LoadEntityReference(game_state *GameState, sim_region *SimRegion, entity_reference *Ref)
 {
     if(Ref->Index)
     {
         sim_entity_hash *Entry = GetHashFromStorageIndex(SimRegion, Ref->Index);
         if(Entry->Ptr == 0)
         {
-            AddEntity(SimRegion, Ref->Index, );
+            AddEntity(GameState, SimRegion, Ref->Index, GetLowEntity(GameState, Ref->Index));
         }
 
         Ref->Ptr = Entry->Ptr;
@@ -53,7 +63,7 @@ StoreEntityReference(entity_reference *Ref)
 }
 
 internal sim_entity *
-AddEntity(sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
+AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
 {
     Assert(StorageIndex);
     sim_entity *Entity = 0;
@@ -61,14 +71,15 @@ AddEntity(sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
     if(SimRegion->EntityCount < SimRegion->MaxEntityCount)
     {
         Entity = SimRegion->Entities + SimRegion->EntityCount++;
+        MapStorageIndexToEntity(SimRegion, StorageIndex, Entity);
 
         if(Source)
         {
             *Entity = Source->Sim;
+            LoadEntityReference(GameState, SimRegion, &Entity->Sword);
         }
 
         Entity->StorageIndex = StorageIndex;
-        MapStorageIndexToEntity(SimRegion, StorageIndex, Entity);
     }
     else
     {
@@ -88,7 +99,7 @@ GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
 }
 
 internal sim_entity *
-AddEntity(sim_region *SimRegion, uint32_t LowEntityIndex, low_entity *Source, v2 *SimP)
+AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t LowEntityIndex, low_entity *Source, v2 *SimP)
 {
     sim_entity *Dest = AddEntity(SimRegion);
     if(Dest)
@@ -136,7 +147,7 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
                         v2 SimSpaceP = GetSimSpaceP(SimRegion, Low);
                         if(IsInRectangle(SimRegion->Bounds, SimSpaceP))
                         {
-                           AddEntity(SimRegion, LowEntityIndex, Low, &SimSpaceP);
+                           AddEntity(GameState, SimRegion, LowEntityIndex, Low, &SimSpaceP);
                         }
                     }
                 }
@@ -154,18 +165,17 @@ EndSim(sim_region *Region, game_state *GameState)
         low_entity *Stored = GameState->LowEntities + Entity->StorageIndex;
 
         Stored->Sim = *Entity;
-        StoredEntityReference(&Stored->Sim->Sword);
+        StoredEntityReference(&Stored->Sim.Sword);
 
         world_position NewP = MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
         ChangeEntityLocation(&GameState->WorldArena, GameState->World. Entity->StorageIndex,
                              Stored, &Stored-P, &NewP);
 
-        entity CameraFollowingEntity = ForceEntityIntoHigh(GameState, GameState->CameraFollowingEntityIndex);
-        if(CameraFollowingEntity.High)
+        if(Entity->StorageIndex == GameState->CameraFollowingEntityIndex)
         {
             world_position NewCameraP = GameState->CameraP;
 
-            NewCameraP.ChunkZ = CameraFollowingEntity.Low->P.ChunkZ;
+            NewCameraP.ChunkZ = Stored->P.ChunkZ;
 
 #if 0
             if(CameraFollowingEntity.High->P.X > (9.0f*World->TileSideInMeters))
@@ -185,7 +195,7 @@ EndSim(sim_region *Region, game_state *GameState)
                 NewCameraP.AbsTileY -= 9;
             }
 #else
-            NewCameraP = CameraFollowingEntity.Low->P;
+            NewCameraP = Stored->P;
 #endif
             SetCamera(GameState, NewCameraP);
         }

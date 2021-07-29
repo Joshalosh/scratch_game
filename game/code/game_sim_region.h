@@ -18,6 +18,7 @@ struct hit_point
     uint8_t FilledAmount;
 };
 
+struct sim_entity;
 union entity_reference
 {
     sim_entity *Ptr;
