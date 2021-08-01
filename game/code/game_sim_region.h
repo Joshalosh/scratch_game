@@ -1,5 +1,12 @@
 #if !defined(GAME_SIM_REGION_H)
 
+struct move_spec
+{
+    bool UnitMaxAccelVector;
+    real32 Speed;
+    real32 Drag;
+};
+
 enum entity_type
 {
     EntityType_Null,
