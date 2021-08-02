@@ -352,30 +352,6 @@ AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_
     return(Entity);
 }
 
-internal bool32
-TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 PlayerDeltaY,
-         real32 *tMin, real32 MinY, real32 MaxY)
-{
-    bool32 Hit = false;
-
-    real32 tEpsilon = 0.001f;
-    if(PlayerDeltaX != 0.0f)
-    {
-        real32 tResult = (WallX - RelX) / PlayerDeltaX;
-        real32 Y = RelY + tResult*PlayerDeltaY;
-        if((tResult >= 0.0f) && (*tMin > tResult))
-        {
-            if((Y >= MinY) && (Y <= MaxY))
-            {
-                *tMin = Maximum(0.0f, tResult - tEpsilon);
-                Hit = true;
-            }
-        }
-    }
-
-    return(Hit);
-}
-
 inline move_spec
 DefaultMoveSpec()
 {
@@ -417,22 +393,6 @@ PushRect(entity_visible_piece_group *Group, v2 Offset, real32 OffsetZ,
          v2 Dim, v4 Color, real32 EntityZC = 1.0f)
 {
     PushPiece(Group, 0, Offset, OffsetZ, V2(0, 0), Dim, Color, EntityZC);
-}
-
-inline entity
-EntityFromHighIndex(game_state *GameState, uint32_t HighEntityIndex)
-{
-    entity Result = {};
-
-    if(HighEntityIndex)
-    {
-        Assert(HighEntityIndex < ArrayCount(GameState->HighEntities_));
-        Result.High = GameState->HighEntities_ + HighEntityIndex;
-        Result.LowIndex = Result.High->LowEntityIndex;
-        Result.Low = GameState->LowEntities + Result.LowIndex;
-    }
-
-    return(Result);
 }
 
 inline void
