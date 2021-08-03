@@ -395,87 +395,20 @@ PushRect(entity_visible_piece_group *Group, v2 Offset, real32 OffsetZ,
     PushPiece(Group, 0, Offset, OffsetZ, V2(0, 0), Dim, Color, EntityZC);
 }
 
-inline void
-UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
-{
-    entity ClosestHero = {};
-    real32 ClosestHeroDSq = Square(10.0f);
-    for(uint32_t HighEntityIndex = 1;
-        HighEntityIndex < GameState->HighEntityCount;
-        ++HighEntityIndex)
-    {
-        entity TestEntity = EntityFromHighIndex(GameState, HighEntityIndex);
-
-        if(TestEntity.Low->Sim.Type == EntityType_Hero)
-        {
-            real32 TestDSq = LengthSq(TestEntity.High->P - Entity.High->P);
-            if(TestEntity.Low->Sim.Type == EntityType_Hero)
-            {
-                TestDSq *= 0.75f;
-            }
-
-            if(ClosestHeroDSq > TestDSq)
-            {
-                ClosestHero = TestEntity;
-                ClosestHeroDSq = TestDSq;
-            }
-        }
-    }
-
-    v2 ddP = {};
-    if(ClosestHero.High && (ClosestHeroDSq > Square(3.0f)))
-    {
-        real32 Acceleration = 0.5f;
-        real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
-        ddP = OneOverLength*(ClosestHero.High->P - Entity.High->P);
-    }
-
-    move_spec MoveSpec = DefaultMoveSpec();
-    MoveSpec.UnitMaxAccelVector = true;
-    MoveSpec.Speed = 50.0f;
-    MoveSpec.Drag  =  9.0f;
-    MoveEntity(GameState, Entity, dt, &MoveSpec, ddP);
-}
-
-inline void
-UpdateMonster(game_state *GameState, entity Entity, real32 dt)
-{
-}
-
-inline void
-UpdateSword(game_state *GameState, entity Entity, real32 dt)
-{
-    move_spec MoveSpec = DefaultMoveSpec();
-    MoveSpec.UnitMaxAccelVector = false;
-    MoveSpec.Speed = 0.0f;
-    MoveSpec.Drag  = 0.0f;
-
-    v2 OldP = Entity.High->P;
-    MoveEntity(GameState, Entity, dt, &MoveSpec, V2(0, 0));
-    real32 DistanceTravelled = Length(Entity.High->P - OldP);
-
-    Entity.Low->Sim.DistanceRemaining -= DistanceTravelled;
-    if(Entity.Low->Sim.DistanceRemaining < 0.0f)
-    {
-        ChangeEntityLocation(&GameState->WorldArena, GameState->World,
-                             Entity.LowIndex, Entity.Low, &Entity.Low->P, 0);
-    }
-}
-
 internal void
-DrawHitPoints(low_entity *LowEntity, entity_visible_piece_group *PieceGroup)
+DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
 {
-    if(LowEntity->HitPointMax >= 1)
+    if(Entity->HitPointMax >= 1)
     {
         v2 HealthDim = {0.2f, 0.2f};
         real32 SpacingX = 1.5f*HealthDim.X;
-        v2 HitP = {-0.5f*(LowEntity->HitPointMax - 1)*SpacingX, -0.25f};
+        v2 HitP = {-0.5f*(Entity->HitPointMax - 1)*SpacingX, -0.25f};
         v2 dHitP = {SpacingX, 0.0f};
         for(uint32_t HealthIndex = 0;
-            HealthIndex < LowEntity->HitPointMax;
+            HealthIndex < Entity->HitPointMax;
             ++HealthIndex)
         {
-            hit_point *HitPoint = LowEntity->HitPoint + HealthIndex;
+            hit_point *HitPoint = Entity->HitPoint + HealthIndex;
             v4 Color = {1.0f, 0.0f, 0.0f, 1.0f};
             if(HitPoint->FilledAmount == 0)
             {
@@ -499,7 +432,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         // NOTE: Reserve entity slot 0 for the null entity
         AddLowEntity(GameState, EntityType_Null, 0);
-        GameState->HighEntityCount = 1;
 
         GameState->Backdrop =
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
@@ -725,87 +657,67 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
-        uint32_t LowIndex = GameState->PlayerIndexForController[ControllerIndex];
-        if(LowIndex == 0)
+        controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
+        if(ConHero->EntityIndex == 0)
         {
             if(Controller->Start.EndedDown)
             {
-                uint32_t EntityIndex = AddPlayer(GameState).LowIndex;
-                GameState->PlayerIndexForController[ControllerIndex] = EntityIndex;
+                *ConHero = {};
+                ConHero->EntityIndex = AddPlayer(GameState).LowIndex;
             }
         }
         else
         {
             entity ControllingEntity = ForceEntityIntoHigh(GameState, LowIndex);
-            v2 ddP = {};
+            ConHero->ddP = {};
 
             if(Controller->IsAnalogue)
             {
                 // Use analogue movement tuning
-                ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
+                ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
             }
             else
             {
                 // Use digital movement tuning
                 if(Controller->MoveUp.EndedDown)
                 {
-                    ddP.Y = 1.0f;
+                    ConHero->ddP.Y = 1.0f;
                 }
                 if(Controller->MoveDown.EndedDown)
                 {
-                    ddP.Y = -1.0f;
+                    ConHero->ddP.Y = -1.0f;
                 }
                 if(Controller->MoveLeft.EndedDown)
                 {
-                    ddP.X = -1.0f;
+                    ConHero->ddP.X = -1.0f;
                 }
                 if(Controller->MoveRight.EndedDown)
                 {
-                    ddP.X = 1.0f;
+                    ConHero->ddP.X = 1.0f;
                 }
             }
 
             if(Controller->Start.EndedDown)
             {
-                ControllingEntity.High->dZ = 3.0f;
+                ConHero->dZ = 3.0f;
             }
 
-            v2 dSword = {};
+            ConHero->dSword = {};
             if(Controller->ActionUp.EndedDown)
             {
-                dSword = V2(0.0f, 1.0f);
+                ConHero->dSword = V2(0.0f, 1.0f);
             }
             if(Controller->ActionDown.EndedDown)
             {
-                dSword = V2(0.0f, -1.0f);
+                ConHero->dSword = V2(0.0f, -1.0f);
             }
             if(Controller->ActionLeft.EndedDown)
             {
-                dSword = V2(-1.0f, 0.0f);
+                ConHero->dSword = V2(-1.0f, 0.0f);
             }
             if(Controller->ActionRight.EndedDown)
             {
-                dSword = V2(1.0f, 0.0f);
-            }
-
-            move_spec MoveSpec = DefaultMoveSpec();
-            MoveSpec.UnitMaxAccelVector = true;
-            MoveSpec.Speed = 50.0f;
-            MoveSpec.Drag  =  9.0f;
-            MoveEntity(GameState, ControllingEntity, Input->dtForFrame, &MoveSpec, ddP);
-            if((dSword.X != 0.0f) || (dSword.Y != 0.0f))
-            {
-                low_entity *LowSword = GetLowEntity(GameState, ControllingEntity.Low->Sim.SwordLowIndex);
-                if(LowSword && !IsValid(LowSword->P))
-                {
-                    world_position SwordP = ControllingEntity.Low->P;
-                    ChangeEntityLocation(&GameState->WorldArena, GameState->World,
-                                         ControllingEntity.Low->Sim.SwordLowIndex, LowSword, 0, &SwordP);
-                    entity Sword = ForceEntityIntoHigh(GameState, ControllingEntity.Low->Sim.SwordLowIndex);
-
-                    Sword.Low->Sim.DistanceRemaining = 5.0f;
-                    Sword.High->dP = 5.0f*dSword;
-                }
+                ConHero->dSword = V2(1.0f, 0.0f);
             }
         }
     }
@@ -846,6 +758,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             case EntityType_Hero:
             {
+                move_spec MoveSpec = DefaultMoveSpec();
+                MoveSpec.UnitMaxAccelVector = true;
+                MoveSpec.Speed = 50.0f;
+                MoveSpec.Drag  =  9.0f;
+                MoveEntity(GameState, ControllingEntity, Input->dtForFrame, &MoveSpec, ddP);
+                if((dSword.X != 0.0f) || (dSword.Y != 0.0f))
+                {
+                    low_entity *LowSword = GetLowEntity(GameState, ControllingEntity.Low->Sim.SwordLowIndex);
+                    if(LowSword && !IsValid(LowSword->P))
+                    {
+                        world_position SwordP = ControllingEntity.Low->P;
+                        ChangeEntityLocation(&GameState->WorldArena, GameState->World,
+                                             ControllingEntity.Low->Sim.SwordLowIndex, LowSword, 0, &SwordP);
+                        entity Sword = ForceEntityIntoHigh(GameState, ControllingEntity.Low->Sim.SwordLowIndex);
+
+                        Sword.Low->Sim.DistanceRemaining = 5.0f;
+                        Sword.High->dP = 5.0f*dSword;
+                    }
+                }
+                
                 PushBitmap(&PieceGroup, &GameState->Shadow,  V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
                 PushBitmap(&PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
                 PushBitmap(&PieceGroup, &HeroBitmaps->Cape,  V2(0, 0), 0, HeroBitmaps->Align);

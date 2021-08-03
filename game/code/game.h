@@ -84,6 +84,15 @@ struct entity_visible_piece
     v2 Dim;
 };
 
+struct controlled_hero
+{
+    uint32_t EntityIndex;
+
+    v2 ddP;
+    v2 dSword;
+    real32 dZ;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -93,7 +102,7 @@ struct game_state
     uint32_t CameraFollowingEntityIndex;
     world_position CameraP;
 
-    uint32_t PlayerIndexForController[ArrayCount(((game_input *)0)->Controllers)];
+    controlled_hero ControlledHeroes[ArrayCount(((game_input *)0)->Controllers)];
 
     uint32_t LowEntityCount;
     low_entity LowEntities[100000];

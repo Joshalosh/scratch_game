@@ -46,7 +46,8 @@ LoadEntityReference(game_state *GameState, sim_region *SimRegion, entity_referen
         sim_entity_hash *Entry = GetHashFromStorageIndex(SimRegion, Ref->Index);
         if(Entry->Ptr == 0)
         {
-            AddEntity(GameState, SimRegion, Ref->Index, GetLowEntity(GameState, Ref->Index));
+            Entry->Index = Ref->Index;
+            Entry->Ptr = AddEntity(GameState, SimRegion, Ref->Index, GetLowEntity(GameState, Ref->Index));
         }
 
         Ref->Ptr = Entry->Ptr;
