@@ -668,7 +668,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         else
         {
-            entity ControllingEntity = ForceEntityIntoHigh(GameState, LowIndex);
             ConHero->ddP = {};
 
             if(Controller->IsAnalogue)
@@ -738,43 +737,45 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     entity_visible_piece_group PieceGroup;
     PieceGroup.GameState = GameState;
-    entity *Entity = SimRegion->Entities;
+    sim_entity *Entity = SimRegion->Entities;
     for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
     {
         PieceGroup.PieceCount = 0;
-
-        low_entity *LowEntity = GameState->LowEntities + HighEntity->StorageIndex;
-
         real32 dt = Input->dtForFrame;
         
-        real32 ShadowAlpha = 1.0f - 0.5f*HighEntity->Z;
+        real32 ShadowAlpha = 1.0f - 0.5f*Entity->Z;
         if(ShadowAlpha < 0)
         {
             ShadowAlpha = 0.0f;
         }
 
-        hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[LowEntity->FacingDirection];
-        switch(LowEntity->Type)
+        hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[Entity->FacingDirection];
+        switch(Entity->Type)
         {
             case EntityType_Hero:
             {
-                move_spec MoveSpec = DefaultMoveSpec();
-                MoveSpec.UnitMaxAccelVector = true;
-                MoveSpec.Speed = 50.0f;
-                MoveSpec.Drag  =  9.0f;
-                MoveEntity(GameState, ControllingEntity, Input->dtForFrame, &MoveSpec, ddP);
-                if((dSword.X != 0.0f) || (dSword.Y != 0.0f))
+                for(uint32_t ControlIndex = 0; ControlIndex < ArrayCount(GameState->ControlledHeroes); ++ControlIndex)
                 {
-                    low_entity *LowSword = GetLowEntity(GameState, ControllingEntity.Low->Sim.SwordLowIndex);
-                    if(LowSword && !IsValid(LowSword->P))
-                    {
-                        world_position SwordP = ControllingEntity.Low->P;
-                        ChangeEntityLocation(&GameState->WorldArena, GameState->World,
-                                             ControllingEntity.Low->Sim.SwordLowIndex, LowSword, 0, &SwordP);
-                        entity Sword = ForceEntityIntoHigh(GameState, ControllingEntity.Low->Sim.SwordLowIndex);
+                    controlled_hero *ConHero = GameState->ControlledHeroes + ControlIndex;
 
-                        Sword.Low->Sim.DistanceRemaining = 5.0f;
-                        Sword.High->dP = 5.0f*dSword;
+                    if(Entity->StorageIndex == ConHero->EntityIndex)
+                    {
+                        Entity->dZ = ConHero->dZ;
+                        move_spec MoveSpec = DefaultMoveSpec();
+                        MoveSpec.UnitMaxAccelVector = true;
+                        MoveSpec.Speed = 50.0f;
+                        MoveSpec.Drag  =  9.0f;
+                        MoveEntity(SimRegion, Entity, Input->dtForFrame, &MoveSpec, ConHero->ddP);
+                        if((ConHero->dSword.X != 0.0f) || (ConHero->dSword.Y != 0.0f))
+                        {
+                            sim_entity *Sword = Entity->Sword.Ptr;
+                            if(Sword)
+                            {
+                                Sword->P = Entity->P;
+                                Sword->DistanceRemaining = 5.0f;
+                                Sword->dP = 5.0f*ConHero->dSword;
+                            }
+                        }
                     }
                 }
                 
