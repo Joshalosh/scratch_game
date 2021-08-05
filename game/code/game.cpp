@@ -2,6 +2,7 @@
 #include "game_world.cpp"
 #include "game_random.h"
 #include "game_sim_region.cpp"
+#include "game_entity.cpp"
 
 internal void
 GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, int ToneHz)
@@ -350,18 +351,6 @@ AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_
     Entity.Low->Sim.Collides = true;
 
     return(Entity);
-}
-
-inline move_spec
-DefaultMoveSpec()
-{
-    move_spec Result;
-
-    Result.UnitMaxAccelVector = false;
-    Result.Speed = 1.0f;
-    Result.Drag  = 0.0f;
-
-    return(Result);
 }
 
 inline void
@@ -784,7 +773,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 PushBitmap(&PieceGroup, &HeroBitmaps->Cape,  V2(0, 0), 0, HeroBitmaps->Align);
                 PushBitmap(&PieceGroup, &HeroBitmaps->Head,  V2(0, 0), 0, HeroBitmaps->Align);
 
-                DrawHitPoints(LowEntity, &PieceGroup);
+                DrawHitPoints(Entity, &PieceGroup);
             } break;
 
             case EntityType_Wall:
@@ -794,20 +783,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             case EntityType_Sword:
             {
-                UpdateSword(GameState, Entity, dt);
+                UpdateSword(SimRegion, Entity, dt);
                 PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
                 PushBitmap(&PieceGroup, &GameState->Sword,  V2(0, 0), 0, V2(29, 10));
             } break;
 
             case EntityType_Familiar:
             {
-                UpdateFamiliar(GameState, Entity, dt);
-                Entity.High->tBob += dt;
-                if(Entity.High->tBob > (2.0f*Pi32))
+                UpdateFamiliar(SimRegion, Entity, dt);
+                Entity->tBob += dt;
+                if(Entity->tBob > (2.0f*Pi32))
                 {
-                    Entity.High->tBob -= (2.0f*Pi32);
+                    Entity->tBob -= (2.0f*Pi32);
                 }
-                real32 BobSin = Sin(2.0f*Entity.High->tBob);
+                real32 BobSin = Sin(2.0f*Entity->tBob);
                 PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align,
                           (0.5f*ShadowAlpha) + 0.2f*BobSin, 0.0f);
                 PushBitmap(&PieceGroup, &HeroBitmaps->Head, V2(0, 0), 0.2f*BobSin, HeroBitmaps->Align);
@@ -815,11 +804,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             case EntityType_Monster:
             {
-                UpdateMonster(GameState, Entity, dt);
+                UpdateMonster(SimRegion, Entity, dt);
                 PushBitmap(&PieceGroup, &GameState->Shadow,  V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
                 PushBitmap(&PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
 
-                DrawHitPoints(LowEntity, &PieceGroup);
+                DrawHitPoints(Entity, &PieceGroup);
             } break;
 
             default:

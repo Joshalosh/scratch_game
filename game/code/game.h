@@ -51,6 +51,7 @@ PushSize_(memory_arena *Arena, memory_index Size)
 #include "game_math.h"
 #include "game_world.h"
 #include "game_sim_region.h"
+#include "game_entity.h"
 
 struct loaded_bitmap
 {

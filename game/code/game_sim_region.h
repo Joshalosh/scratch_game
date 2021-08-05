@@ -51,7 +51,7 @@ struct sim_entity
     real32 tBob;
 
     bool32 Collides;
-    int32 dAbsTileZ;
+    int32_t dAbsTileZ;
 
     uint32_t HitPointMax;
     hit_point HitPoint[16];
@@ -69,7 +69,7 @@ struct sim_region
 
     uint32_t MaxEntityCount;
     uint32_t EntityCount;
-    entity *Entities;
+    sim_entity *Entities;
 
     sim_entity_hash Hash[4096];
 };

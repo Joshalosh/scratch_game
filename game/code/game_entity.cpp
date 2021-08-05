@@ -1,19 +1,29 @@
 
+inline move_spec
+DefaultMoveSpec(void)
+{
+    move_spec Result;
+
+    Result.UnitMaxAccelVector = false;
+    Result.Speed = 1.0f;
+    Result.Drag  = 0.0f;
+
+    return(Result);
+}
+
 inline void
 UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
 {
-    entity ClosestHero = {};
+    sim_entity *ClosestHero = 0;
     real32 ClosestHeroDSq = Square(10.0f);
-    for(uint32_t HighEntityIndex = 1;
-        HighEntityIndex < GameState->HighEntityCount;
-        ++HighEntityIndex)
-    {
-        entity TestEntity = EntityFromHighIndex(GameState, HighEntityIndex);
 
-        if(TestEntity.Low->Sim.Type == EntityType_Hero)
+    sim_entity *TestEntity = SimRegion->Entities;
+    for(uint32_t TestEntityIndex = 0; TestEntityIndex < SimRegion->EntityCount; ++TestEntityIndex)
+    {
+        if(TestEntity->Type == EntityType_Hero)
         {
-            real32 TestDSq = LengthSq(TestEntity.High->P - Entity.High->P);
-            if(TestEntity.Low->Sim.Type == EntityType_Hero)
+            real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
+            if(TestEntity->Type == EntityType_Hero)
             {
                 TestDSq *= 0.75f;
             }
@@ -27,11 +37,11 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
     }
 
     v2 ddP = {};
-    if(ClosestHero.High && (ClosestHeroDSq > Square(3.0f)))
+    if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
     {
         real32 Acceleration = 0.5f;
         real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
-        ddP = OneOverLength*(ClosestHero.High->P - Entity.High->P);
+        ddP = OneOverLength*(ClosestHero->P - Entity->P);
     }
 
     move_spec MoveSpec = DefaultMoveSpec();
@@ -42,27 +52,26 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
 }
 
 inline void
-UpdateMonster(game_state *GameState, entity Entity, real32 dt)
+UpdateMonster(sim_region *SimRegion, sim_entity *Entity, real32 dt)
 {
 }
 
 inline void
-UpdateSword(game_state *GameState, entity Entity, real32 dt)
+UpdateSword(sim_region *SimRegion, sim_entity *Entity, real32 dt)
 {
     move_spec MoveSpec = DefaultMoveSpec();
     MoveSpec.UnitMaxAccelVector = false;
     MoveSpec.Speed = 0.0f;
     MoveSpec.Drag  = 0.0f;
 
-    v2 OldP = Entity.High->P;
+    v2 OldP = Entity->P;
     MoveEntity(GameState, Entity, dt, &MoveSpec, V2(0, 0));
-    real32 DistanceTravelled = Length(Entity.High->P - OldP);
+    real32 DistanceTravelled = Length(Entity->P - OldP);
 
-    Entity.Low->Sim.DistanceRemaining -= DistanceTravelled;
-    if(Entity.Low->Sim.DistanceRemaining < 0.0f)
+    Entity->DistanceRemaining -= DistanceTravelled;
+    if(Entity->DistanceRemaining < 0.0f)
     {
-        ChangeEntityLocation(&GameState->WorldArena, GameState->World,
-                             Entity.LowIndex, Entity.Low, &Entity.Low->P, 0);
+        Assert(!"NEED TO MAKE ENTITES BE ABLE TO NOT BE THERE!");
     }
 }
 
