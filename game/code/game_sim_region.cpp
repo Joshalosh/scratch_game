@@ -114,6 +114,8 @@ AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t LowEntityIndex,
             Dest->P = GetSimSpaceP(SimRegion, Source);
         }
     }
+
+    return(Dest);
 }
 
 internal sim_region *
@@ -155,6 +157,8 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
             }
         }
     }
+
+    return(SimRegion);
 }
 
 internal void

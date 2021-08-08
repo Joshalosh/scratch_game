@@ -60,6 +60,12 @@ struct sim_entity
     real32 DistanceRemaining;
 };
 
+struct sim_entity_hash
+{
+    sim_entity *Ptr;
+    uint32_t Index;
+};
+
 struct sim_region
 {
     world *World;

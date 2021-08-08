@@ -713,7 +713,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     uint32_t TileSpanX = 17*3;
     uint32_t TileSpanY =  9*3;
     rectangle2 CameraBounds = RectCenterDim(V2(0, 0), World->TileSideInMetres*V2((real32)TileSpanX, (real32)TileSpanY));
-    sim_region *SimRegion = BeginSim(SimArena, GameState->World, GameState->CameraP, CameraBounds);
+
+    memory_arena SimArena;
+    InitialiseArena(&SimArena, Memory->TransientStorageSize, Memory->TransientStorage);
+    sim_region *SimRegion = BeginSim(&SimArena, GameState, GameState->World, GameState->CameraP, CameraBounds);
 
 #if 1
     DrawRectangle(Buffer, V2(0.0f, 0.0f), V2((real32)Buffer->Width, (real32)Buffer->Height), 0.5f, 0.5f, 0.5f);
@@ -818,7 +821,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         real32 ddZ = -9.8f;
-        Entity->Z = 0.5f*ddZ*Square(dt) + Entity->dZ*dt + Entity->Z;
+        Entity->Z  = 0.5f*ddZ*Square(dt) + Entity->dZ*dt + Entity->Z;
         Entity->dZ = ddZ*dt + Entity->dZ;
         if(Entity->Z < 0)
         {

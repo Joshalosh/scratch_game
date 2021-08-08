@@ -27,17 +27,17 @@ struct memory_arena
 
 };
 
-internal void
-InitialiseArena(memory_arena *Arena, memory_index Size, uint8_t *Base)
+inline void
+InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
 {
     Arena->Size = Size;
-    Arena->Base = Base;
+    Arena->Base = (uint8_t *)Base;
     Arena->Used = 0;
 }
 
 #define PushStruct(Arena, type) (type *)PushSize_(Arena, sizeof(type))
 #define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
-void *
+inline void *
 PushSize_(memory_arena *Arena, memory_index Size)
 {
     Assert((Arena->Used + Size) <= Arena->Size);
@@ -45,6 +45,16 @@ PushSize_(memory_arena *Arena, memory_index Size)
     Arena->Used += Size;
 
     return(Result);
+}
+
+inline void
+ZeroSize(memory_index Size, void *Ptr)
+{
+    uint8_t *Byte = (uint8_t *)Ptr;
+    while(Size--)
+    {
+        *Byte++ = 0;
+    }
 }
 
 #include "game_intrinsics.h"
