@@ -47,6 +47,7 @@ PushSize_(memory_arena *Arena, memory_index Size)
     return(Result);
 }
 
+#define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))
 inline void
 ZeroSize(memory_index Size, void *Ptr)
 {

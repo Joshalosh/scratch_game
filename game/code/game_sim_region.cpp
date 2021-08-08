@@ -8,8 +8,10 @@ GetHashFromStorageIndex(sim_region *SimRegion, uint32_t StorageIndex)
     uint32_t HashValue = StorageIndex;
     for(uint32_t Offset = 0; Offset < ArrayCount(SimRegion->Hash); ++Offset)
     {
-        sim_entity *Entry = SimRegion->Hash + ((HashValue + Offset) & (ArrayCount(SimRegion->Hash) - 1));
-        if((Entry->Index == StorageIndex) || (Entry->Index == StorageIndex))
+        uint32_t HashMask  = (ArrayCount(SimRegion->Hash) - 1);
+        uint32_t HashIndex = ((HashValue + Offset) & HashMask);
+        sim_entity_hash *Entry = SimRegion->Hash + HashIndex;
+        if((Entry->Index == 0) || (Entry->Index == StorageIndex))
         {
             Result = Entry;
             break;
@@ -122,6 +124,7 @@ internal sim_region *
 BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_position Origin, rectangle2 Bounds)
 {
     sim_region *SimRegion = PushStruct(SimArena, sim_region);
+    ZeroStruct(SimRegion->Hash);
 
     SimRegion->World  = World;
     SimRegion->Origin = Origin;

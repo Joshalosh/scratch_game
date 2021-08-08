@@ -730,7 +730,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     entity_visible_piece_group PieceGroup;
     PieceGroup.GameState = GameState;
     sim_entity *Entity = SimRegion->Entities;
-    for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
+    for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex ++Entity)
     {
         PieceGroup.PieceCount = 0;
         real32 dt = Input->dtForFrame;
@@ -854,6 +854,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
     }
+
+    world_position WorldOrigin = {};
+    world_difference Diff = Subtract(SimRegion->World, &WorldOrigin, &SimRegion->Origin);
+    DrawRectangle(Buffer, Diff.dXY, V2(10.0f, 10.0f), 1.0f, 1.0f, 0.0f);
 
     EndSim(SimRegion, GameState);
 }
