@@ -2,7 +2,7 @@
 
 struct move_spec
 {
-    bool UnitMaxAccelVector;
+    bool32 UnitMaxAccelVector;
     real32 Speed;
     real32 Drag;
 };

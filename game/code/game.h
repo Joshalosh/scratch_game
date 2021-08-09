@@ -82,7 +82,7 @@ struct hero_bitmaps
 struct low_entity
 {
     world_position P;
-    sim_entity Stored;
+    sim_entity Sim;
 };
 
 struct entity_visible_piece

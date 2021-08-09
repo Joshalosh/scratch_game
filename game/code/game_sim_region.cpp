@@ -102,9 +102,9 @@ GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
 }
 
 internal sim_entity *
-AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t LowEntityIndex, low_entity *Source, v2 *SimP)
+AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source, v2 *SimP)
 {
-    sim_entity *Dest = AddEntity(SimRegion);
+    sim_entity *Dest = AddEntity(GameState, SimRegion, StorageIndex, Source);
     if(Dest)
     {
         if(SimP)
@@ -165,19 +165,19 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
 }
 
 internal void
-EndSim(sim_region *SimRegion, game_state *GameState)
+EndSim(sim_region *Region, game_state *GameState)
 {
-    sim_entity *Entities = SimRegion->Entities;
-    for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex, ++Entity)
+    sim_entity *Entity = Region->Entities;
+    for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
     {
         low_entity *Stored = GameState->LowEntities + Entity->StorageIndex;
 
         Stored->Sim = *Entity;
-        StoredEntityReference(&Stored->Sim.Sword);
+        StoreEntityReference(&Stored->Sim.Sword);
 
-        world_position NewP = MapIntoChunkSpace(GameState->World, SimRegion->Origin, Entity->P);
-        ChangeEntityLocation(&GameState->WorldArena, GameState->World. Entity->StorageIndex,
-                             Stored, &Stored-P, &NewP);
+        world_position NewP = MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
+        ChangeEntityLocation(&GameState->WorldArena, GameState->World, Entity->StorageIndex,
+                             Stored, &Stored->P, &NewP);
 
         if(Entity->StorageIndex == GameState->CameraFollowingEntityIndex)
         {
@@ -186,19 +186,19 @@ EndSim(sim_region *SimRegion, game_state *GameState)
             NewCameraP.ChunkZ = Stored->P.ChunkZ;
 
 #if 0
-            if(CameraFollowingEntity->P.X > (9.0f*World->TileSideInMeters))
+            if(CameraFollowingEntity.High->P.X > (9.0f*World->TileSideInMeters))
             {
                 NewCameraP.AbsTileX += 17;
             }
-            if(CameraFollowingEntity->P.X < -(9.0f*World->TileSideInMeters))
+            if(CameraFollowingEntity.High->P.X < -(9.0f*World->TileSideInMeters))
             {
                 NewCameraP.AbsTileX -= 17;
             }
-            if(CameraFollowingEntity->P.Y > (5.0f*World->TileSideInMeters))
+            if(CameraFollowingEntity.High->P.Y > (5.0f*World->TileSideInMeters))
             {
                 NewCameraP.AbsTileY += 9;
             }
-            if(CameraFollowingEntity->P.Y < -(5.0f*World->TileSideInMeters))
+            if(CameraFollowingEntity.High->P.Y < -(5.0f*World->TileSideInMeters))
             {
                 NewCameraP.AbsTileY -= 9;
             }
@@ -266,17 +266,17 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
 
         v2 DesiredPosition = Entity->P + PlayerDelta;
 
-        if(Entity.Collides)
+        if(Entity->Collides)
         {
             for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
             {
                 sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
                 if(Entity != TestEntity)
                 {
-                    if(TestEntity.Collides)
+                    if(TestEntity->Collides)
                     {
-                        real32 DiameterW = TestEntity.Width + Entity.Width;
-                        real32 DiameterH = TestEntity.Height + Entity.Height;
+                        real32 DiameterW = TestEntity->Width + Entity->Width;
+                        real32 DiameterH = TestEntity->Height + Entity->Height;
 
                         v2 MinCorner = -0.5f*V2(DiameterW, DiameterH);
                         v2 MaxCorner = 0.5f*V2(DiameterW, DiameterH);
@@ -357,4 +357,3 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
         }
     }
 }
-

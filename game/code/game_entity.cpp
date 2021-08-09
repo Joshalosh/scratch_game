@@ -12,7 +12,7 @@ DefaultMoveSpec(void)
 }
 
 inline void
-UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
+UpdateFamiliar(sim_region *SimRegion, sim_entity *Entity, real32 dt)
 {
     sim_entity *ClosestHero = 0;
     real32 ClosestHeroDSq = Square(10.0f);
@@ -48,7 +48,7 @@ UpdateFamiliar(game_state *GameState, entity Entity, real32 dt)
     MoveSpec.UnitMaxAccelVector = true;
     MoveSpec.Speed = 50.0f;
     MoveSpec.Drag  =  9.0f;
-    MoveEntity(GameState, Entity, dt, &MoveSpec, ddP);
+    MoveEntity(SimRegion, Entity, dt, &MoveSpec, ddP);
 }
 
 inline void
@@ -65,13 +65,12 @@ UpdateSword(sim_region *SimRegion, sim_entity *Entity, real32 dt)
     MoveSpec.Drag  = 0.0f;
 
     v2 OldP = Entity->P;
-    MoveEntity(GameState, Entity, dt, &MoveSpec, V2(0, 0));
-    real32 DistanceTravelled = Length(Entity->P - OldP);
+    MoveEntity(SimRegion, Entity, dt, &MoveSpec, V2(0, 0));
+    real32 DistanceTraveled = Length(Entity->P - OldP);
 
-    Entity->DistanceRemaining -= DistanceTravelled;
+    Entity->DistanceRemaining -= DistanceTraveled;
     if(Entity->DistanceRemaining < 0.0f)
     {
-        Assert(!"NEED TO MAKE ENTITES BE ABLE TO NOT BE THERE!");
+        Assert(!"NEED TO MAKE ENTITIES BE ABLE TO NOT BE THERE!");
     }
 }
-

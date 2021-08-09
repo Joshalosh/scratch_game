@@ -107,7 +107,6 @@ InitialiseWorld(world *World, real32 TileSideInMeters)
     for(uint32_t ChunkIndex = 0;
         ChunkIndex < ArrayCount(World->ChunkHash);
         ++ChunkIndex)
-
     {
         World->ChunkHash[ChunkIndex].ChunkX = TILE_CHUNK_UNINITIALISED;
         World->ChunkHash[ChunkIndex].FirstBlock.EntityCount = 0;
