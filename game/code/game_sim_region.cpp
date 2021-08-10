@@ -236,6 +236,8 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 internal void
 MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *MoveSpec, v2 ddP)
 {
+    Assert(!IsSet(Entity, EntityFlag_Nonspatial));
+
     world *World = SimRegion->World;
 
     if(MoveSpec->UnitMaxAccelVector)
@@ -266,14 +268,14 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
 
         v2 DesiredPosition = Entity->P + PlayerDelta;
 
-        if(Entity->Collides)
+        if(IsSet(Entity, EntityFlag_Collides))
         {
             for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
             {
                 sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
                 if(Entity != TestEntity)
                 {
-                    if(TestEntity->Collides)
+                    if(IsSet(TestEntity, EntityFlag_Collides))
                     {
                         real32 DiameterW = TestEntity->Width + Entity->Width;
                         real32 DiameterH = TestEntity->Height + Entity->Height;

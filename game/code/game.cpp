@@ -272,7 +272,7 @@ AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t Ab
 
     Entity.Low->Sim.Height = GameState->World->TileSideInMeters;
     Entity.Low->Sim.Width  = Entity.Low->Sim.Height;
-    Entity.Low->Sim.Collides = true;
+    AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     return(Entity);
 }
@@ -297,7 +297,7 @@ AddSword(game_state *GameState)
 
     Entity.Low->Sim.Height   = 0.5f;
     Entity.Low->Sim.Width    = 1.0f;
-    Entity.Low->Sim.Collides = false;
+    AddFlag(&Entity.Low->Sim, EntityFlag_Nonspatial);
 
     return(Entity);
 }
@@ -310,7 +310,7 @@ AddPlayer(game_state *GameState)
 
     Entity.Low->Sim.Height   = 0.5f;
     Entity.Low->Sim.Width    = 1.0f;
-    Entity.Low->Sim.Collides = true;
+    AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     InitHitPoints(Entity.Low, 3);
 
@@ -333,7 +333,7 @@ AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t
 
     Entity.Low->Sim.Height   = 0.5f;
     Entity.Low->Sim.Width    = 1.0f;
-    Entity.Low->Sim.Collides = true;
+    AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     InitHitPoints(Entity.Low, 3);
 
@@ -348,7 +348,7 @@ AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_
 
     Entity.Low->Sim.Height   = 0.5f;
     Entity.Low->Sim.Width    = 1.0f;
-    Entity.Low->Sim.Collides = true;
+    AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     return(Entity);
 }

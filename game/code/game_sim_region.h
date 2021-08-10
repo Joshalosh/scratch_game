@@ -32,25 +32,32 @@ union entity_reference
     uint32_t Index;
 };
 
+enum sim_entity_flags
+{
+    EntityFlag_Collides   = (1 << 1),
+    EntityFlag_Nonspatial = (1 << 2),
+};
+
 struct sim_entity
 {
     uint32_t StorageIndex;
 
     entity_type Type;
+    uint32_t Flags;
 
     v2 P;
-    uint32_t ChunkZ;
+    v2 dP;
 
     real32 Z;
     real32 dZ;
 
-    v2 dP;
+    uint32_t ChunkZ;
+
     real32 Width, Height;
 
     uint32_t FacingDirection;
     real32 tBob;
 
-    bool32 Collides;
     int32_t dAbsTileZ;
 
     uint32_t HitPointMax;
