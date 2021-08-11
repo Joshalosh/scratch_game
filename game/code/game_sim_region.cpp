@@ -39,7 +39,7 @@ GetEntityByStorageIndex(sim_region *SimRegion, uint32_t StorageIndex)
 }
 
 internal sim_entity *
-AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source);
+AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source, v2 *SimP);
 inline void
 LoadEntityReference(game_state *GameState, sim_region *SimRegion, entity_reference *Ref)
 {
@@ -49,7 +49,7 @@ LoadEntityReference(game_state *GameState, sim_region *SimRegion, entity_referen
         if(Entry->Ptr == 0)
         {
             Entry->Index = Ref->Index;
-            Entry->Ptr = AddEntity(GameState, SimRegion, Ref->Index, GetLowEntity(GameState, Ref->Index));
+            Entry->Ptr = AddEntity(GameState, SimRegion, Ref->Index, GetLowEntity(GameState, Ref->Index), 0);
         }
 
         Ref->Ptr = Entry->Ptr;
@@ -66,7 +66,7 @@ StoreEntityReference(entity_reference *Ref)
 }
 
 internal sim_entity *
-AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
+AddEntityRaw(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source)
 {
     Assert(StorageIndex);
     sim_entity *Entity = 0;
@@ -95,8 +95,12 @@ AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, l
 inline v2
 GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
 {
-    world_difference Diff = Subtract(SimRegion->World, &Stored->P, &SimRegion->Origin);
-    v2 Result = Diff.dXY;
+    v2 Result = InvalidP; 
+    if(!IsSet(&Stored->Sim, EntityFlag_Nonspatial))
+    {
+        world_difference Diff = Subtract(SimRegion->World, &Stored->P, &SimRegion->Origin);
+        Result = Diff.dXY;
+    }
 
     return(Result);
 }
@@ -104,7 +108,7 @@ GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
 internal sim_entity *
 AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source, v2 *SimP)
 {
-    sim_entity *Dest = AddEntity(GameState, SimRegion, StorageIndex, Source);
+    sim_entity *Dest = AddEntityRaw(GameState, SimRegion, StorageIndex, Source);
     if(Dest)
     {
         if(SimP)
@@ -150,10 +154,13 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
                     {
                         uint32_t LowEntityIndex = Block->LowEntityIndex[EntityIndexIndex];
                         low_entity *Low = GameState->LowEntities + LowEntityIndex;
-                        v2 SimSpaceP = GetSimSpaceP(SimRegion, Low);
-                        if(IsInRectangle(SimRegion->Bounds, SimSpaceP))
+                        if(!IsSet(&Low->Sim, EntityFlag_Nonspatial))
                         {
-                           AddEntity(GameState, SimRegion, LowEntityIndex, Low, &SimSpaceP);
+                            v2 SimSpaceP = GetSimSpaceP(SimRegion, Low);
+                            if(IsInRectangle(SimRegion->Bounds, SimSpaceP))
+                            {
+                               AddEntity(GameState, SimRegion, LowEntityIndex, Low, &SimSpaceP);
+                            }
                         }
                     }
                 }
@@ -175,7 +182,9 @@ EndSim(sim_region *Region, game_state *GameState)
         Stored->Sim = *Entity;
         StoreEntityReference(&Stored->Sim.Sword);
 
-        world_position NewP = MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
+        world_position NewP = IsSet(Entity, EntityFlag_Nonspatial) ? 
+                              NullPosition() :
+                              MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
         ChangeEntityLocation(&GameState->WorldArena, GameState->World, Entity->StorageIndex,
                              Stored, &Stored->P, &NewP);
 
@@ -268,14 +277,14 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
 
         v2 DesiredPosition = Entity->P + PlayerDelta;
 
-        if(IsSet(Entity, EntityFlag_Collides))
+        if(IsSet(Entity, EntityFlag_Collides) && !IsSet(Entity, EntityFlag_Nonspatial))
         {
             for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
             {
                 sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
                 if(Entity != TestEntity)
                 {
-                    if(IsSet(TestEntity, EntityFlag_Collides))
+                    if(IsSet(TestEntity, EntityFlag_Collides) && !IsSet(Entity, EntityFlag_Nonspatial))
                     {
                         real32 DiameterW = TestEntity->Width + Entity->Width;
                         real32 DiameterH = TestEntity->Height + Entity->Height;
