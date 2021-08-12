@@ -185,8 +185,7 @@ EndSim(sim_region *Region, game_state *GameState)
         world_position NewP = IsSet(Entity, EntityFlag_Nonspatial) ? 
                               NullPosition() :
                               MapIntoChunkSpace(GameState->World, Region->Origin, Entity->P);
-        ChangeEntityLocation(&GameState->WorldArena, GameState->World, Entity->StorageIndex,
-                             Stored, &Stored->P, &NewP);
+        ChangeEntityLocation(&GameState->WorldArena, GameState->World, Entity->StorageIndex, Stored, NewP);
 
         if(Entity->StorageIndex == GameState->CameraFollowingEntityIndex)
         {
@@ -214,6 +213,8 @@ EndSim(sim_region *Region, game_state *GameState)
 #else
             NewCameraP = Stored->P;
 #endif
+
+            GameState->CameraP = NewCameraP;
         }
     }
 }
