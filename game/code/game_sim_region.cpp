@@ -29,6 +29,19 @@ GetEntityByStorageIndex(sim_region *SimRegion, uint32_t StorageIndex)
     return(Result);
 }
 
+inline v2
+GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
+{
+    v2 Result = InvalidP; 
+    if(!IsSet(&Stored->Sim, EntityFlag_Nonspatial))
+    {
+        world_difference Diff = Subtract(SimRegion->World, &Stored->P, &SimRegion->Origin);
+        Result = Diff.dXY;
+    }
+
+    return(Result);
+}
+
 internal sim_entity *
 AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source, v2 *SimP);
 inline void
@@ -40,7 +53,9 @@ LoadEntityReference(game_state *GameState, sim_region *SimRegion, entity_referen
         if(Entry->Ptr == 0)
         {
             Entry->Index = Ref->Index;
-            Entry->Ptr = AddEntity(GameState, SimRegion, Ref->Index, GetLowEntity(GameState, Ref->Index), 0);
+            low_entity *LowEntity = GetLowEntity(GameState, Ref->Index);
+            v2 P = GetSimSpaceP(SimRegion, LowEntity);
+            Entry->Ptr = AddEntity(GameState, SimRegion, Ref->Index, LowEntity, &P);
         }
 
         Ref->Ptr = Entry->Ptr;
@@ -82,6 +97,7 @@ AddEntityRaw(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex
             }
 
             Entity->StorageIndex = StorageIndex;
+            Entity->Updatable = false;
         }
         else
         {
@@ -90,19 +106,6 @@ AddEntityRaw(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex
     }
 
     return(Entity);
-}
-
-inline v2
-GetSimSpaceP(sim_region *SimRegion, low_entity *Stored)
-{
-    v2 Result = InvalidP; 
-    if(!IsSet(&Stored->Sim, EntityFlag_Nonspatial))
-    {
-        world_difference Diff = Subtract(SimRegion->World, &Stored->P, &SimRegion->Origin);
-        Result = Diff.dXY;
-    }
-
-    return(Result);
 }
 
 internal sim_entity *
@@ -114,6 +117,7 @@ AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, l
         if(SimP)
         {
             Dest->P = *SimP;
+            Dest->Updatable = IsInRectangle(SimRegion->UpdatableBounds, Dest->P);
         }
         else
         {
@@ -130,9 +134,17 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
     sim_region *SimRegion = PushStruct(SimArena, sim_region);
     ZeroStruct(SimRegion->Hash);
 
+    // TODO: Calculate this eventually from the maximum value of
+    // all entities radius plus their speed.
+    real32 UpdateSafetyMargin = 1.0f;
+
     SimRegion->World  = World;
     SimRegion->Origin = Origin;
-    SimRegion->Bounds = Bounds;
+    SimRegion->UpdatableBounds = Bounds;
+    SimRegion->Bounds = AddRadiusTo(SimRegion->UpdatableBounds, UpdateSafetyMargin, UpdateSafetyMargin);
+
+
+    // TODO: Need to be more specific about entity counts.
     SimRegion->MaxEntityCount = 4096;
     SimRegion->EntityCount = 0;
     SimRegion->Entities = PushArray(SimArena, SimRegion->MaxEntityCount, sim_entity);

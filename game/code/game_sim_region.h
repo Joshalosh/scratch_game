@@ -42,7 +42,9 @@ enum sim_entity_flags
 
 struct sim_entity
 {
+    // Note: These are only for the sim region.
     uint32_t StorageIndex;
+    bool32 Updatable;
 
     entity_type Type;
     uint32_t Flags;
@@ -81,6 +83,7 @@ struct sim_region
 
     world_position Origin;
     rectangle2 Bounds;
+    rectangle2 UpdatableBounds;
 
     uint32_t MaxEntityCount;
     uint32_t EntityCount;
