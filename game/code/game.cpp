@@ -748,6 +748,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 ShadowAlpha = 0.0f;
             }
 
+            move_spec MoveSpec = DefaultMoveSpec();
+            v2 ddP = {};
+
             hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[Entity->FacingDirection];
             switch(Entity->Type)
             {
@@ -764,11 +767,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                 Entity->dZ = ConHero->dZ;
                             }
 
-                            move_spec MoveSpec = DefaultMoveSpec();
                             MoveSpec.UnitMaxAccelVector = true;
                             MoveSpec.Speed = 50.0f;
                             MoveSpec.Drag  =  9.0f;
-                            MoveEntity(SimRegion, Entity, Input->dtForFrame, &MoveSpec, ConHero->ddP);
+                            ddP = ConHero->ddP;
+                            
                             if((ConHero->dSword.X != 0.0f) || (ConHero->dSword.Y != 0.0f))
                             {
                                 sim_entity *Sword = Entity->Sword.Ptr;
@@ -796,14 +799,60 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Sword:
                 {
-                    UpdateSword(SimRegion, Entity, dt);
+                    MoveSpec.UnitMaxAccelVector = false;
+                    MoveSpec.Speed = 0.0f;
+                    MoveSpec.Drag  = 0.0f;
+
+                    v2 OldP = Entity->P;
+                    real32 DistanceTraveled = Length(Entity->P - OldP);
+
+                    Entity->DistanceRemaining -= DistanceTraveled;
+                    if(Entity->DistanceRemaining < 0.0f)
+                    {
+                        MakeEntityNonspatial(Entity);
+                    }
+
                     PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
                     PushBitmap(&PieceGroup, &GameState->Sword,  V2(0, 0), 0, V2(29, 10));
                 } break;
 
                 case EntityType_Familiar:
                 {
-                    UpdateFamiliar(SimRegion, Entity, dt);
+                    sim_entity *ClosestHero = 0;
+                    real32 ClosestHeroDSq = Square(10.0f);
+
+                    sim_entity *TestEntity = SimRegion->Entities;
+                    for(uint32_t TestEntityIndex = 0;
+                            TestEntityIndex < SimRegion->EntityCount;
+                            ++TestEntityIndex, ++TestEntity)
+                    {
+                        if(TestEntity->Type == EntityType_Hero)
+                        {
+                            real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
+                            if(TestEntity->Type == EntityType_Hero)
+                            {
+                                TestDSq *= 0.75f;
+                            }
+
+                            if(ClosestHeroDSq > TestDSq)
+                            {
+                                ClosestHero = TestEntity;
+                                ClosestHeroDSq = TestDSq;
+                            }
+                        }
+                    }
+
+                    if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
+                    {
+                        real32 Acceleration = 0.5f;
+                        real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
+                        ddP = OneOverLength*(ClosestHero->P - Entity->P);
+                    }
+
+                    MoveSpec.UnitMaxAccelVector = true;
+                    MoveSpec.Speed = 50.0f;
+                    MoveSpec.Drag  =  9.0f;
+
                     Entity->tBob += dt;
                     if(Entity->tBob > (2.0f*Pi32))
                     {
@@ -811,13 +860,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
                     PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align,
-                              (0.5f*ShadowAlpha) + 0.2f*BobSin, 0.0f);
+                               (0.5f*ShadowAlpha) + 0.2f*BobSin, 0.0f);
                     PushBitmap(&PieceGroup, &HeroBitmaps->Head, V2(0, 0), 0.2f*BobSin, HeroBitmaps->Align);
                 } break;
 
                 case EntityType_Monster:
                 {
-                    UpdateMonster(SimRegion, Entity, dt);
                     PushBitmap(&PieceGroup, &GameState->Shadow,  V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
                     PushBitmap(&PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
 
@@ -830,14 +878,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 } break;
             }
 
-            real32 ddZ = -9.8f;
-            Entity->Z  =  0.5f*ddZ*Square(dt) + Entity->dZ*dt + Entity->Z;
-            Entity->dZ =  ddZ*dt + Entity->dZ;
-            if(Entity->Z < 0)
+            if(Entity->dP.X || Entity->dP.Y || ddP.X || ddP.Y)
             {
-                Entity->Z = 0;
+                MoveEntity(SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
-            
+
             real32 EntityGroundPointX = ScreenCentreX + MetersToPixels*Entity->P.X;
             real32 EntityGroundPointY = ScreenCentreY - MetersToPixels*Entity->P.Y;
             real32 EntityZ = -MetersToPixels*Entity->Z;

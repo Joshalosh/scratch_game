@@ -285,6 +285,14 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
     Entity->dP = ddP*dt + Entity->dP;
     v2 NewPlayerP = OldPlayerP + PlayerDelta;
 
+    real32 ddZ = -9.8f;
+    Entity->Z  =  0.5f*ddZ*Square(dt) + Entity->dZ*dt + Entity->Z;
+    Entity->dZ =  ddZ*dt + Entity->dZ;
+    if(Entity->Z < 0)
+    {
+        Entity->Z = 0;
+    }
+            
     for(uint32_t Iteration = 0; Iteration < 4; ++Iteration)
     {
         real32 tMin = 1.0f;
