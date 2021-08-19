@@ -878,7 +878,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 } break;
             }
 
-            if(Entity->dP.X || Entity->dP.Y || ddP.X || ddP.Y)
+            if(!IsSet(Entity, EntityFlag_Nonspatial))
             {
                 MoveEntity(SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
