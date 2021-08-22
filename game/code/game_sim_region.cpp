@@ -293,76 +293,103 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
         Entity->Z = 0;
     }
             
+    real32 DistanceRemaining = Entity->DistanceLimit;
+    if(DistanceRemaining == 0.0f)
+    {
+        // TODO: Maybe formalise this number.
+        DistanceRemaining = 10000.0f;
+    }
+
     for(uint32_t Iteration = 0; Iteration < 4; ++Iteration)
     {
         real32 tMin = 1.0f;
-        v2 WallNormal = {};
-        sim_entity *HitEntity = 0;
 
-        v2 DesiredPosition = Entity->P + PlayerDelta;
-
-        if(IsSet(Entity, EntityFlag_Collides) && !IsSet(Entity, EntityFlag_Nonspatial))
+        real32 PlayerDeltaLength = Length(PlayerDelta);
+        if(PlayerDeltaLength > 0.0f)
         {
-            for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
+            if(PlayerDeltaLength > DistanceRemaining)
             {
-                sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
-                if(Entity != TestEntity)
+                tMin = (DistanceRemaining / PlayerDeltaLength);
+            }
+
+            v2 WallNormal = {};
+            sim_entity *HitEntity = 0;
+
+            v2 DesiredPosition = Entity->P + PlayerDelta;
+
+            if(IsSet(Entity, EntityFlag_Collides) && !IsSet(Entity, EntityFlag_Nonspatial))
+            {
+                for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
                 {
-                    if(IsSet(TestEntity, EntityFlag_Collides) && !IsSet(Entity, EntityFlag_Nonspatial))
+                    sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
+                    if(Entity != TestEntity)
                     {
-                        real32 DiameterW = TestEntity->Width + Entity->Width;
-                        real32 DiameterH = TestEntity->Height + Entity->Height;
-
-                        v2 MinCorner = -0.5f*V2(DiameterW, DiameterH);
-                        v2 MaxCorner = 0.5f*V2(DiameterW, DiameterH);
-
-                        v2 Rel = Entity->P - TestEntity->P;
-
-                        if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
-                                    &tMin, MinCorner.Y, MaxCorner.Y))
+                        if(IsSet(TestEntity, EntityFlag_Collides) && !IsSet(TestEntity, EntityFlag_Nonspatial))
                         {
-                            WallNormal = V2(-1, 0);
-                            HitEntity = TestEntity;
-                        }
+                            real32 DiameterW = TestEntity->Width + Entity->Width;
+                            real32 DiameterH = TestEntity->Height + Entity->Height;
 
-                        if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
-                                    &tMin, MinCorner.Y, MaxCorner.Y))
-                        {
-                            WallNormal = V2(1, 0);
-                            HitEntity = TestEntity;
-                        }
+                            v2 MinCorner = -0.5f*V2(DiameterW, DiameterH);
+                            v2 MaxCorner = 0.5f*V2(DiameterW, DiameterH);
 
-                        if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
-                                    &tMin, MinCorner.X, MaxCorner.X))
-                        {
-                            WallNormal = V2(0, -1);
-                            HitEntity = TestEntity;
-                        }
+                            v2 Rel = Entity->P - TestEntity->P;
 
-                        if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
-                                    &tMin, MinCorner.X, MaxCorner.X))
-                        {
-                            WallNormal = V2(0, 1);
-                            HitEntity = TestEntity;
+                            if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                        &tMin, MinCorner.Y, MaxCorner.Y))
+                            {
+                                WallNormal = V2(-1, 0);
+                                HitEntity = TestEntity;
+                            }
+
+                            if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                        &tMin, MinCorner.Y, MaxCorner.Y))
+                            {
+                                WallNormal = V2(1, 0);
+                                HitEntity = TestEntity;
+                            }
+
+                            if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                        &tMin, MinCorner.X, MaxCorner.X))
+                            {
+                                WallNormal = V2(0, -1);
+                                HitEntity = TestEntity;
+                            }
+
+                            if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                        &tMin, MinCorner.X, MaxCorner.X))
+                            {
+                                WallNormal = V2(0, 1);
+                                HitEntity = TestEntity;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Entity->P += tMin*PlayerDelta;
-        if(HitEntity)
-        {
-            Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
-            PlayerDelta = DesiredPosition - Entity->P;
-            PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
+            Entity->P += tMin*PlayerDelta;
+            DistanceRemaining -= tMin*PlayerDeltaLength;
+            if(HitEntity)
+            {
+                Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
+                PlayerDelta = DesiredPosition - Entity->P;
+                PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
 
-            //Entity->AbsTileZ += HitLow->dAbsTileZ;
+                //Entity->AbsTileZ += HitLow->dAbsTileZ;
+            }
+            else
+            {
+                break;
+            }
         }
         else
         {
             break;
         }
+    }
+
+    if(Entity->DistanceLimit != 0.0f)
+    {
+        Entity->DistanceLimit = DistanceRemaining;
     }
 
     if((Entity->dP.X == 0.0f) && (Entity->dP.Y == 0.0f))
