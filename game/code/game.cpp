@@ -10,7 +10,7 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
     int16_t ToneVolume = 3000; 
     int WavePeriod = SoundBuffer->SamplesPerSecond/ToneHz;
 
-    int16_t *SampleOut = SoundBuffer->Samples; 
+    int16_t *SampleOut  = SoundBuffer->Samples; 
     for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
     {
 #if 0
@@ -120,7 +120,7 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
 
     for(int32_t Y = MinY; Y < MaxY; ++Y)
     {
-        uint32_t *Dest = (uint32_t *)DestRow;
+        uint32_t *Dest   = (uint32_t *)DestRow;
         uint32_t *Source = SourceRow;
         for(int32_t X = MinX; X < MaxX; ++X)
         {
@@ -147,7 +147,7 @@ DrawBitmap(game_offscreen_buffer *Buffer, loaded_bitmap *Bitmap,
             ++Source;
         }
 
-        DestRow += Buffer->Pitch;
+        DestRow   += Buffer->Pitch;
         SourceRow -= Bitmap->Width;
     }
 }
@@ -193,7 +193,7 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Result.Height = Header->Height;
 
         Assert(Header->Compression == 3);
-        uint32_t RedMask = Header->RedMask;
+        uint32_t RedMask   = Header->RedMask;
         uint32_t GreenMask = Header->GreenMask;
         uint32_t BlueMask  = Header->BlueMask;
         uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
@@ -364,10 +364,10 @@ PushPiece(entity_visible_piece_group *Group, loaded_bitmap *Bitmap,
     Piece->Offset   = Group->GameState->MetersToPixels*V2(Offset.X, -Offset.Y) - Align;
     Piece->OffsetZ  = Group->GameState->MetersToPixels*OffsetZ;
     Piece->EntityZC = EntityZC;
-    Piece->R = Color.R;
-    Piece->G = Color.G;
-    Piece->B = Color.B;
-    Piece->A = Color.A;
+    Piece->R   = Color.R;
+    Piece->G   = Color.G;
+    Piece->B   = Color.B;
+    Piece->A   = Color.A;
     Piece->Dim = Dim;
 }
 
@@ -392,7 +392,7 @@ DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
     {
         v2 HealthDim = {0.2f, 0.2f};
         real32 SpacingX = 1.5f*HealthDim.X;
-        v2 HitP = {-0.5f*(Entity->HitPointMax - 1)*SpacingX, -0.25f};
+        v2 HitP  = {-0.5f*(Entity->HitPointMax - 1)*SpacingX, -0.25f};
         v2 dHitP = {SpacingX, 0.0f};
         for(uint32_t HealthIndex = 0;
             HealthIndex < Entity->HitPointMax;
