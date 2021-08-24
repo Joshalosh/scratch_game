@@ -259,6 +259,16 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 }
 
 internal void
+HandleCollision(sim_entity *A, sim_entity *B)
+{
+    if((A->Type == EntityType_Monster) && (B->Type == EntityType_Sword))
+    {
+        --A->HitPointMax;
+        MakeEntityNonspatial(B);
+    }
+}
+
+internal void
 MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *MoveSpec, v2 ddP)
 {
     Assert(!IsSet(Entity, EntityFlag_Nonspatial));
@@ -317,7 +327,9 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
 
             v2 DesiredPosition = Entity->P + PlayerDelta;
 
-            if(IsSet(Entity, EntityFlag_Collides) && !IsSet(Entity, EntityFlag_Nonspatial))
+            bool32 StopsOnCollision = IsSet(Entity, EntityFlag_Collides);
+
+            if(!IsSet(Entity, EntityFlag_Nonspatial))
             {
                 for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
                 {
@@ -370,9 +382,22 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
             DistanceRemaining -= tMin*PlayerDeltaLength;
             if(HitEntity)
             {
-                Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
                 PlayerDelta = DesiredPosition - Entity->P;
-                PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
+                if(StopsOnCollision)
+                {
+                    PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
+                    Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
+                }
+
+                sim_entity *A = Entity;
+                sim_entity *B = HitEntity;
+                if(A->Type > B->Type)
+                {
+                    sim_entity *Temp = A;
+                    A = B;
+                    B = Temp;
+                }
+                HandleCollision(A, B);
 
                 //Entity->AbsTileZ += HitLow->dAbsTileZ;
             }
