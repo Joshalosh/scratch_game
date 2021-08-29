@@ -258,13 +258,75 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
     return(Hit);
 }
 
+internal void
+AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide)
+{
+    if(StorageIndexA > StorageIndexB)
+    {
+        uint32_t *Temp = StorageIndexA;
+        StorageIndexA = StorageIndexB;
+        StorageIndexB = Temp;
+    }
+
+    // TODO Implement a better hash function.
+    pairwise_collision_rule *Found = 0;
+    uint32_t HashBucket = A->StorageIndex & (ArrayCount(GameState->CollisionRuleHash) - 1);
+    for(pairwise_collision_rule *Rule = GameState->CollisionRuleHash[HashBucket];
+        Rule;
+        Rule = Rule->NextInHash)
+    {
+        if((Rule->StorageIndexA == A->StorageIndex) &&
+           (Rule->StorageIndexB == B->StorageIndex))
+        {
+            Found = Rule;
+            break;
+        }
+    }
+
+    if(!Found)
+    {
+        Found = PushStruct(&GameState->WorldArena, pairwise_collision_rule);
+        Found->NextInHash = GameState->CollisionRuleHash[HashBucket];
+        GameState->CollisionRuleHash[HashBucket] = Found;
+    }
+
+    if(Found)
+    {
+        Found->StorageIndexA = A->StorageIndex;
+        Found->StorageIndexB = B->StorageIndex;
+        Found->ShouldCollide = ShouldCollide;
+    }
+}
+
 internal bool32
-ShouldCollide(sim_entity *A, sim_entity *B)
+ShouldCollide(game_state *GameState, sim_entity *A, sim_entity *B)
 {
     bool32 Result = false;
+
+    if(A->StorageIndex > B->StorageIndex)
+    {
+        sim_entity *Temp = A;
+        A = B;
+        B = Temp;
+    }
+
     if(!IsSet(A, EntityFlag_Nonspatial) && !IsSet(B, EntityFlag_Nonspatial))
     {
+        // TODO Property based collision logic in this scope.
         Result = true;
+    }
+
+    // TODO Implement a better hash function.
+    uint32_t HashBucket = A->StorageIndex & (ArrayCount(GameState->CollisionRuleHash) - 1);
+    for(pairwise_collision_rule *Rule = GameState->CollisionRuleHash[HashBucket];
+        Rule;
+        Rule = Rule->NextInHash)
+    {
+        if((Rule->StorageIndexA == A->StorageIndex) && (Rule->StorageIndexB == B->StorageIndex))
+        {
+            Result = Rule->ShouldCollide;
+            break;
+        }
     }
 
     return(Result);
@@ -296,7 +358,7 @@ HandleCollision(sim_entity *A, sim_entity *B)
 }
 
 internal void
-MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *MoveSpec, v2 ddP)
+MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *MoveSpec, v2 ddP)
 {
     Assert(!IsSet(Entity, EntityFlag_Nonspatial));
 
@@ -359,7 +421,7 @@ MoveEntity(sim_region *SimRegion, sim_entity *Entity, real32 dt, move_spec *Move
                 for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
                 {
                     sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
-                    if(ShouldCollide(Entity, TestEntity))
+                    if(ShouldCollide(GameState, Entity, TestEntity))
                     {
                         real32 DiameterW = TestEntity->Width + Entity->Width;
                         real32 DiameterH = TestEntity->Height + Entity->Height;

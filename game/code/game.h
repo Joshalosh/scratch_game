@@ -105,6 +105,15 @@ struct controlled_hero
     real32 dZ;
 };
 
+struct pairwise_collision_rule
+{
+    bool32 ShouldCollide;
+    uint32_t StorageIndexA;
+    uint32_t StorageIndexB;
+
+    pairwise_collision_rule *NextInHash;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -126,6 +135,9 @@ struct game_state
     loaded_bitmap Tree;
     loaded_bitmap Sword;
     real32 MetersToPixels;
+
+    // Must be a power of two.
+    pairwise_collision_rule *CollisionRuleHash[256];
 };
 
 struct entity_visible_piece_group

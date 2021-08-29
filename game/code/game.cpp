@@ -318,6 +318,8 @@ AddPlayer(game_state *GameState)
     add_low_entity_result Sword = AddSword(GameState);
     Entity.Low->Sim.Sword.Index = Sword.LowIndex;
 
+    AddCollisionRule(Sword);
+
     if(GameState->CameraFollowingEntityIndex == 0)
     {
         GameState->CameraFollowingEntityIndex = Entity.LowIndex;
@@ -877,7 +879,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             if(!IsSet(Entity, EntityFlag_Nonspatial))
             {
-                MoveEntity(SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
+                MoveEntity(GameState, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
 
             real32 EntityGroundPointX = ScreenCentreX + MetersToPixels*Entity->P.X;
