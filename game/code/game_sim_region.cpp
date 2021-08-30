@@ -258,46 +258,6 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
     return(Hit);
 }
 
-internal void
-AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide)
-{
-    if(StorageIndexA > StorageIndexB)
-    {
-        uint32_t *Temp = StorageIndexA;
-        StorageIndexA = StorageIndexB;
-        StorageIndexB = Temp;
-    }
-
-    // TODO Implement a better hash function.
-    pairwise_collision_rule *Found = 0;
-    uint32_t HashBucket = A->StorageIndex & (ArrayCount(GameState->CollisionRuleHash) - 1);
-    for(pairwise_collision_rule *Rule = GameState->CollisionRuleHash[HashBucket];
-        Rule;
-        Rule = Rule->NextInHash)
-    {
-        if((Rule->StorageIndexA == A->StorageIndex) &&
-           (Rule->StorageIndexB == B->StorageIndex))
-        {
-            Found = Rule;
-            break;
-        }
-    }
-
-    if(!Found)
-    {
-        Found = PushStruct(&GameState->WorldArena, pairwise_collision_rule);
-        Found->NextInHash = GameState->CollisionRuleHash[HashBucket];
-        GameState->CollisionRuleHash[HashBucket] = Found;
-    }
-
-    if(Found)
-    {
-        Found->StorageIndexA = A->StorageIndex;
-        Found->StorageIndexB = B->StorageIndex;
-        Found->ShouldCollide = ShouldCollide;
-    }
-}
-
 internal bool32
 ShouldCollide(game_state *GameState, sim_entity *A, sim_entity *B)
 {
@@ -337,6 +297,15 @@ HandleCollision(sim_entity *A, sim_entity *B)
 {
     bool32 StopsOnCollision = false;
 
+    if(A->Type == EntityType_Sword)
+    {
+        StopsOnCollision = false;
+    }
+    else
+    {
+        StopsOnCollision = true;
+    }
+
     if(A->Type > B->Type)
     {
         sim_entity *Temp = A;
@@ -348,12 +317,12 @@ HandleCollision(sim_entity *A, sim_entity *B)
     {
         --A->HitPointMax;
         MakeEntityNonspatial(B);
+        StopsOnCollision = true;
     }
 
     // TODO Handle stairs.
 //    Entity->AbsTileZ += HitLow->dAbsTileZ;
 
-    // TODO implement real stops on collision
     return(StopsOnCollision);
 }
 
@@ -472,6 +441,10 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                 {
                     PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
                     Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
+                }
+                else
+                {
+                    AddCollisionRule(GameState, Entity->StorageIndex, HitEntity->StorageIndex, false);
                 }
             }
             else

@@ -138,6 +138,7 @@ struct game_state
 
     // Must be a power of two.
     pairwise_collision_rule *CollisionRuleHash[256];
+    pairwise_collision_rule *FirstFreeCollisionRule;
 };
 
 struct entity_visible_piece_group
@@ -159,6 +160,9 @@ GetLowEntity(game_state *GameState, uint32_t Index)
 
     return(Result);
 }
+
+internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide);
+internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex); 
 
 #define GAME_H
 #endif
