@@ -1,13 +1,30 @@
 #if !defined(GAME_H)
 
 /*
-  GAME_INTERNAL:
-    0 - Build for public release
-    1 - Build for developer only
-
-  GAME_SLOW:
-    0 - No slow code allowed
-    1 - Slow code
+ TODO
+ - Metagame / save game
+   - Do we allow saved games? Probably yes, just for 'pausing',
+     or crash recovery?
+ - Implement multiple sim regions per fram
+   - Per-entity clocking
+   - Sim region merging? For multiple players?
+ - Collision detection?
+   - Entry / exit?
+   - What's the plan for robustness / shape definition?
+ - AI
+   - Pathfinding
+   - AI 'storage'
+ - Rudimentary world gen (no quality, just 'what sorts of things' we do)
+   - Placement of background things
+   - Connectivity?
+   - Non-overlapping?
+ - Animtaion, should probably lead into rendering
+   - Skeletal animation
+   - Particle systems
+ - Rendering
+ -> GAME
+   - Entity system
+   - world generation
 */
 
 #include "game_platform.h"

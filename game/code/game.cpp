@@ -414,6 +414,15 @@ DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
 internal void
 ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex)
 {
+    // TODO Make a better data structure that allows the removal
+    // of collision rules without having to search the entire table.
+    // One way to make removal easy would be to always add _both_
+    // orders of the pairs of storage indeces to the hash table,
+    // so that way no matter which position the entity is in, I can
+    // always find it. Then, when I do my first pass through for
+    // removal, I can just remember the original top of the free list,
+    // and then when i'm done, I can do another pass through all the
+    // new things on the free list, and remove the reverse of those pairs.
     for(uint32_t HashBucket = 0; HashBucket < ArrayCount(GameState->CollisionRuleHash); ++HashBucket)
     {
         for(pairwise_collision_rule **Rule = &GameState->CollisionRuleHash[HashBucket];
@@ -428,6 +437,10 @@ ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex)
 
                 RemovedRule->NextInHash = GameState->FirstFreeCollisionRule;
                 GameState->FirstFreeCollisionRule = RemovedRule;
+            }
+            else
+            {
+                Rule = &(*Rule)->NextInHash;
             }
         }
     }

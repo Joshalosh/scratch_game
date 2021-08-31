@@ -315,9 +315,10 @@ HandleCollision(sim_entity *A, sim_entity *B)
 
     if((A->Type == EntityType_Monster) && (B->Type == EntityType_Sword))
     {
-        --A->HitPointMax;
-        MakeEntityNonspatial(B);
-        StopsOnCollision = true;
+        if(A->HitPointMax > 0)
+        {
+            --A->HitPointMax;
+        }
     }
 
     // TODO Handle stairs.
