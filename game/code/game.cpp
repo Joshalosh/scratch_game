@@ -912,11 +912,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         if(TestEntity->Type == EntityType_Hero)
                         {
                             real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
-                            if(TestEntity->Type == EntityType_Hero)
-                            {
-                                TestDSq *= 0.75f;
-                            }
-
                             if(ClosestHeroDSq > TestDSq)
                             {
                                 ClosestHero = TestEntity;

@@ -2,25 +2,50 @@
 
 /*
  TODO
- - Metagame / save game
-   - Do we allow saved games? Probably yes, just for 'pausing',
-     or crash recovery?
- - Implement multiple sim regions per fram
-   - Per-entity clocking
-   - Sim region merging? For multiple players?
+
+ ARCHITECTURE EXPLORATION
  - Collision detection?
    - Entry / exit?
    - What's the plan for robustness / shape definition?
- - AI
-   - Pathfinding
-   - AI 'storage'
+ - Implement multiple sim regions per fram
+   - Per-entity clocking
+   - Sim region merging? For multiple players?
+ - Z
+   - Clean up things by using v3
+   - Figure out how you go 'up' and 'down', and how is this rendered?
+
+ - Debug code
+   - Logging
+   - Diagramming
+   - A little GUI, switches / sliders / etc.
+
+ - Audio
+   - Sound effect triggers
+   - Ambient sounds
+   - Music
+ - Asset streaming
+
+ - Metagame / save game
+   - How do you enter a 'save slot'?
+   - Persistent unlocks/etc
+   - Do we allow saved games? Probably yes, just for 'pausing',
+   * Continuous save for crash recovery?
  - Rudimentary world gen (no quality, just 'what sorts of things' we do)
    - Placement of background things
    - Connectivity?
    - Non-overlapping?
- - Animtaion, should probably lead into rendering
+   - Map display
+     - Magnets - how do they work?
+ - AI
+   - Rudimentary monster example
+   * Pathfinding
+   - AI 'storage'
+
+ * Animtaion, should probably lead into rendering
    - Skeletal animation
    - Particle systems
+
+ PRODUCTION
  - Rendering
  -> GAME
    - Entity system

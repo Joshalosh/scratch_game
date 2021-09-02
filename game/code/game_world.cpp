@@ -167,17 +167,14 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
     return(Result);
 }
 
-inline world_difference
+inline v3
 Subtract(world *World, world_position *A, world_position *B)
 {
-    world_difference Result;
+    v3 dTile = {(real32)A->ChunkX - (real32)B->ChunkX,
+                (real32)A->ChunkY - (real32)B->ChunkY;
+                (real32)A->ChunkZ - (real32)B->ChunkZ};
 
-    v2 dTileXY = {(real32)A->ChunkX - (real32)B->ChunkX,
-                  (real32)A->ChunkY - (real32)B->ChunkY};
-    real32 dTileZ = (real32)A->ChunkZ - (real32)B->ChunkZ;
-
-    Result.dXY = World->ChunkSideInMeters*dTileXY + (A->Offset_ - B->Offset_);
-    Result.dZ = World->ChunkSideInMeters*dTileZ;
+    v3 Result = Hadamard(World->ChunkDimInMeters, dTile) + (A->Offset_ - B->Offset_);
 
     return(Result);
 }

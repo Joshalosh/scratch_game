@@ -1,11 +1,5 @@
 #if !defined(GAME_WORLD_H)
 
-struct world_difference
-{
-    v2 dXY;
-    real32 dZ;
-};
-
 struct world_position
 {
     // NOTE: These are fixed point tile locations. The high
@@ -39,7 +33,7 @@ struct world_chunk
 struct world
 {
     real32 TileSideInMeters;
-    real32 ChunkSideInMeters;
+    v3 ChunkDimInMeters;
 
     world_entity_block *FirstFree;
 

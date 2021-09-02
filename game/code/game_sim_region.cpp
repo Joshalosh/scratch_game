@@ -263,29 +263,32 @@ ShouldCollide(game_state *GameState, sim_entity *A, sim_entity *B)
 {
     bool32 Result = false;
 
-    if(A->StorageIndex > B->StorageIndex)
+    if(A != B)
     {
-        sim_entity *Temp = A;
-        A = B;
-        B = Temp;
-    }
-
-    if(!IsSet(A, EntityFlag_Nonspatial) && !IsSet(B, EntityFlag_Nonspatial))
-    {
-        // TODO Property based collision logic in this scope.
-        Result = true;
-    }
-
-    // TODO Implement a better hash function.
-    uint32_t HashBucket = A->StorageIndex & (ArrayCount(GameState->CollisionRuleHash) - 1);
-    for(pairwise_collision_rule *Rule = GameState->CollisionRuleHash[HashBucket];
-        Rule;
-        Rule = Rule->NextInHash)
-    {
-        if((Rule->StorageIndexA == A->StorageIndex) && (Rule->StorageIndexB == B->StorageIndex))
+        if(A->StorageIndex > B->StorageIndex)
         {
-            Result = Rule->ShouldCollide;
-            break;
+            sim_entity *Temp = A;
+            A = B;
+            B = Temp;
+        }
+
+        if(!IsSet(A, EntityFlag_Nonspatial) && !IsSet(B, EntityFlag_Nonspatial))
+        {
+            // TODO Property based collision logic in this scope.
+            Result = true;
+        }
+
+        // TODO Implement a better hash function.
+        uint32_t HashBucket = A->StorageIndex & (ArrayCount(GameState->CollisionRuleHash) - 1);
+        for(pairwise_collision_rule *Rule = GameState->CollisionRuleHash[HashBucket];
+            Rule;
+            Rule = Rule->NextInHash)
+        {
+            if((Rule->StorageIndexA == A->StorageIndex) && (Rule->StorageIndexB == B->StorageIndex))
+            {
+                Result = Rule->ShouldCollide;
+                break;
+            }
         }
     }
 
@@ -393,11 +396,11 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                     sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
                     if(ShouldCollide(GameState, Entity, TestEntity))
                     {
-                        real32 DiameterW = TestEntity->Width + Entity->Width;
+                        real32 DiameterW = TestEntity->Width  + Entity->Width;
                         real32 DiameterH = TestEntity->Height + Entity->Height;
 
                         v2 MinCorner = -0.5f*V2(DiameterW, DiameterH);
-                        v2 MaxCorner = 0.5f*V2(DiameterW, DiameterH);
+                        v2 MaxCorner =  0.5f*V2(DiameterW, DiameterH);
 
                         v2 Rel = Entity->P - TestEntity->P;
 
@@ -405,28 +408,28 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                     &tMin, MinCorner.Y, MaxCorner.Y))
                         {
                             WallNormal = V2(-1, 0);
-                            HitEntity = TestEntity;
+                            HitEntity  = TestEntity;
                         }
 
                         if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                     &tMin, MinCorner.Y, MaxCorner.Y))
                         {
                             WallNormal = V2(1, 0);
-                            HitEntity = TestEntity;
+                            HitEntity  = TestEntity;
                         }
 
                         if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                     &tMin, MinCorner.X, MaxCorner.X))
                         {
                             WallNormal = V2(0, -1);
-                            HitEntity = TestEntity;
+                            HitEntity  = TestEntity;
                         }
 
                         if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                     &tMin, MinCorner.X, MaxCorner.X))
                         {
                             WallNormal = V2(0, 1);
-                            HitEntity = TestEntity;
+                            HitEntity  = TestEntity;
                         }
                     }
                 }
@@ -441,7 +444,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                 if(StopsOnCollision)
                 {
                     PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
-                    Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
+                    Entity->dP  = Entity->dP  - 1*Inner(Entity->dP,  WallNormal)*WallNormal;
                 }
                 else
                 {
