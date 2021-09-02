@@ -9,7 +9,7 @@ struct world_position
     int32_t ChunkY;
     int32_t ChunkZ;
 
-    v2 Offset_;
+    v3 Offset_;
 };
 
 struct world_entity_block
