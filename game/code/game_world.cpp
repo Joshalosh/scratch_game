@@ -106,6 +106,7 @@ InitialiseWorld(world *World, real32 TileSideInMeters)
     World->ChunkDimInMeters = {(real32)TILES_PER_CHUNK*TileSideInMeters,
                                 (real32)TILES_PER_CHUNK*TileSideInMeters,
                                 (real32)TileSideInMeters};
+    World->TileDepthInMeters = (real32)TileSideInMeters;
     World->FirstFree = 0;
 
     for(uint32_t ChunkIndex = 0;
@@ -146,7 +147,7 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
     world_position BasePos = {};
 
     v3 Offset = Hadamard(World->ChunkDimInMeters, V3((real32)AbsTileX, (real32)AbsTileY, (real32)AbsTileZ));
-    world_position Result = MarpIntoChunkSpace(World, BasePos, Offset);
+    world_position Result = MapIntoChunkSpace(World, BasePos, Offset);
 
     Assert(IsCanonical(World, Result.Offset_));
 
@@ -157,7 +158,7 @@ inline v3
 Subtract(world *World, world_position *A, world_position *B)
 {
     v3 dTile = {(real32)A->ChunkX - (real32)B->ChunkX,
-                (real32)A->ChunkY - (real32)B->ChunkY;
+                (real32)A->ChunkY - (real32)B->ChunkY,
                 (real32)A->ChunkZ - (real32)B->ChunkZ};
 
     v3 Result = Hadamard(World->ChunkDimInMeters, dTile) + (A->Offset_ - B->Offset_);
