@@ -351,7 +351,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     
     //TODO: Diagonal will be faster! Fix with vectors
     ddP += -MoveSpec->Drag*Entity->dP;
-    ddP += V3(0, 0, -9.8f);
+    ddP += V3(0, 0, -9.8f); // This is gravity.
 
     v3 OldPlayerP  = Entity->P;
     v3 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
