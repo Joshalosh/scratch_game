@@ -7,7 +7,6 @@
  - Z
    - Minkowski inclusion for sim region begin / updatable bounds
    - Figure out how you go 'up' and 'down', and how is this rendered?
-   - Solve the Puzzler from world_position?
  - Collision detection?
    - Entry / exit?
    - What's the plan for robustness / shape definition?

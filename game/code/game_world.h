@@ -2,9 +2,11 @@
 
 struct world_position
 {
-    // NOTE: These are fixed point tile locations. The high
-    // bits are the tile_chunk index, and the low bits are
-    // the tile index in the chunk.
+    // It seems like we have to store ChunkX/Y/Z with each
+    // Entity because even though the sim region gather doesn't
+    // need it at first, and we could get by without it, entity
+    // references pull in entities WITHOUT going through their
+    // world_chunk, and so still need to know the ChunkX/Y/Z.
     int32_t ChunkX;
     int32_t ChunkY;
     int32_t ChunkZ;

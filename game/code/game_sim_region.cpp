@@ -128,19 +128,22 @@ AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, l
 }
 
 internal sim_region *
-BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_position Origin, rectangle3 Bounds)
+BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_position Origin, rectangle3 Bounds, real32 dt)
 {
     sim_region *SimRegion = PushStruct(SimArena, sim_region);
     ZeroStruct(SimRegion->Hash);
 
-    // TODO: Calculate this eventually from the maximum value of
-    // all entities radius plus their speed.
-    real32 UpdateSafetyMargin  = 1.0f;
+    // TODO Try to make these get enforced more rigorously
+    SimRegion->MaxEntityRadius = 5.0f;
+    SimRegion->MaxEntityVelocity = 30.0f;
+    real32 UpdateSafetyMargin = SimRegion->MaxEntityRadius + dt*SimRegion->MaxEntityVelocity;
     real32 UpdateSafetyMarginZ = 1.0f;
 
-    SimRegion->World  = World;
+    SimRegion->World = World;
     SimRegion->Origin = Origin;
-    SimRegion->UpdatableBounds = Bounds;
+    SimRegion->UpdatableBounds = AddRadiusTo(Bounds, V3(SimRegion->MaxEntityRadius,
+                                                        SimRegion->MaxEntityRadius,
+                                                        SimRegion->MaxEntityRadius));
     SimRegion->Bounds = AddRadiusTo(SimRegion->UpdatableBounds,
                                     V3(UpdateSafetyMargin, UpdateSafetyMargin, UpdateSafetyMarginZ));
 
@@ -227,7 +230,9 @@ EndSim(sim_region *Region, game_state *GameState)
                 NewCameraP.AbsTileY -= 9;
             }
 #else
+            real32 CamZOffset = NewCameraP.Offset_.Z;
             NewCameraP = Stored->P;
+            NewCameraP.Offset_.Z = CamZOffset;
 #endif
 
             GameState->CameraP = NewCameraP;
@@ -356,6 +361,9 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     v3 OldPlayerP  = Entity->P;
     v3 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
     Entity->dP = ddP*dt + Entity->dP;
+    // TODO Upgrade physical motion routinges to handle capping
+    // the maximum velocity?
+    Assert(LengthSq(Entity->dP) <= Square(SimRegion->MaxEntityVelocity));
     v3 NewPlayerP = OldPlayerP + PlayerDelta;
 
     real32 DistanceRemaining = Entity->DistanceLimit;
@@ -460,6 +468,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     if(Entity->P.Z < 0)
     {
         Entity->P.Z = 0;
+        Entity->dP.Z = 0;
     }
             
     if(Entity->DistanceLimit != 0.0f)
