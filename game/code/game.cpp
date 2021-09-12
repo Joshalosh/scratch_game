@@ -262,8 +262,8 @@ AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t Ab
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
     add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Wall, P);
 
-    Entity.Low->Sim.Height = GameState->World->TileSideInMeters;
-    Entity.Low->Sim.Width  = Entity.Low->Sim.Height;
+    Entity.Low->Sim.Dim.Y = GameState->World->TileSideInMeters;
+    Entity.Low->Sim.Dim.X  = Entity.Low->Sim.Dim.Y;
     AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     return(Entity);
@@ -287,8 +287,8 @@ AddSword(game_state *GameState)
 {
     add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Sword, NullPosition());
 
-    Entity.Low->Sim.Height   = 0.5f;
-    Entity.Low->Sim.Width    = 1.0f;
+    Entity.Low->Sim.Dim.Y   = 0.5f;
+    Entity.Low->Sim.Dim.X    = 1.0f;
     AddFlag(&Entity.Low->Sim, EntityFlag_Nonspatial);
 
     return(Entity);
@@ -300,8 +300,8 @@ AddPlayer(game_state *GameState)
     world_position P = GameState->CameraP;
     add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Hero, P);
 
-    Entity.Low->Sim.Height   = 0.5f;
-    Entity.Low->Sim.Width    = 1.0f;
+    Entity.Low->Sim.Dim.Y   = 0.5f;
+    Entity.Low->Sim.Dim.X    = 1.0f;
     AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     InitHitPoints(Entity.Low, 3);
@@ -323,8 +323,8 @@ AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
     add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Monster, P);
 
-    Entity.Low->Sim.Height   = 0.5f;
-    Entity.Low->Sim.Width    = 1.0f;
+    Entity.Low->Sim.Dim.Y   = 0.5f;
+    Entity.Low->Sim.Dim.X    = 1.0f;
     AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     InitHitPoints(Entity.Low, 3);
@@ -338,8 +338,8 @@ AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
     add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Familiar, P);
 
-    Entity.Low->Sim.Height   = 0.5f;
-    Entity.Low->Sim.Width    = 1.0f;
+    Entity.Low->Sim.Dim.Y   = 0.5f;
+    Entity.Low->Sim.Dim.X    = 1.0f;
     AddFlag(&Entity.Low->Sim, EntityFlag_Collides);
 
     return(Entity);
@@ -504,6 +504,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_shadow.bmp");
         GameState->Tree =
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tree00.bmp");
+        GameState->Stairwell =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock01.bmp");
         GameState->Sword =
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock03.bmp");
 
@@ -541,41 +543,39 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         world *World = GameState->World;
         InitialiseWorld(World, 1.4f);
 
-        int32_t TileSideInPixels  = 60;
+        int32_t TileSideInPixels = 60;
         GameState->MetersToPixels = (real32)TileSideInPixels / (real32)World->TileSideInMeters;
 
         uint32_t RandomNumberIndex =  0;
-        uint32_t TilesPerWidth     = 17;
-        uint32_t TilesPerHeight    =  9;
+        uint32_t TilesPerWidth = 17;
+        uint32_t TilesPerHeight = 9;
 
         uint32_t ScreenBaseX = 0;
         uint32_t ScreenBaseY = 0;
         uint32_t ScreenBaseZ = 0;
-        uint32_t ScreenX  = ScreenBaseX;
-        uint32_t ScreenY  = ScreenBaseY;
+        uint32_t ScreenX = ScreenBaseX;
+        uint32_t ScreenY = ScreenBaseY;
         uint32_t AbsTileZ = ScreenBaseZ;
 
-        bool32 DoorLeft   = false;
-        bool32 DoorRight  = false;
-        bool32 DoorTop    = false;
+        bool32 DoorLeft = false;
+        bool32 DoorRight = false;
+        bool32 DoorTop = false;
         bool32 DoorBottom = false;
-        bool32 DoorUp     = false;
-        bool32 DoorDown   = false;
+        bool32 DoorUp = false;
+        bool32 DoorDown = false;
         for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
         {
             Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
 
             uint32_t RandomChoice; 
-//            if(DoorUp || DoorDown)
+            if(DoorUp || DoorDown)
             {
                 RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
             }
-#if 0
             else
             {
                 RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
             }
-#endif
 
             bool32 CreatedZDoor = false;
             if(RandomChoice == 2)
@@ -627,16 +627,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         TileValue = 2;
                     }
 
-                    if((TileX == 10) && (TileY == 6))
+                    if(CreatedZDoor)
                     {
-                        if(DoorUp)
+                        if((TileX == 10) && (TileY == 6))
                         {
-                            TileValue = 3;
-                        }
+                            AddStair(GameState, AbsTileX, AbsTileY, AbsTileZ);
 
-                        if(DoorDown)
-                        {
-                            TileValue = 4;
+                            if(DoorUp)
+                            {
+                                TileValue = 3;
+                            }
+
+                            if(DoorDown)
+                            {
+                                TileValue = 4;
+                            }
                         }
                     }
 
@@ -647,22 +652,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 }
             }
 
-            DoorLeft   = DoorRight;
+            DoorLeft = DoorRight;
             DoorBottom = DoorTop;
 
             if(CreatedZDoor)
             {
                 DoorDown = !DoorDown;
-                DoorUp   = !DoorUp;
+                DoorUp = !DoorUp;
             }
             else
             {
-                DoorUp   = false;
+                DoorUp = false;
                 DoorDown = false;
             }
 
             DoorRight = false;
-            DoorTop   = false;
+            DoorTop = false;
 
             if(RandomChoice == 2)
             {

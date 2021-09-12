@@ -107,6 +107,15 @@ AddEntityRaw(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex
     return(Entity);
 }
 
+inline bool32
+EntityOverlapsRectangle(v3 P, v3 Dim, rectangle3 Rect)
+{
+    rectangle3 Grown = AddRadiusTo(Rect, 0.5f*Dim);
+    bool32 Result = IsInRectangle(Grown, P);
+    
+    return(Result);
+}
+
 internal sim_entity *
 AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, low_entity *Source, v3 *SimP)
 {
@@ -116,7 +125,7 @@ AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, l
         if(SimP)
         {
             Dest->P = *SimP;
-            Dest->Updatable = IsInRectangle(SimRegion->UpdatableBounds, Dest->P);
+            Dest->Updatable = EntityOverlapsRectangle(Dest->P, Dest->Dim, SimRegion->UpdatableBounds);
         }
         else
         {
@@ -173,7 +182,7 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
                         if(!IsSet(&Low->Sim, EntityFlag_Nonspatial))
                         {
                             v3 SimSpaceP = GetSimSpaceP(SimRegion, Low);
-                            if(IsInRectangle(SimRegion->Bounds, SimSpaceP))
+                            if(EntityOverlapsRectangle(SimSpaceP, Low->Sim.Dim, SimRegion->Bounds))
                             {
                                AddEntity(GameState, SimRegion, LowEntityIndex, Low, &SimSpaceP);
                             }
@@ -397,9 +406,9 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                     sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
                     if(ShouldCollide(GameState, Entity, TestEntity))
                     {
-                        v3 MinkowskiDiameter = {TestEntity->Width  + Entity->Width,
-                                                TestEntity->Height + Entity->Height,
-                                                2.0f*World->TileDepthInMeters};
+                        v3 MinkowskiDiameter = {TestEntity->Dim.X + Entity->Dim.X,
+                                                TestEntity->Dim.Y + Entity->Dim.Y,
+                                                TestEntity->Dim.Z + Entity->Dim.Z};
 
                         v3 MinCorner = -0.5f*MinkowskiDiameter;
                         v3 MaxCorner =  0.5f*MinkowskiDiameter;

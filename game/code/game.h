@@ -5,11 +5,12 @@
 
  ARCHITECTURE EXPLORATION
  - Z
-   - Minkowski inclusion for sim region begin / updatable bounds
    - Figure out how you go 'up' and 'down', and how is this rendered?
- - Collision detection?
+   - Frinstances
+ - Collision detection
    - Entry / exit?
    - What's the plan for robustness / shape definition?
+   - Implement reprojection to handle interpenetration
  - Implement multiple sim regions per fram
    - Per-entity clocking
    - Sim region merging? For multiple players?
@@ -108,8 +109,8 @@ ZeroSize(memory_index Size, void *Ptr)
 
 struct loaded_bitmap
 {
-    int32_t  Width;
-    int32_t  Height;
+    int32_t Width;
+    int32_t Height;
     uint32_t *Pixels;
 };
 
@@ -176,6 +177,7 @@ struct game_state
 
     loaded_bitmap Tree;
     loaded_bitmap Sword;
+    loaded_bitmap Stairwell;
     real32 MetersToPixels;
 
     // Must be a power of two.

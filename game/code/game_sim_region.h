@@ -16,6 +16,7 @@ enum entity_type
     EntityType_Familiar,
     EntityType_Monster,
     EntityType_Sword,
+    EntityType_Stairwell,
 };
 
 #define HIT_POINT_SUB_COUNT 4
@@ -54,7 +55,7 @@ struct sim_entity
 
     real32 DistanceLimit;
 
-    real32 Width, Height;
+    v3 Dim;
 
     uint32_t FacingDirection;
     real32 tBob;
