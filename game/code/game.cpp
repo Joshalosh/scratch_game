@@ -269,6 +269,19 @@ AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t Ab
     return(Entity);
 }
 
+internal add_low_entity_result
+AddStair(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+{
+    world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
+    add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Stairwell, P);
+
+    Entity.Low->Sim.Dim.Y = GameState->World->TileSideInMeters;
+    Entity.Low->Sim.Dim.X  = Entity.Low->Sim.Dim.Y;
+    Entity.Low->Sim.Dim.Z = GameState->World->TileDepthInMeters;
+
+    return(Entity);
+}
+
 internal void
 InitHitPoints(low_entity *EntityLow, uint32_t HitPointCount)
 {
@@ -505,33 +518,33 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Tree =
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tree00.bmp");
         GameState->Stairwell =
-            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock01.bmp");
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock02.bmp");
         GameState->Sword =
             DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock03.bmp");
 
         hero_bitmaps *Bitmap;
 
         Bitmap = GameState->HeroBitmaps;
-        Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_head.bmp");
-        Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_cape.bmp");
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_torso.bmp");
         Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
-        Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_head.bmp");
-        Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_cape.bmp");
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_torso.bmp");
         Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
-        Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_head.bmp");
-        Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_cape.bmp");
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_torso.bmp");
         Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
-        Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_head.bmp");
-        Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_cape.bmp");
+        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_head.bmp");
+        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_torso.bmp");
         Bitmap->Align = V2(72, 182);
         ++Bitmap;
@@ -606,49 +619,39 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     uint32_t AbsTileX = ScreenX*TilesPerWidth + TileX;
                     uint32_t AbsTileY = ScreenY*TilesPerHeight + TileY;
 
-                    uint32_t TileValue = 1;
+                    bool32 ShouldBeDoor = false;
                     if((TileX == 0) && (!DoorLeft || (TileY != (TilesPerHeight/2))))
                     {
-                        TileValue = 2;
+                        ShouldBeDoor = true;
                     }
 
                     if((TileX == (TilesPerWidth - 1)) && (!DoorRight || (TileY != (TilesPerHeight/2))))
                     {
-                        TileValue = 2;
+                        ShouldBeDoor = true;
                     }
 
                     if((TileY == 0) && (!DoorBottom || (TileX != (TilesPerWidth/2))))
                     {
-                        TileValue = 2;
+                        ShouldBeDoor = true;
                     }
 
                     if((TileY == (TilesPerHeight - 1)) && (!DoorTop || (TileX != (TilesPerWidth/2))))
                     {
-                        TileValue = 2;
+                        ShouldBeDoor = true;
                     }
 
-                    if(CreatedZDoor)
-                    {
-                        if((TileX == 10) && (TileY == 6))
-                        {
-                            AddStair(GameState, AbsTileX, AbsTileY, AbsTileZ);
-
-                            if(DoorUp)
-                            {
-                                TileValue = 3;
-                            }
-
-                            if(DoorDown)
-                            {
-                                TileValue = 4;
-                            }
-                        }
-                    }
-
-                    if(TileValue == 2)
+                    if(ShouldBeDoor)
                     {
                         AddWall(GameState, AbsTileX, AbsTileY, AbsTileZ);
                     }
+                    else if(CreatedZDoor)
+                    {
+                        if((TileX == 10) && (TileY == 6))
+                        {
+                            AddStair(GameState, AbsTileX, AbsTileY, DoorDown ? AbsTileZ - 1 : AbsTileZ);
+                        }
+                    }
+
                 }
             }
 
@@ -708,7 +711,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                    CameraTileZ);
         GameState->CameraP = NewCameraP;
 
-        AddMonster(GameState, CameraTileX + 2, CameraTileY + 2, CameraTileZ);
+        AddMonster(GameState, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
         for(int FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
         {
             int32_t FamiliarOffsetX = (RandomNumberTable[RandomNumberIndex++] % 10) - 7;
@@ -880,6 +883,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 case EntityType_Wall:
                 {
                     PushBitmap(&PieceGroup, &GameState->Tree, V2(0, 0), 0, V2(40, 80));
+                } break;
+
+                case EntityType_Stairwell:
+                {
+                    PushBitmap(&PieceGroup, &GameState->Stairwell, V2(0, 0), 0, V2(37, 37));
                 } break;
 
                 case EntityType_Sword:
