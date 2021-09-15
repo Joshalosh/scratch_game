@@ -16,6 +16,7 @@
  - Implement multiple sim regions per fram
    - Per-entity clocking
    - Sim region merging? For multiple players?
+   - Simple zoomed-out view for testing
 
  - Debug code
    - Logging
@@ -150,21 +151,16 @@ struct controlled_hero
     real32 dZ;
 };
 
-enum pairwise_collision_rule_flag
-{
-    PairCollisionFlag_ShouldCollide = 0x1,
-    PairCollisionFlag_Temporary = 0x2,
-};
 struct pairwise_collision_rule
 {
-    bool32 ShouldCollide;
+    bool32 CanCollide;
     uint32_t StorageIndexA;
     uint32_t StorageIndexB;
 
     pairwise_collision_rule *NextInHash;
 };
 struct game_state;
-internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide);
+internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 CanCollide);
 internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex); 
 
 struct game_state

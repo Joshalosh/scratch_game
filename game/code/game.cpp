@@ -451,7 +451,7 @@ ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex)
 }
 
 internal void
-AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide)
+AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 CanCollide)
 {
     if(StorageIndexA > StorageIndexB)
     {
@@ -495,7 +495,7 @@ AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t Storage
     {
         Found->StorageIndexA = StorageIndexA;
         Found->StorageIndexB = StorageIndexB;
-        Found->ShouldCollide = ShouldCollide;
+        Found->CanCollide = CanCollide;
     }
 }
 
