@@ -4,13 +4,15 @@
  TODO
 
  ARCHITECTURE EXPLORATION
- - Z
-   - Figure out how you go 'up' and 'down', and how is this rendered?
-   - Frinstances
  - Collision detection
+   - Transient collision rules, clear based on flag
+     - Allow non-stransient rules to overide transient ones
    - Entry / exit?
    - What's the plan for robustness / shape definition?
    - Implement reprojection to handle interpenetration
+ - Z
+   - Figure out how you go 'up' and 'down', and how is this rendered?
+   - Frinstances
  - Implement multiple sim regions per fram
    - Per-entity clocking
    - Sim region merging? For multiple players?
@@ -148,6 +150,11 @@ struct controlled_hero
     real32 dZ;
 };
 
+enum pairwise_collision_rule_flag
+{
+    PairCollisionFlag_ShouldCollide = 0x1,
+    PairCollisionFlag_Temporary = 0x2,
+};
 struct pairwise_collision_rule
 {
     bool32 ShouldCollide;
@@ -156,6 +163,9 @@ struct pairwise_collision_rule
 
     pairwise_collision_rule *NextInHash;
 };
+struct game_state;
+internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide);
+internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex); 
 
 struct game_state
 {
@@ -204,9 +214,6 @@ GetLowEntity(game_state *GameState, uint32_t Index)
 
     return(Result);
 }
-
-internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide);
-internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex); 
 
 #define GAME_H
 #endif
