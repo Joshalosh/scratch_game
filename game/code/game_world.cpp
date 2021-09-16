@@ -276,11 +276,11 @@ ChangeEntityLocation(memory_arena *Arena, world *World,
     if(NewP)
     {
         LowEntity->P = *NewP;
-        ClearFlag(&LowEntity->Sim, EntityFlag_Nonspatial);
+        ClearFlags(&LowEntity->Sim, EntityFlag_Nonspatial);
     }
     else
     {
         LowEntity->P = NullPosition();
-        AddFlag(&LowEntity->Sim, EntityFlag_Nonspatial);
+        AddFlags(&LowEntity->Sim, EntityFlag_Nonspatial);
     }
 }

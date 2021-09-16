@@ -92,7 +92,7 @@ AddEntityRaw(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex
                 LoadEntityReference(GameState, SimRegion, &Entity->Sword);
 
                 Assert(!IsSet(&Source->Sim, EntityFlag_Simming));
-                AddFlag(&Source->Sim, EntityFlag_Simming);
+                AddFlags(&Source->Sim, EntityFlag_Simming);
             }
 
             Entity->StorageIndex = StorageIndex;
@@ -293,6 +293,11 @@ CanCollide(game_state *GameState, sim_entity *A, sim_entity *B)
             Result = true;
         }
 
+        if((A->Type == EntityType_Stairwell) || (B->Type == EntityType_Stairwell))
+        {
+            Result = false;
+        }
+
         // TODO Implement a better hash function.
         uint32_t HashBucket = A->StorageIndex & (ArrayCount(GameState->CollisionRuleHash) - 1);
         for(pairwise_collision_rule *Rule = GameState->CollisionRuleHash[HashBucket];
@@ -340,11 +345,6 @@ HandleCollision(game_state *GameState, sim_entity *A, sim_entity *B)
         }
     }
 
-    if((A->Type == EntityType_Hero) && (B->Type == EntityType_Stairwell))
-    {
-        StopsOnCollision = false;
-    }
-
     // TODO Handle stairs.
 //    Entity->AbsTileZ += HitLow->dAbsTileZ;
 
@@ -356,19 +356,26 @@ CanOverlap(game_state *GameState, sim_entity *Mover, sim_entity *Region)
 {
     bool32 Result = false;
 
-    if(Region->Type == EntityType_Stairwell)
+    if(Mover != Region)
     {
-        Result = true;
+        if(Region->Type == EntityType_Stairwell)
+        {
+            Result = true;
+        }
     }
 
     return(Result);
 }
 
 internal void
-HandleOverlap(game_state *GameState, sim_entity *Mover, sim_entity *Region, real32 dt)
+HandleOverlap(game_state *GameState, sim_entity *Mover, sim_entity *Region, real32 dt, real32 *Ground)
 {
     if(Region->Type == EntityType_Stairwell)
     {
+        rectangle3 RegionRect = RectCenterDim(Region->P, Region->Dim);
+        v3 Bary = GetBarycentric(RegionRect, Mover->P);
+        
+        *Ground = Lerp(RegionRect.Min.Z, Bary.Y, RegionRect.Max.Z);
     }
 }
 
@@ -378,25 +385,6 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     Assert(!IsSet(Entity, EntityFlag_Nonspatial));
 
     world *World = SimRegion->World;
-
-    // Handle events based on area overlapping.
-    {
-        rectangle3 EntityRect = RectCenterDim(Entity->P, Entity->Dim);
-
-        // TODO Spatial partition here
-        for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
-        {
-            sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
-            if(CanOverlap(GameState, Entity, TestEntity))
-            {
-                rectangle3 TestEntityRect = RectCenterDim(TestEntity->P, TestEntity->Dim);
-                if(RectanglesIntersect(EntityRect, TestEntityRect))
-                {
-                    HandleOverlap(GameState, Entity, TestEntity, dt);
-                }
-            }
-        }
-    }
 
     if(MoveSpec->UnitMaxAccelVector)
     {
@@ -513,6 +501,27 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
         else
         {
             break;
+        }
+    }
+
+    real32 Ground = 0.0f;
+
+    // Handle events based on area overlapping.
+    {
+        rectangle3 EntityRect = RectCenterDim(Entity->P, Entity->Dim);
+
+        // TODO Spatial partition here
+        for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
+        {
+            sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
+            if(CanOverlap(GameState, Entity, TestEntity))
+            {
+                rectangle3 TestEntityRect = RectCenterDim(TestEntity->P, TestEntity->Dim);
+                if(RectanglesIntersect(EntityRect, TestEntityRect))
+                {
+                    HandleOverlap(GameState, Entity, TestEntity, dt, &Ground);
+                }
+            }
         }
     }
 
