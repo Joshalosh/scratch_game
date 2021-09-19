@@ -112,7 +112,7 @@ EntityOverlapsRectangle(v3 P, v3 Dim, rectangle3 Rect)
 {
     rectangle3 Grown = AddRadiusTo(Rect, 0.5f*Dim);
     bool32 Result = IsInRectangle(Grown, P);
-    
+
     return(Result);
 }
 
@@ -164,27 +164,30 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
     world_position MinChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMinCorner(SimRegion->Bounds));
     world_position MaxChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMaxCorner(SimRegion->Bounds));
 
-    for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
+    for(int32_t ChunkZ = MinChunkP.ChunkZ; ChunkZ <= MaxChunkP.ChunkZ; ++ChunkZ)
     {
-        for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
+        for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
         {
-            world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, SimRegion->Origin.ChunkZ);
-            if(Chunk)
+            for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
             {
-                for(world_entity_block *Block = &Chunk->FirstBlock; Block; Block = Block->Next)
+                world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, ChunkZ);
+                if(Chunk)
                 {
-                    for(uint32_t EntityIndexIndex = 0;
-                        EntityIndexIndex < Block->EntityCount;
-                        ++EntityIndexIndex)
+                    for(world_entity_block *Block = &Chunk->FirstBlock; Block; Block = Block->Next)
                     {
-                        uint32_t LowEntityIndex = Block->LowEntityIndex[EntityIndexIndex];
-                        low_entity *Low = GameState->LowEntities + LowEntityIndex;
-                        if(!IsSet(&Low->Sim, EntityFlag_Nonspatial))
+                        for(uint32_t EntityIndexIndex = 0;
+                            EntityIndexIndex < Block->EntityCount;
+                            ++EntityIndexIndex)
                         {
-                            v3 SimSpaceP = GetSimSpaceP(SimRegion, Low);
-                            if(EntityOverlapsRectangle(SimSpaceP, Low->Sim.Dim, SimRegion->Bounds))
+                            uint32_t LowEntityIndex = Block->LowEntityIndex[EntityIndexIndex];
+                            low_entity *Low = GameState->LowEntities + LowEntityIndex;
+                            if(!IsSet(&Low->Sim, EntityFlag_Nonspatial))
                             {
-                               AddEntity(GameState, SimRegion, LowEntityIndex, Low, &SimSpaceP);
+                                v3 SimSpaceP = GetSimSpaceP(SimRegion, Low);
+                                if(EntityOverlapsRectangle(SimSpaceP, Low->Sim.Dim, SimRegion->Bounds))
+                                {
+                                    AddEntity(GameState, SimRegion, LowEntityIndex, Low, &SimSpaceP);
+                                }
                             }
                         }
                     }
@@ -373,7 +376,7 @@ HandleOverlap(game_state *GameState, sim_entity *Mover, sim_entity *Region, real
     if(Region->Type == EntityType_Stairwell)
     {
         rectangle3 RegionRect = RectCenterDim(Region->P, Region->Dim);
-        v3 Bary = GetBarycentric(RegionRect, Mover->P);
+        v3 Bary = Clamp01(GetBarycentric(RegionRect, Mover->P));
         
         *Ground = Lerp(RegionRect.Min.Z, Bary.Y, RegionRect.Max.Z);
     }
@@ -401,7 +404,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     ddP += -MoveSpec->Drag*Entity->dP;
     ddP += V3(0, 0, -9.8f); // This is gravity.
 
-    v3 OldPlayerP  = Entity->P;
+    v3 OldPlayerP = Entity->P;
     v3 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
     Entity->dP = ddP*dt + Entity->dP;
     // TODO Upgrade physical motion routinges to handle capping
@@ -445,7 +448,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                                 TestEntity->Dim.Z + Entity->Dim.Z};
 
                         v3 MinCorner = -0.5f*MinkowskiDiameter;
-                        v3 MaxCorner =  0.5f*MinkowskiDiameter;
+                        v3 MaxCorner = 0.5f*MinkowskiDiameter;
 
                         v3 Rel = Entity->P - TestEntity->P;
 
@@ -453,28 +456,28 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                     &tMin, MinCorner.Y, MaxCorner.Y))
                         {
                             WallNormal = V3(-1, 0, 0);
-                            HitEntity  = TestEntity;
+                            HitEntity = TestEntity;
                         }
 
                         if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                     &tMin, MinCorner.Y, MaxCorner.Y))
                         {
                             WallNormal = V3(1, 0, 0);
-                            HitEntity  = TestEntity;
+                            HitEntity = TestEntity;
                         }
 
                         if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                     &tMin, MinCorner.X, MaxCorner.X))
                         {
                             WallNormal = V3(0, -1, 0);
-                            HitEntity  = TestEntity;
+                            HitEntity = TestEntity;
                         }
 
                         if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                     &tMin, MinCorner.X, MaxCorner.X))
                         {
                             WallNormal = V3(0, 1, 0);
-                            HitEntity  = TestEntity;
+                            HitEntity = TestEntity;
                         }
                     }
                 }
@@ -490,7 +493,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                 if(StopsOnCollision)
                 {
                     PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
-                    Entity->dP = Entity->dP - 1*Inner(Entity->dP,  WallNormal)*WallNormal;
+                    Entity->dP = Entity->dP - 1*Inner(Entity->dP, WallNormal)*WallNormal;
                 }
             }
             else
@@ -526,9 +529,9 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     }
 
     // TODO This has to become real height handling / ground collision / etc.
-    if(Entity->P.Z < 0)
+    if(Entity->P.Z < Ground)
     {
-        Entity->P.Z = 0;
+        Entity->P.Z = Ground;
         Entity->dP.Z = 0;
     }
             

@@ -125,6 +125,31 @@ Lerp(real32 A, real32 t, real32 B)
     return(Result);
 }
 
+inline real32
+Clamp(real32 Min, real32 Value, real32 Max)
+{
+    real32 Result = Value;
+
+    if(Result < Min)
+    {
+        Result = Min;
+    }
+    else if(Result > Max)
+    {
+        Result = Max;
+    }
+
+    return(Result);
+}
+
+inline real32
+Clamp01(real32 Value)
+{
+    real32 Result = Clamp(0.0f, Value, 1.0f);
+
+    return(Result);
+}
+
 //
 // v2 OPERATIONS
 //
@@ -332,6 +357,18 @@ inline real32
 Length(v3 A)
 {
     real32 Result = SquareRoot(LengthSq(A));
+    return(Result);
+}
+
+inline v3
+Clamp01(v3 Value)
+{
+    v3 Result;
+
+    Result.X = Clamp01(Value.X);
+    Result.Y = Clamp01(Value.Y);
+    Result.Z = Clamp01(Value.Z);
+
     return(Result);
 }
 
