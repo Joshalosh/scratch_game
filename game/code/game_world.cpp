@@ -24,7 +24,7 @@ IsCanonical(real32 ChunkDim, real32 TileRel)
 {
     real32 Epsilon = 0.01f;
     bool32 Result = ((TileRel >= -(0.5f*ChunkDim + Epsilon)) &&
-                     (TileRel <=  (0.5f*ChunkDim + Epsilon)));
+                     (TileRel <= (0.5f*ChunkDim + Epsilon)));
     return(Result);
 }
 
@@ -58,9 +58,9 @@ GetWorldChunk(world *World, int32_t ChunkX, int32_t ChunkY, int32_t ChunkZ,
     Assert(ChunkX > -TILE_CHUNK_SAFE_MARGIN);
     Assert(ChunkY > -TILE_CHUNK_SAFE_MARGIN);
     Assert(ChunkZ > -TILE_CHUNK_SAFE_MARGIN);
-    Assert(ChunkX <  TILE_CHUNK_SAFE_MARGIN);
-    Assert(ChunkY <  TILE_CHUNK_SAFE_MARGIN);
-    Assert(ChunkZ <  TILE_CHUNK_SAFE_MARGIN);
+    Assert(ChunkX < TILE_CHUNK_SAFE_MARGIN);
+    Assert(ChunkY < TILE_CHUNK_SAFE_MARGIN);
+    Assert(ChunkZ < TILE_CHUNK_SAFE_MARGIN);
 
     uint32_t HashValue = 19*ChunkX + 7*ChunkY + 3*ChunkZ;
     uint32_t HashSlot = HashValue & (ArrayCount(World->ChunkHash) - 1);
@@ -104,8 +104,8 @@ InitialiseWorld(world *World, real32 TileSideInMeters)
 {
     World->TileSideInMeters = TileSideInMeters;
     World->ChunkDimInMeters = {(real32)TILES_PER_CHUNK*TileSideInMeters,
-                                (real32)TILES_PER_CHUNK*TileSideInMeters,
-                                (real32)TileSideInMeters};
+                               (real32)TILES_PER_CHUNK*TileSideInMeters,
+                               (real32)TileSideInMeters};
     World->TileDepthInMeters = (real32)TileSideInMeters;
     World->FirstFree = 0;
 
