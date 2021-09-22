@@ -389,6 +389,11 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
 
     world *World = SimRegion->World;
 
+    if(Entity->Type == EntityType_Hero)
+    {
+        int BreakHere = 5;
+    }
+
     if(MoveSpec->UnitMaxAccelVector)
     {
         real32 ddPLength = LengthSq(ddP);
@@ -402,7 +407,10 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     
     //TODO: Diagonal will be faster! Fix with vectors
     ddP += -MoveSpec->Drag*Entity->dP;
-    ddP += V3(0, 0, -9.8f); // This is gravity.
+    if(!IsSet(Entity, EntityFlag_ZSupported))
+    {
+        ddP += V3(0, 0, -9.8f); // This is gravity.
+    }
 
     v3 OldPlayerP = Entity->P;
     v3 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
@@ -529,10 +537,17 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     }
 
     // TODO This has to become real height handling / ground collision / etc.
-    if(Entity->P.Z < Ground)
+    if((Entity->P.Z <= Ground) ||
+       (IsSet(Entity, EntityFlag_ZSupported) &&
+        (Entity->dP.Z == 0.0f)))
     {
         Entity->P.Z = Ground;
         Entity->dP.Z = 0;
+        AddFlags(Entity, EntityFlag_ZSupported);
+    }
+    else
+    {
+        ClearFlags(Entity, EntityFlag_ZSupported);
     }
             
     if(Entity->DistanceLimit != 0.0f)
