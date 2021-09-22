@@ -276,9 +276,10 @@ AddStair(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t A
                                                      V3(0.0f, 0.0f, 0.5f*GameState->World->TileDepthInMeters));
     add_low_entity_result Entity = AddLowEntity(GameState, EntityType_Stairwell, P);
 
-    Entity.Low->Sim.Dim.Y = GameState->World->TileSideInMeters;
-    Entity.Low->Sim.Dim.X = Entity.Low->Sim.Dim.Y;
+    Entity.Low->Sim.Dim.X = GameState->World->TileSideInMeters;
+    Entity.Low->Sim.Dim.Y = 2.0f*GameState->World->TileSideInMeters;
     Entity.Low->Sim.Dim.Z = GameState->World->TileDepthInMeters;
+    AddFlags(&Entity.Low->Sim, EntityFlag_Collides);
 
     return(Entity);
 }
@@ -647,7 +648,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     }
                     else if(CreatedZDoor)
                     {
-                        if((TileX == 10) && (TileY == 6))
+                        if((TileX == 10) && (TileY == 5))
                         {
                             AddStair(GameState, AbsTileX, AbsTileY, DoorDown ? AbsTileZ - 1 : AbsTileZ);
                         }
@@ -911,6 +912,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     sim_entity *ClosestHero = 0;
                     real32 ClosestHeroDSq = Square(10.0f);
 
+#if 0
                     sim_entity *TestEntity = SimRegion->Entities;
                     for(uint32_t TestEntityIndex = 0;
                         TestEntityIndex < SimRegion->EntityCount;
@@ -926,6 +928,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             }
                         }
                     }
+#endif
 
                     if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
                     {
