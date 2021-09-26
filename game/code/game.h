@@ -5,10 +5,19 @@
 
  ARCHITECTURE EXPLORATION
  - Z
+   - Need to make a solid concept of ground levels so the camera can
+     be freely placed in Z and have multiple ground levels in one sim
+     region.
    - 3D collision detection working properly
    - Figure out how you go 'up' and 'down', and how is this rendered?
    - Frinstances
+     ZFUDGE
  - Collision detection
+   - Clean up predicate proliferation. Can we make a nice clean
+     set of flags/rules so that it's easy to understand how
+     things work in terms of special handling? This may involve
+     making the iteration handle everything instead of handling
+     overlap outside and so on.
    - Transient collision rules, clear based on flag
      - Allow non-stransient rules to overide transient ones
    - Entry / exit?

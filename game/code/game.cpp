@@ -972,8 +972,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 MoveEntity(GameState, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
 
-            real32 EntityGroundPointX = ScreenCentreX + MetersToPixels*Entity->P.X;
-            real32 EntityGroundPointY = ScreenCentreY - MetersToPixels*Entity->P.Y;
+            real32 ZFudge = (1.0f + 0.1f*Entity->P.Z);
+
+            real32 EntityGroundPointX = ScreenCentreX + MetersToPixels*ZFudge*Entity->P.X;
+            real32 EntityGroundPointY = ScreenCentreY - MetersToPixels*ZFudge*Entity->P.Y;
             real32 EntityZ = -MetersToPixels*Entity->P.Z;
 #if 0
             v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*LowEntity->Width,
