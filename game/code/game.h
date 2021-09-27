@@ -5,10 +5,11 @@
 
  ARCHITECTURE EXPLORATION
  - Z
+   - Go through and define how tall everything should be
+   - Make sure flying things can go over low walls
    - Need to make a solid concept of ground levels so the camera can
      be freely placed in Z and have multiple ground levels in one sim
      region.
-   - 3D collision detection working properly
    - Figure out how you go 'up' and 'down', and how is this rendered?
    - Frinstances
      ZFUDGE
