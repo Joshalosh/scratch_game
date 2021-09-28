@@ -34,6 +34,8 @@
    - Logging
    - Diagramming
    - A little GUI, switches / sliders / etc.
+   - Draw tile chunks so we can verify that things are aligned /
+     in the chunks we want them to be in
 
  - Audio
    - Sound effect triggers
