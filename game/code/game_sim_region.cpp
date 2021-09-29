@@ -570,6 +570,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     }
 
     // TODO This has to become real height handling / ground collision / etc.
+    Ground += 0.5f*Entity->Dim.Z;
     if((Entity->P.Z <= Ground) ||
        (IsSet(Entity, EntityFlag_ZSupported) &&
         (Entity->dP.Z == 0.0f)))

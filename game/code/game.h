@@ -5,6 +5,8 @@
 
  ARCHITECTURE EXPLORATION
  - Z
+   - Debug drawing of Z levels and inclusion of Z to make sure
+     that there are no bugs
    - Go through and define how tall everything should be
    - Make sure flying things can go over low walls
    - Need to make a solid concept of ground levels so the camera can

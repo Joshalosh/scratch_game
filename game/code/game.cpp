@@ -167,8 +167,8 @@ struct bitmap_header
     uint16_t BitsPerPixel;
     uint32_t Compression;
     uint32_t SizeOfBitmap;
-    int32_t  HorzResolution;
-    int32_t  VertResolution;
+    int32_t HorzResolution;
+    int32_t VertResolution;
     uint32_t ColorsUsed;
     uint32_t ColorsImportant;
 
@@ -322,7 +322,7 @@ AddSword(game_state *GameState)
 internal add_low_entity_result
 AddPlayer(game_state *GameState)
 {
-    v3 Dim = {1.0f, 0.5f, 0.63f};
+    v3 Dim = {1.0f, 0.5f, 1.2f};
     world_position P = GameState->CameraP;
     add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Hero, P, Dim);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
