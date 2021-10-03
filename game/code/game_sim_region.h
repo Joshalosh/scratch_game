@@ -68,6 +68,9 @@ struct sim_entity
     hit_point HitPoint[16];
 
     entity_reference Sword;
+
+    // TODO Only for Stairwells
+    real32 WalkableHeight;
 };
 
 struct sim_entity_hash
