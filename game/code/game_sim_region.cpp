@@ -108,10 +108,10 @@ AddEntityRaw(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex
 }
 
 inline bool32
-EntityOverlapsRectangle(v3 P, v3 Dim, rectangle3 Rect)
+EntityOverlapsRectangle(v3 P, sim_entity_collision_volume Volume, rectangle3 Rect)
 {
-    rectangle3 Grown = AddRadiusTo(Rect, 0.5f*Dim);
-    bool32 Result = IsInRectangle(Grown, P);
+    rectangle3 Grown = AddRadiusTo(Rect, 0.5f*Volume.Dim);
+    bool32 Result = IsInRectangle(Grown, P + Volume.OffsetP);
 
     return(Result);
 }
@@ -125,7 +125,7 @@ AddEntity(game_state *GameState, sim_region *SimRegion, uint32_t StorageIndex, l
         if(SimP)
         {
             Dest->P = *SimP;
-            Dest->Updatable = EntityOverlapsRectangle(Dest->P, Dest->Dim, SimRegion->UpdatableBounds);
+            Dest->Updatable = EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds);
         }
         else
         {
@@ -184,7 +184,7 @@ BeginSim(memory_arena *SimArena, game_state *GameState, world *World, world_posi
                             if(!IsSet(&Low->Sim, EntityFlag_Nonspatial))
                             {
                                 v3 SimSpaceP = GetSimSpaceP(SimRegion, Low);
-                                if(EntityOverlapsRectangle(SimSpaceP, Low->Sim.Dim, SimRegion->Bounds))
+                                if(EntityOverlapsRectangle(SimSpaceP, Low->Sim.Collision->TotalVolume, SimRegion->Bounds))
                                 {
                                     AddEntity(GameState, SimRegion, LowEntityIndex, Low, &SimSpaceP);
                                 }
@@ -464,57 +464,74 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                     sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
                     if(CanCollide(GameState, Entity, TestEntity))
                     {
-                        v3 MinkowskiDiameter = {TestEntity->Dim.X + Entity->Dim.X,
-                                                TestEntity->Dim.Y + Entity->Dim.Y,
-                                                TestEntity->Dim.Z + Entity->Dim.Z};
-
-                        v3 MinCorner = -0.5f*MinkowskiDiameter;
-                        v3 MaxCorner = 0.5f*MinkowskiDiameter;
-
-                        v3 Rel = Entity->P - TestEntity->P;
-
-                        if((Rel.Z >= MinCorner.Z) && (Rel.Z < MaxCorner.Z))
+                        for(uint32_t VolumeInex = 0;
+                            VolumeIndex < Entity->Collision->VolumeCount;
+                            ++VolumeIndex)
                         {
-                            real32 tMinTest = tMin;
-                            v3 TestWallNormal = {};
+                            sim_entity_collision_volume *Volume =
+                                Entity->Collision->Volumes + VolumeIndex;
 
-                            bool32 HitThis = false;
-                            if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
-                                        &tMinTest, MinCorner.Y, MaxCorner.Y))
+                            for(uint32_t TestVolumeIndex = 0;
+                                TestVolumeIndex < TestEntity->Collision->VolumeCount;
+                                ++TestVolumeIndex)
                             {
-                                TestWallNormal = V3(-1, 0, 0);
-                                HitThis = true;
-                            }
+                                sim_entity_collision_volume *TestVolume =
+                                    TestEntity->Collision->Volumes + TestVolumeIndex;
 
-                            if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
-                                        &tMinTest, MinCorner.Y, MaxCorner.Y))
-                            {
-                                TestWallNormal = V3(1, 0, 0);
-                                HitThis = true;
-                            }
+                                v3 MinkowskiDiameter = {TestVolume->Dim.X + Volume->Dim.X,
+                                                        TestVolume->Dim.Y + Volume->Dim.Y,
+                                                        TestVolume->Dim.Z + Volume->Dim.Z};
 
-                            if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
-                                        &tMinTest, MinCorner.X, MaxCorner.X))
-                            {
-                                TestWallNormal = V3(0, -1, 0);
-                                HitThis = true;
-                            }
+                                v3 MinCorner = -0.5f*MinkowskiDiameter;
+                                v3 MaxCorner = 0.5f*MinkowskiDiameter;
 
-                            if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
-                                        &tMinTest, MinCorner.X, MaxCorner.X))
-                            {
-                                TestWallNormal = V3(0, 1, 0);
-                                HitThis = true;
-                            }
+                                v3 Rel = ((Entity->P + Volume->OffsetP) - 
+                                          (TestEntity->P + TestVolume->OffsetP));
 
-                            if(HitThis)
-                            {
-                                v3 TestP = Entity->P + tMinTest*PlayerDelta;
-                                if(SpeculativeCollide(Entity, TestEntity))
+                                if((Rel.Z >= MinCorner.Z) && (Rel.Z < MaxCorner.Z))
                                 {
-                                    tMin = tMinTest;
-                                    WallNormal = TestWallNormal;
-                                    HitEntity = TestEntity;
+                                    real32 tMinTest = tMin;
+                                    v3 TestWallNormal = {};
+
+                                    bool32 HitThis = false;
+                                    if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                                &tMinTest, MinCorner.Y, MaxCorner.Y))
+                                    {
+                                        TestWallNormal = V3(-1, 0, 0);
+                                        HitThis = true;
+                                    }
+
+                                    if(TestWall(MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                                &tMinTest, MinCorner.Y, MaxCorner.Y))
+                                    {
+                                        TestWallNormal = V3(1, 0, 0);
+                                        HitThis = true;
+                                    }
+
+                                    if(TestWall(MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                                &tMinTest, MinCorner.X, MaxCorner.X))
+                                    {
+                                        TestWallNormal = V3(0, -1, 0);
+                                        HitThis = true;
+                                    }
+
+                                    if(TestWall(MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                                &tMinTest, MinCorner.X, MaxCorner.X))
+                                    {
+                                        TestWallNormal = V3(0, 1, 0);
+                                        HitThis = true;
+                                    }
+
+                                    if(HitThis)
+                                    {
+                                        v3 TestP = Entity->P + tMinTest*PlayerDelta;
+                                        if(SpeculativeCollide(Entity, TestEntity))
+                                        {
+                                            tMin = tMinTest;
+                                            WallNormal = TestWallNormal;
+                                            HitEntity = TestEntity;
+                                        }
+                                    }
                                 }
                             }
                         }
