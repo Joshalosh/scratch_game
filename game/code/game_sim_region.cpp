@@ -464,7 +464,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                     sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
                     if(CanCollide(GameState, Entity, TestEntity))
                     {
-                        for(uint32_t VolumeInex = 0;
+                        for(uint32_t VolumeIndex = 0;
                             VolumeIndex < Entity->Collision->VolumeCount;
                             ++VolumeIndex)
                         {
@@ -567,7 +567,8 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
 
     // Handle events based on area overlapping.
     {
-        rectangle3 EntityRect = RectCenterDim(Entity->P, Entity->Dim);
+        rectangle3 EntityRect = RectCenterDim(Entity->P + Entity->Collision->TotalVolume.OffsetP,
+                                              Entity->Collision->TotalVolume.Dim);
 
         // TODO Spatial partition here
         for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
@@ -575,7 +576,8 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
             sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
             if(CanOverlap(GameState, Entity, TestEntity))
             {
-                rectangle3 TestEntityRect = RectCenterDim(TestEntity->P, TestEntity->Dim);
+                rectangle3 TestEntityRect = RectCenterDim(TestEntity->P + TestEntity->Collision->TotalVolume.OffsetP,
+                                                          TestEntity->Collision->TotalVolume.Dim);
                 if(RectanglesIntersect(EntityRect, TestEntityRect))
                 {
                     HandleOverlap(GameState, Entity, TestEntity, dt, &Ground);

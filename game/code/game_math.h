@@ -624,5 +624,16 @@ GetBarycentric(rectangle3 A, v3 P)
     return(Result);
 }
 
+inline rectangle2
+ToRectangle2(rectangle3 A)
+{
+    rectangle2 Result;
+
+    Result.Min = A.Min.XY;
+    Result.Max = A.Max.XY;
+
+    return(Result);
+}
+
 #define GAME_MATH_H
 #endif
