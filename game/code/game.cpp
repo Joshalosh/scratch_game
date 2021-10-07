@@ -245,6 +245,7 @@ AddLowEntity(game_state *GameState, entity_type Type, world_position P)
     low_entity *EntityLow = GameState->LowEntities + EntityIndex;
     *EntityLow = {};
     EntityLow->Sim.Type = Type;
+    EntityLow->Sim.Collision = GameState->NullCollision;
     EntityLow->P = NullPosition();
 
     ChangeEntityLocation(&GameState->WorldArena, GameState->World, EntityIndex, EntityLow, P);
@@ -508,6 +509,19 @@ MakeSimpleGroundedCollision(game_state *GameState, real32 DimX, real32 DimY, rea
     return(Group);
 }
 
+sim_entity_collision_volume_group *
+MakeNullCollision(game_state *GameState)
+{
+    sim_entity_collision_volume_group *Group = PushStruct(&GameState->WorldArena, sim_entity_collision_volume_group);
+    Group->VolumeCount = 0;
+    Group->Volumes = 0;
+    Group->TotalVolume.OffsetP = V3(0, 0, 0);
+    // TODO Maybe make this negative?
+    Group->TotalVolume.Dim = V3(0, 0, 0);
+
+    return(Group);
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -531,6 +545,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         int32_t TileSideInPixels = 60;
         GameState->MetersToPixels = (real32)TileSideInPixels / (real32)World->TileSideInMeters;
 
+        GameState->NullCollision = MakeNullCollision(GameState);
         GameState->SwordCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.1f);
         GameState->StairCollision = MakeSimpleGroundedCollision(GameState,
                                                                 GameState->World->TileSideInMeters,

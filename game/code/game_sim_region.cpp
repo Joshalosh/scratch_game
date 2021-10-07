@@ -418,8 +418,10 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
 
     ddP *= MoveSpec->Speed;
     
-    //TODO: Diagonal will be faster! Fix with vectors
-    ddP += -MoveSpec->Drag*Entity->dP;
+
+    v3 Drag = -MoveSpec->Drag*Entity->dP;
+    Drag.Z = 0.0f;
+    ddP += Drag;
     if(!IsSet(Entity, EntityFlag_ZSupported))
     {
         ddP += V3(0, 0, -9.8f); // This is gravity.
@@ -565,6 +567,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
 
     real32 Ground = 0.0f;
 
+    // TODO Handle mult-volumes here.
     // Handle events based on area overlapping.
     {
         rectangle3 EntityRect = RectCenterDim(Entity->P + Entity->Collision->TotalVolume.OffsetP,
