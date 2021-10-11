@@ -252,6 +252,17 @@ EndSim(sim_region *Region, game_state *GameState)
     }
 }
 
+struct test_wall
+{
+    real32 X;
+    real32 RelX;
+    real32 RelY;
+    real32 DeltaX;
+    real32 DeltaY;
+    real32 MinY;
+    real32 MaxY;
+    v3 Normal;
+};
 internal bool32
 TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 PlayerDeltaY,
          real32 *tMin, real32 MinY, real32 MaxY)
@@ -449,6 +460,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     for(uint32_t Iteration = 0; Iteration < 4; ++Iteration)
     {
         real32 tMin = 1.0f;
+        real32 tMax = 0.0f;
 
         real32 PlayerDeltaLength = Length(PlayerDelta);
         if(PlayerDeltaLength > 0.0f)
@@ -498,8 +510,9 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                 {
                                     real32 tMinTest = tMin;
                                     v3 TestWallNormal = {};
-
                                     bool32 HitThis = false;
+
+#if 0
                                     if(TestWall(MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                                 &tMinTest, MinCorner.Y, MaxCorner.Y))
                                     {
@@ -526,6 +539,28 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                     {
                                         TestWallNormal = V3(0, 1, 0);
                                         HitThis = true;
+                                    }
+#endif
+                                    test_wall Walls[] =
+                                    {
+                                        {MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                         MinCorner.Y, MaxCorner.Y, V3(-1, 0, 0)},
+                                        {MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                         MinCorner.Y, MaxCorner.Y, V3(1, 0, 0)},
+                                        {MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                         MinCorner.X, MaxCorner.X, V3(0, -1, 0)},
+                                        {MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                         MinCorner.X, MaxCorner.X, V3(0, 1, 0)},
+                                    };
+                                    for(uint32_t WallIndex = 0; WallIndex < ArrayCount(Walls); ++WallIndex)
+                                    {
+                                        test_wall *Wall = Walls + WallIndex;
+                                        if(TestWall(Wall->X, Wall->RelX, Wall->RelY, Wall->DeltaX, Wall->DeltaY,
+                                                    &tMinTest, Wall->MinY, Wall->MaxY))
+                                        {
+                                            TestWallNormal = Wall->Normal;
+                                            HitThis = true;
+                                        }
                                     }
 
                                     if(HitThis)
