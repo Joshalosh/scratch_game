@@ -37,11 +37,12 @@
    - Draw tile chunks so we can verify that things are aligned /
      in the chunks we want them to be in
 
+ - Asset streaming
+
  - Audio
    - Sound effect triggers
    - Ambient sounds
    - Music
- - Asset streaming
 
  - Metagame / save game
    - How do you enter a 'save slot'?

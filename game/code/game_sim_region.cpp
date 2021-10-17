@@ -304,7 +304,7 @@ CanCollide(game_state *GameState, sim_entity *A, sim_entity *B)
         if(IsSet(A, EntityFlag_Collides) &&
            IsSet(B, EntityFlag_Collides))
         {
-            if(!IsSet(A, EntityFlag_Nonspatial) && 
+            if(!IsSet(A, EntityFlag_Nonspatial) &&
                !IsSet(B, EntityFlag_Nonspatial))
             {
                 // TODO Property based collision logic in this scope.
@@ -317,7 +317,8 @@ CanCollide(game_state *GameState, sim_entity *A, sim_entity *B)
                 Rule;
                 Rule = Rule->NextInHash)
             {
-                if((Rule->StorageIndexA == A->StorageIndex) && (Rule->StorageIndexB == B->StorageIndex))
+                if((Rule->StorageIndexA == A->StorageIndex) &&
+                   (Rule->StorageIndexB == B->StorageIndex))
                 {
                     Result = Rule->CanCollide;
                     break;
@@ -351,7 +352,8 @@ HandleCollision(game_state *GameState, sim_entity *A, sim_entity *B)
         B = Temp;
     }
 
-    if((A->Type == EntityType_Monster) && (B->Type == EntityType_Sword))
+    if((A->Type == EntityType_Monster) &&
+       (B->Type == EntityType_Sword))
     {
         if(A->HitPointMax > 0)
         {
@@ -404,7 +406,7 @@ SpeculativeCollide(sim_entity *Mover, sim_entity *Region)
 #endif
         v3 MoverGroundPoint = GetEntityGroundPoint(Mover);
         real32 Ground = GetStairGround(Region, MoverGroundPoint);
-        Result = (AbsoluteValue(GetEntityGroundPoint(Mover).Z - Ground) > StepHeight);
+        Result = (AbsoluteValue(MoverGroundPoint.Z - Ground) > StepHeight);
     }
 
     return(Result);
@@ -508,6 +510,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                 for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
                 {
                     sim_entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
+
                     real32 OverlapEpsilon = 0.001f;
 
                     if((IsSet(TestEntity, EntityFlag_Traversable) &&
@@ -535,7 +538,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                 v3 MinCorner = -0.5f*MinkowskiDiameter;
                                 v3 MaxCorner = 0.5f*MinkowskiDiameter;
 
-                                v3 Rel = ((Entity->P + Volume->OffsetP) - 
+                                v3 Rel = ((Entity->P + Volume->OffsetP) -
                                           (TestEntity->P + TestVolume->OffsetP));
 
                                 if((Rel.Z >= MinCorner.Z) && (Rel.Z < MaxCorner.Z))
@@ -544,17 +547,17 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                     {
                                         {MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                          MinCorner.Y, MaxCorner.Y, V3(-1, 0, 0)},
-                                        {MinCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
+                                        {MaxCorner.X, Rel.X, Rel.Y, PlayerDelta.X, PlayerDelta.Y,
                                          MinCorner.Y, MaxCorner.Y, V3(1, 0, 0)},
                                         {MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                          MinCorner.X, MaxCorner.X, V3(0, -1, 0)},
-                                        {MinCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
+                                        {MaxCorner.Y, Rel.Y, Rel.X, PlayerDelta.Y, PlayerDelta.X,
                                          MinCorner.X, MaxCorner.X, V3(0, 1, 0)},
                                     };
 
                                     if(IsSet(TestEntity, EntityFlag_Traversable))
                                     {
-                                        real32 tMaxTest = 0.0f;
+                                        real32 tMaxTest = tMax;
                                         bool32 HitThis = false;
 
                                         v3 TestWallNormal = {};
@@ -638,7 +641,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
             real32 tStop;
             if(tMin < tMax)
             {
-                tStop= tMin;
+                tStop = tMin;
                 HitEntity = HitEntityMin;
                 WallNormal = WallNormalMin;
             }

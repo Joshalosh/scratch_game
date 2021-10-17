@@ -582,7 +582,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->PlayerCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 1.2f);
         GameState->MonsterCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.5f);
-        GameState->FamiliarCollision = MakeSimpleGroundedCollision(GameState, 0.5f, 1.0f, 0.5f);
+        GameState->FamiliarCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.5f);
         GameState->WallCollision = MakeSimpleGroundedCollision(GameState,
                                                                GameState->World->TileSideInMeters,
                                                                GameState->World->TileSideInMeters,
@@ -787,7 +787,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             int32_t FamiliarOffsetX = (RandomNumberTable[RandomNumberIndex++] % 10) - 7;
             int32_t FamiliarOffsetY = (RandomNumberTable[RandomNumberIndex++] % 10) - 3;
-            if((FamiliarOffsetX != 0) || (FamiliarOffsetY != 0))
+            if((FamiliarOffsetX != 0) ||
+               (FamiliarOffsetY != 0))
             {
                 AddFamiliar(GameState, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY, CameraTileZ);
             }
@@ -927,7 +928,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                             MoveSpec.UnitMaxAccelVector = true;
                             MoveSpec.Speed = 50.0f;
-                            MoveSpec.Drag = 9.0f;
+                            MoveSpec.Drag = 8.0f;
                             ddP = V3(ConHero->ddP, 0);
                             
                             if((ConHero->dSword.X != 0.0f) || (ConHero->dSword.Y != 0.0f))
@@ -1010,7 +1011,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                     MoveSpec.UnitMaxAccelVector = true;
                     MoveSpec.Speed = 50.0f;
-                    MoveSpec.Drag = 9.0f;
+                    MoveSpec.Drag = 8.0f;
 
                     Entity->tBob += dt;
                     if(Entity->tBob > (2.0f*Pi32))
@@ -1052,13 +1053,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 MoveEntity(GameState, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
 
-#if 0
-            v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*LowEntity->Width,
-                                PlayerGroundPointY - 0.5f*MetersToPixels*LowEntity->Height};
-            v2 EntityWidthHeight = {LowEntity->Width, LowEntity->Height};
-            DrawRectangle(Buffer, PlayerLeftTop, PlayerLeftTop + 0.9f*MetersToPixels*EntityWidthHeight,
-                          1.0f, 1.0f, 0.0f);
-#endif
             for(uint32_t PieceIndex = 0; PieceIndex < PieceGroup.PieceCount; ++PieceIndex)
             {
                 entity_visible_piece *Piece = PieceGroup.Pieces + PieceIndex;
