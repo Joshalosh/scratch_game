@@ -547,6 +547,14 @@ MakeNullCollision(game_state *GameState)
     return(Group);
 }
 
+internal void
+DrawTestGround(game_state *GameState, game_offscreen_buffer *Buffer)
+{
+    uint32_t RandomNumberIndex = 0;
+
+    DrawBitmap(Buffer, &GameState->Grass[0], 100.0f, 100.0f);
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -591,6 +599,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                                        TilesPerWidth*GameState->World->TileSideInMeters,
                                                                        TilesPerHeight*GameState->World->TileSideInMeters,
                                                                        0.9f*GameState->World->TileDepthInMeters);
+
+        GameState->Grass[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass00.bmp");
+        GameState->Grass[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass01.bmp");
+
+        GameState->Tuft[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft00.bmp");
+        GameState->Tuft[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft01.bmp");
+        GameState->Tuft[2] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft02.bmp");
+
+        GameState->Stone[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/stone00.bmp");
+        GameState->Stone[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/stone01.bmp");
+        GameState->Stone[2] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/stone02.bmp");
+        GameState->Stone[3] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/stone03.bmp");
 
         GameState->Backdrop = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
         GameState->Shadow = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_shadow.bmp");
@@ -887,6 +907,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #else
     DrawBitmap(Buffer, &GameState->Backdrop, 0, 0);
 #endif
+
+    DrawTestGround(GameState, Buffer);
 
     real32 ScreenCentreX = 0.5f*(real32)Buffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)Buffer->Height;

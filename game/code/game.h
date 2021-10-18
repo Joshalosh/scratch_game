@@ -14,6 +14,7 @@
    - Frinstances
      ZFUDGE
  - Collision detection
+   - Fix sword collisions
    - Clean up predicate proliferation. Can we make a nice clean
      set of flags/rules so that it's easy to understand how
      things work in terms of special handling? This may involve
@@ -191,6 +192,10 @@ struct game_state
 
     uint32_t LowEntityCount;
     low_entity LowEntities[100000];
+
+    loaded_bitmap Grass[2];
+    loaded_bitmap Stone[4];
+    loaded_bitmap Tuft[3];
 
     loaded_bitmap Backdrop;
     loaded_bitmap Shadow;
