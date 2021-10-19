@@ -552,7 +552,17 @@ DrawTestGround(game_state *GameState, game_offscreen_buffer *Buffer)
 {
     uint32_t RandomNumberIndex = 0;
 
-    DrawBitmap(Buffer, &GameState->Grass[0], 100.0f, 100.0f);
+    v2 Center = {0.5f*(real32)Buffer->Width, 0.5f*(real32)Buffer->Height};
+    for(uint32_t GrassIndex = 0; GrassIndex < 1; ++GrasIndex)
+    {
+        Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
+        v2 Offset = {2.0f*(real32)RandomNumberTable[RandomNumberIndex++]/(real32)MaxRandomNumber - 1,
+                     2.0f*(real32)RandomNumberTable[RandomNumberIndex++]/(real32)MaxRandomNumber - 1};
+
+        v2 P = Center + GameState->MetersToPixels*Offset;
+
+        DrawBitmap(Buffer, &GameState->Grass[0], P.X, P.Y);
+    }
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
