@@ -519,5 +519,22 @@ global_variable uint32_t RandomNumberTable[] =
     0x0d5d155, 0x4363005, 0x2cbd064, 0x5c18f03, 0x214bedd, 0x42ef202, 0x41827cd, 0x27a8fe9,
 };
 
+struct random_series
+{
+    uint32_t RandomNumberIndex;
+};
+
+inline uint32_t RandomChoice(random_series *Series, uint32_t ChoiceCount)
+{
+}
+
+inline real32 RandomUnilateral(random_series *Series)
+{
+}
+
+inline real32 RandomBilateral(random_series *Series)
+{
+}
+
 #define GAME_RANDOM_H
 #endif

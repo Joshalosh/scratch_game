@@ -550,15 +550,13 @@ MakeNullCollision(game_state *GameState)
 internal void
 DrawTestGround(game_state *GameState, game_offscreen_buffer *Buffer)
 {
-    uint32_t RandomNumberIndex = 0;
+    random_series Series = Seed(1234);
 
     v2 Center = 0.5f*V2i(Buffer->Width, Buffer->Height);
     for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
     {
-        Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-
         loaded_bitmap *Stamp;
-        if(RandomNumberTable[RandomNumberIndex++] % 2)
+        if(RandomChoice(&Series, 2))
         {
             Stamp = GameState->Grass + (RandomNumberTable[RandomNumberIndex++]%ArrayCount(GameState->Grass));
         }
@@ -1095,11 +1093,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Space:
                 {
+#if 0
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
                         PushRectOutline(&PieceGroup, Volume->OffsetP.XY, 0, Volume->Dim.XY, V4(0, 0.5f, 1.0f, 1), 0.0f);
                     }
+#endif
                 } break;
 
                 default:
