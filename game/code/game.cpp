@@ -558,17 +558,16 @@ DrawTestGround(game_state *GameState, game_offscreen_buffer *Buffer)
         loaded_bitmap *Stamp;
         if(RandomChoice(&Series, 2))
         {
-            Stamp = GameState->Grass + (RandomNumberTable[RandomNumberIndex++]%ArrayCount(GameState->Grass));
+            Stamp = GameState->Grass + RandomChoice(&Series, ArrayCount(GameState->Grass));
         }
         else
         {
-            Stamp = GameState->Stone + (RandomNumberTable[RandomNumberIndex++]%ArrayCount(GameState->Stone));
+            Stamp = GameState->Stone + RandomChoice(&Series, ArrayCount(GameState->Stone));
         }
 
         real32 Radius = 5.0f;
         v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
-        v2 Offset = {2.0f*(real32)RandomNumberTable[RandomNumberIndex++]/(real32)MaxRandomNumber - 1,
-                     2.0f*(real32)RandomNumberTable[RandomNumberIndex++]/(real32)MaxRandomNumber - 1};
+        v2 Offset = {RandomBilateral(&Series), RandomBilateral(&Series)};
 
         v2 P = Center + GameState->MetersToPixels*Radius*Offset - BitmapCenter;
 
@@ -577,14 +576,11 @@ DrawTestGround(game_state *GameState, game_offscreen_buffer *Buffer)
 
     for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
     {
-        Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-
-        loaded_bitmap *Stamp = GameState->Tuft + (RandomNumberTable[RandomNumberIndex++]%ArrayCount(GameState->Tuft));
+        loaded_bitmap *Stamp = GameState->Tuft + RandomChoice(&Series, ArrayCount(GameState->Tuft));
 
         real32 Radius = 5.0f;
         v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
-        v2 Offset = {2.0f*(real32)RandomNumberTable[RandomNumberIndex++]/(real32)MaxRandomNumber - 1,
-                     2.0f*(real32)RandomNumberTable[RandomNumberIndex++]/(real32)MaxRandomNumber - 1};
+        v2 Offset = {RandomBilateral(&Series), RandomBilateral(&Series)};
 
         v2 P = Center + GameState->MetersToPixels*Radius*Offset - BitmapCenter;
 
@@ -682,7 +678,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
-        uint32_t RandomNumberIndex = 0;
+        random_series Series = {1234};
 
         uint32_t ScreenBaseX = 0;
         uint32_t ScreenBaseY = 0;
@@ -699,20 +695,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         bool32 DoorDown = false;
         for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
         {
-            Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-
-            uint32_t RandomChoice; 
-            if(DoorUp || DoorDown)
-            {
-                RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
-            }
-            else
-            {
-                RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
-            }
+            uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 3); 
 
             bool32 CreatedZDoor = false;
-            if(RandomChoice == 2)
+            if(DoorDirection == 2)
             {
                 CreatedZDoor = true;
                 if(AbsTileZ == ScreenBaseZ)
@@ -724,7 +710,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     DoorDown = true;
                 }
             }
-            else if(RandomChoice == 1)
+            else if(DoorDirection == 1)
             {
                 DoorRight = true;
             }
@@ -800,7 +786,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DoorRight = false;
             DoorTop = false;
 
-            if(RandomChoice == 2)
+            if(DoorDirection == 2)
             {
                 if(AbsTileZ == ScreenBaseZ)
                 {
@@ -811,7 +797,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     AbsTileZ = ScreenBaseZ;
                 }
             }
-            else if(RandomChoice == 1)
+            else if(DoorDirection == 1)
             {
                 ScreenX += 1;
             }
@@ -842,8 +828,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         AddMonster(GameState, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
         for(int FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
         {
-            int32_t FamiliarOffsetX = (RandomNumberTable[RandomNumberIndex++] % 10) - 7;
-            int32_t FamiliarOffsetY = (RandomNumberTable[RandomNumberIndex++] % 10) - 3;
+            int32_t FamiliarOffsetX = RandomBetween(&Series, -7, 7);
+            int32_t FamiliarOffsetY = RandomBetween(&Series, -3, -1);
             if((FamiliarOffsetX != 0) ||
                (FamiliarOffsetY != 0))
             {
