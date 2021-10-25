@@ -130,7 +130,8 @@ struct loaded_bitmap
 {
     int32_t Width;
     int32_t Height;
-    uint32_t *Pixels;
+    int32_t Pitch;
+    void *Memory;
 };
 
 struct hero_bitmaps

@@ -575,7 +575,7 @@ inline real32 RandomBetween(random_series *Series, real32 Min, real32 Max)
 
 inline int32_t RandomBetween(random_series *Series, int32_t Min, int32_t Max)
 {
-    int32_t Result = Min + (int32_t)(NextRandomUInt32(Series)%(Max - Min));
+    int32_t Result = Min + (int32_t)(NextRandomUInt32(Series)%((Max + 1) - Min));
 
     return(Result);
 }
