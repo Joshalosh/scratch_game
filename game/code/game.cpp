@@ -123,22 +123,25 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
         uint32_t *Source = (uint32_t *)SourceRow;
         for(int32_t X = MinX; X < MaxX; ++X)
         {
-            real32 A = (real32)((*Source >> 24) & 0xFF) / 255.0f;
-            A *= CAlpha;
+            real32 SA = (real32)((*Source >> 24) & 0xFF) / 255.0f;
+            SA *= CAlpha;
 
             real32 SR = (real32)((*Source >> 16) & 0xFF);
             real32 SG = (real32)((*Source >> 8) & 0xFF);
             real32 SB = (real32)((*Source >> 0) & 0xFF);
 
+            real32 DA = (real32)((*Dest >> 24) & 0xFF);
             real32 DR = (real32)((*Dest >> 16) & 0xFF);
             real32 DG = (real32)((*Dest >> 8) & 0xFF);
             real32 DB = (real32)((*Dest >> 0) & 0xFF);
 
-            real32 R = (1.0f-A)*DR + A*SR;
-            real32 G = (1.0f-A)*DG + A*SG;
-            real32 B = (1.0f-A)*DB + A*SB;
+            real32 A = Maximum(DA, 255.0f*SA);
+            real32 R = (1.0f-SA)*DR + SA*SR;
+            real32 G = (1.0f-SA)*DG + SA*SG;
+            real32 B = (1.0f-SA)*DB + SA*SB;
 
-            *Dest = (((uint32_t)(R + 0.5f) << 16) |
+            *Dest = (((uint32_t)(A + 0.5f) << 24) |
+                     ((uint32_t)(R + 0.5f) << 16) |
                      ((uint32_t)(G + 0.5f) << 8) |
                      ((uint32_t)(B + 0.5f) << 0));
 
@@ -590,6 +593,21 @@ DrawTestGround(game_state *GameState, loaded_bitmap *Buffer)
     }
 }
 
+loaded_bitmap
+MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height)
+{
+    loaded_bitmap Result = {};
+
+    Result.Width = Width;
+    Result.Height = Height;
+    Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
+    int32_t TotalBitmapSize = Width*Height*BITMAP_BYTES_PER_PIXEL;
+    Result.Memory = PushSize_(Arena, TotalBitmapSize);
+    ZeroSize(TotalBitmapSize, Result.Memory);
+
+    return(Result);
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -839,6 +857,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
 
+        GameState->GroundBuffer = MakeEmptyBitmap(&GameState->WorldArena, 512, 512);
+        DrawTestGround(GameState, &GameState->GroundBuffer);
+
         Memory->IsInitialised = true;
     }
 
@@ -934,13 +955,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBuffer->Pitch = Buffer->Pitch;
     DrawBuffer->Memory = Buffer->Memory;
 
-#if 1
     DrawRectangle(DrawBuffer, V2(0.0f, 0.0f), V2((real32)DrawBuffer->Width, (real32)DrawBuffer->Height), 0.5f, 0.5f, 0.5f);
-#else
-    DrawBitmap(DrawBuffer, &GameState->Backdrop, 0, 0);
-#endif
-
-    DrawTestGround(GameState, DrawBuffer);
+    DrawBitmap(DrawBuffer, &GameState->GroundBuffer, 0, 0);
 
     real32 ScreenCentreX = 0.5f*(real32)DrawBuffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)DrawBuffer->Height;
