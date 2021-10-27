@@ -524,7 +524,7 @@ struct random_series
     uint32_t Index;
 };
 
-inline random_series Seed(uint32_t Value)
+inline random_series RandomSeed(uint32_t Value)
 {
     random_series Series;
 
@@ -533,7 +533,7 @@ inline random_series Seed(uint32_t Value)
     return(Series);
 }
 
-inline uint32_t NextRandomUInt32(random_series *Series)
+inline uint32_t RandomNextUInt32(random_series *Series)
 {
     uint32_t Result = RandomNumberTable[Series->Index++];
     if(Series->Index >= ArrayCount(RandomNumberTable))
@@ -546,7 +546,7 @@ inline uint32_t NextRandomUInt32(random_series *Series)
 
 inline uint32_t RandomChoice(random_series *Series, uint32_t ChoiceCount)
 {
-    uint32_t Result = (NextRandomUInt32(Series) % ChoiceCount);
+    uint32_t Result = (RandomNextUInt32(Series) % ChoiceCount);
 
     return(Result);
 }
@@ -554,7 +554,7 @@ inline uint32_t RandomChoice(random_series *Series, uint32_t ChoiceCount)
 inline real32 RandomUnilateral(random_series *Series)
 {
     real32 Divisor = 1.0f / (real32)MaxRandomNumber;
-    real32 Result = Divisor*(real32)NextRandomUInt32(Series);
+    real32 Result = Divisor*(real32)RandomNextUInt32(Series);
 
     return(Result);
 }
@@ -575,7 +575,7 @@ inline real32 RandomBetween(random_series *Series, real32 Min, real32 Max)
 
 inline int32_t RandomBetween(random_series *Series, int32_t Min, int32_t Max)
 {
-    int32_t Result = Min + (int32_t)(NextRandomUInt32(Series)%((Max + 1) - Min));
+    int32_t Result = Min + (int32_t)(RandomNextUInt32(Series)%((Max + 1) - Min));
 
     return(Result);
 }

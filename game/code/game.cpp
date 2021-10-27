@@ -555,7 +555,7 @@ MakeNullCollision(game_state *GameState)
 internal void
 DrawTestGround(game_state *GameState, loaded_bitmap *Buffer)
 {
-    random_series Series = Seed(1234);
+    random_series Series = RandomSeed(1234);
 
     v2 Center = 0.5f*V2i(Buffer->Width, Buffer->Height);
     for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
@@ -698,7 +698,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Bitmap->Align = V2(72, 182);
         ++Bitmap;
 
-        random_series Series = {1234};
+        random_series Series = RandomSeed(1234);
 
         uint32_t ScreenBaseX = 0;
         uint32_t ScreenBaseY = 0;
