@@ -123,22 +123,22 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
         uint32_t *Source = (uint32_t *)SourceRow;
         for(int32_t X = MinX; X < MaxX; ++X)
         {
-            real32 SA = (real32)((*Source >> 24) & 0xFF) / 255.0f;
-            SA *= CAlpha;
-
+            real32 SA = (real32)((*Source >> 24) & 0xFF);
             real32 SR = (real32)((*Source >> 16) & 0xFF);
             real32 SG = (real32)((*Source >> 8) & 0xFF);
             real32 SB = (real32)((*Source >> 0) & 0xFF);
+            real32 RSA = (SA / 255.0f) * CAlpha;
 
             real32 DA = (real32)((*Dest >> 24) & 0xFF);
             real32 DR = (real32)((*Dest >> 16) & 0xFF);
             real32 DG = (real32)((*Dest >> 8) & 0xFF);
             real32 DB = (real32)((*Dest >> 0) & 0xFF);
 
-            real32 A = Maximum(DA, 255.0f*SA);
-            real32 R = (1.0f-SA)*DR + SA*SR;
-            real32 G = (1.0f-SA)*DG + SA*SG;
-            real32 B = (1.0f-SA)*DB + SA*SB;
+            real32 InvRSA = (1.0f - RSA);
+            real32 A = InvRSA*DA + SA;
+            real32 R = InvRSA*DR + RSA*SR;
+            real32 G = InvRSA*DG + RSA*SG;
+            real32 B = InvRSA*DB + RSA*SB;
 
             *Dest = (((uint32_t)(A + 0.5f) << 24) |
                      ((uint32_t)(R + 0.5f) << 16) |
@@ -210,10 +210,14 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Assert(BlueScan.Found);
         Assert(AlphaScan.Found);
 
-        int32_t RedShift = 16 - (int32_t)RedScan.Index;
-        int32_t GreenShift = 8 - (int32_t)GreenScan.Index;
-        int32_t BlueShift = 0 - (int32_t)BlueScan.Index;
-        int32_t AlphaShift = 24 - (int32_t)AlphaScan.Index;
+        int32_t RedShiftUp = 16;
+        int32_t RedShiftDown = (int32_t)RedScan.Index;
+        int32_t GreenShiftUp = 8;
+        int32_t GreenShiftDown = (int32_t)GreenScan.Index;
+        int32_t BlueShiftUp = 0;
+        int32_t BlueShiftDown = (int32_t)BlueScan.Index;
+        int32_t AlphaShiftUp = 24;
+        int32_t AlphaShiftDown = (int32_t)AlphaScan.Index;
 
         uint32_t *SourceDest = Pixels;
         for(int32_t Y = 0; Y < Header->Height; ++Y)
@@ -222,10 +226,15 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
             {
                 uint32_t C = *SourceDest;
 
-                *SourceDest++ = (RotateLeft(C & RedMask, RedShift) |
-                                 RotateLeft(C & GreenMask, GreenShift) |
-                                 RotateLeft(C & BlueMask, BlueShift) |
-                                 RotateLeft(C & AlphaMask, AlphaShift));
+                uint32_t R = (C & RedMask) >> RedShiftDown;
+                uint32_t G = (C & GreenMask) >> GreenShiftDown;
+                uint32_t B = (C & BlueMask) >> BlueShiftDown;
+                uint32_t A = (C & AlphaMask) >> AlphaShiftDown;
+
+                *SourceDest++ = ((R << RedShiftUp) |
+                                 (G << GreenShiftUp) |
+                                 (B << BlueShiftUp) |
+                                 (A << AlphaShiftUp));
             }
         }
     }
@@ -555,12 +564,15 @@ MakeNullCollision(game_state *GameState)
 internal void
 DrawTestGround(game_state *GameState, loaded_bitmap *Buffer)
 {
+    DrawRectangle(Buffer, V2(0.0f, 0.0f), V2((real32)Buffer->Width, (real32)Buffer->Height), 0, 0, 0);
+
     random_series Series = RandomSeed(1234);
 
     v2 Center = 0.5f*V2i(Buffer->Width, Buffer->Height);
     for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
     {
         loaded_bitmap *Stamp;
+#if 0
         if(RandomChoice(&Series, 2))
         {
             Stamp = GameState->Grass + RandomChoice(&Series, ArrayCount(GameState->Grass));
@@ -569,6 +581,9 @@ DrawTestGround(game_state *GameState, loaded_bitmap *Buffer)
         {
             Stamp = GameState->Stone + RandomChoice(&Series, ArrayCount(GameState->Stone));
         }
+#else
+        Stamp = GameState->Stone;
+#endif
 
         real32 Radius = 5.0f;
         v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
@@ -866,6 +881,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     world *World = GameState->World;
 
     real32 MetersToPixels = GameState->MetersToPixels;
+
+    DrawTestGround(GameState, &GameState->GroundBuffer);
 
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
