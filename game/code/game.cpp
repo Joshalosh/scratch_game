@@ -10,7 +10,7 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
     int16_t ToneVolume = 3000; 
     int WavePeriod = SoundBuffer->SamplesPerSecond/ToneHz;
 
-    int16_t *SampleOut  = SoundBuffer->Samples; 
+    int16_t *SampleOut = SoundBuffer->Samples; 
     for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
     {
 #if 0
@@ -850,10 +850,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t CameraTileX = ScreenBaseX*TilesPerWidth + 17/2;
         uint32_t CameraTileY = ScreenBaseY*TilesPerHeight + 9/2;
         uint32_t CameraTileZ = ScreenBaseZ;
-        NewCameraP = ChunkPositionFromTilePosition(GameState->World,
-                                                   CameraTileX,
-                                                   CameraTileY,
-                                                   CameraTileZ);
+        NewCameraP = ChunkPositionFromTilePosition(GameState->World, CameraTileX, CameraTileY, CameraTileZ);
         GameState->CameraP = NewCameraP;
 
         AddMonster(GameState, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
