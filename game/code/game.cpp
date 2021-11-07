@@ -865,7 +865,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
 
-        GameState->GroundBuffer = MakeEmptyBitmap(&GameState->WorldArena, 512, 512);
+        real32 ScreenWidth = (real32)Buffer->Width;
+        real32 ScreenHeight = (real32)Buffer->Height;
+        real32 MaximumZScale = 0.5f;
+        real32 GroundOverScan = 1.5f;
+        uint32_t GroundBufferWidth = RoundReal32ToInt32(GroundOverScan*ScreenWidth);
+        uint32_t GroundBufferHeight = RoundReal32ToInt32(GroundOverScan*ScreenHeight);
+        GameState->GroundBuffer = MakeEmptyBitmap(&GameState->WorldArena, GroundBufferWidth, GroundBufferHeight);
+        GameState->GroundBufferP = GameState->CameraP;
         DrawTestGround(GameState, &GameState->GroundBuffer);
 
         Memory->IsInitialised = true;
@@ -964,10 +971,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBuffer->Memory = Buffer->Memory;
 
     DrawRectangle(DrawBuffer, V2(0.0f, 0.0f), V2((real32)DrawBuffer->Width, (real32)DrawBuffer->Height), 0.5f, 0.5f, 0.5f);
-    DrawBitmap(DrawBuffer, &GameState->GroundBuffer, 0, 0);
 
     real32 ScreenCentreX = 0.5f*(real32)DrawBuffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)DrawBuffer->Height;
+
+    v2 Ground = {ScreenCentreX - 0.5f*(real32)GameState->GroundBuffer.Width,
+                 ScreenCentreY - 0.5f*(real32)GameState->GroundBuffer.Height};
+    v3 Delta = Subtract(GameState->World, &GameState->GroundBufferP, &GameState->CameraP);
+    Delta.Y = -Delta.Y;
+    Ground += GameState->MetersToPixels*Delta.XY;
+    DrawBitmap(DrawBuffer, &GameState->GroundBuffer, Ground.X, Ground.Y);
 
     entity_visible_piece_group PieceGroup;
     PieceGroup.GameState = GameState;
