@@ -183,8 +183,8 @@ internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageInde
 struct ground_buffer
 {
     world_position P;
-    loaded_bitmap Bitmap;
-}
+    void *Memory;
+};
 
 struct game_state
 {
@@ -230,6 +230,7 @@ struct game_state
     uint32_t GroundBufferWidth;
     uint32_t GroundBufferHeight;
     uint32_t GroundBufferCount;
+    loaded_bitmap GroundBitmapTemplate;
     ground_buffer *GroundBuffers;
 };
 

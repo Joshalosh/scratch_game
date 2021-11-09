@@ -875,8 +875,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
 
-        GameState->GroundBufferWidth = 256;
-        GameState->GroundBufferHeight = 256;
+        uint32_t GroundBufferWidth = 256;
+        uint32_t GroundBufferHeight = 256;
         GameState->GroundBufferCount = 128;
         GameState->GroundBuffers = PushArray(&GameState->TransientArena, GameState->GroundBufferCount, ground_buffer);
         for(uint32_t GroundBufferIndex = 0;
@@ -884,8 +884,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             ++GroundBufferIndex)
         {
             ground_buffer *GroundBuffer = GameState->GroundBuffers + GroundBufferIndex;
-            GroundBuffer->Bitmap = MakeEmptyBitmap(&GameState->TransientArena, GameState->GroundBufferWidth,
-                                                   GameState->GroundBufferHeight, false);
+            GameState->GroundBitmapTemplate = MakeEmptyBitmap(&GameState->TransientArena, GroundBufferWidth,
+                                                              GroundBufferHeight, false);
+            GroundBuffer->Memory = GameState->GroundBitmapTemplate.Memory;
             GroundBuffer->P = NullPosition();
         }
 //        DrawGroundChunk(GameState, &GameState->GroundBuffer, &GameState->GroundBufferP);
@@ -997,10 +998,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         ground_buffer *GroundBuffer = GameState->GroundBuffers + GroundBufferIndex;
         if(IsValid(GroundBuffer->P))
         {
+            loaded_bitmap Bitmap = GameState->GroundBitmapTemplate;
+            Bitmap.Memory = GroundBuffer->Memory;
             v3 Delta = GameState->MetersToPixels*Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
-            v2 Ground = {ScreenCentreX - 0.5f*(real32)GameState->GroundBuffer.Width,
-                         ScreenCentreY - 0.5f*(real32)GameState->GroundBuffer.Height};
-            DrawBitmap(DrawBuffer, &GameState->GroundBuffer, Ground.X, Ground.Y);
+            v2 Ground = {ScreenCentreX + Delta.X - 0.5f*(real32)Bitmap.Width,
+                         ScreenCentreY - Delta.Y - 0.5f*(real32)Bitmap.Height};
+            DrawBitmap(DrawBuffer, &Bitmap, Ground.X, Ground.Y);
         }
     }
 
