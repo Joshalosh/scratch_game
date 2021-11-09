@@ -180,8 +180,15 @@ struct game_state;
 internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 CanCollide);
 internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex); 
 
+struct ground_buffer
+{
+    world_position P;
+    loaded_bitmap Bitmap;
+}
+
 struct game_state
 {
+    memory_arena TransientArena;
     memory_arena WorldArena;
     world *World;
 
@@ -220,8 +227,10 @@ struct game_state
     sim_entity_collision_volume_group *WallCollision;
     sim_entity_collision_volume_group *StandardRoomCollision;
 
-    world_position GroundBufferP;
-    loaded_bitmap GroundBuffer;
+    uint32_t GroundBufferWidth;
+    uint32_t GroundBufferHeight;
+    uint32_t GroundBufferCount;
+    ground_buffer *GroundBuffers;
 };
 
 struct entity_visible_piece_group

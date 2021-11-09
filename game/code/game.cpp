@@ -601,8 +601,18 @@ DrawGroundChunk(game_state *GameState, loaded_bitmap *Buffer, world_position *Ch
     }
 }
 
-loaded_bitmap
-MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height)
+internal void
+ClearBitmap(loaded_bitmap *Bitmap)
+{
+    if(Bitmap->Memory)
+    {
+        int32_t TotalBitmapSize = Bitmap->Width*Bitmap->Height*BITMAP_BYTES_PER_PIXEL;
+        ZeroSize(TotalBitmapSize, Bitmap->Memory);
+    }
+}
+
+internal loaded_bitmap
+MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 ClearToZero = true)
 {
     loaded_bitmap Result = {};
 
@@ -611,7 +621,10 @@ MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height)
     Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
     int32_t TotalBitmapSize = Width*Height*BITMAP_BYTES_PER_PIXEL;
     Result.Memory = PushSize_(Arena, TotalBitmapSize);
-    ZeroSize(TotalBitmapSize, Result.Memory);
+    if(ClearToZero)
+    {
+        ClearBitmap(&Result);
+    }
 
     return(Result);
 }
@@ -631,6 +644,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // TODO start partitioning the memory space.
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
                         (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
+        InitialiseArena(&GameState->TransientArena, Memory->TransientStorageSize,
+                        (uint8_t *)Memory->TransientStorage);
 
         // NOTE: Reserve entity slot 0 for the null entity
         AddLowEntity(GameState, EntityType_Null, NullPosition());
@@ -860,15 +875,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
 
-        real32 ScreenWidth = (real32)Buffer->Width;
-        real32 ScreenHeight = (real32)Buffer->Height;
-        real32 MaximumZScale = 0.5f;
-        real32 GroundOverScan = 1.5f;
-        uint32_t GroundBufferWidth = RoundReal32ToInt32(GroundOverScan*ScreenWidth);
-        uint32_t GroundBufferHeight = RoundReal32ToInt32(GroundOverScan*ScreenHeight);
-        GameState->GroundBuffer = MakeEmptyBitmap(&GameState->WorldArena, GroundBufferWidth, GroundBufferHeight);
-        GameState->GroundBufferP = GameState->CameraP;
-        DrawGroundChunk(GameState, &GameState->GroundBuffer, &GameState->GroundBufferP);
+        GameState->GroundBufferWidth = 256;
+        GameState->GroundBufferHeight = 256;
+        GameState->GroundBufferCount = 128;
+        GameState->GroundBuffers = PushArray(&GameState->TransientArena, GameState->GroundBufferCount, ground_buffer);
+        for(uint32_t GroundBufferIndex = 0;
+            GroundBufferIndex < GameState->GroundBufferCount;
+            ++GroundBufferIndex)
+        {
+            ground_buffer *GroundBuffer = GameState->GroundBuffers + GroundBufferIndex;
+            GroundBuffer->Bitmap = MakeEmptyBitmap(&GameState->TransientArena, GameState->GroundBufferWidth,
+                                                   GameState->GroundBufferHeight, false);
+            GroundBuffer->P = NullPosition();
+        }
+//        DrawGroundChunk(GameState, &GameState->GroundBuffer, &GameState->GroundBufferP);
 
         Memory->IsInitialised = true;
     }
@@ -970,12 +990,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 ScreenCentreX = 0.5f*(real32)DrawBuffer->Width;
     real32 ScreenCentreY = 0.5f*(real32)DrawBuffer->Height;
 
-    v2 Ground = {ScreenCentreX - 0.5f*(real32)GameState->GroundBuffer.Width,
-                 ScreenCentreY - 0.5f*(real32)GameState->GroundBuffer.Height};
-    v3 Delta = Subtract(GameState->World, &GameState->GroundBufferP, &GameState->CameraP);
-    Delta.Y = -Delta.Y;
-    Ground += GameState->MetersToPixels*Delta.XY;
-    DrawBitmap(DrawBuffer, &GameState->GroundBuffer, Ground.X, Ground.Y);
+    for(uint32_t GroundBufferIndex = 0;
+        GroundBufferIndex < GameState->GroundBufferCount;
+        ++GroundBufferIndex)
+    {
+        ground_buffer *GroundBuffer = GameState->GroundBuffers + GroundBufferIndex;
+        if(IsValid(GroundBuffer->P))
+        {
+            v3 Delta = GameState->MetersToPixels*Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
+            v2 Ground = {ScreenCentreX - 0.5f*(real32)GameState->GroundBuffer.Width,
+                         ScreenCentreY - 0.5f*(real32)GameState->GroundBuffer.Height};
+            DrawBitmap(DrawBuffer, &GameState->GroundBuffer, Ground.X, Ground.Y);
+        }
+    }
 
     entity_visible_piece_group PieceGroup;
     PieceGroup.GameState = GameState;
