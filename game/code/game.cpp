@@ -644,8 +644,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // TODO start partitioning the memory space.
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
                         (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
-        InitialiseArena(&GameState->TransientArena, Memory->TransientStorageSize,
-                        (uint8_t *)Memory->TransientStorage);
 
         // NOTE: Reserve entity slot 0 for the null entity
         AddLowEntity(GameState, EntityType_Null, NullPosition());
@@ -875,24 +873,36 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
 
-        uint32_t GroundBufferWidth = 256;
-        uint32_t GroundBufferHeight = 256;
-        GameState->GroundBufferCount = 128;
-        GameState->GroundBuffers = PushArray(&GameState->TransientArena, GameState->GroundBufferCount, ground_buffer);
-        for(uint32_t GroundBufferIndex = 0;
-            GroundBufferIndex < GameState->GroundBufferCount;
-            ++GroundBufferIndex)
-        {
-            ground_buffer *GroundBuffer = GameState->GroundBuffers + GroundBufferIndex;
-            GameState->GroundBitmapTemplate = MakeEmptyBitmap(&GameState->TransientArena, GroundBufferWidth,
-                                                              GroundBufferHeight, false);
-            GroundBuffer->Memory = GameState->GroundBitmapTemplate.Memory;
-            GroundBuffer->P = NullPosition();
-        }
-//        DrawGroundChunk(GameState, &GameState->GroundBuffer, &GameState->GroundBufferP);
-
         Memory->IsInitialised = true;
     }
+
+    // Transient initialisation
+    Assert(sizeof(transient_state) <= Memory->TransientStorageSize);
+    transient_state *TranState = (transient_state *)Memory->TransientStorageSize;
+    if(!TransientState->IsInitialised)
+    {
+        InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
+                        (uint8_t *)Memory->TransientStorageSize + sizeof(transient_state));
+
+        uint32_t GroundBufferWidth = 256;
+        uint32_t GroundBufferHeight = 256;
+        TranState->GroundBufferCount = 128;
+        TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
+        for(uint32_t GroundBufferIndex = 0;
+            GroundBufferIndex < TranState->GroundBufferCount;
+            ++GroundBufferIndex)
+        {
+            ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
+            TranState->GroundBitmapTemplate = MakeEmptyBitmap(&TranState->TranArena, GroundBufferWidth,
+                                                              GroundBufferHeight, false);
+            GroundBuffer->Memory = TranState->GroundBitmapTemplate.Memory;
+            GroundBuffer->P = NullPosition();
+        }
+//        DrawGroundChunk(TranState, &TranState->GroundBuffer, &TranState->GroundBufferP);
+
+        TranState->IsInitialised = true;
+    }
+
 
     world *World = GameState->World;
 
@@ -974,9 +984,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                                                     (real32)TileSpanY,
                                                                                     (real32)TileSpanZ));
 
-    memory_arena SimArena;
-    InitialiseArena(&SimArena, Memory->TransientStorageSize, Memory->TransientStorage);
-    sim_region *SimRegion = BeginSim(&SimArena, GameState, GameState->World,
+    BeginTemporaryMemory(&TranState->TranArena);
+    sim_region *SimRegion = BeginSim(&TranState->TranArena, GameState, GameState->World,
                                      GameState->CameraP, CameraBounds, Input->dtForFrame);
 
     loaded_bitmap DrawBuffer_ = {};
@@ -1202,6 +1211,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawRectangle(DrawBuffer, Diff.XY, V2(10.0f, 10.0f), 1.0f, 1.0f, 0.0f);
 
     EndSim(SimRegion, GameState);
+    EndTemporaryMemory(SimMemory);
+
+    CheckArena(GameState->WorldArena);
+    CheckArena(TranState->TranArena);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)

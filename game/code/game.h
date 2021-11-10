@@ -81,11 +81,18 @@
 //
 //
 
+struct temporary_memory
+{
+    memory_arena *Arena;
+    memory_index Used;
+};
 struct memory_arena
 {
     memory_index Size;
     uint8_t *Base;
     memory_index Used;
+
+    int32_t TempCount;
 
 };
 
@@ -95,6 +102,7 @@ InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
     Arena->Size = Size;
     Arena->Base = (uint8_t *)Base;
     Arena->Used = 0;
+    Arena->TempCount = 0;
 }
 
 #define PushStruct(Arena, type) (type *)PushSize_(Arena, sizeof(type))
@@ -107,6 +115,35 @@ PushSize_(memory_arena *Arena, memory_index Size)
     Arena->Used += Size;
 
     return(Result);
+}
+
+inline temporary_memory
+BeginTemporaryMemory(memory_arena *Arena)
+{
+    temporary_memory Result;
+
+    Result.Arena = Arena;
+    Result.Used = Arena->Used;
+
+    ++Result.TempCount;
+
+    return(Result);
+}
+
+inline void
+EndTemporaryMemory(temporary_memory TempMem)
+{
+    memory_arena *Arena = TempMem.Arena;
+    Assert(Arena->Used >= TempMem.Used);
+    Arena->Used = TempMem.Used;
+    Assert(Result.TempCount > 0);
+    --Result.TempCount
+}
+
+inline void
+CheckArena(memory_arena *Arena)
+{
+    Assert(Arena->TempCount == 0);
 }
 
 #define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))
@@ -226,12 +263,16 @@ struct game_state
     sim_entity_collision_volume_group *FamiliarCollision;
     sim_entity_collision_volume_group *WallCollision;
     sim_entity_collision_volume_group *StandardRoomCollision;
+};
 
-    uint32_t GroundBufferWidth;
-    uint32_t GroundBufferHeight;
+struct transient_state
+{
+    bool32 IsInitialised;
+    memory_arena TranArena;
     uint32_t GroundBufferCount;
     loaded_bitmap GroundBitmapTemplate;
     ground_buffer *GroundBuffers;
+
 };
 
 struct entity_visible_piece_group
