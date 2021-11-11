@@ -81,11 +81,6 @@
 //
 //
 
-struct temporary_memory
-{
-    memory_arena *Arena;
-    memory_index Used;
-};
 struct memory_arena
 {
     memory_index Size;
@@ -94,6 +89,12 @@ struct memory_arena
 
     int32_t TempCount;
 
+};
+
+struct temporary_memory
+{
+    memory_arena *Arena;
+    memory_index Used;
 };
 
 inline void
@@ -125,7 +126,7 @@ BeginTemporaryMemory(memory_arena *Arena)
     Result.Arena = Arena;
     Result.Used = Arena->Used;
 
-    ++Result.TempCount;
+    ++Arena->TempCount;
 
     return(Result);
 }
@@ -136,8 +137,8 @@ EndTemporaryMemory(temporary_memory TempMem)
     memory_arena *Arena = TempMem.Arena;
     Assert(Arena->Used >= TempMem.Used);
     Arena->Used = TempMem.Used;
-    Assert(Result.TempCount > 0);
-    --Result.TempCount
+    Assert(Arena->TempCount > 0);
+    --Arena->TempCount;
 }
 
 inline void
