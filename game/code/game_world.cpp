@@ -1,6 +1,7 @@
 #define TILE_CHUNK_SAFE_MARGIN (INT32_MAX/64)
 #define TILE_CHUNK_UNINITIALISED INT32_MAX
-#define TILES_PER_CHUNK 16
+
+#define TILES_PER_CHUNK 8
 
 inline world_position
 NullPosition(void)
@@ -176,6 +177,14 @@ CentredChunkPoint(uint32_t ChunkX, uint32_t ChunkY, uint32_t ChunkZ)
     Result.ChunkX = ChunkX;
     Result.ChunkY = ChunkY;
     Result.ChunkZ = ChunkZ;
+
+    return(Result);
+}
+
+inline world_position
+CentredChunkPoint(world_chunk *Chunk)
+{
+    world_position Result = CentredChunkPoint(Chunk->ChunkX, Chunk->ChunkY, Chunk->ChunkZ);
 
     return(Result);
 }

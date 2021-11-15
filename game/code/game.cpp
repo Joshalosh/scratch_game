@@ -80,6 +80,18 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
 }
 
 internal void
+DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R = 2.0f)
+{
+    // For the top and bottom.
+    DrawRectangle(Buffer, V2(vMin.X - R, vMin.Y - R), V2(vMax.X + R, vMin.Y + R), Color.R, Color.G, Color.B);
+    DrawRectangle(Buffer, V2(vMin.X - R, vMax.Y - R), V2(vMax.X + R, vMax.Y + R), Color.R, Color.G, Color.B);
+
+    // For the left and right.
+    DrawRectangle(Buffer, V2(vMin.X - R, vMin.Y - R), V2(vMin.X + R, vMax.Y + R), Color.R, Color.G, Color.B);
+    DrawRectangle(Buffer, V2(vMax.X - R, vMin.Y - R), V2(vMax.X + R, vMax.Y + R), Color.R, Color.G, Color.B);
+}
+
+internal void
 DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
            real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
 {
@@ -670,8 +682,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         world *World = GameState->World;
         InitialiseWorld(World, 1.4f, 3.0f);
 
-        int32_t TileSideInPixels = 60;
-        GameState->MetersToPixels = (real32)TileSideInPixels / (real32)World->TileSideInMeters;
+        GameState->MetersToPixels = 32.0f;
 
         GameState->NullCollision = MakeNullCollision(GameState);
         GameState->SwordCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.1f);
@@ -924,6 +935,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     world *World = GameState->World;
 
     real32 MetersToPixels = GameState->MetersToPixels;
+    real32 PixelsToMeters = 1.0f/MetersToPixels;
 
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
@@ -994,6 +1006,48 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    loaded_bitmap DrawBuffer_ = {};
+    loaded_bitmap *DrawBuffer = &DrawBuffer_;
+    DrawBuffer->Width = Buffer->Width;
+    DrawBuffer->Height = Buffer->Height;
+    DrawBuffer->Pitch = Buffer->Pitch;
+    DrawBuffer->Memory = Buffer->Memory;
+
+    DrawRectangle(DrawBuffer, V2(0.0f, 0.0f), V2((real32)DrawBuffer->Width, (real32)DrawBuffer->Height), 0.5f, 0.5f, 0.5f);
+
+    v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
+                        0.5f*(real32)DrawBuffer->Height};
+
+    {
+        real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMeters;
+        real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMeters;
+        rectangle3 CameraBounds = RectCenterDim(V3(0, 0, 0),
+                                                V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
+        world_position MinChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMinCorner(CameraBounds));
+        world_position MaxChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMaxCorner(CameraBounds));
+
+        for(int32_t ChunkZ = MinChunkP.ChunkZ; ChunkZ <= MaxChunkP.ChunkZ; ++ChunkZ)
+        {
+            for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
+            {
+                for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
+                {
+                    world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, ChunkZ);
+                    if(Chunk)
+                    {
+                        world_position ChunkCentreP = CentredChunkPoint(Chunk);
+                        v3 RelP = Subtract(World, &ChunkCentreP, &GameState->CameraP);
+                        v2 ScreenP = {ScreenCentre.X + MetersToPixels*RelP.X,
+                                      ScreenCentre.Y - MetersToPixels*RelP.Y};
+                        v2 ScreenDim = MetersToPixels*World->ChunkDimInMeters.XY;
+                        DrawRectangleOutline(DrawBuffer, ScreenP - 0.5f*ScreenDim,
+                                             ScreenP + 0.5f*ScreenDim, V3(1.0f, 1.0f, 0.0f));
+                    }
+                }
+            }
+        }
+    }
+
     uint32_t TileSpanX = 17*3;
     uint32_t TileSpanY = 9*3;
     uint32_t TileSpanZ = 1;
@@ -1005,18 +1059,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     sim_region *SimRegion = BeginSim(&TranState->TranArena, GameState, GameState->World,
                                      GameState->CameraP, CameraBounds, Input->dtForFrame);
 
-    loaded_bitmap DrawBuffer_ = {};
-    loaded_bitmap *DrawBuffer = &DrawBuffer_;
-    DrawBuffer->Width = Buffer->Width;
-    DrawBuffer->Height = Buffer->Height;
-    DrawBuffer->Pitch = Buffer->Pitch;
-    DrawBuffer->Memory = Buffer->Memory;
-
-    DrawRectangle(DrawBuffer, V2(0.0f, 0.0f), V2((real32)DrawBuffer->Width, (real32)DrawBuffer->Height), 0.5f, 0.5f, 0.5f);
-
-    real32 ScreenCentreX = 0.5f*(real32)DrawBuffer->Width;
-    real32 ScreenCentreY = 0.5f*(real32)DrawBuffer->Height;
-
     for(uint32_t GroundBufferIndex = 0;
         GroundBufferIndex < TranState->GroundBufferCount;
         ++GroundBufferIndex)
@@ -1027,8 +1069,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             loaded_bitmap Bitmap = TranState->GroundBitmapTemplate;
             Bitmap.Memory = GroundBuffer->Memory;
             v3 Delta = GameState->MetersToPixels*Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
-            v2 Ground = {ScreenCentreX + Delta.X - 0.5f*(real32)Bitmap.Width,
-                         ScreenCentreY - Delta.Y - 0.5f*(real32)Bitmap.Height};
+            v2 Ground = {ScreenCentre.X + Delta.X - 0.5f*(real32)Bitmap.Width,
+                         ScreenCentre.Y - Delta.Y - 0.5f*(real32)Bitmap.Height};
             DrawBitmap(DrawBuffer, &Bitmap, Ground.X, Ground.Y);
         }
     }
@@ -1204,8 +1246,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 v3 EntityBaseP = GetEntityGroundPoint(Entity);
                 real32 ZFudge = (1.0f + 0.1f*(EntityBaseP.Z + Piece->OffsetZ));
 
-                real32 EntityGroundPointX = ScreenCentreX + MetersToPixels*ZFudge*EntityBaseP.X;
-                real32 EntityGroundPointY = ScreenCentreY - MetersToPixels*ZFudge*EntityBaseP.Y;
+                real32 EntityGroundPointX = ScreenCentre.X + MetersToPixels*ZFudge*EntityBaseP.X;
+                real32 EntityGroundPointY = ScreenCentre.Y - MetersToPixels*ZFudge*EntityBaseP.Y;
                 real32 EntityZ = -MetersToPixels*EntityBaseP.Z;
 
                 v2 Center = {EntityGroundPointX + Piece->Offset.X,
