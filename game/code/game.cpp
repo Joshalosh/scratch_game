@@ -147,7 +147,7 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
             real32 DB = (real32)((*Dest >> 0) & 0xFF);
             real32 RDA = (DA / 255.0f);
 
-            real32 InvRSA = (1.0f - RSA);
+            real32 InvRSA = (1.0f-RSA);
             real32 A = 255.0f*(RSA + RDA - RSA*RDA);
             real32 R = InvRSA*DR + SR;
             real32 G = InvRSA*DG + SG;
@@ -241,9 +241,11 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
                 real32 A = (real32)((C & AlphaMask) >> AlphaShiftDown);
                 real32 AN = (A / 255.0f);
 
+#if 1
                 R = R*AN;
                 G = G*AN;
                 B = B*AN;
+#endif
 
                 *SourceDest++ = (((uint32_t)(A + 0.5f) << 24) |
                                  ((uint32_t)(R + 0.5f) << 16) |
@@ -302,7 +304,6 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
 
     real32 TileSideInMeters = 1.4f;
     real32 TileDepthInMeters = 3.0f;
-
 
     v3 TileDim = V3(TileSideInMeters, TileSideInMeters, TileDepthInMeters);
     v3 Offset = Hadamard(TileDim, V3((real32)AbsTileX, (real32)AbsTileY, (real32)AbsTileZ));
@@ -714,14 +715,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         real32 TileSideInMeters = 1.4f;
         real32 TileDepthInMeters = GameState->TypicalFloorHeight;
 
-
         GameState->NullCollision = MakeNullCollision(GameState);
         GameState->SwordCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.1f);
         GameState->StairCollision = MakeSimpleGroundedCollision(GameState,
                                                                 TileSideInMeters,
                                                                 2.0f*TileSideInMeters,
                                                                 1.1f*TileDepthInMeters);
-
         GameState->PlayerCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 1.2f);
         GameState->MonsterCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.5f);
         GameState->FamiliarCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.5f);
@@ -960,7 +959,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TranState->IsInitialised = true;
     }
 
-
     world *World = GameState->World;
 
     real32 MetersToPixels = GameState->MetersToPixels;
@@ -1045,11 +1043,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawRectangle(DrawBuffer, V2(0.0f, 0.0f), V2((real32)DrawBuffer->Width, (real32)DrawBuffer->Height), 0.5f, 0.5f, 0.5f);
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
-                        0.5f*(real32)DrawBuffer->Height};
+                       0.5f*(real32)DrawBuffer->Height};
 
-        real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMeters;
-        real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMeters;
-        rectangle3 CameraBoundsInMeters = RectCenterDim(V3(0, 0, 0), V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
+    real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMeters;
+    real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMeters;
+    rectangle3 CameraBoundsInMeters = RectCenterDim(V3(0, 0, 0), V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
     {
         world_position MinChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMinCorner(CameraBoundsInMeters));
         world_position MaxChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMaxCorner(CameraBoundsInMeters));
@@ -1060,10 +1058,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
                 {
-                    world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, ChunkZ);
-                    if(Chunk)
+//                    world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, ChunkZ);
+//                    if(Chunk)
                     {
-                        world_position ChunkCentreP = CentredChunkPoint(Chunk);
+                        world_position ChunkCentreP = CentredChunkPoint(ChunkX, ChunkY, ChunkZ);
                         v3 RelP = Subtract(World, &ChunkCentreP, &GameState->CameraP);
                         v2 ScreenP = {ScreenCentre.X + MetersToPixels*RelP.X,
                                       ScreenCentre.Y - MetersToPixels*RelP.Y};
@@ -1072,7 +1070,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         bool32 Found = false;
                         ground_buffer *EmptyBuffer = 0;
                         for(uint32_t GroundBufferIndex = 0;
-                            GroundBufferIndex < TranState->GroundBufferCount + GroundBufferIndex;
+                            GroundBufferIndex < TranState->GroundBufferCount;
                             ++GroundBufferIndex)
                         {
                             ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;

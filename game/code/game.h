@@ -88,7 +88,6 @@ struct memory_arena
     memory_index Used;
 
     int32_t TempCount;
-
 };
 
 struct temporary_memory
@@ -275,7 +274,6 @@ struct transient_state
     uint32_t GroundBufferCount;
     loaded_bitmap GroundBitmapTemplate;
     ground_buffer *GroundBuffers;
-
 };
 
 struct entity_visible_piece_group
