@@ -681,9 +681,6 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     // TODO Handle mult-volumes here.
     // Handle events based on area overlapping.
     {
-        rectangle3 EntityRect = RectCenterDim(Entity->P + Entity->Collision->TotalVolume.OffsetP,
-                                              Entity->Collision->TotalVolume.Dim);
-
         // TODO Spatial partition here
         for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
         {
@@ -696,7 +693,6 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
         }
     }
 
-    // TODO This has to become real height handling / ground collision / etc.
     Ground += Entity->P.Z - GetEntityGroundPoint(Entity).Z;
     if((Entity->P.Z <= Ground) ||
        (IsSet(Entity, EntityFlag_ZSupported) &&
@@ -710,7 +706,7 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
     {
         ClearFlags(Entity, EntityFlag_ZSupported);
     }
-            
+
     if(Entity->DistanceLimit != 0.0f)
     {
         Entity->DistanceLimit = DistanceRemaining;
