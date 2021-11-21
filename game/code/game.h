@@ -214,7 +214,7 @@ struct pairwise_collision_rule
     pairwise_collision_rule *NextInHash;
 };
 struct game_state;
-internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 CanCollide);
+internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide);
 internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex); 
 
 struct ground_buffer
