@@ -1,23 +1,34 @@
-#include "game.h"
-#include "game_world.cpp"
-#include "game_random.h"
-#include "game_sim_region.cpp"
-#include "game_entity.cpp"
+/* ========================================================================
+   $File: $
+   $Date: $
+   $Revision: $
+   $Creator: Casey Muratori $
+   $Notice: (C) Copyright 2014 by Molly Rocket, Inc. All Rights Reserved. $
+   ======================================================================== */
+
+#include "handmade.h"
+#include "handmade_world.cpp"
+#include "handmade_random.h"
+#include "handmade_sim_region.cpp"
+#include "handmade_entity.cpp"
 
 internal void
 GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, int ToneHz)
 {
-    int16_t ToneVolume = 3000; 
+    int16 ToneVolume = 3000;
     int WavePeriod = SoundBuffer->SamplesPerSecond/ToneHz;
 
-    int16_t *SampleOut = SoundBuffer->Samples; 
-    for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
+    int16 *SampleOut = SoundBuffer->Samples;
+    for(int SampleIndex = 0;
+        SampleIndex < SoundBuffer->SampleCount;
+        ++SampleIndex)
     {
+        // TODO(casey): Draw this out for people
 #if 0
         real32 SineValue = sinf(GameState->tSine);
-        int16_t SampleValue = (int16_t)(SineValue * ToneVolume);
+        int16 SampleValue = (int16)(SineValue * ToneVolume);
 #else
-        int16_t SampleValue = 0;
+        int16 SampleValue = 0;
 #endif
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
@@ -34,11 +45,11 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
 
 internal void
 DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real32 B)
-{
-    int32_t MinX = RoundReal32ToInt32(vMin.X);
-    int32_t MinY = RoundReal32ToInt32(vMin.Y);
-    int32_t MaxX = RoundReal32ToInt32(vMax.X);
-    int32_t MaxY = RoundReal32ToInt32(vMax.Y);
+{    
+    int32 MinX = RoundReal32ToInt32(vMin.X);
+    int32 MinY = RoundReal32ToInt32(vMin.Y);
+    int32 MaxX = RoundReal32ToInt32(vMax.X);
+    int32 MaxY = RoundReal32ToInt32(vMax.Y);
 
     if(MinX < 0)
     {
@@ -60,33 +71,37 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
         MaxY = Buffer->Height;
     }
 
-    uint32_t Color = ((RoundReal32ToUInt32(R * 255.0f) << 16) |
-                      (RoundReal32ToUInt32(G * 255.0f) << 8) |
-                      (RoundReal32ToUInt32(B * 255.0f) << 0));
+    uint32 Color = ((RoundReal32ToUInt32(R * 255.0f) << 16) |
+                    (RoundReal32ToUInt32(G * 255.0f) << 8) |
+                    (RoundReal32ToUInt32(B * 255.0f) << 0));
 
-    uint8_t *Row = ((uint8_t *)Buffer->Memory +
-                    MinX*BITMAP_BYTES_PER_PIXEL +
-                    MinY*Buffer->Pitch);
-    for(int Y = MinY; Y < MaxY; ++Y)
+    uint8 *Row = ((uint8 *)Buffer->Memory +
+                  MinX*BITMAP_BYTES_PER_PIXEL +
+                  MinY*Buffer->Pitch);
+    for(int Y = MinY;
+        Y < MaxY;
+        ++Y)
     {
-        uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = MinX; X < MaxX; ++X)
-        {
+        uint32 *Pixel = (uint32 *)Row;
+        for(int X = MinX;
+            X < MaxX;
+            ++X)
+        {            
             *Pixel++ = Color;
         }
-
+        
         Row += Buffer->Pitch;
     }
 }
 
-internal void
+inline void
 DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R = 2.0f)
 {
-    // For the top and bottom.
+    // NOTE(casey): Top and bottom
     DrawRectangle(Buffer, V2(vMin.X - R, vMin.Y - R), V2(vMax.X + R, vMin.Y + R), Color.R, Color.G, Color.B);
     DrawRectangle(Buffer, V2(vMin.X - R, vMax.Y - R), V2(vMax.X + R, vMax.Y + R), Color.R, Color.G, Color.B);
 
-    // For the left and right.
+    // NOTE(casey): Left and right
     DrawRectangle(Buffer, V2(vMin.X - R, vMin.Y - R), V2(vMin.X + R, vMax.Y + R), Color.R, Color.G, Color.B);
     DrawRectangle(Buffer, V2(vMax.X - R, vMin.Y - R), V2(vMax.X + R, vMax.Y + R), Color.R, Color.G, Color.B);
 }
@@ -95,19 +110,19 @@ internal void
 DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
            real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
 {
-    int32_t MinX = RoundReal32ToInt32(RealX);
-    int32_t MinY = RoundReal32ToInt32(RealY);
-    int32_t MaxX = MinX + Bitmap->Width;
-    int32_t MaxY = MinY + Bitmap->Height;
+    int32 MinX = RoundReal32ToInt32(RealX);
+    int32 MinY = RoundReal32ToInt32(RealY);
+    int32 MaxX = MinX + Bitmap->Width;
+    int32 MaxY = MinY + Bitmap->Height;
 
-    int32_t SourceOffsetX = 0;
+    int32 SourceOffsetX = 0;
     if(MinX < 0)
     {
         SourceOffsetX = -MinX;
         MinX = 0;
     }
 
-    int32_t SourceOffsetY = 0;
+    int32 SourceOffsetY = 0;
     if(MinY < 0)
     {
         SourceOffsetY = -MinY;
@@ -124,19 +139,22 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
         MaxY = Buffer->Height;
     }
 
-    uint8_t *SourceRow = (uint8_t *)Bitmap->Memory + SourceOffsetY*Bitmap->Pitch + BITMAP_BYTES_PER_PIXEL*SourceOffsetX;
-    uint8_t *DestRow = ((uint8_t *)Buffer->Memory +
-                        MinX*BITMAP_BYTES_PER_PIXEL +
-                        MinY*Buffer->Pitch);
-
-    for(int32_t Y = MinY; Y < MaxY; ++Y)
+    uint8 *SourceRow = (uint8 *)Bitmap->Memory + SourceOffsetY*Bitmap->Pitch + BITMAP_BYTES_PER_PIXEL*SourceOffsetX;
+    uint8 *DestRow = ((uint8 *)Buffer->Memory +
+                      MinX*BITMAP_BYTES_PER_PIXEL +
+                      MinY*Buffer->Pitch);
+    for(int Y = MinY;
+        Y < MaxY;
+        ++Y)
     {
-        uint32_t *Dest = (uint32_t *)DestRow;
-        uint32_t *Source = (uint32_t *)SourceRow;
-        for(int32_t X = MinX; X < MaxX; ++X)
+        uint32 *Dest = (uint32 *)DestRow;
+        uint32 *Source = (uint32 *)SourceRow;
+        for(int X = MinX;
+            X < MaxX;
+            ++X)
         {
             real32 SA = (real32)((*Source >> 24) & 0xFF);
-            real32 RSA = (SA / 255.0f) * CAlpha;
+            real32 RSA = (SA / 255.0f) * CAlpha;            
             real32 SR = CAlpha*(real32)((*Source >> 16) & 0xFF);
             real32 SG = CAlpha*(real32)((*Source >> 8) & 0xFF);
             real32 SB = CAlpha*(real32)((*Source >> 0) & 0xFF);
@@ -146,18 +164,19 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
             real32 DG = (real32)((*Dest >> 8) & 0xFF);
             real32 DB = (real32)((*Dest >> 0) & 0xFF);
             real32 RDA = (DA / 255.0f);
-
+            
             real32 InvRSA = (1.0f-RSA);
+            // TODO(casey): Check this for math errors
             real32 A = 255.0f*(RSA + RDA - RSA*RDA);
             real32 R = InvRSA*DR + SR;
             real32 G = InvRSA*DG + SG;
             real32 B = InvRSA*DB + SB;
 
-            *Dest = (((uint32_t)(A + 0.5f) << 24) |
-                     ((uint32_t)(R + 0.5f) << 16) |
-                     ((uint32_t)(G + 0.5f) << 8) |
-                     ((uint32_t)(B + 0.5f) << 0));
-
+            *Dest = (((uint32)(A + 0.5f) << 24) |
+                     ((uint32)(R + 0.5f) << 16) |
+                     ((uint32)(G + 0.5f) << 8) |
+                     ((uint32)(B + 0.5f) << 0));
+            
             ++Dest;
             ++Source;
         }
@@ -170,70 +189,83 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
 #pragma pack(push, 1)
 struct bitmap_header
 {
-    uint16_t FileType;
-    uint32_t FileSize;
-    uint16_t Reserved1;
-    uint16_t Reserved2;
-    uint32_t BitmapOffset;
-    uint32_t Size;
-    int32_t Width;
-    int32_t Height;
-    uint16_t Planes;
-    uint16_t BitsPerPixel;
-    uint32_t Compression;
-    uint32_t SizeOfBitmap;
-    int32_t HorzResolution;
-    int32_t VertResolution;
-    uint32_t ColorsUsed;
-    uint32_t ColorsImportant;
+    uint16 FileType;
+    uint32 FileSize;
+    uint16 Reserved1;
+    uint16 Reserved2;
+    uint32 BitmapOffset;
+    uint32 Size;
+    int32 Width;
+    int32 Height;
+    uint16 Planes;
+    uint16 BitsPerPixel;
+    uint32 Compression;
+    uint32 SizeOfBitmap;
+    int32 HorzResolution;
+    int32 VertResolution;
+    uint32 ColorsUsed;
+    uint32 ColorsImportant;
 
-    uint32_t RedMask;
-    uint32_t GreenMask;
-    uint32_t BlueMask;
+    uint32 RedMask;
+    uint32 GreenMask;
+    uint32 BlueMask;
 };
 #pragma pack(pop)
 
 internal loaded_bitmap
-DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
+DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *FileName)
 {
     loaded_bitmap Result = {};
     
-    debug_read_file_result ReadResult = ReadEntireFile(Thread, Filename);
+    debug_read_file_result ReadResult = ReadEntireFile(Thread, FileName);    
     if(ReadResult.ContentsSize != 0)
     {
         bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
-        uint32_t *Pixels = (uint32_t *)((uint8_t *)ReadResult.Contents + Header->BitmapOffset);
+        uint32 *Pixels = (uint32 *)((uint8 *)ReadResult.Contents + Header->BitmapOffset);
         Result.Memory = Pixels;
         Result.Width = Header->Width;
         Result.Height = Header->Height;
 
         Assert(Header->Compression == 3);
-        uint32_t RedMask = Header->RedMask;
-        uint32_t GreenMask = Header->GreenMask;
-        uint32_t BlueMask = Header->BlueMask;
-        uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
 
+        // NOTE(casey): If you are using this generically for some reason,
+        // please remember that BMP files CAN GO IN EITHER DIRECTION and
+        // the height will be negative for top-down.
+        // (Also, there can be compression, etc., etc... DON'T think this
+        // is complete BMP loading code because it isn't!!)
+
+        // NOTE(casey): Byte order in memory is determined by the Header itself,
+        // so we have to read out the masks and convert the pixels ourselves.
+        uint32 RedMask = Header->RedMask;
+        uint32 GreenMask = Header->GreenMask;
+        uint32 BlueMask = Header->BlueMask;
+        uint32 AlphaMask = ~(RedMask | GreenMask | BlueMask);        
+        
         bit_scan_result RedScan = FindLeastSignificantSetBit(RedMask);
         bit_scan_result GreenScan = FindLeastSignificantSetBit(GreenMask);
         bit_scan_result BlueScan = FindLeastSignificantSetBit(BlueMask);
         bit_scan_result AlphaScan = FindLeastSignificantSetBit(AlphaMask);
-
+        
         Assert(RedScan.Found);
         Assert(GreenScan.Found);
         Assert(BlueScan.Found);
         Assert(AlphaScan.Found);
 
-        int32_t RedShiftDown = (int32_t)RedScan.Index;
-        int32_t GreenShiftDown = (int32_t)GreenScan.Index;
-        int32_t BlueShiftDown = (int32_t)BlueScan.Index;
-        int32_t AlphaShiftDown = (int32_t)AlphaScan.Index;
-
-        uint32_t *SourceDest = Pixels;
-        for(int32_t Y = 0; Y < Header->Height; ++Y)
+        int32 RedShiftDown = (int32)RedScan.Index;
+        int32 GreenShiftDown = (int32)GreenScan.Index;
+        int32 BlueShiftDown = (int32)BlueScan.Index;
+        int32 AlphaShiftDown = (int32)AlphaScan.Index;
+        
+        uint32 *SourceDest = Pixels;
+        for(int32 Y = 0;
+            Y < Header->Height;
+            ++Y)
         {
-            for(int32_t X = 0; X < Header->Width; ++X)
+            for(int32 X = 0;
+                X < Header->Width;
+                ++X)
             {
-                uint32_t C = *SourceDest;
+                uint32 C = *SourceDest;
 
                 real32 R = (real32)((C & RedMask) >> RedShiftDown);
                 real32 G = (real32)((C & GreenMask) >> GreenShiftDown);
@@ -246,32 +278,32 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
                 G = G*AN;
                 B = B*AN;
 #endif
-
-                *SourceDest++ = (((uint32_t)(A + 0.5f) << 24) |
-                                 ((uint32_t)(R + 0.5f) << 16) |
-                                 ((uint32_t)(G + 0.5f) << 8) |
-                                 ((uint32_t)(B + 0.5f) << 0));
+                
+                *SourceDest++ = (((uint32)(A + 0.5f) << 24) |
+                                 ((uint32)(R + 0.5f) << 16) |
+                                 ((uint32)(G + 0.5f) << 8) |
+                                 ((uint32)(B + 0.5f) << 0));
             }
         }
     }
 
     Result.Pitch = -Result.Width*BITMAP_BYTES_PER_PIXEL;
-    Result.Memory = (uint8_t *)Result.Memory - Result.Pitch*(Result.Height - 1);
-
+    Result.Memory = (uint8 *)Result.Memory - Result.Pitch*(Result.Height - 1);
+    
     return(Result);
 }
 
 struct add_low_entity_result
 {
     low_entity *Low;
-    uint32_t LowIndex;
+    uint32 LowIndex;
 };
 internal add_low_entity_result
 AddLowEntity(game_state *GameState, entity_type Type, world_position P)
 {
     Assert(GameState->LowEntityCount < ArrayCount(GameState->LowEntities));
-    uint32_t EntityIndex = GameState->LowEntityCount++;
-
+    uint32 EntityIndex = GameState->LowEntityCount++;
+   
     low_entity *EntityLow = GameState->LowEntities + EntityIndex;
     *EntityLow = {};
     EntityLow->Sim.Type = Type;
@@ -283,62 +315,69 @@ AddLowEntity(game_state *GameState, entity_type Type, world_position P)
     add_low_entity_result Result;
     Result.Low = EntityLow;
     Result.LowIndex = EntityIndex;
+
+    // TODO(casey): Do we need to have a begin/end paradigm for adding
+    // entities so that they can be brought into the high set when they
+    // are added and are in the camera region?
     
     return(Result);
 }
 
 internal add_low_entity_result
-AddGroundedEntity(game_state *GameState, entity_type Type, world_position P, sim_entity_collision_volume_group *Collision)
+AddGroundedEntity(game_state *GameState, entity_type Type, world_position P,
+                  sim_entity_collision_volume_group *Collision)
 {
     add_low_entity_result Entity = AddLowEntity(GameState, Type, P);
     Entity.Low->Sim.Collision = Collision;
-    
     return(Entity);
 }
 
 inline world_position
-ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, int32_t AbsTileZ,
+ChunkPositionFromTilePosition(world *World, int32 AbsTileX, int32 AbsTileY, int32 AbsTileZ,
                               v3 AdditionalOffset = V3(0, 0, 0))
 {
     world_position BasePos = {};
 
     real32 TileSideInMeters = 1.4f;
     real32 TileDepthInMeters = 3.0f;
-
+    
     v3 TileDim = V3(TileSideInMeters, TileSideInMeters, TileDepthInMeters);
     v3 Offset = Hadamard(TileDim, V3((real32)AbsTileX, (real32)AbsTileY, (real32)AbsTileZ));
     world_position Result = MapIntoChunkSpace(World, BasePos, AdditionalOffset + Offset);
-
+    
     Assert(IsCanonical(World, Result.Offset_));
-
+    
     return(Result);
 }
 
 internal add_low_entity_result
-AddStandardRoom(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddStandardRoom(game_state *GameState, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Space, P, GameState->StandardRoomCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Space, P,
+                                                     GameState->StandardRoomCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Traversable);
 
     return(Entity);
 }
 
 internal add_low_entity_result
-AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddWall(game_state *GameState, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Wall, P, GameState->WallCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Wall, P,
+                                                     GameState->WallCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides);
 
     return(Entity);
 }
 
 internal add_low_entity_result
-AddStair(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddStair(game_state *GameState, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Stairwell, P, GameState->StairCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Stairwell, P,
+                                                     GameState->StairCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides);
     Entity.Low->Sim.WalkableDim = Entity.Low->Sim.Collision->TotalVolume.Dim.XY;
     Entity.Low->Sim.WalkableHeight = GameState->TypicalFloorHeight;
@@ -347,11 +386,13 @@ AddStair(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t A
 }
 
 internal void
-InitHitPoints(low_entity *EntityLow, uint32_t HitPointCount)
+InitHitPoints(low_entity *EntityLow, uint32 HitPointCount)
 {
     Assert(HitPointCount <= ArrayCount(EntityLow->Sim.HitPoint));
     EntityLow->Sim.HitPointMax = HitPointCount;
-    for(uint32_t HitPointIndex = 0; HitPointIndex < EntityLow->Sim.HitPointMax; ++HitPointIndex)
+    for(uint32 HitPointIndex = 0;
+        HitPointIndex < EntityLow->Sim.HitPointMax;
+        ++HitPointIndex)
     {
         hit_point *HitPoint = EntityLow->Sim.HitPoint + HitPointIndex;
         HitPoint->Flags = 0;
@@ -374,7 +415,8 @@ internal add_low_entity_result
 AddPlayer(game_state *GameState)
 {
     world_position P = GameState->CameraP;
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Hero, P, GameState->PlayerCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Hero, P,
+                                                     GameState->PlayerCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
     InitHitPoints(Entity.Low, 3);
@@ -391,10 +433,11 @@ AddPlayer(game_state *GameState)
 }
 
 internal add_low_entity_result
-AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddMonstar(game_state *GameState, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Monster, P, GameState->MonsterCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Monstar, P,
+                                                     GameState->MonstarCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
     InitHitPoints(Entity.Low, 3);
@@ -403,10 +446,11 @@ AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t
 }
 
 internal add_low_entity_result
-AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddFamiliar(game_state *GameState, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Familiar, P, GameState->FamiliarCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Familiar, P,
+                                                     GameState->FamiliarCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
     return(Entity);
@@ -448,18 +492,18 @@ PushRectOutline(entity_visible_piece_group *Group, v2 Offset, real32 OffsetZ,
                 v2 Dim, v4 Color, real32 EntityZC = 1.0f)
 {
     real32 Thickness = 0.1f;
-
-    // Top and Bottom.
+    
+    // NOTE(casey): Top and bottom
     PushPiece(Group, 0, Offset - V2(0, 0.5f*Dim.Y), OffsetZ, V2(0, 0), V2(Dim.X, Thickness), Color, EntityZC);
     PushPiece(Group, 0, Offset + V2(0, 0.5f*Dim.Y), OffsetZ, V2(0, 0), V2(Dim.X, Thickness), Color, EntityZC);
 
-    // Left and Right.
+    // NOTE(casey): Left and right
     PushPiece(Group, 0, Offset - V2(0.5f*Dim.X, 0), OffsetZ, V2(0, 0), V2(Thickness, Dim.Y), Color, EntityZC);
     PushPiece(Group, 0, Offset + V2(0.5f*Dim.X, 0), OffsetZ, V2(0, 0), V2(Thickness, Dim.Y), Color, EntityZC);
 }
 
 internal void
-DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
+DrawHitpoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
 {
     if(Entity->HitPointMax >= 1)
     {
@@ -467,7 +511,7 @@ DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
         real32 SpacingX = 1.5f*HealthDim.X;
         v2 HitP = {-0.5f*(Entity->HitPointMax - 1)*SpacingX, -0.25f};
         v2 dHitP = {SpacingX, 0.0f};
-        for(uint32_t HealthIndex = 0;
+        for(uint32 HealthIndex = 0;
             HealthIndex < Entity->HitPointMax;
             ++HealthIndex)
         {
@@ -485,18 +529,21 @@ DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
 }
 
 internal void
-ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex)
+ClearCollisionRulesFor(game_state *GameState, uint32 StorageIndex)
 {
-    // TODO Make a better data structure that allows the removal
-    // of collision rules without having to search the entire table.
-    // One way to make removal easy would be to always add _both_
-    // orders of the pairs of storage indeces to the hash table,
-    // so that way no matter which position the entity is in, I can
-    // always find it. Then, when I do my first pass through for
-    // removal, I can just remember the original top of the free list,
-    // and then when i'm done, I can do another pass through all the
-    // new things on the free list, and remove the reverse of those pairs.
-    for(uint32_t HashBucket = 0; HashBucket < ArrayCount(GameState->CollisionRuleHash); ++HashBucket)
+    // TODO(casey): Need to make a better data structure that allows
+    // removal of collision rules without searching the entire table
+    // NOTE(casey): One way to make removal easy would be to always
+    // add _both_ orders of the pairs of storage indices to the
+    // hash table, so no matter which position the entity is in,
+    // you can always find it.  Then, when you do your first pass
+    // through for removal, you just remember the original top
+    // of the free list, and when you're done, do a pass through all
+    // the new things on the free list, and remove the reverse of
+    // those pairs.
+    for(uint32 HashBucket = 0;
+        HashBucket < ArrayCount(GameState->CollisionRuleHash);
+        ++HashBucket)
     {
         for(pairwise_collision_rule **Rule = &GameState->CollisionRuleHash[HashBucket];
             *Rule;
@@ -520,18 +567,19 @@ ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex)
 }
 
 internal void
-AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 CanCollide)
+AddCollisionRule(game_state *GameState, uint32 StorageIndexA, uint32 StorageIndexB, bool32 CanCollide)
 {
+    // TODO(casey): Collapse this with ShouldCollide
     if(StorageIndexA > StorageIndexB)
     {
-        uint32_t Temp = StorageIndexA;
+        uint32 Temp = StorageIndexA;
         StorageIndexA = StorageIndexB;
         StorageIndexB = Temp;
     }
 
-    // TODO Implement a better hash function.
+    // TODO(casey): BETTER HASH FUNCTION
     pairwise_collision_rule *Found = 0;
-    uint32_t HashBucket = StorageIndexA & (ArrayCount(GameState->CollisionRuleHash) - 1);
+    uint32 HashBucket = StorageIndexA & (ArrayCount(GameState->CollisionRuleHash) - 1);
     for(pairwise_collision_rule *Rule = GameState->CollisionRuleHash[HashBucket];
         Rule;
         Rule = Rule->NextInHash)
@@ -543,7 +591,7 @@ AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t Storage
             break;
         }
     }
-
+    
     if(!Found)
     {
         Found = GameState->FirstFreeCollisionRule;
@@ -555,7 +603,7 @@ AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t Storage
         {
             Found = PushStruct(&GameState->WorldArena, pairwise_collision_rule);
         }
-
+        
         Found->NextInHash = GameState->CollisionRuleHash[HashBucket];
         GameState->CollisionRuleHash[HashBucket] = Found;
     }
@@ -571,7 +619,7 @@ AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t Storage
 sim_entity_collision_volume_group *
 MakeSimpleGroundedCollision(game_state *GameState, real32 DimX, real32 DimY, real32 DimZ)
 {
-    // TODO Change to using the fundamental types arena, etc.
+    // TODO(casey): NOT WORLD ARENA!  Change to using the fundamental types arena, etc.
     sim_entity_collision_volume_group *Group = PushStruct(&GameState->WorldArena, sim_entity_collision_volume_group);
     Group->VolumeCount = 1;
     Group->Volumes = PushArray(&GameState->WorldArena, Group->VolumeCount, sim_entity_collision_volume);
@@ -585,11 +633,12 @@ MakeSimpleGroundedCollision(game_state *GameState, real32 DimX, real32 DimY, rea
 sim_entity_collision_volume_group *
 MakeNullCollision(game_state *GameState)
 {
+    // TODO(casey): NOT WORLD ARENA!  Change to using the fundamental types arena, etc.
     sim_entity_collision_volume_group *Group = PushStruct(&GameState->WorldArena, sim_entity_collision_volume_group);
     Group->VolumeCount = 0;
     Group->Volumes = 0;
     Group->TotalVolume.OffsetP = V3(0, 0, 0);
-    // TODO Maybe make this negative?
+    // TODO(casey): Should this be negative?
     Group->TotalVolume.Dim = V3(0, 0, 0);
 
     return(Group);
@@ -600,15 +649,19 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 {
     loaded_bitmap Buffer = TranState->GroundBitmapTemplate;
     Buffer.Memory = GroundBuffer->Memory;
-    
-    GroundBuffer->P = *ChunkP;
 
+    GroundBuffer->P = *ChunkP;
+    
+    // TODO(casey): Make random number generation more systemic
+    // TODO(casey): Look into wang hashing or some other spatial seed generation "thing"!
     random_series Series = RandomSeed(139*ChunkP->ChunkX + 593*ChunkP->ChunkY + 329*ChunkP->ChunkZ);
 
     real32 Width = (real32)Buffer.Width;
     real32 Height = (real32)Buffer.Height;
     v2 Center = 0.5f*V2(Width, Height);
-    for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
+    for(uint32 GrassIndex = 0;
+        GrassIndex < 100;
+        ++GrassIndex)
     {
         loaded_bitmap *Stamp;
         if(RandomChoice(&Series, 2))
@@ -619,19 +672,21 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
         {
             Stamp = GameState->Stone + RandomChoice(&Series, ArrayCount(GameState->Stone));
         }
-
+        
         v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
-        v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
+        v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};        
         v2 P = Offset - BitmapCenter;
         DrawBitmap(&Buffer, Stamp, P.X, P.Y);
     }
-
-    for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
+    
+    for(uint32 GrassIndex = 0;
+        GrassIndex < 100;
+        ++GrassIndex)
     {
         loaded_bitmap *Stamp = GameState->Tuft + RandomChoice(&Series, ArrayCount(GameState->Tuft));
-
+        
         v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
-        v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
+        v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};        
         v2 P = Offset - BitmapCenter;
 
         DrawBitmap(&Buffer, Stamp, P.X, P.Y);
@@ -643,20 +698,20 @@ ClearBitmap(loaded_bitmap *Bitmap)
 {
     if(Bitmap->Memory)
     {
-        int32_t TotalBitmapSize = Bitmap->Width*Bitmap->Height*BITMAP_BYTES_PER_PIXEL;
+        int32 TotalBitmapSize = Bitmap->Width*Bitmap->Height*BITMAP_BYTES_PER_PIXEL;
         ZeroSize(TotalBitmapSize, Bitmap->Memory);
     }
 }
 
 internal loaded_bitmap
-MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 ClearToZero = true)
+MakeEmptyBitmap(memory_arena *Arena, int32 Width, int32 Height, bool32 ClearToZero = true)
 {
     loaded_bitmap Result = {};
 
     Result.Width = Width;
     Result.Height = Height;
     Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
-    int32_t TotalBitmapSize = Width*Height*BITMAP_BYTES_PER_PIXEL;
+    int32 TotalBitmapSize = Width*Height*BITMAP_BYTES_PER_PIXEL;
     Result.Memory = PushSize_(Arena, TotalBitmapSize);
     if(ClearToZero)
     {
@@ -671,28 +726,29 @@ internal void
 RequestGroundBuffers(world_position CenterP, rectangle3 Bounds)
 {
     Bounds = Offset(Bounds, CenterP.Offset_);
-    CenterP.Offset_ = V3(0, 0, 0);
-    for(int32_t)
+    CenterP.Offset_ = V3(0, 0, 0);    
+    for(int32 )
     {
     }
+    // TODO(casey): This is just a test fill
     FillGroundChunk(TranState, GameState, TranState->GroundBuffers, &GameState->CameraP);
 }
 #endif
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
-{
+{    
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
            (ArrayCount(Input->Controllers[0].Buttons)));
 
-    uint32_t GroundBufferWidth = 256;
-    uint32_t GroundBufferHeight = 256;
+    uint32 GroundBufferWidth = 256;
+    uint32 GroundBufferHeight = 256;
 
-    Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
+    Assert(sizeof(game_state) <= Memory->PermanentStorageSize);    
     game_state *GameState = (game_state *)Memory->PermanentStorage;
-    if(!Memory->IsInitialised)
+    if(!Memory->IsInitialized)
     {
-        uint32_t TilesPerWidth = 17;
-        uint32_t TilesPerHeight = 9;
+        uint32 TilesPerWidth = 17;
+        uint32 TilesPerHeight = 9;
 
         GameState->TypicalFloorHeight = 3.0f;
         GameState->MetersToPixels = 42.0f;
@@ -702,15 +758,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                     GameState->PixelsToMeters*(real32)GroundBufferHeight,
                                     GameState->TypicalFloorHeight};
 
-        InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
-                        (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
+        InitializeArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
+                        (uint8 *)Memory->PermanentStorage + sizeof(game_state));
 
-        // NOTE: Reserve entity slot 0 for the null entity
+        
+        // NOTE(casey): Reserve entity slot 0 for the null entity
         AddLowEntity(GameState, EntityType_Null, NullPosition());
 
         GameState->World = PushStruct(&GameState->WorldArena, world);
         world *World = GameState->World;
-        InitialiseWorld(World, WorldChunkDimInMeters);
+        InitializeWorld(World, WorldChunkDimInMeters);
 
         real32 TileSideInMeters = 1.4f;
         real32 TileDepthInMeters = GameState->TypicalFloorHeight;
@@ -722,7 +779,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                                 2.0f*TileSideInMeters,
                                                                 1.1f*TileDepthInMeters);
         GameState->PlayerCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 1.2f);
-        GameState->MonsterCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.5f);
+        GameState->MonstarCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.5f);
         GameState->FamiliarCollision = MakeSimpleGroundedCollision(GameState, 1.0f, 0.5f, 0.5f);
         GameState->WallCollision = MakeSimpleGroundedCollision(GameState,
                                                                TileSideInMeters,
@@ -733,23 +790,37 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                                        TilesPerHeight*TileSideInMeters,
                                                                        0.9f*TileDepthInMeters);
 
-        GameState->Grass[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass00.bmp");
-        GameState->Grass[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass01.bmp");
+        GameState->Grass[0] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass00.bmp");
+        GameState->Grass[1] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass01.bmp");
 
-        GameState->Tuft[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft00.bmp");
-        GameState->Tuft[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft01.bmp");
-        GameState->Tuft[2] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft02.bmp");
+        GameState->Tuft[0] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft00.bmp");
+        GameState->Tuft[1] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft01.bmp");
+        GameState->Tuft[2] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft02.bmp");
 
-        GameState->Stone[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground00.bmp");
-        GameState->Stone[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground01.bmp");
-        GameState->Stone[2] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground02.bmp");
-        GameState->Stone[3] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground03.bmp");
-
-        GameState->Backdrop = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
-        GameState->Shadow = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_shadow.bmp");
-        GameState->Tree = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tree00.bmp");
-        GameState->Stairwell = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock02.bmp");
-        GameState->Sword = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock03.bmp");
+        GameState->Stone[0] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground00.bmp");
+        GameState->Stone[1] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground01.bmp");
+        GameState->Stone[2] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground02.bmp");
+        GameState->Stone[3] =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground03.bmp");
+        
+        GameState->Backdrop =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_background.bmp");
+        GameState->Shadow =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_shadow.bmp");
+        GameState->Tree =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tree00.bmp");
+        GameState->Stairwell =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock02.bmp");
+        GameState->Sword =
+            DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock03.bmp");
 
         hero_bitmaps *Bitmap;
 
@@ -779,25 +850,28 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         ++Bitmap;
 
         random_series Series = RandomSeed(1234);
+        
+        uint32 ScreenBaseX = 0;
+        uint32 ScreenBaseY = 0;
+        uint32 ScreenBaseZ = 0;
+        uint32 ScreenX = ScreenBaseX;
+        uint32 ScreenY = ScreenBaseY;
+        uint32 AbsTileZ = ScreenBaseZ;
 
-        uint32_t ScreenBaseX = 0;
-        uint32_t ScreenBaseY = 0;
-        uint32_t ScreenBaseZ = 0;
-        uint32_t ScreenX = ScreenBaseX;
-        uint32_t ScreenY = ScreenBaseY;
-        uint32_t AbsTileZ = ScreenBaseZ;
-
+        // TODO(casey): Replace all this with real world generation!
         bool32 DoorLeft = false;
         bool32 DoorRight = false;
         bool32 DoorTop = false;
         bool32 DoorBottom = false;
         bool32 DoorUp = false;
         bool32 DoorDown = false;
-        for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
+        for(uint32 ScreenIndex = 0;
+            ScreenIndex < 2000;
+            ++ScreenIndex)
         {
-//            uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 3); 
-            uint32_t DoorDirection = RandomChoice(&Series, 2); 
-
+//            uint32 DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 3);
+            uint32 DoorDirection = RandomChoice(&Series, 2);
+            
             bool32 CreatedZDoor = false;
             if(DoorDirection == 2)
             {
@@ -824,14 +898,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             ScreenX*TilesPerWidth + TilesPerWidth/2,
                             ScreenY*TilesPerHeight + TilesPerHeight/2,
                             AbsTileZ);
-
-            for(uint32_t TileY = 0; TileY < TilesPerHeight; ++TileY)
+            
+            for(uint32 TileY = 0;
+                TileY < TilesPerHeight;
+                ++TileY)
             {
-                for(uint32_t TileX = 0; TileX < TilesPerWidth; ++TileX)
+                for(uint32 TileX = 0;
+                    TileX < TilesPerWidth;
+                    ++TileX)
                 {
-                    uint32_t AbsTileX = ScreenX*TilesPerWidth + TileX;
-                    uint32_t AbsTileY = ScreenY*TilesPerHeight + TileY;
-
+                    uint32 AbsTileX = ScreenX*TilesPerWidth + TileX;
+                    uint32 AbsTileY = ScreenY*TilesPerHeight + TileY;
+                    
                     bool32 ShouldBeDoor = false;
                     if((TileX == 0) && (!DoorLeft || (TileY != (TilesPerHeight/2))))
                     {
@@ -842,7 +920,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     {
                         ShouldBeDoor = true;
                     }
-
+                    
                     if((TileY == 0) && (!DoorBottom || (TileX != (TilesPerWidth/2))))
                     {
                         ShouldBeDoor = true;
@@ -893,7 +971,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 else
                 {
                     AbsTileZ = ScreenBaseZ;
-                }
+                }                
             }
             else if(DoorDirection == 1)
             {
@@ -908,63 +986,73 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #if 0
         while(GameState->LowEntityCount < (ArrayCount(GameState->LowEntities) - 16))
         {
-            uint32_t Coordinate = 1024 + GameState->LowEntityCount;
+            uint32 Coordinate = 1024 + GameState->LowEntityCount;
             AddWall(GameState, Coordinate, Coordinate, Coordinate);
         }
 #endif
-
+        
         world_position NewCameraP = {};
-        uint32_t CameraTileX = ScreenBaseX*TilesPerWidth + 17/2;
-        uint32_t CameraTileY = ScreenBaseY*TilesPerHeight + 9/2;
-        uint32_t CameraTileZ = ScreenBaseZ;
-        NewCameraP = ChunkPositionFromTilePosition(GameState->World, CameraTileX, CameraTileY, CameraTileZ);
+        uint32 CameraTileX = ScreenBaseX*TilesPerWidth + 17/2;
+        uint32 CameraTileY = ScreenBaseY*TilesPerHeight + 9/2;
+        uint32 CameraTileZ = ScreenBaseZ;
+        NewCameraP = ChunkPositionFromTilePosition(GameState->World,
+                                                   CameraTileX,
+                                                   CameraTileY,
+                                                   CameraTileZ);
         GameState->CameraP = NewCameraP;
-
-        AddMonster(GameState, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
-        for(int FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
+        
+        AddMonstar(GameState, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
+        for(int FamiliarIndex = 0;
+            FamiliarIndex < 1;
+            ++FamiliarIndex)
         {
-            int32_t FamiliarOffsetX = RandomBetween(&Series, -7, 7);
-            int32_t FamiliarOffsetY = RandomBetween(&Series, -3, -1);
+            int32 FamiliarOffsetX = RandomBetween(&Series, -7, 7);
+            int32 FamiliarOffsetY = RandomBetween(&Series, -3, -1);
             if((FamiliarOffsetX != 0) ||
                (FamiliarOffsetY != 0))
             {
-                AddFamiliar(GameState, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY, CameraTileZ);
+                AddFamiliar(GameState, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY,
+                            CameraTileZ);
             }
         }
 
-        Memory->IsInitialised = true;
+        Memory->IsInitialized = true;
     }
 
-    // Transient initialisation
-    Assert(sizeof(transient_state) <= Memory->TransientStorageSize);
-    transient_state *TranState = (transient_state *)Memory->TransientStorage;
-    if(!TranState->IsInitialised)
+    // NOTE(casey): Transient initialization
+    Assert(sizeof(transient_state) <= Memory->TransientStorageSize);    
+    transient_state *TranState = (transient_state *)Memory->TransientStorageSize;
+    if(!TranState->IsInitialized)
     {
-        InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
-                        (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
+        InitializeArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
+                        (uint8 *)Memory->TransientStorageSize + sizeof(transient_state));
 
         TranState->GroundBufferCount = 128;
         TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
-        for(uint32_t GroundBufferIndex = 0;
+        for(uint32 GroundBufferIndex = 0;
             GroundBufferIndex < TranState->GroundBufferCount;
             ++GroundBufferIndex)
         {
             ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
-            TranState->GroundBitmapTemplate = MakeEmptyBitmap(&TranState->TranArena, GroundBufferWidth,
-                                                              GroundBufferHeight, false);
+            TranState->GroundBitmapTemplate = MakeEmptyBitmap(&TranState->TranArena, GroundBufferWidth, GroundBufferHeight, false);
             GroundBuffer->Memory = TranState->GroundBitmapTemplate.Memory;
             GroundBuffer->P = NullPosition();
         }
 
-        TranState->IsInitialised = true;
+        TranState->IsInitialized = true;
     }
-
+    
     world *World = GameState->World;
 
     real32 MetersToPixels = GameState->MetersToPixels;
     real32 PixelsToMeters = 1.0f/MetersToPixels;
 
-    for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
+    //
+    // NOTE(casey): 
+    //
+    for(int ControllerIndex = 0;
+        ControllerIndex < ArrayCount(Input->Controllers);
+        ++ControllerIndex)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
         controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
@@ -982,14 +1070,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             ConHero->ddP = {};
             ConHero->dSword = {};
 
-            if(Controller->IsAnalogue)
+            if(Controller->IsAnalog)
             {
-                // Use analogue movement tuning
+                // NOTE(casey): Use analog movement tuning
                 ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
             }
             else
             {
-                // Use digital movement tuning
+                // NOTE(casey): Use digital movement tuning
                 if(Controller->MoveUp.EndedDown)
                 {
                     ConHero->ddP.Y = 1.0f;
@@ -1032,6 +1120,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
     }
+    
+    //
+    // NOTE(casey): Render
+    //
 
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
@@ -1039,42 +1131,52 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBuffer->Height = Buffer->Height;
     DrawBuffer->Pitch = Buffer->Pitch;
     DrawBuffer->Memory = Buffer->Memory;
-
+    
     DrawRectangle(DrawBuffer, V2(0.0f, 0.0f), V2((real32)DrawBuffer->Width, (real32)DrawBuffer->Height), 0.5f, 0.5f, 0.5f);
 
-    v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
+    v2 ScreenCenter = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};
 
     real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMeters;
     real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMeters;
-    rectangle3 CameraBoundsInMeters = RectCenterDim(V3(0, 0, 0), V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
+    rectangle3 CameraBoundsInMeters = RectCenterDim(V3(0, 0, 0),
+                                                    V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
+
     {
         world_position MinChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMinCorner(CameraBoundsInMeters));
         world_position MaxChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMaxCorner(CameraBoundsInMeters));
 
-        for(int32_t ChunkZ = MinChunkP.ChunkZ; ChunkZ <= MaxChunkP.ChunkZ; ++ChunkZ)
+        for(int32 ChunkZ = MinChunkP.ChunkZ;
+            ChunkZ <= MaxChunkP.ChunkZ;
+            ++ChunkZ)
         {
-            for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
+            for(int32 ChunkY = MinChunkP.ChunkY;
+                ChunkY <= MaxChunkP.ChunkY;
+                ++ChunkY)
             {
-                for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
+                for(int32 ChunkX = MinChunkP.ChunkX;
+                    ChunkX <= MaxChunkP.ChunkX;
+                    ++ChunkX)
                 {
 //                    world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, ChunkZ);
 //                    if(Chunk)
                     {
-                        world_position ChunkCentreP = CentredChunkPoint(ChunkX, ChunkY, ChunkZ);
-                        v3 RelP = Subtract(World, &ChunkCentreP, &GameState->CameraP);
-                        v2 ScreenP = {ScreenCentre.X + MetersToPixels*RelP.X,
-                                      ScreenCentre.Y - MetersToPixels*RelP.Y};
+                        world_position ChunkCenterP = CenteredChunkPoint(ChunkX, ChunkY, ChunkZ);
+                        v3 RelP = Subtract(World, &ChunkCenterP, &GameState->CameraP);
+                        v2 ScreenP = {ScreenCenter.X + MetersToPixels*RelP.X,
+                                      ScreenCenter.Y - MetersToPixels*RelP.Y};
                         v2 ScreenDim = MetersToPixels*World->ChunkDimInMeters.XY;
 
+
+                        // TODO(casey): This is super inefficient fix it tomorrrow!
                         bool32 Found = false;
                         ground_buffer *EmptyBuffer = 0;
-                        for(uint32_t GroundBufferIndex = 0;
+                        for(uint32 GroundBufferIndex = 0;
                             GroundBufferIndex < TranState->GroundBufferCount;
                             ++GroundBufferIndex)
                         {
                             ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
-                            if(AreInSameChunk(World, &GroundBuffer->P, &ChunkCentreP))
+                            if(AreInSameChunk(World, &GroundBuffer->P, &ChunkCenterP))
                             {
                                 Found = true;
                                 break;
@@ -1087,25 +1189,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                         if(!Found && EmptyBuffer)
                         {
-                            FillGroundChunk(TranState, GameState, EmptyBuffer, &ChunkCentreP);
+                            FillGroundChunk(TranState, GameState, EmptyBuffer, &ChunkCenterP);
                         }
-
-                        DrawRectangleOutline(DrawBuffer, ScreenP - 0.5f*ScreenDim,
-                                             ScreenP + 0.5f*ScreenDim, V3(1.0f, 1.0f, 0.0f));
+                        
+                        DrawRectangleOutline(DrawBuffer, ScreenP - 0.5f*ScreenDim, ScreenP + 0.5f*ScreenDim, V3(1.0f, 1.0f, 0.0f));
                     }
                 }
             }
         }
     }
 
-    // TODO: How big do I actually want to expand here?
+    // TODO(casey): How big do we actually want to expand here?
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMeters, SimBoundsExpansion);
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
     sim_region *SimRegion = BeginSim(&TranState->TranArena, GameState, GameState->World,
                                      GameState->CameraP, SimBounds, Input->dtForFrame);
 
-    for(uint32_t GroundBufferIndex = 0;
+    for(uint32 GroundBufferIndex = 0;
         GroundBufferIndex < TranState->GroundBufferCount;
         ++GroundBufferIndex)
     {
@@ -1114,23 +1215,27 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             loaded_bitmap Bitmap = TranState->GroundBitmapTemplate;
             Bitmap.Memory = GroundBuffer->Memory;
-            v3 Delta = GameState->MetersToPixels*Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
-            v2 Ground = {ScreenCentre.X + Delta.X - 0.5f*(real32)Bitmap.Width,
-                         ScreenCentre.Y - Delta.Y - 0.5f*(real32)Bitmap.Height};
+            v3 Delta = GameState->MetersToPixels*Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);        
+            v2 Ground = {ScreenCenter.X + Delta.X - 0.5f*(real32)Bitmap.Width,
+                         ScreenCenter.Y - Delta.Y - 0.5f*(real32)Bitmap.Height};            
             DrawBitmap(DrawBuffer, &Bitmap, Ground.X, Ground.Y);
         }
     }
 
+    // TODO(casey): Move this out into handmade_entity.cpp!
     entity_visible_piece_group PieceGroup;
     PieceGroup.GameState = GameState;
     sim_entity *Entity = SimRegion->Entities;
-    for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex, ++Entity)
+    for(uint32 EntityIndex = 0;
+        EntityIndex < SimRegion->EntityCount;
+        ++EntityIndex, ++Entity)
     {
         if(Entity->Updatable)
         {
             PieceGroup.PieceCount = 0;
             real32 dt = Input->dtForFrame;
         
+            // TODO(casey): This is incorrect, should be computed after update!!!!
             real32 ShadowAlpha = 1.0f - 0.5f*Entity->P.Z;
             if(ShadowAlpha < 0)
             {
@@ -1139,13 +1244,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             move_spec MoveSpec = DefaultMoveSpec();
             v3 ddP = {};
-
+            
             hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[Entity->FacingDirection];
             switch(Entity->Type)
             {
                 case EntityType_Hero:
                 {
-                    for(uint32_t ControlIndex = 0; ControlIndex < ArrayCount(GameState->ControlledHeroes); ++ControlIndex)
+                    // TODO(casey): Now that we have some real usage examples, let's solidify
+                    // the positioning system!
+                    for(uint32 ControlIndex = 0;
+                        ControlIndex < ArrayCount(GameState->ControlledHeroes);
+                        ++ControlIndex)
                     {
                         controlled_hero *ConHero = GameState->ControlledHeroes + ControlIndex;
 
@@ -1155,7 +1264,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             {
                                 Entity->dP.Z = ConHero->dZ;
                             }
-
+                        
                             MoveSpec.UnitMaxAccelVector = true;
                             MoveSpec.Speed = 50.0f;
                             MoveSpec.Drag = 8.0f;
@@ -1167,19 +1276,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                 if(Sword && IsSet(Sword, EntityFlag_Nonspatial))
                                 {
                                     Sword->DistanceLimit = 5.0f;
-                                    MakeEntitySpatial(Sword, Entity->P, Entity->dP + 5.0f*V3(ConHero->dSword, 0));
+                                    MakeEntitySpatial(Sword, Entity->P,
+                                                      Entity->dP + 5.0f*V3(ConHero->dSword, 0));
                                     AddCollisionRule(GameState, Sword->StorageIndex, Entity->StorageIndex, false);
                                 }
                             }
                         }
                     }
 
+                    // TODO(casey): Z!!!
                     PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
                     PushBitmap(&PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
                     PushBitmap(&PieceGroup, &HeroBitmaps->Cape, V2(0, 0), 0, HeroBitmaps->Align);
                     PushBitmap(&PieceGroup, &HeroBitmaps->Head, V2(0, 0), 0, HeroBitmaps->Align);
 
-                    DrawHitPoints(Entity, &PieceGroup);
+                    DrawHitpoints(Entity, &PieceGroup);
                 } break;
 
                 case EntityType_Wall:
@@ -1202,7 +1313,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     if(Entity->DistanceLimit == 0.0f)
                     {
                         ClearCollisionRulesFor(GameState, Entity->StorageIndex);
-                        MakeEntityNonspatial(Entity);
+                        MakeEntityNonSpatial(Entity);
                     }
 
                     PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
@@ -1212,17 +1323,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 case EntityType_Familiar:
                 {
                     sim_entity *ClosestHero = 0;
-                    real32 ClosestHeroDSq = Square(10.0f);
+                    real32 ClosestHeroDSq = Square(10.0f); // NOTE(casey): Ten meter maximum search!
 
 #if 0
+                    // TODO(casey): Make spatial queries easy for things!
                     sim_entity *TestEntity = SimRegion->Entities;
-                    for(uint32_t TestEntityIndex = 0;
+                    for(uint32 TestEntityIndex = 0;
                         TestEntityIndex < SimRegion->EntityCount;
                         ++TestEntityIndex, ++TestEntity)
                     {
                         if(TestEntity->Type == EntityType_Hero)
-                        {
-                            real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
+                        {            
+                            real32 TestDSq = LengthSq(TestEntity->P - Entity->P);            
                             if(ClosestHeroDSq > TestDSq)
                             {
                                 ClosestHero = TestEntity;
@@ -1231,7 +1343,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         }
                     }
 #endif
-
+                    
                     if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
                     {
                         real32 Acceleration = 0.5f;
@@ -1242,32 +1354,33 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     MoveSpec.UnitMaxAccelVector = true;
                     MoveSpec.Speed = 50.0f;
                     MoveSpec.Drag = 8.0f;
-
+                    
                     Entity->tBob += dt;
                     if(Entity->tBob > (2.0f*Pi32))
                     {
                         Entity->tBob -= (2.0f*Pi32);
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
-                    PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align,
-                               (0.5f*ShadowAlpha) + 0.2f*BobSin, 0.0f);
+                    PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, (0.5f*ShadowAlpha) + 0.2f*BobSin, 0.0f);
                     PushBitmap(&PieceGroup, &HeroBitmaps->Head, V2(0, 0), 0.25f*BobSin, HeroBitmaps->Align);
                 } break;
-
-                case EntityType_Monster:
+                
+                case EntityType_Monstar:
                 {
                     PushBitmap(&PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
                     PushBitmap(&PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
 
-                    DrawHitPoints(Entity, &PieceGroup);
+                    DrawHitpoints(Entity, &PieceGroup);
                 } break;
 
                 case EntityType_Space:
                 {
 #if 0
-                    for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
+                    for(uint32 VolumeIndex = 0;
+                        VolumeIndex < Entity->Collision->VolumeCount;
+                        ++VolumeIndex)
                     {
-                        sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+                        sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;                        
                         PushRectOutline(&PieceGroup, Volume->OffsetP.XY, 0, Volume->Dim.XY, V4(0, 0.5f, 1.0f, 1), 0.0f);
                     }
 #endif
@@ -1278,22 +1391,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     InvalidCodePath;
                 } break;
             }
-
+            
             if(!IsSet(Entity, EntityFlag_Nonspatial) &&
                IsSet(Entity, EntityFlag_Moveable))
             {
                 MoveEntity(GameState, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
 
-            for(uint32_t PieceIndex = 0; PieceIndex < PieceGroup.PieceCount; ++PieceIndex)
+            for(uint32 PieceIndex = 0;
+                PieceIndex < PieceGroup.PieceCount;
+                ++PieceIndex)
             {
                 entity_visible_piece *Piece = PieceGroup.Pieces + PieceIndex;
 
                 v3 EntityBaseP = GetEntityGroundPoint(Entity);
                 real32 ZFudge = (1.0f + 0.1f*(EntityBaseP.Z + Piece->OffsetZ));
-
-                real32 EntityGroundPointX = ScreenCentre.X + MetersToPixels*ZFudge*EntityBaseP.X;
-                real32 EntityGroundPointY = ScreenCentre.Y - MetersToPixels*ZFudge*EntityBaseP.Y;
+            
+                real32 EntityGroundPointX = ScreenCenter.X + MetersToPixels*ZFudge*EntityBaseP.X;
+                real32 EntityGroundPointY = ScreenCenter.Y - MetersToPixels*ZFudge*EntityBaseP.Y;            
                 real32 EntityZ = -MetersToPixels*EntityBaseP.Z;
 
                 v2 Center = {EntityGroundPointX + Piece->Offset.X,
@@ -1317,7 +1432,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     EndSim(SimRegion, GameState);
     EndTemporaryMemory(SimMemory);
-
+    
     CheckArena(&GameState->WorldArena);
     CheckArena(&TranState->TranArena);
 }

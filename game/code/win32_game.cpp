@@ -1097,9 +1097,9 @@ WinMain(HINSTANCE Instance,
             // what the lowest reasonable value is.
             SoundOutput.SafetyBytes = (int)(((real32)SoundOutput.SamplesPerSecond *
                                       (real32)SoundOutput.BytesPerSample / GameUpdateHz) / 3.0f);
-//            Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
-//            Win32ClearBuffer(&SoundOutput);
-//            GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+            Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
+            Win32ClearBuffer(&SoundOutput);
+            GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
             GlobalRunning = true;
 
