@@ -606,18 +606,18 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
     real32 Width = (real32)Buffer.Width;
     real32 Height = (real32)Buffer.Height;
 
-    int32_t ChunkX = ChunkP->Chunkz;
-
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
     {
-        for(int32_t ChunkOffsetX = -1; ChunkOffsetX 1; ++ChunkOffsetX)
+        for(int32_t ChunkOffsetX = -1; ChunkOffsetX <= 1; ++ChunkOffsetX)
         {
             int32_t ChunkX = ChunkP->ChunkX + ChunkOffsetX;
             int32_t ChunkY = ChunkP->ChunkY + ChunkOffsetY;
+            int32_t ChunkZ = ChunkP->ChunkZ;
     
-            random_series Series = RandomSeed(139*ChunkP->ChunkX + 593*ChunkP->ChunkY + 329*ChunkP->ChunkZ);
+            random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
 
-            v2 Center = 0.5f*V2(Width, Height);
+            v2 Centre = V2(ChunkOffsetX*Width, -ChunkOffsetY*Height);
+
             for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
             {
                 loaded_bitmap *Stamp;
@@ -632,7 +632,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
                 v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
-                v2 P = Offset - BitmapCenter;
+                v2 P = Centre + Offset - BitmapCenter;
                 DrawBitmap(&Buffer, Stamp, P.X, P.Y);
             }
 
@@ -642,7 +642,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
                 v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
-                v2 P = Offset - BitmapCenter;
+                v2 P = Centre + Offset - BitmapCenter;
 
                 DrawBitmap(&Buffer, Stamp, P.X, P.Y);
             }
@@ -955,7 +955,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
                         (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
 
-        TranState->GroundBufferCount = 128;
+        TranState->GroundBufferCount = 16;
         TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
         for(uint32_t GroundBufferIndex = 0;
             GroundBufferIndex < TranState->GroundBufferCount;
@@ -1080,7 +1080,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         v2 ScreenDim = MetersToPixels*World->ChunkDimInMeters.XY;
 
                         bool32 Found = false;
-                        ground_buffer *EmptyBuffer = 0;
+                        real32 FurthestBufferLengthSq = Real32Maximum;
+                        ground_buffer *FurthestBuffer = 0;
                         for(uint32_t GroundBufferIndex = 0;
                             GroundBufferIndex < TranState->GroundBufferCount;
                             ++GroundBufferIndex)
@@ -1091,9 +1092,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                 Found = true;
                                 break;
                             }
-                            else if(!IsValid(GroundBuffer->P))
+                            else if(IsValid(GroundBuffer->P))
                             {
+                                v3 RelP = Subtract(World, &GroundBuffer->P, &GameState->CameraP);
+                                real32 DistanceFromCamera = LengthSq(RelP.XY);
+
                                 EmptyBuffer = GroundBuffer;
+                            }
+                            else
+                            {
+                                FurthestBuffer = GroundBuffer;
                             }
                         }
 

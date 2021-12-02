@@ -36,12 +36,15 @@ extern "C" {
 //
 #include <stdint.h>
 #include <stddef.h>
+#include <limits.h>
 
 typedef size_t memory_index;
 
 typedef int32_t bool32;
 typedef float real32;
 typedef double real64;
+
+#define Real32Maximum FLT_MAX
 
 #define internal static
 #define local_persist static
