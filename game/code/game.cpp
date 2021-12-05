@@ -614,6 +614,8 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             int32_t ChunkY = ChunkP->ChunkY + ChunkOffsetY;
             int32_t ChunkZ = ChunkP->ChunkZ;
     
+            // TODO Make random number generation more systemic.
+            // Looks into wang hashing or some other spatial seed generation thing.
             random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
 
             v2 Centre = V2(ChunkOffsetX*Width, -ChunkOffsetY*Height);
@@ -635,8 +637,22 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 P = Centre + Offset - BitmapCenter;
                 DrawBitmap(&Buffer, Stamp, P.X, P.Y);
             }
+        }
+    }
 
-            for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
+    for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
+    {
+        for(int32_t ChunkOffsetX = -1; ChunkOffsetX <= 1; ++ChunkOffsetX)
+        {
+            int32_t ChunkX = ChunkP->ChunkX + ChunkOffsetX;
+            int32_t ChunkY = ChunkP->ChunkY + ChunkOffsetY;
+            int32_t ChunkZ = ChunkP->ChunkZ;
+
+            random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
+
+            v2 Centre = V2(ChunkOffsetX*Width, -ChunkOffsetY*Height);
+
+            for(uint32_t GrassIndex = 0; GrassIndex < 30; ++GrassIndex)
             {
                 loaded_bitmap *Stamp = GameState->Tuft + RandomChoice(&Series, ArrayCount(GameState->Tuft));
 
@@ -955,7 +971,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
                         (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
 
-        TranState->GroundBufferCount = 16;
+        TranState->GroundBufferCount = 32;
         TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
         for(uint32_t GroundBufferIndex = 0;
             GroundBufferIndex < TranState->GroundBufferCount;
@@ -969,6 +985,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         TranState->IsInitialised = true;
+    }
+
+    if(Input->ExecutableReloaded)
+    {
+        for(uint32_t GroundBufferIndex = 0;
+            GroundBufferIndex < TranState->GroundBufferCount;
+            ++GroundBufferIndex)
+        {
+            ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
+            GroundBuffer->P = NullPosition();
+        }
     }
 
     world *World = GameState->World;
@@ -1079,8 +1106,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                       ScreenCentre.Y - MetersToPixels*RelP.Y};
                         v2 ScreenDim = MetersToPixels*World->ChunkDimInMeters.XY;
 
-                        bool32 Found = false;
-                        real32 FurthestBufferLengthSq = Real32Maximum;
+                        // TODO: This is super inefficient and i'll need to fix it later.
+                        real32 FurthestBufferLengthSq = 0.0f;
                         ground_buffer *FurthestBuffer = 0;
                         for(uint32_t GroundBufferIndex = 0;
                             GroundBufferIndex < TranState->GroundBufferCount;
@@ -1089,25 +1116,29 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
                             if(AreInSameChunk(World, &GroundBuffer->P, &ChunkCentreP))
                             {
-                                Found = true;
+                                FurthestBuffer = 0;
                                 break;
                             }
                             else if(IsValid(GroundBuffer->P))
                             {
                                 v3 RelP = Subtract(World, &GroundBuffer->P, &GameState->CameraP);
-                                real32 DistanceFromCamera = LengthSq(RelP.XY);
-
-                                EmptyBuffer = GroundBuffer;
+                                real32 BufferLengthSq = LengthSq(RelP.XY);
+                                if(FurthestBufferLengthSq < BufferLengthSq)
+                                {
+                                    FurthestBufferLengthSq = BufferLengthSq;
+                                    FurthestBuffer = GroundBuffer;
+                                }
                             }
                             else
                             {
+                                FurthestBufferLengthSq = Real32Maximum;
                                 FurthestBuffer = GroundBuffer;
                             }
                         }
 
-                        if(!Found && EmptyBuffer)
+                        if(FurthestBuffer)
                         {
-                            FillGroundChunk(TranState, GameState, EmptyBuffer, &ChunkCentreP);
+                            FillGroundChunk(TranState, GameState, FurthestBuffer, &ChunkCentreP);
                         }
 
                         DrawRectangleOutline(DrawBuffer, ScreenP - 0.5f*ScreenDim,

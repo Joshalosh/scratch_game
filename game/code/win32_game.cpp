@@ -1187,14 +1187,12 @@ WinMain(HINSTANCE Instance,
                 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                          TempGameCodeDLLFullPath,
                                                          GameCodeLockFullPath);
-
-                uint32_t LoadCounter = 0;
-
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
                     NewInput->dtForFrame = TargetSecondsPerFrame;
 
+                    NewInput->ExecutableReloaded = false;
                     FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);
                     if(CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime) != 0)
                     {
@@ -1202,7 +1200,7 @@ WinMain(HINSTANCE Instance,
                         Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                  TempGameCodeDLLFullPath,
                                                  GameCodeLockFullPath);
-                        LoadCounter = 0;
+                        NewInput->ExecutableReloaded = true;
                     }
 
                     // TODO: Zeroing macro
