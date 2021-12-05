@@ -980,6 +980,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
             TranState->GroundBitmapTemplate = MakeEmptyBitmap(&TranState->TranArena, GroundBufferWidth,
                                                               GroundBufferHeight, false);
+
             GroundBuffer->Memory = TranState->GroundBitmapTemplate.Memory;
             GroundBuffer->P = NullPosition();
         }
