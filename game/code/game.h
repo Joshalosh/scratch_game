@@ -185,17 +185,6 @@ struct low_entity
     sim_entity Sim;
 };
 
-struct entity_visible_piece
-{
-    loaded_bitmap *Bitmap;
-    v2 Offset;
-    real32 OffsetZ;
-    real32 EntityZC;
-
-    real32 R, G, B, A;
-    v2 Dim;
-};
-
 struct controlled_hero
 {
     uint32_t EntityIndex;
@@ -274,13 +263,6 @@ struct transient_state
     uint32_t GroundBufferCount;
     loaded_bitmap GroundBitmapTemplate;
     ground_buffer *GroundBuffers;
-};
-
-struct entity_visible_piece_group
-{
-    game_state *GameState;
-    uint32_t PieceCount;
-    entity_visible_piece Pieces[32];
 };
 
 inline low_entity *
