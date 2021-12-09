@@ -491,7 +491,7 @@ AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_
 }
 
 internal void
-DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
+DrawHitPoints(sim_entity *Entity, render_group *RenderGroup)
 {
     if(Entity->HitPointMax >= 1)
     {
@@ -510,7 +510,7 @@ DrawHitPoints(sim_entity *Entity, entity_visible_piece_group *PieceGroup)
                 Color = V4(0.2f, 0.2f, 0.2f, 1.0f);
             }
 
-            PushRect(PieceGroup, HitP, 0, HealthDim, Color, 0.0f);
+            PushRect(RenderGroup, HitP, 0, HealthDim, Color, 0.0f);
             HitP += dHitP;
         }
     }
@@ -716,7 +716,7 @@ MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 Clear
     Result.Height = Height;
     Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
     int32_t TotalBitmapSize = Width*Height*BITMAP_BYTES_PER_PIXEL;
-    Result.Memory = PushSize_(Arena, TotalBitmapSize);
+    Result.Memory = PushSize(Arena, TotalBitmapSize);
     if(ClearToZero)
     {
         ClearBitmap(&Result);
@@ -1102,11 +1102,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
-    entity_visible_piece_group *PieceGroup = PushStruct(&TranState->TranArena, entity_visible_piece_group);
-    render_basis DefaultBasis = {0, 0, 0};
-    PieceGroup->DefaultBasis = &DefaultBasis;
-    PieceGroup->GameState = GameState;
-    PieceGroup->PieceCount = 0;
+    // TODO: Need to figure out what the pushbuffer size is.
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, MegaBytes(4), GameState->MetresToPixels);
 
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
@@ -1133,7 +1130,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             loaded_bitmap *Bitmap = &GroundBuffer->Bitmap;
             v3 Delta = Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
-            PushBitmap(PieceGroup, Bitmap, Delta.XY, Delta.Z,  0.5f*V2i(Bitmap->Width, Bitmap->Height));
+            PushBitmap(RenderGroup, Bitmap, Delta.XY, Delta.Z,  0.5f*V2i(Bitmap->Width, Bitmap->Height));
         }
     }
 
@@ -1213,7 +1210,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         sim_entity *Entity = SimRegion->Entities + EntityIndex;
         if(Entity->Updatable)
         {
-            PieceGroup->PieceCount = 0;
+            RenderGroup->PieceCount = 0;
             real32 dt = Input->dtForFrame;
         
             real32 ShadowAlpha = 1.0f - 0.5f*Entity->P.Z;
@@ -1226,7 +1223,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             v3 ddP = {};
 
             render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
-            PieceGroup->DefaultBasis = Basis;
+            RenderGroup->DefaultBasis = Basis;
 
             hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[Entity->FacingDirection];
             switch(Entity->Type)
@@ -1262,23 +1259,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         }
                     }
 
-                    PushBitmap(PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
-                    PushBitmap(PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
-                    PushBitmap(PieceGroup, &HeroBitmaps->Cape, V2(0, 0), 0, HeroBitmaps->Align);
-                    PushBitmap(PieceGroup, &HeroBitmaps->Head, V2(0, 0), 0, HeroBitmaps->Align);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
+                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
+                    PushBitmap(RenderGroup, &HeroBitmaps->Cape, V2(0, 0), 0, HeroBitmaps->Align);
+                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V2(0, 0), 0, HeroBitmaps->Align);
 
-                    DrawHitPoints(Entity, PieceGroup);
+                    DrawHitPoints(Entity, RenderGroup);
                 } break;
 
                 case EntityType_Wall:
                 {
-                    PushBitmap(PieceGroup, &GameState->Tree, V2(0, 0), 0, V2(40, 80));
+                    PushBitmap(RenderGroup, &GameState->Tree, V2(0, 0), 0, V2(40, 80));
                 } break;
 
                 case EntityType_Stairwell:
                 {
-                    PushRect(PieceGroup, V2(0, 0), 0, Entity->WalkableDim, V4(1, 0.5f, 0, 1), 0.0f);
-                    PushRect(PieceGroup, V2(0, 0), Entity->WalkableHeight, Entity->WalkableDim, V4(1, 1, 0, 1), 0.0f);
+                    PushRect(RenderGroup, V2(0, 0), 0, Entity->WalkableDim, V4(1, 0.5f, 0, 1), 0.0f);
+                    PushRect(RenderGroup, V2(0, 0), Entity->WalkableHeight, Entity->WalkableDim, V4(1, 1, 0, 1), 0.0f);
                 } break;
 
                 case EntityType_Sword:
@@ -1293,8 +1290,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         MakeEntityNonspatial(Entity);
                     }
 
-                    PushBitmap(PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
-                    PushBitmap(PieceGroup, &GameState->Sword, V2(0, 0), 0, V2(29, 10));
+                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
+                    PushBitmap(RenderGroup, &GameState->Sword, V2(0, 0), 0, V2(29, 10));
                 } break;
 
                 case EntityType_Familiar:
@@ -1337,17 +1334,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Entity->tBob -= (2.0f*Pi32);
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
-                    PushBitmap(PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align,
+                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align,
                                (0.5f*ShadowAlpha) + 0.2f*BobSin, 0.0f);
-                    PushBitmap(PieceGroup, &HeroBitmaps->Head, V2(0, 0), 0.25f*BobSin, HeroBitmaps->Align);
+                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V2(0, 0), 0.25f*BobSin, HeroBitmaps->Align);
                 } break;
 
                 case EntityType_Monster:
                 {
-                    PushBitmap(PieceGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
-                    PushBitmap(PieceGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
+                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
 
-                    DrawHitPoints(Entity, PieceGroup);
+                    DrawHitPoints(Entity, RenderGroup);
                 } break;
 
                 case EntityType_Space:
@@ -1356,7 +1353,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-                        PushRectOutline(PieceGroup, Volume->OffsetP.XY, 0, Volume->Dim.XY, V4(0, 0.5f, 1.0f, 1), 0.0f);
+                        PushRectOutline(RenderGroup, Volume->OffsetP.XY, 0, Volume->Dim.XY, V4(0, 0.5f, 1.0f, 1), 0.0f);
                     }
 #endif
                 } break;
@@ -1377,9 +1374,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    for(uint32_t PieceIndex = 0; PieceIndex < PieceGroup->PieceCount; ++PieceIndex)
+    for(uint32_t PieceIndex = 0; PieceIndex < RenderGroup->PieceCount; ++PieceIndex)
     {
-        entity_visible_piece *Piece = PieceGroup->Pieces + PieceIndex;
+        entity_visible_piece *Piece = RenderGroup->Pieces + PieceIndex;
 
         v3 EntityBaseP = Piece->Basis->P;
         real32 ZFudge = (1.0f + 0.1f*(EntityBaseP.Z + Piece->OffsetZ));
@@ -1400,10 +1397,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DrawRectangle(DrawBuffer, Center - HalfDim, Center + HalfDim, Piece->R, Piece->G, Piece->B);
         }
     }
-
-    world_position WorldOrigin = {};
-    v3 Diff = Subtract(SimRegion->World, &WorldOrigin, &SimRegion->Origin);
-    DrawRectangle(DrawBuffer, Diff.XY, V2(10.0f, 10.0f), 1.0f, 1.0f, 0.0f);
 
     EndSim(SimRegion, GameState);
     EndTemporaryMemory(SimMemory);
