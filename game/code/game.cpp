@@ -754,8 +754,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t TilesPerHeight = 9;
 
         GameState->TypicalFloorHeight = 3.0f;
-        GameState->MetersToPixels = 42.0f;
-        GameState->PixelsToMeters = 1.0f / GameState->MetersToPixels;
+        GameState->MetresToPixels = 42.0f;
+        GameState->PixelsToMeters = 1.0f / GameState->MetresToPixels;
 
         v3 WorldChunkDimInMeters = {GameState->PixelsToMeters*(real32)GroundBufferWidth,
                                     GameState->PixelsToMeters*(real32)GroundBufferHeight,
@@ -1029,8 +1029,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     world *World = GameState->World;
 
-    real32 MetersToPixels = GameState->MetersToPixels;
-    real32 PixelsToMeters = 1.0f/MetersToPixels;
+    real32 MetresToPixels = GameState->MetresToPixels;
+    real32 PixelsToMeters = 1.0f/MetresToPixels;
 
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
@@ -1103,7 +1103,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
     // TODO: Need to figure out what the pushbuffer size is.
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, MegaBytes(4), GameState->MetresToPixels);
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), GameState->MetresToPixels);
 
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
@@ -1149,9 +1149,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     {
                         world_position ChunkCentreP = CentredChunkPoint(ChunkX, ChunkY, ChunkZ);
                         v3 RelP = Subtract(World, &ChunkCentreP, &GameState->CameraP);
-                        v2 ScreenP = {ScreenCentre.X + MetersToPixels*RelP.X,
-                                      ScreenCentre.Y - MetersToPixels*RelP.Y};
-                        v2 ScreenDim = MetersToPixels*World->ChunkDimInMeters.XY;
+                        v2 ScreenP = {ScreenCentre.X + MetresToPixels*RelP.X,
+                                      ScreenCentre.Y - MetresToPixels*RelP.Y};
+                        v2 ScreenDim = MetresToPixels*World->ChunkDimInMeters.XY;
 
                         // TODO: This is super inefficient and i'll need to fix it later.
                         real32 FurthestBufferLengthSq = 0.0f;
@@ -1374,16 +1374,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    for(uint32_t PieceIndex = 0; PieceIndex < RenderGroup->PieceCount; ++PieceIndex)
+    for(uint32_t BaseAddress = 0; BaseAddress < RenderGroup->PushBufferSize;)
     {
-        entity_visible_piece *Piece = RenderGroup->Pieces + PieceIndex;
+        entity_visible_piece *Piece = (entity_visible_piece *)(RenderGroup->PushBufferBase + BaseAddress);
+        BaseAddress += sizeof(entity_visible_piece);
 
         v3 EntityBaseP = Piece->Basis->P;
         real32 ZFudge = (1.0f + 0.1f*(EntityBaseP.Z + Piece->OffsetZ));
 
-        real32 EntityGroundPointX = ScreenCentre.X + MetersToPixels*ZFudge*EntityBaseP.X;
-        real32 EntityGroundPointY = ScreenCentre.Y - MetersToPixels*ZFudge*EntityBaseP.Y;
-        real32 EntityZ = -MetersToPixels*EntityBaseP.Z;
+        real32 EntityGroundPointX = ScreenCentre.X + MetresToPixels*ZFudge*EntityBaseP.X;
+        real32 EntityGroundPointY = ScreenCentre.Y - MetresToPixels*ZFudge*EntityBaseP.Y;
+        real32 EntityZ = -MetresToPixels*EntityBaseP.Z;
 
         v2 Center = {EntityGroundPointX + Piece->Offset.X,
                      EntityGroundPointY + Piece->Offset.Y + Piece->EntityZC*EntityZ};
@@ -1393,7 +1394,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         else
         {
-            v2 HalfDim = 0.5f*MetersToPixels*Piece->Dim;
+            v2 HalfDim = 0.5f*MetresToPixels*Piece->Dim;
             DrawRectangle(DrawBuffer, Center - HalfDim, Center + HalfDim, Piece->R, Piece->G, Piece->B);
         }
     }

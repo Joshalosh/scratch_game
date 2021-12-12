@@ -1,4 +1,4 @@
-#if !defined(HANDMADE_RENDER_GROUP_H)
+#if !defined(GAME_RENDER_GROUP_H)
 
 struct render_basis
 {
@@ -36,7 +36,7 @@ PushRenderElement(render_group *Group, uint32_t Size)
 
     if((Group->PushBufferSize + Size) < Group->MaxPushBufferSize)
     {
-        Result = (Group->PushBufferBase + GroupPushBufferSize);
+        Result = (Group->PushBufferBase + Group->PushBufferSize);
         Group->PushBufferSize += Size;
     }
     else
@@ -54,7 +54,7 @@ PushPiece(render_group *Group, loaded_bitmap *Bitmap,
     entity_visible_piece *Piece = (entity_visible_piece *)PushRenderElement(Group, sizeof(entity_visible_piece));
     Piece->Basis = Group->DefaultBasis;
     Piece->Bitmap = Bitmap;
-    Piece->Offset = Group->GameState->MetersToPixels*V2(Offset.X, -Offset.Y) - Align;
+    Piece->Offset = Group->MetresToPixels*V2(Offset.X, -Offset.Y) - Align;
     Piece->OffsetZ = OffsetZ;
     Piece->EntityZC = EntityZC;
     Piece->R = Color.R;
@@ -93,5 +93,5 @@ PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ,
     PushPiece(Group, 0, Offset + V2(0.5f*Dim.X, 0), OffsetZ, V2(0, 0), V2(Thickness, Dim.Y), Color, EntityZC);
 }
 
-#define HANDMAE_RENDER_GROUP_H
+#define GAME_RENDER_GROUP_H
 #endif
