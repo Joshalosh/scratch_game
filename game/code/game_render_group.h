@@ -5,8 +5,26 @@ struct render_basis
     v3 P;
 };
 
-struct entity_visible_piece
+// render_group_entry is a "compact discriminated union"
+enum render_group_entry_type
 {
+    RenderGroupEntry_Clear,
+    RenderGroupEntry_Rectangle,
+};
+struct render_group_entry_header
+{
+    render_group_entry_type Type;
+};
+
+struct render_entry_clear
+{
+    render_group_entry_header Header;
+    real32 R, G, B, A;
+};
+
+struct render_entry_rectangle
+{
+    render_group_entry_header Header;
     render_basis *Basis;
     loaded_bitmap *Bitmap;
     v2 Offset;
@@ -21,8 +39,6 @@ struct render_group
 {
     render_basis *DefaultBasis;
     real32 MetresToPixels;
-    uint32_t PieceCount;
-
 
     uint32_t MaxPushBufferSize;
     uint32_t PushBufferSize;
@@ -51,7 +67,7 @@ inline void
 PushPiece(render_group *Group, loaded_bitmap *Bitmap,
           v2 Offset, real32 OffsetZ, v2 Align, v2 Dim, v4 Color, real32 EntityZC)
 {
-    entity_visible_piece *Piece = (entity_visible_piece *)PushRenderElement(Group, sizeof(entity_visible_piece));
+    render_group_entry *Piece = (render_group_entry *)PushRenderElement(Group, sizeof(render_group_entry));
     Piece->Basis = Group->DefaultBasis;
     Piece->Bitmap = Bitmap;
     Piece->Offset = Group->MetresToPixels*V2(Offset.X, -Offset.Y) - Align;
