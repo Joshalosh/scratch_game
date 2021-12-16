@@ -242,9 +242,9 @@ EndSim(sim_region *Region, game_state *GameState)
                 NewCameraP.AbsTileY -= 9;
             }
 #else
-            real32 CamZOffset = NewCameraP.Offset_.Z;
+            real32 CamZOffset = NewCameraP.Offset_.z;
             NewCameraP = Stored->P;
-            NewCameraP.Offset_.Z = CamZOffset;
+            NewCameraP.Offset_.z = CamZOffset;
 #endif
 
             GameState->CameraP = NewCameraP;
@@ -546,12 +546,12 @@ MoveEntity(game_state *GameState, sim_region *SimRegion, sim_entity *Entity, rea
                                     test_wall Walls[] =
                                     {
                                         {MinCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y,
-                                         MinCorner.y, MaxCorner.Y, V3(-1, 0, 0)},
+                                         MinCorner.y, MaxCorner.y, V3(-1, 0, 0)},
                                         {MaxCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y,
                                          MinCorner.y, MaxCorner.y, V3(1, 0, 0)},
                                         {MinCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x,
                                          MinCorner.x, MaxCorner.x, V3(0, -1, 0)},
-                                        {MaxCorner.y, Rel.Y, Rel.x, PlayerDelta.y, PlayerDelta.x,
+                                        {MaxCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x,
                                          MinCorner.x, MaxCorner.x, V3(0, 1, 0)},
                                     };
 

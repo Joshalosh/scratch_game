@@ -520,8 +520,8 @@ GetBarycentric(rectangle2 A, v2 P)
 {
     v2 Result;
 
-    Result.X = SafeRatio0(P.x - A.Min.x, A.Max.x - A.Min.x);
-    Result.Y = SafeRatio0(P.y - A.Min.y, A.Max.y - A.Min.y);
+    Result.x = SafeRatio0(P.x - A.Min.x, A.Max.x - A.Min.x);
+    Result.y = SafeRatio0(P.y - A.Min.y, A.Max.y - A.Min.y);
 
     return(Result);
 }
@@ -646,7 +646,7 @@ GetBarycentric(rectangle3 A, v3 P)
 
     Result.x = SafeRatio0(P.x - A.Min.x, A.Max.x - A.Min.x);
     Result.y = SafeRatio0(P.y - A.Min.y, A.Max.y - A.Min.y);
-    Result.X = SafeRatio0(P.z - A.Min.z, A.Max.z - A.Min.z);
+    Result.z = SafeRatio0(P.z - A.Min.z, A.Max.z - A.Min.z);
 
     return(Result);
 }
