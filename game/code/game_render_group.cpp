@@ -360,12 +360,12 @@ PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ,
     real32 Thickness = 0.1f;
 
     // Top and Bottom.
-    PushPiece(Group, 0, Offset - V2(0, 0.5f*Dim.y), OffsetZ, V2(0, 0), V2(Dim.x, Thickness), Color, EntityZC);
-    PushPiece(Group, 0, Offset + V2(0, 0.5f*Dim.y), OffsetZ, V2(0, 0), V2(Dim.x, Thickness), Color, EntityZC);
+    PushRect(Group, Offset - V2(0, 0.5f*Dim.y), OffsetZ, V2(Dim.x, Thickness), Color, EntityZC);
+    PushRect(Group, Offset + V2(0, 0.5f*Dim.y), OffsetZ, V2(Dim.x, Thickness), Color, EntityZC);
 
     // Left and Right.
-    PushPiece(Group, 0, Offset - V2(0.5f*Dim.x, 0), OffsetZ, V2(0, 0), V2(Thickness, Dim.y), Color, EntityZC);
-    PushPiece(Group, 0, Offset + V2(0.5f*Dim.x, 0), OffsetZ, V2(0, 0), V2(Thickness, Dim.y), Color, EntityZC);
+    PushRect(Group, Offset - V2(0.5f*Dim.x, 0), OffsetZ, V2(Thickness, Dim.y), Color, EntityZC);
+    PushRect(Group, Offset + V2(0.5f*Dim.x, 0), OffsetZ, V2(Thickness, Dim.y), Color, EntityZC);
 }
 
 inline void

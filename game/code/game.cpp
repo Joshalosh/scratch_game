@@ -419,6 +419,11 @@ MakeNullCollision(game_state *GameState)
 internal void
 FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer *GroundBuffer, world_position *ChunkP)
 {
+    temporary_memory GroundMemory = BeginTemporaryMemory(&TranState->TranArena);
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), 1.0f);
+
+    Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
+
     loaded_bitmap *Buffer = &GroundBuffer->Bitmap;
     
     GroundBuffer->P = *ChunkP;
@@ -455,7 +460,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
-                DrawBitmap(Buffer, Stamp, P.x, P.y);
+                PushBitmap(RenderGroup, Stamp, P, 0.0f, V2(0, 0));
             }
         }
     }
@@ -480,10 +485,13 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
 
-                DrawBitmap(Buffer, Stamp, P.x, P.y);
+                PushBitmap(RenderGroup, Stamp, P, 0.0f, V2(0, 0));
             }
         }
     }
+
+    RenderGroupToOutput(RenderGroup, Buffer);
+    EndTemporaryMemory(GroundMemory);
 }
 
 internal void
@@ -938,9 +946,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     {
                         world_position ChunkCentreP = CentredChunkPoint(ChunkX, ChunkY, ChunkZ);
                         v3 RelP = Subtract(World, &ChunkCentreP, &GameState->CameraP);
-                        v2 ScreenP = {ScreenCentre.x + MetresToPixels*RelP.x,
-                                      ScreenCentre.y - MetresToPixels*RelP.y};
-                        v2 ScreenDim = MetresToPixels*World->ChunkDimInMeters.xy;
 
                         // TODO: This is super inefficient and i'll need to fix it later.
                         real32 FurthestBufferLengthSq = 0.0f;
@@ -977,8 +982,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             FillGroundChunk(TranState, GameState, FurthestBuffer, &ChunkCentreP);
                         }
 
-                        PushRectOutline(DrawBuffer, ScreenP - 0.5f*ScreenDim,
-                                        ScreenP + 0.5f*ScreenDim, V3(1.0f, 1.0f, 0.0f));
+                        PushRectOutline(RenderGroup, RelP.xy, 0.0f, World->ChunkDimInMeters.xy,
+                                        V4(1.0f, 1.0f, 0.0f, 1.0f));
                     }
                 }
             }
@@ -1135,13 +1140,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Space:
                 {
-#if 0
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
                         PushRectOutline(RenderGroup, Volume->OffsetP.xy, 0, Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1), 0.0f);
                     }
-#endif
                 } break;
 
                 default:
