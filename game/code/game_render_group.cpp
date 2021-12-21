@@ -378,3 +378,14 @@ Clear(render_group *Group, v4 Color)
     }
 }
 
+inline void
+CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color)
+{
+    render_entry_coordinate_system *Entry = PushRenderElement(Group, render_entry_coordinate_system);
+    if(Entry)
+    {
+        Entry->Origin = Origin;
+        Entry->XAxis = XAxis;
+        Entry->YAxis = YAxis;
+    }
+}

@@ -1163,6 +1163,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    GameState->Time += Input->dtForFrame;
+    v2 Origin = V2(0, 0);
+    v2 XAxis = V2(0, 0);
+    v2 YAxis = V2(0, 0);
+    CoordinateSystem(RenderGroup, Origin, XAxis, YAxis, V4(1, 1, 0, 1));
+
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 
     EndSim(SimRegion, GameState);
