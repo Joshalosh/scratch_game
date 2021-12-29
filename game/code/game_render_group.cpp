@@ -48,7 +48,7 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
 }
 
 internal void
-DrawRectangleSlowly(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color)
+DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color)
 {
     uint32_t Color32 = ((RoundReal32ToUInt32(Color.a * 255.0f) << 24) |
                         (RoundReal32ToUInt32(Color.r * 255.0f) << 16) |
@@ -61,8 +61,14 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color)
         uint32_t *Pixel = (uint32_t *)Row;
         for(int X = 0; X < Buffer->Width; ++X)
         {
-            if((X >= vMin.x) && (X < vMax.x) &&
-               (Y >= vMin.y) && (Y < vMax.y))
+            v2 PixelP = V2i(X, Y);
+            real32 Edge0 = Inner(PixelP - Origin, -YAxis);
+            real32 Edge1 = Inner(PixelP - (Origin + XAxis), XAxis);
+            real32 Edge2 = Inner(PixelP - (Origin + XAxis + YAxis), YAxis);
+            real32 Edge3 = Inner(PixelP - (Origin + YAxis), -XAxis);
+
+            if((Edge0 < 0) && (Edge1 < 0) &&
+               (Edge2 < 0) && (Edge3 < 0))
             {
                 *Pixel = Color32;
             }
@@ -296,7 +302,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
                 render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Header;
 
                 v2 vMax = (Entry->Origin + Entry->XAxis + Entry->YAxis);
-                DrawRectangleSlowly(OutputTarget, Entry->Origin, vMax, Entry->Color);
+                DrawRectangleSlowly(OutputTarget, Entry->Origin, Entry->XAxis, Entry->YAxis, Entry->Color);
 
                 v4 Color = {1, 1, 0, 1};
                 v2 Dim = {2, 2};

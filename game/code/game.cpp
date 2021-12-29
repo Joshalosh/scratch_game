@@ -1164,10 +1164,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     GameState->Time += Input->dtForFrame;
-    real32 Angle = 0.0f; //GameState->Time;
+    real32 Angle = GameState->Time;
 
     v2 Origin = ScreenCentre;
-    v2 XAxis = 80.f*V2(Cos(Angle), Sin(Angle));
+    v2 XAxis = (50.0f + 50.0f*Cos(Angle))*V2(Cos(Angle), Sin(Angle));
     v2 YAxis = V2(-XAxis.y, XAxis.x);
     uint32_t PIndex = 0;
     render_entry_coordinate_system *C = CoordinateSystem(RenderGroup, Origin, XAxis, YAxis, V4(1, 0, 1, 1));
