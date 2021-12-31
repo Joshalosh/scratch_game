@@ -55,12 +55,41 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                         (RoundReal32ToUInt32(Color.g * 255.0f) << 8) |
                         (RoundReal32ToUInt32(Color.b * 255.0f) << 0));
 
-    uint8_t *Row = (uint8_t *)Buffer->Memory;
-    for(int Y = 0; Y < Buffer->Height; ++Y)
+    int WidthMax = (Buffer->Width - 1);
+    int HeightMax = (Buffer->Height - 1);
+
+    int XMin = WidthMax;
+    int XMax = 0;
+    int YMin = HeightMax;
+    int YMax = 0;
+
+    v2 P[4] = {Origin, Origin + XAxis, Origin + XAxis + YAxis, Origin + YAxis};
+    for(int PIndex = 0; PIndex < ArrayCount(P); ++PIndex)
+    {
+        v2 TestP = P[PIndex];
+        int FloorX = FloorReal32ToInt32(TestP.x);
+        int CeilX = CeilReal32ToInt32(TestP.x);
+        int FloorY = FloorReal32ToInt32(TestP.y);
+        int CeilY = CeilReal32ToInt32(TestP.y);
+
+        if(XMin > FloorX) {XMin = FloorX;}
+        if(YMin > FloorY) {YMin = FloorY;}
+        if(XMax < CeilX) {XMax = CeilX;}
+        if(YMax < CeilY) {YMax = CeilY;}
+    }
+
+    if(XMin < 0) {XMin = 0;}
+    if(YMin < 0) {YMin = 0;}
+    if(XMax > WidthMax) {XMax = WidthMax;}
+    if(YMax > HeightMax) {YMax = HeightMax;}
+
+    uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
+    for(int Y = YMin; Y <= YMax; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = 0; X < Buffer->Width; ++X)
+        for(int X = XMin; X <= XMax; ++X)
         {
+#if 1
             v2 PixelP = V2i(X, Y);
             real32 Edge0 = Inner(PixelP - Origin, -YAxis);
             real32 Edge1 = Inner(PixelP - (Origin + XAxis), XAxis);
@@ -72,6 +101,9 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
             {
                 *Pixel = Color32;
             }
+#else
+            *Pixel = Color32;
+#endif
 
             ++Pixel;
         }
