@@ -48,8 +48,11 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
 }
 
 internal void
-DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color)
+DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color, loaded_bitmap *Texture)
 {
+    real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
+    real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
+
     uint32_t Color32 = ((RoundReal32ToUInt32(Color.a * 255.0f) << 24) |
                         (RoundReal32ToUInt32(Color.r * 255.0f) << 16) |
                         (RoundReal32ToUInt32(Color.g * 255.0f) << 8) |
@@ -91,16 +94,30 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
         {
 #if 1
             v2 PixelP = V2i(X, Y);
+            v2 d = PixelP - Origin;
+
             // TODO: Implement Perp dot product.
             // TODO: Simpler Origin.
-            real32 Edge0 = Inner(PixelP - Origin, -Perp(XAxis));
-            real32 Edge1 = Inner(PixelP - (Origin + XAxis), -Perp(YAxis));
-            real32 Edge2 = Inner(PixelP - (Origin + XAxis + YAxis), Perp(XAxis));
-            real32 Edge3 = Inner(PixelP - (Origin + YAxis), Perp(YAxis));
+            real32 Edge0 = Inner(d, -Perp(XAxis));
+            real32 Edge1 = Inner(d - XAxis, -Perp(YAxis));
+            real32 Edge2 = Inner(d - XAxis - YAxis, Perp(XAxis));
+            real32 Edge3 = Inner(d - YAxis, Perp(YAxis));
 
             if((Edge0 < 0) && (Edge1 < 0) &&
                (Edge2 < 0) && (Edge3 < 0))
             {
+                real32 U = InvXAxisLengthSq*Inner(d, XAxis);
+                real32 V = InvYAxisLengthSq*Inner(d, YAxis);
+
+                Assert((U >= 0.0f) && (U <= 1.0f));
+                Assert((V >= 0.0f) && (V <= 1.0f));
+
+                int32_t X = (int32_t)((U*(real32)(Texture->Width - 1)) + 0.5f);
+                int32_t Y = (int32_t)((V*(real32)(Texture->Height - 1)) + 0.5f);
+
+                Assert((X >= 0) && (X < Texture->Width));
+                Assert((Y >= 0) && (Y < Texture->Height));
+
                 *Pixel = Color32;
             }
 #else
@@ -336,7 +353,12 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
                 render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Header;
 
                 v2 vMax = (Entry->Origin + Entry->XAxis + Entry->YAxis);
-                DrawRectangleSlowly(OutputTarget, Entry->Origin, Entry->XAxis, Entry->YAxis, Entry->Color);
+                DrawRectangleSlowly(OutputTarget,
+                                    Entry->Origin,
+                                    Entry->XAxis,
+                                    Entry->YAxis,
+                                    Entry->Color,
+                                    Entry->Texture);
 
                 v4 Color = {1, 1, 0, 1};
                 v2 Dim = {2, 2};
@@ -478,7 +500,7 @@ Clear(render_group *Group, v4 Color)
 }
 
 inline render_entry_coordinate_system *
-CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color)
+CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color, loaded_bitmap *Texture)
 {
     render_entry_coordinate_system *Entry = PushRenderElement(Group, render_entry_coordinate_system);
     if(Entry)
@@ -487,6 +509,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color)
         Entry->XAxis = XAxis;
         Entry->YAxis = YAxis;
         Entry->Color = Color;
+        Entry->Texture = Texture;
     }
 
     return(Entry);
