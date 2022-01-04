@@ -118,7 +118,31 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 Assert((X >= 0) && (X < Texture->Width));
                 Assert((Y >= 0) && (Y < Texture->Height));
 
-                *Pixel = Color32;
+                uint8_t *TexelPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
+                uint32_t Texel = *(uint32_t *)TexelPtr;
+
+                real32 SA = (real32)((Texel >> 24) & 0xFF);
+                real32 RSA = (SA / 255.0f) * Color.a;
+                real32 SR = Color.a*(real32)((Texel >> 16) & 0xFF);
+                real32 SG = Color.a*(real32)((Texel >> 8) & 0xFF);
+                real32 SB = Color.a*(real32)((Texel >> 0) & 0xFF);
+
+                real32 DA = (real32)((*Pixel >> 24) & 0xFF);
+                real32 DR = (real32)((*Pixel >> 16) & 0xFF);
+                real32 DG = (real32)((*Pixel >> 8) & 0xFF);
+                real32 DB = (real32)((*Pixel >> 0) & 0xFF);
+                real32 RDA = (DA / 255.0f);
+
+                real32 InvRSA = (1.0f-RSA);
+                real32 A = 255.0f*(RSA + RDA - RSA*RDA);
+                real32 R = InvRSA*DR + SR;
+                real32 G = InvRSA*DG + SG;
+                real32 B = InvRSA*DB + SB;
+
+                *Pixel = (((uint32_t)(A + 0.5f) << 24) |
+                          ((uint32_t)(R + 0.5f) << 16) |
+                          ((uint32_t)(G + 0.5f) << 8) |
+                          ((uint32_t)(B + 0.5f) << 0));
             }
 #else
             *Pixel = Color32;
