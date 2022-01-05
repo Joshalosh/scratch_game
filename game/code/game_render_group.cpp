@@ -112,20 +112,51 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 Assert((U >= 0.0f) && (U <= 1.0f));
                 Assert((V >= 0.0f) && (V <= 1.0f));
 
-                int32_t X = (int32_t)((U*(real32)(Texture->Width - 1)) + 0.5f);
-                int32_t Y = (int32_t)((V*(real32)(Texture->Height - 1)) + 0.5f);
+                real32 tX = 1.0f + ((U*(real32)(Texture->Width - 3)) + 0.5f);
+                real32 tY = 1.0f + ((U*(real32)(Texture->Height - 3)) + 0.5f);
+
+                int32_t X = (int32_t)tX;
+                int32_t Y = (int32_t)tY;
+
+                real32 fX = tX - (real32)X;
+                real32 fY = tY - (real32)Y;
 
                 Assert((X >= 0) && (X < Texture->Width));
                 Assert((Y >= 0) && (Y < Texture->Height));
 
                 uint8_t *TexelPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
-                uint32_t Texel = *(uint32_t *)TexelPtr;
+                uint32_t TexelPtrA = *(uint32_t *)(TexelPtr);
+                uint32_t TexelPtrB = *(uint32_t *)(TexelPtr + sizeof(uint32_t));
+                uint32_t TexelPtrC = *(uint32_t *)(TexelPtr + Texture->Pitch);
+                uint32_t TexelPtrD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
 
-                real32 SA = (real32)((Texel >> 24) & 0xFF);
+                v4 TexelA = {(real32)((TexelPtrA >> 16) & 0xFF),
+                             (real32)((TexelPtrA >> 8) & 0xFF),
+                             (real32)((TexelPtrA >> 0) & 0xFF),
+                             (real32)((TexelPtrA >> 24) & 0xFF)};
+                v4 TexelB = {(real32)((TexelPtrB >> 16) & 0xFF),
+                             (real32)((TexelPtrB >> 8) & 0xFF),
+                             (real32)((TexelPtrB >> 0) & 0xFF),
+                             (real32)((TexelPtrB >> 24) & 0xFF)};
+                v4 TexelC = {(real32)((TexelPtrC >> 16) & 0xFF),
+                             (real32)((TexelPtrC >> 8) & 0xFF),
+                             (real32)((TexelPtrC >> 0) & 0xFF),
+                             (real32)((TexelPtrC >> 24) & 0xFF)};
+                v4 TexelD = {(real32)((TexelPtrD >> 16) & 0xFF),
+                             (real32)((TexelPtrD >> 8) & 0xFF),
+                             (real32)((TexelPtrD >> 0) & 0xFF),
+                             (real32)((TexelPtrD >> 24) & 0xFF)};
+
+                v4 Texel = Lerp(Lerp(TexelA, fX, TexelB), 
+                                fY,
+                                Lerp(TexelC, fX, TexelD));
+
+                real32 SA = Texel.a;
+                real32 SR = Texel.r;
+                real32 SG = Texel.g;
+                real32 SB = Texel.b;
+
                 real32 RSA = (SA / 255.0f) * Color.a;
-                real32 SR = Color.a*(real32)((Texel >> 16) & 0xFF);
-                real32 SG = Color.a*(real32)((Texel >> 8) & 0xFF);
-                real32 SB = Color.a*(real32)((Texel >> 0) & 0xFF);
 
                 real32 DA = (real32)((*Pixel >> 24) & 0xFF);
                 real32 DR = (real32)((*Pixel >> 16) & 0xFF);
