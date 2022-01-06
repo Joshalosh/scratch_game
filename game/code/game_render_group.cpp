@@ -112,8 +112,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 Assert((U >= 0.0f) && (U <= 1.0f));
                 Assert((V >= 0.0f) && (V <= 1.0f));
 
-                real32 tX = 1.0f + ((U*(real32)(Texture->Width - 3)) + 0.5f);
-                real32 tY = 1.0f + ((U*(real32)(Texture->Height - 3)) + 0.5f);
+                real32 tX = ((U*(real32)(Texture->Width - 2)));
+                real32 tY = ((V*(real32)(Texture->Height - 2)));
 
                 int32_t X = (int32_t)tX;
                 int32_t Y = (int32_t)tY;
@@ -147,7 +147,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                              (real32)((TexelPtrD >> 0) & 0xFF),
                              (real32)((TexelPtrD >> 24) & 0xFF)};
 
-                v4 Texel = Lerp(Lerp(TexelA, fX, TexelB), 
+                v4 Texel = Lerp(Lerp(TexelA, fX, TexelB),
                                 fY,
                                 Lerp(TexelC, fX, TexelD));
 
