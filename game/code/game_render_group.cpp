@@ -147,6 +147,12 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                              (real32)((TexelPtrD >> 0) & 0xFF),
                              (real32)((TexelPtrD >> 24) & 0xFF)};
 
+                // Go from sRGB to "linear" brightness space.
+                TexelA = SRGB255ToLinear1(TexelA);
+                TexelB = SRGB255ToLinear1(TexelB);
+                TexelC = SRGB255ToLinear1(TexelC);
+                TexelD = SRGB255ToLinear1(TexelD);
+
                 v4 Texel = Lerp(Lerp(TexelA, fX, TexelB),
                                 fY,
                                 Lerp(TexelC, fX, TexelD));
@@ -156,19 +162,27 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 real32 SG = Texel.g;
                 real32 SB = Texel.b;
 
-                real32 RSA = (SA / 255.0f) * Color.a;
+                real32 RSA = SA * Color.a;
 
-                real32 DA = (real32)((*Pixel >> 24) & 0xFF);
-                real32 DR = (real32)((*Pixel >> 16) & 0xFF);
-                real32 DG = (real32)((*Pixel >> 8) & 0xFF);
-                real32 DB = (real32)((*Pixel >> 0) & 0xFF);
-                real32 RDA = (DA / 255.0f);
+                v4 Dest = {(real32)((*Pixel >> 16) & 0xFF),
+                           (real32)((*Pixel >> 8) & 0xFF),
+                           (real32)((*Pixel >> 0) & 0xFF),
+                           (real32)((*Pixelf>> 24) & 0xFF)};
+
+                // Go from sRGB to "linear" brightness space.
+                Dest = SRGB255ToLinear1(Dest);
+
+                real32 RDA = Dest.a;
 
                 real32 InvRSA = (1.0f-RSA);
-                real32 A = 255.0f*(RSA + RDA - RSA*RDA);
-                real32 R = InvRSA*DR + SR;
-                real32 G = InvRSA*DG + SG;
-                real32 B = InvRSA*DB + SB;
+
+                v4 Blended255 = {InvRSA*Dest.r + Texel.r,
+                                 InvRSA*Dest.g + Texel.g,
+                                 InvRSA*Dest.b + Texel.b,
+                                 255.0f*(RSA + RDA - RSA*RDA)};
+
+                // Go frim "linear" brightness space to sRGB.
+                v4 Blended255 = Linear1ToSRGB255(Blended);
 
                 *Pixel = (((uint32_t)(A + 0.5f) << 24) |
                           ((uint32_t)(R + 0.5f) << 16) |
