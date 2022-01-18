@@ -192,10 +192,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                                 fY,
                                 Lerp(TexelC, fX, TexelD));
 
-                Texel.r *= Color.r;
-                Texel.g *= Color.g;
-                Texel.b *= Color.b;
-                Texel.a *= Color.a;
+                Texel = Hadamard(Texel, Color);
 
                 v4 Dest = {(real32)((*Pixel >> 16) & 0xFF),
                            (real32)((*Pixel >> 8) & 0xFF),
@@ -205,16 +202,9 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 // Go from sRGB to "linear" brightness space.
                 Dest = SRGB255ToLinear1(Dest);
 
-                real32 RDA = Dest.a;
+                v4 Blended = (1.0f-Texel.a)*Dest + Texel;
 
-                real32 InvRSA = (1.0f-Texel.a);
-
-                v4 Blended = {InvRSA*Dest.r + Texel.r,
-                              InvRSA*Dest.g + Texel.g,
-                              InvRSA*Dest.b + Texel.b,
-                              (Texel.a + Dest.a - Texel.a*Dest.a)};
-
-                // Go frim "linear" brightness space to sRGB.
+                // Go from "linear" brightness space to sRGB.
                 v4 Blended255 = Linear1ToSRGB255(Blended);
 
                 *Pixel = (((uint32_t)(Blended255.a + 0.5f) << 24) |
@@ -231,18 +221,6 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
         Row += Buffer->Pitch;
     }
-}
-
-internal void
-DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R = 2.0f)
-{
-    // For the top and bottom.
-    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMax.x + R, vMin.y + R), Color.r, Color.g, Color.b);
-    DrawRectangle(Buffer, V2(vMin.x - R, vMax.y - R), V2(vMax.x + R, vMax.y + R), Color.r, Color.g, Color.b);
-
-    // For the left and right.
-    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMin.x + R, vMax.y + R), Color.r, Color.g, Color.b);
-    DrawRectangle(Buffer, V2(vMax.x - R, vMin.y - R), V2(vMax.x + R, vMax.y + R), Color.r, Color.g, Color.b);
 }
 
 internal void
@@ -306,12 +284,7 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
 
             D = SRGB255ToLinear1(D);
 
-            real32 InvRSA = (1.0f-Texel.a);
-
-            v4 Result = {InvRSA*D.r + Texel.r,
-                         InvRSA*D.g + Texel.g,
-                         InvRSA*D.b + Texel.b,
-                         (Texel.a + D.a - Texel.a*D.a)};
+            v4 Result = (1.0f-Texel.a)*D + Texel;
 
             Result = Linear1ToSRGB255(Result);
 
@@ -327,6 +300,18 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
         DestRow += Buffer->Pitch;
         SourceRow += Bitmap->Pitch;
     }
+}
+
+internal void
+DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R = 2.0f)
+{
+    // For the top and bottom.
+    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMax.x + R, vMin.y + R), Color.r, Color.g, Color.b);
+    DrawRectangle(Buffer, V2(vMin.x - R, vMax.y - R), V2(vMax.x + R, vMax.y + R), Color.r, Color.g, Color.b);
+
+    // For the left and right.
+    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMin.x + R, vMax.y + R), Color.r, Color.g, Color.b);
+    DrawRectangle(Buffer, V2(vMax.x - R, vMin.y - R), V2(vMax.x + R, vMax.y + R), Color.r, Color.g, Color.b);
 }
 
 internal void
@@ -501,7 +486,6 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
             InvalidDefaultCase;
         }
     }
-
 }
 
 internal render_group *
