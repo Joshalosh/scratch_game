@@ -77,8 +77,20 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
     }
 }
 
+inline v4
+Unpack4x8(uint32_t Packed)
+{
+    v4 Result = {(real32)((Packed >> 16) & 0xFF),
+                 (real32)((Packed >> 8) & 0xFF),
+                 (real32)((Packed >> 0) & 0xFF),
+                 (real32)((Packed >> 24) & 0xFF)};
+
+    return(Result);
+}
+
 internal void
-DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color, loaded_bitmap *Texture)
+DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
+                    loaded_bitmap *Texture, loaded_bitmap *NormalMap)
 {
     // Premultiply color up front
     Color.rgb *= Color.a;
@@ -165,22 +177,10 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 uint32_t TexelPtrC = *(uint32_t *)(TexelPtr + Texture->Pitch);
                 uint32_t TexelPtrD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
 
-                v4 TexelA = {(real32)((TexelPtrA >> 16) & 0xFF),
-                             (real32)((TexelPtrA >> 8) & 0xFF),
-                             (real32)((TexelPtrA >> 0) & 0xFF),
-                             (real32)((TexelPtrA >> 24) & 0xFF)};
-                v4 TexelB = {(real32)((TexelPtrB >> 16) & 0xFF),
-                             (real32)((TexelPtrB >> 8) & 0xFF),
-                             (real32)((TexelPtrB >> 0) & 0xFF),
-                             (real32)((TexelPtrB >> 24) & 0xFF)};
-                v4 TexelC = {(real32)((TexelPtrC >> 16) & 0xFF),
-                             (real32)((TexelPtrC >> 8) & 0xFF),
-                             (real32)((TexelPtrC >> 0) & 0xFF),
-                             (real32)((TexelPtrC >> 24) & 0xFF)};
-                v4 TexelD = {(real32)((TexelPtrD >> 16) & 0xFF),
-                             (real32)((TexelPtrD >> 8) & 0xFF),
-                             (real32)((TexelPtrD >> 0) & 0xFF),
-                             (real32)((TexelPtrD >> 24) & 0xFF)};
+                v4 TexelA = Unpack4x8(TexelPtrA);
+                v4 TexelB = Unpack4x8(TexelPtrB);
+                v4 TexelC = Unpack4x8(TexelPtrC);
+                v4 TexelD = Unpack4x8(TexelPtrD);
 
                 // Go from sRGB to "linear" brightness space.
                 TexelA = SRGB255ToLinear1(TexelA);
@@ -191,6 +191,21 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 v4 Texel = Lerp(Lerp(TexelA, fX, TexelB),
                                 fY,
                                 Lerp(TexelC, fX, TexelD));
+
+                uint8_t *NormalPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
+                uint32_t NormalPtrA = *(uint32_t *)(NormalPtr);
+                uint32_t NormalPtrB = *(uint32_t *)(NormalPtr + sizeof(uint32_t));
+                uint32_t NormalPtrC = *(uint32_t *)(NormalPtr + Texture->Pitch);
+                uint32_t NormalPtrD = *(uint32_t *)(NormalPtr + Texture->Pitch + sizeof(uint32_t));
+
+                v4 NormalA = Unpack4x8(NormalPtrA);
+                v4 NormalB = Unpack4x8(NormalPtrB);
+                v4 NormalC = Unpack4x8(NormalPtrC);
+                v4 NormalD = Unpack4x8(NormalPtrD);
+
+                v4 Normal = Lerp(Lerp(TexelA, fX, TexelB),
+                                 fY,
+                                 Lerp(TexelC, fX, TexelD));
 
                 Texel = Hadamard(Texel, Color);
 
@@ -458,7 +473,8 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
                                     Entry->XAxis,
                                     Entry->YAxis,
                                     Entry->Color,
-                                    Entry->Texture);
+                                    Entry->Texture,
+                                    Entry->NormalMap);
 
                 v4 Color = {1, 1, 0, 1};
                 v2 Dim = {2, 2};
@@ -602,7 +618,8 @@ Clear(render_group *Group, v4 Color)
 }
 
 inline render_entry_coordinate_system *
-CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color, loaded_bitmap *Texture)
+CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
+                 loaded_bitmap *Texture, loaded_bitmap *NormalMap)
 {
     render_entry_coordinate_system *Entry = PushRenderElement(Group, render_entry_coordinate_system);
     if(Entry)
@@ -612,6 +629,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color, l
         Entry->YAxis = YAxis;
         Entry->Color = Color;
         Entry->Texture = Texture;
+        Entry->NormalMap = NormalMap;
     }
 
     return(Entry);
