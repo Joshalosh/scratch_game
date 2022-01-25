@@ -88,9 +88,18 @@ Unpack4x8(uint32_t Packed)
     return(Result);
 }
 
+inline v3
+SampleEnvironmentMap(v2 ScreenSpaceUV, v3 Normal, real32 Roughness, environment_map *Map)
+{
+    v3 Result = Normal;
+
+    return(Result);
+}
+
 internal void
 DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
-                    loaded_bitmap *Texture, loaded_bitmap *NormalMap)
+                    loaded_bitmap *Texture, loaded_bitmap *NormalMap,
+                    environment_map *Top, environment_map *Middle, environment_map *Bottom)
 {
     // Premultiply color up front
     Color.rgb *= Color.a;
@@ -105,6 +114,9 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
     int WidthMax = (Buffer->Width - 1);
     int HeightMax = (Buffer->Height - 1);
+
+    real32 InvWidthMax = 1.0f / (real32)WidthMax;
+    real32 InvHeightMax = 1.0f / (real32)HeightMax;
 
     int XMin = WidthMax;
     int XMax = 0;
@@ -151,6 +163,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
             if((Edge0 < 0) && (Edge1 < 0) &&
                (Edge2 < 0) && (Edge3 < 0))
             {
+                v2 ScreenSpaceUV = {InvWidthMax*(real32)X, InvHeightMax*(real32)Y};
+                
                 real32 U = InvXAxisLengthSq*Inner(d, XAxis);
                 real32 V = InvYAxisLengthSq*Inner(d, YAxis);
 
@@ -192,20 +206,46 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                                 fY,
                                 Lerp(TexelC, fX, TexelD));
 
-                uint8_t *NormalPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
-                uint32_t NormalPtrA = *(uint32_t *)(NormalPtr);
-                uint32_t NormalPtrB = *(uint32_t *)(NormalPtr + sizeof(uint32_t));
-                uint32_t NormalPtrC = *(uint32_t *)(NormalPtr + Texture->Pitch);
-                uint32_t NormalPtrD = *(uint32_t *)(NormalPtr + Texture->Pitch + sizeof(uint32_t));
+                if(NormalMap)
+                {
+                    uint8_t *NormalPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
+                    uint32_t NormalPtrA = *(uint32_t *)(NormalPtr);
+                    uint32_t NormalPtrB = *(uint32_t *)(NormalPtr + sizeof(uint32_t));
+                    uint32_t NormalPtrC = *(uint32_t *)(NormalPtr + Texture->Pitch);
+                    uint32_t NormalPtrD = *(uint32_t *)(NormalPtr + Texture->Pitch + sizeof(uint32_t));
 
-                v4 NormalA = Unpack4x8(NormalPtrA);
-                v4 NormalB = Unpack4x8(NormalPtrB);
-                v4 NormalC = Unpack4x8(NormalPtrC);
-                v4 NormalD = Unpack4x8(NormalPtrD);
+                    v4 NormalA = Unpack4x8(NormalPtrA);
+                    v4 NormalB = Unpack4x8(NormalPtrB);
+                    v4 NormalC = Unpack4x8(NormalPtrC);
+                    v4 NormalD = Unpack4x8(NormalPtrD);
 
-                v4 Normal = Lerp(Lerp(TexelA, fX, TexelB),
-                                 fY,
-                                 Lerp(TexelC, fX, TexelD));
+                    v4 Normal = Lerp(Lerp(TexelA, fX, TexelB),
+                                     fY,
+                                     Lerp(TexelC, fX, TexelD));
+
+                    environment_map *FarMap = 0;
+                    real32 tEnvMap = Normal.z;
+                    real32 tFarMap = 0.0f;
+                    if(tEnvMap < 0.25f)
+                    {
+                        FarMap = Bottom;
+                        tFarMap = 1.0f - (tEnvMap / 0.25f);
+                    }
+                    else if(tEnvMap > 0.75f)
+                    {
+                        FarMap = Top;
+                        tFarMap = (1.0f - tEnvMap) / 0.25f;
+                    }
+
+                    v3 LightColor = SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
+                    if(FarMap)
+                    {
+                        v3 FarMapColor = SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, FarMap);
+                        LightColor = Lerp(LightColor, tFarMap, FarMapColor);
+                    }
+
+                    Texel.rgb = Hadamard(Texel.rgb, LightColor);
+                }
 
                 Texel = Hadamard(Texel, Color);
 
@@ -474,7 +514,8 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
                                     Entry->YAxis,
                                     Entry->Color,
                                     Entry->Texture,
-                                    Entry->NormalMap);
+                                    Entry->NormalMap,
+                                    Entry->Top, Entry->Middle, Entry->Bottom);
 
                 v4 Color = {1, 1, 0, 1};
                 v2 Dim = {2, 2};
@@ -619,7 +660,8 @@ Clear(render_group *Group, v4 Color)
 
 inline render_entry_coordinate_system *
 CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
-                 loaded_bitmap *Texture, loaded_bitmap *NormalMap)
+                 loaded_bitmap *Texture, loaded_bitmap *NormalMap,
+                 environment_map *Top, environment_map *Middle, environment_map *Bottom)
 {
     render_entry_coordinate_system *Entry = PushRenderElement(Group, render_entry_coordinate_system);
     if(Entry)
@@ -630,6 +672,9 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
         Entry->Color = Color;
         Entry->Texture = Texture;
         Entry->NormalMap = NormalMap;
+        Entry->Top = Top;
+        Entry->Middle = Middle;
+        Entry->Bottom = Bottom;
     }
 
     return(Entry);

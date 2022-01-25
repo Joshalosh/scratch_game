@@ -1187,14 +1187,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     v4 Color = V4(1.0f, 1.0f, 1.0f, 1.0f);
 #endif
     render_entry_coordinate_system *C = CoordinateSystem(RenderGroup, /*V2(Disp, 0) + */ Origin - 0.5f*XAxis - 0.5f*YAxis,
-                                                         XAxis, YAxis, Color, &GameState->Tree);
-    for(real32 Y = 0.0f; Y < 1.0f; Y += 0.25f)
-    {
-        for(real32 X = 0.0f; X < 1.0f; X += 0.25f)
-        {
-            C->Points[PIndex++] = V2(X, Y);
-        }
-    }
+                                                         XAxis, YAxis, Color, &GameState->Tree, 0, 0, 0, 0);
 
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 
