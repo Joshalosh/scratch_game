@@ -521,6 +521,40 @@ MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 Clear
     return(Result);
 }
 
+internal void
+MakeSphereNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
+{
+    real32 InvWidth = 1.0f / (1.0f - Bitmap->Width);
+    real32 InvHeight = 1.0f / (1.0f - Bitmap->Height);
+
+    uint8_t *Row = (uint8_t *)Bitmap->Memory;
+    for(int32_t Y = 0; Y < Bitmap->Width; ++Y)
+    {
+        uint32_t *Pixel = (uint32_t *)Row;
+        for(int32_t X = 0; X < Bitmap->Width; ++X)
+        {
+            v2 BitmapUV = {InvWidth*(real32)X, InvHeight*(real32)Y};
+
+            v3 Normal = {2.0f*BitmapUV.x - 1.0f, 2.0f*BitmapUV.y - 1.0f, 0.0f};
+            Normal.z = AbsoluteValue(Normal.x) + AbsoluteValue(Normal.y);
+
+            Normal = Normalize(Normal);
+
+            v4 Color = {255.0f*(0.5f*(Normal.x + 1.0f)),
+                        255.0f*(0.5f*(Normal.y + 1.0f)),
+                        127.0f*Normal.z,
+                        255.0f*Roughness};
+
+            *Pixel = (((uint32_t)(Color.a + 0.5f) << 24) |
+                      ((uint32_t)(Color.r + 0.5f) << 16) |
+                      ((uint32_t)(Color.g + 0.5f) << 8) |
+                      ((uint32_t)(Color.b + 0.5f) << 0));
+        }
+
+        Row += Buffer->Pitch;
+    }
+}
+
 #if 0
 internal void
 RequestGroundBuffers(world_position CenterP, rectangle3 Bounds)
