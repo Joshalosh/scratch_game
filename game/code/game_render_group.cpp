@@ -219,9 +219,9 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     v4 NormalC = Unpack4x8(NormalPtrC);
                     v4 NormalD = Unpack4x8(NormalPtrD);
 
-                    v4 Normal = Lerp(Lerp(TexelA, fX, TexelB),
+                    v4 Normal = Lerp(Lerp(NormalA, fX, NormalB),
                                      fY,
-                                     Lerp(TexelC, fX, TexelD));
+                                     Lerp(NormalC, fX, NormalD));
 
                     environment_map *FarMap = 0;
                     real32 tEnvMap = Normal.z;

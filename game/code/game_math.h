@@ -443,6 +443,14 @@ Length(v3 A)
 }
 
 inline v3
+Normalize(v3 A)
+{
+    v3 Result = A * (1.0f / Length(A));
+
+    return(Result);
+}
+
+inline v3
 Clamp01(v3 Value)
 {
     v3 Result;
