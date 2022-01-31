@@ -542,7 +542,7 @@ MakeSphereNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
 
             v4 Color = {255.0f*(0.5f*(Normal.x + 1.0f)),
                         255.0f*(0.5f*(Normal.y + 1.0f)),
-                        127.0f*Normal.z,
+                        255.0f*(0.5f*(Normal.z + 1.0f)),
                         255.0f*Roughness};
 
             *Pixel = (((uint32_t)(Color.a + 0.5f) << 24) |
@@ -843,9 +843,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             GroundBuffer->P = NullPosition();
         }
 
+        GameState->TreeNormal = MakeEmptyBitmap(&TranState->TranArena, GameState->Tree.Width,
+                                                GameState->Tree.Height, false);
+        MakeSphereNormalMap(&GameState->TreeNormal, 0.0f);
+
         TranState->IsInitialised = true;
     }
 
+#if 0
     if(Input->ExecutableReloaded)
     {
         for(uint32_t GroundBufferIndex = 0;
@@ -856,6 +861,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             GroundBuffer->P = NullPosition();
         }
     }
+#endif
 
     world *World = GameState->World;
 
@@ -1221,7 +1227,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     v4 Color = V4(1.0f, 1.0f, 1.0f, 1.0f);
 #endif
     render_entry_coordinate_system *C = CoordinateSystem(RenderGroup, /*V2(Disp, 0) + */ Origin - 0.5f*XAxis - 0.5f*YAxis,
-                                                         XAxis, YAxis, Color, &GameState->Tree, 0, 0, 0, 0);
+                                                         XAxis, YAxis, Color, &GameState->Tree,
+                                                         &GameState->TreeNormal, 0, 0, 0);
 
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 
