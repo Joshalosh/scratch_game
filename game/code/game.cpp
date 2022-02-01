@@ -524,31 +524,38 @@ MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 Clear
 internal void
 MakeSphereNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
 {
-    real32 InvWidth = 1.0f / (1.0f - Bitmap->Width);
-    real32 InvHeight = 1.0f / (1.0f - Bitmap->Height);
+    real32 InvWidth = 1.0f / (real32)(Bitmap->Width - 1);
+    real32 InvHeight = 1.0f / (real32)(Bitmap->Height - 1);
 
     uint8_t *Row = (uint8_t *)Bitmap->Memory;
-    for(int32_t Y = 0; Y < Bitmap->Width; ++Y)
+    for(int32_t Y = 0; Y < Bitmap->Height; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
-        for(int32_t X = 0; X < Bitmap->Height; ++X)
+        for(int32_t X = 0; X < Bitmap->Width; ++X)
         {
             v2 BitmapUV = {InvWidth*(real32)X, InvHeight*(real32)Y};
 
-            v3 Normal = {2.0f*BitmapUV.x - 1.0f, 2.0f*BitmapUV.y - 1.0f, 0.0f};
-            Normal.z = SquareRoot(1.0f - Minimum(1.0f, Square(Normal.x) + Square(Normal.y)));
+            real32 Nx = 2.0f*BitmapUV.x - 1.0f;
+            real32 Ny = 2.0f*BitmapUV.y - 1.0f;
 
-            Normal = Normalize(Normal);
+            real32 RootTerm = 1.0f - Nx*Nx - Ny*Ny;
+            v3 Normal = {0, 0, 1};
+            real32 Nz = 0.0f;
+            if(RootTerm >= 0.0f)
+            {
+                Nz = SquareRoot(RootTerm);
+                Normal = V3(Nx, Ny, Nz);
+            }
 
             v4 Color = {255.0f*(0.5f*(Normal.x + 1.0f)),
                         255.0f*(0.5f*(Normal.y + 1.0f)),
                         255.0f*(0.5f*(Normal.z + 1.0f)),
                         255.0f*Roughness};
 
-            *Pixel = (((uint32_t)(Color.a + 0.5f) << 24) |
-                      ((uint32_t)(Color.r + 0.5f) << 16) |
-                      ((uint32_t)(Color.g + 0.5f) << 8) |
-                      ((uint32_t)(Color.b + 0.5f) << 0));
+            *Pixel++ = (((uint32_t)(Color.a + 0.5f) << 24) |
+                        ((uint32_t)(Color.r + 0.5f) << 16) |
+                        ((uint32_t)(Color.g + 0.5f) << 8) |
+                        ((uint32_t)(Color.b + 0.5f) << 0));
         }
 
         Row += Bitmap->Pitch;
