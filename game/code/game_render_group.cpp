@@ -104,14 +104,6 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
     }
 }
 
-inline v3
-SampleEnvironmentMap(v2 ScreenSpaceUV, v3 Normal, real32 Roughness, environment_map *Map)
-{
-    v3 Result = Normal;
-
-    return(Result);
-}
-
 struct bilinear_sample
 {
     uint32_t A, B, C, D;
@@ -130,6 +122,50 @@ BilinearSample(loaded_bitmap *Texture, int32_t X, int32_t Y)
     return(Result);
 }
 
+inline v4
+SRGBBilinearBlend(bilinear_sample TexelSample, real32 fX, real32 fY)
+{
+    v4 TexelA = Unpack4x8(TexelSample.A);
+    v4 TexelB = Unpack4x8(TexelSample.B);
+    v4 TexelC = Unpack4x8(TexelSample.C);
+    v4 TexelD = Unpack4x8(TexelSample.D);
+
+    // Go from sRGB to "linear" brightness space.
+    TexelA = SRGB255ToLinear1(TexelA);
+    TexelB = SRGB255ToLinear1(TexelB);
+    TexelC = SRGB255ToLinear1(TexelC);
+    TexelD = SRGB255ToLinear1(TexelD);
+
+    v4 Result = Lerp(Lerp(TexelA, fX, TexelB), fY, Lerp(TexelC, fX, TexelD));
+
+    return(Result);
+}
+
+inline v3
+SampleEnvironmentMap(v2 ScreenSpaceUV, v3 Normal, real32 Roughness, environment_map *Map)
+{
+    uint32_t LODIndex = (uint32_t)(Roughness*(real32)(ArrayCount(Map->LOD) - 1) + 0.5f);
+    Assert(LODIndex < ArrayCount(Map->LOD));
+
+    loaded_bitmap *LOD = Map->LOD[LODIndex];
+
+    real32 tX = 0.0f;
+    real32 tY = 0.0f;
+
+    int32_t X = (int32_t)tX;
+    int32_t Y = (int32_t)tY;
+
+    real32 fX = tX - (real32)X;
+    real32 fY = tY - (real32)Y;
+
+    Assert((X >= 0) && (X < LOD->Width));
+    Assert((Y >= 0) && (Y < LOD->Height));
+
+    bilinear_sample Sample = BilinearSample(LOD, X, Y);
+    v3 Result = SRGBBilinearBlend(Sample, fX, fY).xyz;
+
+    return(Result);
+}
 
 internal void
 DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
@@ -221,21 +257,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 Assert((Y >= 0) && (Y < Texture->Height));
 
                 bilinear_sample TexelSample = BilinearSample(Texture, X, Y);
-
-                v4 TexelA = Unpack4x8(TexelSample.A);
-                v4 TexelB = Unpack4x8(TexelSample.B);
-                v4 TexelC = Unpack4x8(TexelSample.C);
-                v4 TexelD = Unpack4x8(TexelSample.D);
-
-                // Go from sRGB to "linear" brightness space.
-                TexelA = SRGB255ToLinear1(TexelA);
-                TexelB = SRGB255ToLinear1(TexelB);
-                TexelC = SRGB255ToLinear1(TexelC);
-                TexelD = SRGB255ToLinear1(TexelD);
-
-                v4 Texel = Lerp(Lerp(TexelA, fX, TexelB),
-                                fY,
-                                Lerp(TexelC, fX, TexelD));
+                v4 Texel = SRGBBilinearBlend(TexelSample, fX, fY);
 
                 if(NormalMap)
                 {
@@ -251,34 +273,31 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                                      Lerp(NormalC, fX, NormalD));
                     
                     Normal = UnscaleAndBiasNormal(Normal);
+                    // Is this really necessary?
+                    Normal.xyz = Normalize(Normal.xyz);
 
-#if 1
                     environment_map *FarMap = 0;
-                    real32 tEnvMap = Normal.z;
+                    real32 tEnvMap = Normal.y;
                     real32 tFarMap = 0.0f;
-                    if(tEnvMap < 0.25f)
+                    if(tEnvMap < -0.5f)
                     {
                         FarMap = Bottom;
-                        tFarMap = 1.0f - (tEnvMap / 0.25f);
+                        tFarMap = 2.0f*(tEnvMap + 1.0f);
                     }
-                    else if(tEnvMap > 0.75f)
+                    else if(tEnvMap > 0.5f)
                     {
                         FarMap = Top;
-                        tFarMap = (1.0f - tEnvMap) / 0.25f;
+                        tFarMap = 2.0f*(tEnvMap - 0.5f);
                     }
 
-                    v3 LightColor = SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
+                    v3 LightColor = {0, 0, 0}; // SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
                     if(FarMap)
                     {
                         v3 FarMapColor = SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, FarMap);
                         LightColor = Lerp(LightColor, tFarMap, FarMapColor);
                     }
 
-                    Texel.rgb = Texel.rgb + LightColor;
-#else
-                    Texel.rgb = V3(0.5f, 0.5f, 0.5f) + 0.5f*Normal.rgb;
-                    Texel.a = 1.0f;
-#endif
+                    Texel.rgb = Texel.rgb + Texel.a*LightColor;
                 }
 
                 Texel = Hadamard(Texel, Color);

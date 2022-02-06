@@ -2,9 +2,6 @@
 
 struct environment_map
 {
-    // LOD[0] is 2^WidthPow2 x 2^HeightPow2
-    uint32_t WidthPow2;
-    uint32_t HeightPow2;
     loaded_bitmap *LOD[4];
 };
 
