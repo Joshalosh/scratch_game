@@ -1,5 +1,4 @@
 #include "game.h"
-#include "game_render_group.h"
 #include "game_render_group.cpp"
 #include "game_world.cpp"
 #include "game_random.h"
@@ -854,6 +853,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                 GameState->Tree.Height, false);
         MakeSphereNormalMap(&GameState->TreeNormal, 0.0f);
 
+        TranState->EnvMapWidth = 512;
+        TranState->EnvMapHeight = 256;
+        for(uint32_t MapIndex = 0; MapIndex < ArrayCount(TranState->EnvMaps); ++MapIndex)
+        {
+            environment_map *Map = TranState->EnvMaps + MapIndex;
+            uint32_t Width = TranState->EnvMapWidth;
+            uint32_t Height = TranState->EnvMapHeight;
+            for(uint32_t LODIndex = 0; LODIndex < ArrayCount(Map->LOD); ++LODIndex)
+            {
+                Map->LOD[LODIndex] = MakeEmptyBitmap(&TranState->TranArena, Width, Height, false);
+                Width >>= 1;
+                Height >>= 1;
+            }
+        }
+
         TranState->IsInitialised = true;
     }
 
@@ -1235,7 +1249,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
     render_entry_coordinate_system *C = CoordinateSystem(RenderGroup, /*V2(Disp, 0) + */ Origin - 0.5f*XAxis - 0.5f*YAxis,
                                                          XAxis, YAxis, Color, &GameState->Tree,
-                                                         &GameState->TreeNormal, 0, 0, 0);
+                                                         &GameState->TreeNormal,
+                                                         TranState->EnvMaps + 2,
+                                                         TranState->EnvMaps + 1,
+                                                         TranState->EnvMaps + 0);
 
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 

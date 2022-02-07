@@ -147,7 +147,7 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 Normal, real32 Roughness, environment_
     uint32_t LODIndex = (uint32_t)(Roughness*(real32)(ArrayCount(Map->LOD) - 1) + 0.5f);
     Assert(LODIndex < ArrayCount(Map->LOD));
 
-    loaded_bitmap *LOD = Map->LOD[LODIndex];
+    loaded_bitmap *LOD = &Map->LOD[LODIndex];
 
     real32 tX = 0.0f;
     real32 tY = 0.0f;
@@ -308,7 +308,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 v4 Dest = {(real32)((*Pixel >> 16) & 0xFF),
                            (real32)((*Pixel >> 8) & 0xFF),
                            (real32)((*Pixel >> 0) & 0xFF),
-                           (real32)((*Pixel>> 24) & 0xFF)};
+                           (real32)((*Pixel >> 24) & 0xFF)};
 
                 // Go from sRGB to "linear" brightness space.
                 Dest = SRGB255ToLinear1(Dest);

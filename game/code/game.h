@@ -163,14 +163,7 @@ ZeroSize(memory_index Size, void *Ptr)
 #include "game_world.h"
 #include "game_sim_region.h"
 #include "game_entity.h"
-
-struct loaded_bitmap
-{
-    int32_t Width;
-    int32_t Height;
-    int32_t Pitch;
-    void *Memory;
-};
+#include "game_render_group.h"
 
 struct hero_bitmaps
 {
@@ -266,6 +259,11 @@ struct transient_state
     memory_arena TranArena;
     uint32_t GroundBufferCount;
     ground_buffer *GroundBuffers;
+
+    uint32_t EnvMapWidth;
+    uint32_t EnvMapHeight;
+    // 0 is bottom, 1 is middle and 2 is top.
+    environment_map EnvMaps[3];
 };
 
 inline low_entity *

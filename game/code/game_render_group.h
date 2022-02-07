@@ -1,8 +1,16 @@
 #if !defined(GAME_RENDER_GROUP_H)
 
+struct loaded_bitmap
+{
+    int32_t Width;
+    int32_t Height;
+    int32_t Pitch;
+    void *Memory;
+};
+
 struct environment_map
 {
-    loaded_bitmap *LOD[4];
+    loaded_bitmap LOD[4];
 };
 
 struct render_basis
