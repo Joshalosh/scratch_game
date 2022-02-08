@@ -1227,6 +1227,30 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 Angle = 0.1f*GameState->Time;
     real32 Disp = 100.0f*Cos(5.0f*Angle);
 
+#if 0
+    for(uint32_t MapIndex = 0; MapIndex < ArrayCount(TranState->EnvMaps); ++MapIndex)
+    {
+        environment_map *Map = TranState->EnvMaps + MapIndex;
+        loaded_bitmap *LOD = Map->LOD + 0;
+        for(uint32_t Y = 0; Y < LOD->Height; Y += CheckerHeight)
+        {
+            for(uint32_t X = 0; X < LOD->Width; X += CheckerWidth)
+            {
+                v2 MinP = ;
+                v2 MaxP = MinP + V2i(CheckerWidth, CheckerHeight);
+                DrawRectangle(LOD, MinP, MaxP 1.0f, 0.0f, 0.0f, 1.0f);
+            }
+        }
+    }
+#endif
+
+    DrawRectangle(TranState->EnvMaps[0].LOD + 0, V2(0, 0),
+                  V2i(TranState->EnvMapWidth, TranState->EnvMapHeight), 1.0f, 0.0f, 0.0f, 1.0f);
+    DrawRectangle(TranState->EnvMaps[1].LOD + 0, V2(0, 0),
+                  V2i(TranState->EnvMapWidth, TranState->EnvMapHeight), 0.0f, 1.0f, 0.0f, 1.0f);
+    DrawRectangle(TranState->EnvMaps[2].LOD + 0, V2(0, 0),
+                  V2i(TranState->EnvMapWidth, TranState->EnvMapHeight), 0.0f, 0.0f, 1.0f, 1.0f);
+
     Angle = 0.0f;
 
     v2 Origin = ScreenCentre;
@@ -1253,6 +1277,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                                          TranState->EnvMaps + 2,
                                                          TranState->EnvMaps + 1,
                                                          TranState->EnvMaps + 0);
+
+    v2 MapP = {0.0f, 0.0f};
+    for(uint32_t MapIndex = 0; MapIndex < ArrayCount(TranState->EnvMaps); ++MapIndex)
+    {
+        environment_map *Map = TranState->EnvMaps + MapIndex;
+        loaded_bitmap *LOD = Map->LOD + 0;
+
+        XAxis = 0.5f * V2((real32)LOD->Width, 0.0f);
+        YAxis = 0.5f * V2(0.0f, (real32)LOD->Height);
+
+        CoordinateSystem(RenderGroup, MapP, XAxis, YAxis, V4(1.0f, 1.0f, 1.0f, 1.0f), LOD, 0, 0, 0, 0);
+        MapP += YAxis + V2(0.0f, 6.0f);
+    }
 
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 

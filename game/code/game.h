@@ -3,6 +3,14 @@
 /*
  TODO
 
+ - Rendering
+   - Lighting
+   - Straighten out all of the coordinate systems.
+     - Screen
+     - World
+     - Texture
+   - Optimisation
+
  ARCHITECTURE EXPLORATION
  - Z
    - Need to make a solid concept of ground levels so the camera can
@@ -66,7 +74,6 @@
    - Particle systems
 
  PRODUCTION
- - Rendering
  -> GAME
    - Entity system
    - World generation

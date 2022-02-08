@@ -57,8 +57,13 @@ UnscaleAndBiasNormal(v4 Normal)
 }
 
 internal void
-DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real32 B, real32 A = 1.0f)
+DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color)
 {
+    real32 R = Color.r;
+    real32 G = Color.g;
+    real32 B = Color.b;
+    real32 A = Color.a;
+
     int32_t MinX = RoundReal32ToInt32(vMin.x);
     int32_t MinY = RoundReal32ToInt32(vMin.y);
     int32_t MaxX = RoundReal32ToInt32(vMax.x);
@@ -84,10 +89,10 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
         MaxY = Buffer->Height;
     }
 
-    uint32_t Color = ((RoundReal32ToUInt32(A * 255.0f) << 24) |
-                      (RoundReal32ToUInt32(R * 255.0f) << 16) |
-                      (RoundReal32ToUInt32(G * 255.0f) << 8) |
-                      (RoundReal32ToUInt32(B * 255.0f) << 0));
+    uint32_t Color32 = ((RoundReal32ToUInt32(A * 255.0f) << 24) |
+                        (RoundReal32ToUInt32(R * 255.0f) << 16) |
+                        (RoundReal32ToUInt32(G * 255.0f) << 8) |
+                        (RoundReal32ToUInt32(B * 255.0f) << 0));
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory +
                     MinX*BITMAP_BYTES_PER_PIXEL +
@@ -97,7 +102,7 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, real32 R, real32 G, real3
         uint32_t *Pixel = (uint32_t *)Row;
         for(int X = MinX; X < MaxX; ++X)
         {
-            *Pixel++ = Color;
+            *Pixel++ = Color32;
         }
 
         Row += Buffer->Pitch;
@@ -282,7 +287,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     if(tEnvMap < -0.5f)
                     {
                         FarMap = Bottom;
-                        tFarMap = 2.0f*(tEnvMap + 1.0f);
+                        tFarMap = -1.0f - 2.0f*tEnvMap;
                     }
                     else if(tEnvMap > 0.5f)
                     {
@@ -417,12 +422,12 @@ internal void
 DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R = 2.0f)
 {
     // For the top and bottom.
-    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMax.x + R, vMin.y + R), Color.r, Color.g, Color.b);
-    DrawRectangle(Buffer, V2(vMin.x - R, vMax.y - R), V2(vMax.x + R, vMax.y + R), Color.r, Color.g, Color.b);
+    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMax.x + R, vMin.y + R), ToV4(Color, 1.0f));
+    DrawRectangle(Buffer, V2(vMin.x - R, vMax.y - R), V2(vMax.x + R, vMax.y + R), ToV4(Color, 1.0f));
 
     // For the left and right.
-    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMin.x + R, vMax.y + R), Color.r, Color.g, Color.b);
-    DrawRectangle(Buffer, V2(vMax.x - R, vMin.y - R), V2(vMax.x + R, vMax.y + R), Color.r, Color.g, Color.b);
+    DrawRectangle(Buffer, V2(vMin.x - R, vMin.y - R), V2(vMin.x + R, vMax.y + R), ToV4(Color, 1.0f));
+    DrawRectangle(Buffer, V2(vMax.x - R, vMin.y - R), V2(vMax.x + R, vMax.y + R), ToV4(Color, 1.0f));
 }
 
 internal void
