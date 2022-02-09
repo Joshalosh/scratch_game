@@ -63,13 +63,13 @@ struct render_entry_bitmap
 {
     loaded_bitmap *Bitmap;
     render_entity_basis EntityBasis;
-    real32 R, G, B, A;
+    v4 Color;
 };
 
 struct render_entry_rectangle
 {
     render_entity_basis EntityBasis;
-    real32 R, G, B, A;
+    v4 Color;
     v2 Dim;
 };
 

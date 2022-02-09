@@ -238,7 +238,6 @@ struct game_state
     hero_bitmaps HeroBitmaps[4];
 
     loaded_bitmap Tree;
-    loaded_bitmap TreeNormal;
     loaded_bitmap Sword;
     loaded_bitmap Stairwell;
     real32 MetresToPixels;
@@ -258,6 +257,9 @@ struct game_state
     sim_entity_collision_volume_group *StandardRoomCollision;
 
     real32 Time;
+
+    loaded_bitmap TestDiffuse;
+    loaded_bitmap TestNormal;
 };
 
 struct transient_state
