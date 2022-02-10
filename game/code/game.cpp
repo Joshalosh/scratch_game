@@ -1299,6 +1299,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         MapP += YAxis + V2(0.0f, 6.0f);
     }
 
+#if 0
+    Saturation(RenderGroup, 0.5f + 0.5f*Sin(10.0f*GameState->Time));
+#endif
+
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 
     EndSim(SimRegion, GameState);

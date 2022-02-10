@@ -34,6 +34,7 @@ enum render_group_entry_type
     RenderGroupEntryType_render_entry_bitmap,
     RenderGroupEntryType_render_entry_rectangle,
     RenderGroupEntryType_render_entry_coordinate_system,
+    RenderGroupEntryType_render_entry_saturation,
 };
 struct render_group_entry_header
 {
@@ -43,6 +44,11 @@ struct render_group_entry_header
 struct render_entry_clear
 {
     v4 Color;
+};
+
+struct render_entry_saturation
+{
+    real32 Level;
 };
 
 struct render_entry_coordinate_system

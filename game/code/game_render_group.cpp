@@ -419,6 +419,41 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
 }
 
 internal void
+ChangeSaturation(loaded_bitmap *Buffer, real32 Level)
+{
+    uint8_t *DestRow = (uint8_t *)Buffer->Memory;
+    for(int Y = 0; Y < Buffer->Height; ++Y)
+    {
+        uint32_t *Dest = (uint32_t *)DestRow;
+        for(int X = 0; X < Buffer->Width; ++X)
+        {
+            v4 D = {(real32)((*Dest >> 16) & 0xFF),
+                    (real32)((*Dest >> 8) & 0xFF),
+                    (real32)((*Dest >> 0) & 0xFF),
+                    (real32)((*Dest >> 24) & 0xFF)};
+
+            D = SRGB255ToLinear1(D);
+
+            real32 Avg = (1.0f / 3.0f) * (D.r + D.g + D.b);
+            v3 Delta = V3(D.r - Avg, D.g - Avg, D.b - Avg);
+
+            v4 Result = ToV4(V3(Avg, Avg, Avg) + Level*Delta, D.a);
+
+            Result = Linear1ToSRGB255(Result);
+
+            *Dest = (((uint32_t)(Result.a + 0.5f) << 24) |
+                     ((uint32_t)(Result.r + 0.5f) << 16) |
+                     ((uint32_t)(Result.g + 0.5f) << 8) |
+                     ((uint32_t)(Result.b + 0.5f) << 0));
+
+            ++Dest;
+        }
+
+        DestRow += Buffer->Pitch;
+    }
+}
+
+internal void
 DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R = 2.0f)
 {
     // For the top and bottom.
@@ -539,6 +574,15 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 
                 DrawRectangle(OutputTarget, V2(0.0f, 0.0f), V2((real32)OutputTarget->Width,
                               (real32)OutputTarget->Height), Entry->Color);
+
+                BaseAddress += sizeof(*Entry);
+            } break;
+
+            case RenderGroupEntryType_render_entry_saturation:
+            {
+                render_entry_saturation *Entry = (render_entry_saturation *)Data;
+
+                ChangeSaturation(OutputTarget, Entry->Level);
 
                 BaseAddress += sizeof(*Entry);
             } break;
@@ -710,6 +754,16 @@ Clear(render_group *Group, v4 Color)
     if(Entry)
     {
         Entry->Color = Color;
+    }
+}
+
+inline void
+Saturation(render_group *Group, real32 Level)
+{
+    render_entry_saturation *Entry = PushRenderElement(Group, render_entry_saturation);
+    if(Entry)
+    {
+        Entry->Level = Level;
     }
 }
 
