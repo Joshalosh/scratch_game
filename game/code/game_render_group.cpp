@@ -147,15 +147,15 @@ SRGBBilinearBlend(bilinear_sample TexelSample, real32 fX, real32 fY)
 }
 
 inline v3
-SampleEnvironmentMap(v2 ScreenSpaceUV, v3 Normal, real32 Roughness, environment_map *Map)
+SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness, environment_map *Map)
 {
     uint32_t LODIndex = (uint32_t)(Roughness*(real32)(ArrayCount(Map->LOD) - 1) + 0.5f);
     Assert(LODIndex < ArrayCount(Map->LOD));
 
     loaded_bitmap *LOD = &Map->LOD[LODIndex];
 
-    real32 tX = LOD->Width/2 + Normal.x*(real32)(LOD->Width/2);
-    real32 tY = LOD->Height/2 + Normal.y*(real32)(LOD->Height/2);
+    real32 tX = LOD->Width/2 + SampleDirection.x*(real32)(LOD->Width/2);
+    real32 tY = LOD->Height/2 + SampleDirection.y*(real32)(LOD->Height/2);
 
     int32_t X = (int32_t)tX;
     int32_t Y = (int32_t)tY;
@@ -281,8 +281,13 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     // Is this really necessary?
                     Normal.xyz = Normalize(Normal.xyz);
 
+                    // The eye vector is always assumed to be [0, 0, 1]
+                    // this is the simplified version of the reflection -e + 2e^T N N
+                    v3 BounceDirection = 2.0f*Normal.z*Normal.xyz;
+                    BounceDirection.z -= 1.0f;
+
                     environment_map *FarMap = 0;
-                    real32 tEnvMap = Normal.y;
+                    real32 tEnvMap = BounceDirection.y;
                     real32 tFarMap = 0.0f;
                     if(tEnvMap < -0.5f)
                     {
@@ -298,7 +303,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     v3 LightColor = {0, 0, 0}; // SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
                     if(FarMap)
                     {
-                        v3 FarMapColor = SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, FarMap);
+                        v3 FarMapColor = SampleEnvironmentMap(ScreenSpaceUV, BounceDirection, Normal.w, FarMap);
                         LightColor = Lerp(LightColor, tFarMap, FarMapColor);
                     }
 
