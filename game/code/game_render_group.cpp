@@ -154,8 +154,19 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness, env
 
     loaded_bitmap *LOD = &Map->LOD[LODIndex];
 
-    real32 tX = LOD->Width/2 + SampleDirection.x*(real32)(LOD->Width/2);
-    real32 tY = LOD->Height/2 + SampleDirection.y*(real32)(LOD->Height/2);
+    Assert(SampleDirection.y > 0.0f);
+    real32 DistanceFromMapInZ = 1.0f;
+    real32 UVsPerMetre = 0.01f;
+    real32 C = (UVsPerMetre*DistanceFromMapInZ) / SampleDirection.y;
+    // Make sure to know what direction Z should go in Y.
+    v2 Offset = C *  V2(SampleDirection.x, SampleDirection.z);
+    v2 UV = ScreenSpaceUV + Offset;
+
+    UV.x = Clamp01(UV.x);
+    UV.y = Clamp01(UV.y);
+
+    real32 tX = ((UV.x*(real32)(LOD->Width - 2)));
+    real32 tY = ((UV.y*(real32)(LOD->Height - 2)));
 
     int32_t X = (int32_t)tX;
     int32_t Y = (int32_t)tY;
@@ -293,6 +304,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     {
                         FarMap = Bottom;
                         tFarMap = -1.0f - 2.0f*tEnvMap;
+                        BounceDirection.y = -BounceDirection.y;
                     }
                     else if(tEnvMap > 0.5f)
                     {
