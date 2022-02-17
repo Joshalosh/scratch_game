@@ -159,7 +159,7 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness, env
     real32 UVsPerMetre = 0.01f;
     real32 C = (UVsPerMetre*DistanceFromMapInZ) / SampleDirection.y;
     // Make sure to know what direction Z should go in Y.
-    v2 Offset = C *  V2(SampleDirection.x, SampleDirection.z);
+    v2 Offset = C * V2(SampleDirection.x, SampleDirection.z);
     v2 UV = ScreenSpaceUV + Offset;
 
     UV.x = Clamp01(UV.x);
@@ -291,6 +291,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     Normal = UnscaleAndBiasNormal(Normal);
                     // Is this really necessary?
                     Normal.xyz = Normalize(Normal.xyz);
+
+                    // TODO: Need to rotate normals based on X/Y axis.
 
                     // The eye vector is always assumed to be [0, 0, 1]
                     // this is the simplified version of the reflection -e + 2e^T N N
