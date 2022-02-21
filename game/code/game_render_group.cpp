@@ -191,6 +191,9 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
     // Premultiply color up front
     Color.rgb *= Color.a;
 
+    v2 NXAxis = (Length(YAxis) / Length(XAxis)) * XAxis;
+    v2 NYAxis = (Length(XAxis) / Length(YAxis)) * YAxis;
+
     real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
     real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
 
@@ -290,9 +293,10 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     
                     Normal = UnscaleAndBiasNormal(Normal);
                     // Is this really necessary?
-                    Normal.xyz = Normalize(Normal.xyz);
+                    
+                    Normal.xy = Normal.x*XAxis + Normal.y*YAxis;
 
-                    // TODO: Need to rotate normals based on X/Y axis.
+                    Normal.xyz = Normalize(Normal.xyz);
 
                     // The eye vector is always assumed to be [0, 0, 1]
                     // this is the simplified version of the reflection -e + 2e^T N N
