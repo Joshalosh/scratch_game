@@ -909,7 +909,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                       GameState->TestDiffuse.Height), V4(0.5f, 0.5f, 0.5f, 1.0f));
         GameState->TestNormal = MakeEmptyBitmap(&TranState->TranArena, GameState->TestDiffuse.Width,
                                                 GameState->TestDiffuse.Height, false);
-        MakeSphereNormalMap(&GameState->TestNormal, 0.0f, 0.0f, 1.0f);
+        MakeSphereNormalMap(&GameState->TestNormal, 0.0f);
 //          MakePyramidNormalMap(&GameState->TestNormal, 0.0f);
 
         TranState->EnvMapWidth = 512;

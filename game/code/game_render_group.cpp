@@ -147,24 +147,40 @@ SRGBBilinearBlend(bilinear_sample TexelSample, real32 fX, real32 fY)
 }
 
 inline v3
-SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness, environment_map *Map)
+SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
+                     environment_map *Map, real32 DistanceFromMapInZ)
 {
+    /*
+      ScreenSpaceUV tells me where the ray is being cast _from_ in
+      normalized screen coordinates.
+
+      SampleDirection tells us what direction the cast is going -
+      it does not have to be normalized, but its y _must be positive_.
+
+      Roughness says which LODs of Map we sample from.
+    */
+
     uint32_t LODIndex = (uint32_t)(Roughness*(real32)(ArrayCount(Map->LOD) - 1) + 0.5f);
     Assert(LODIndex < ArrayCount(Map->LOD));
 
     loaded_bitmap *LOD = &Map->LOD[LODIndex];
 
-    Assert(SampleDirection.y > 0.0f);
-    real32 DistanceFromMapInZ = 1.0f;
+    // Need to compute the distance to the map and the
+    // scaling factor for meters-to-UVs.
     real32 UVsPerMetre = 0.01f;
     real32 C = (UVsPerMetre*DistanceFromMapInZ) / SampleDirection.y;
     // Make sure to know what direction Z should go in Y.
     v2 Offset = C * V2(SampleDirection.x, SampleDirection.z);
+
+    // Find the intersection point.
     v2 UV = ScreenSpaceUV + Offset;
 
+    // Clamp the valid range.
     UV.x = Clamp01(UV.x);
     UV.y = Clamp01(UV.y);
 
+    // Bilinear sample
+    // TODO Formalise texture boundaries.
     real32 tX = ((UV.x*(real32)(LOD->Width - 2)));
     real32 tY = ((UV.y*(real32)(LOD->Height - 2)));
 
@@ -191,8 +207,16 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
     // Premultiply color up front
     Color.rgb *= Color.a;
 
-    v2 NXAxis = (Length(YAxis) / Length(XAxis)) * XAxis;
-    v2 NYAxis = (Length(XAxis) / Length(YAxis)) * YAxis;
+    real32 XAxisLength = Length(XAxis);
+    real32 YAxisLength = Length(YAxis);
+
+    v2 NxAxis = (YAxisLength / XAxisLength) * XAxis;
+    v2 NyAxis = (XAxisLength / YAxisLength) * YAxis;
+
+    // NzScale could be a parameter if I want people to have
+    // control over the amount of scaling in the Z direction
+    // that the normals appear to have.
+    real32 NzScale = 0.5*(XAxisLength + YAxisLength);
 
     real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
     real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
@@ -294,8 +318,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     Normal = UnscaleAndBiasNormal(Normal);
                     // Is this really necessary?
                     
-                    Normal.xy = Normal.x*XAxis + Normal.y*YAxis;
-
+                    Normal.xy = Normal.x*NxAxis + Normal.y*NyAxis;
+                    Normal.z *= NzScale;
                     Normal.xyz = Normalize(Normal.xyz);
 
                     // The eye vector is always assumed to be [0, 0, 1]
@@ -303,14 +327,20 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     v3 BounceDirection = 2.0f*Normal.z*Normal.xyz;
                     BounceDirection.z -= 1.0f;
 
+                    // TODO Eventually i'm going to need to support two mappings,
+                    // one for top-down view (which I don't do now) and one
+                    // for sideways view which is whats happening here.
+                    BounceDirection.z = -BounceDirection.z;
+
                     environment_map *FarMap = 0;
+                    real32 DistanceFromMapInZ = 2.0f;
                     real32 tEnvMap = BounceDirection.y;
                     real32 tFarMap = 0.0f;
                     if(tEnvMap < -0.5f)
                     {
                         FarMap = Bottom;
                         tFarMap = -1.0f - 2.0f*tEnvMap;
-                        BounceDirection.y = -BounceDirection.y;
+                        DistanceFromMapInZ = -DistanceFromMapInZ;
                     }
                     else if(tEnvMap > 0.5f)
                     {
@@ -321,7 +351,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     v3 LightColor = {0, 0, 0}; // SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
                     if(FarMap)
                     {
-                        v3 FarMapColor = SampleEnvironmentMap(ScreenSpaceUV, BounceDirection, Normal.w, FarMap);
+                        v3 FarMapColor = SampleEnvironmentMap(ScreenSpaceUV, BounceDirection, Normal.w,
+                                                              FarMap, DistanceFromMapInZ);
                         LightColor = Lerp(LightColor, tFarMap, FarMapColor);
                     }
 
