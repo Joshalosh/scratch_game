@@ -158,6 +158,9 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
       it does not have to be normalized, but its y _must be positive_.
 
       Roughness says which LODs of Map we sample from.
+
+      DistanceFromMapInZ says how far the map is from the sample point in Z
+      given in meters.
     */
 
     uint32_t LODIndex = (uint32_t)(Roughness*(real32)(ArrayCount(Map->LOD) - 1) + 0.5f);
