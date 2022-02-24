@@ -196,6 +196,9 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
     Assert((X >= 0) && (X < LOD->Width));
     Assert((Y >= 0) && (Y < LOD->Height));
 
+    uint8_t *TexelPtr = ((uint8_t *)LOD->Memory) + Y*LOD->Pitch + X*sizeof(uint32_t);
+    *(uint32_t *)TexelPtr = 0xFFFFFFFF;
+
     bilinear_sample Sample = BilinearSample(LOD, X, Y);
     v3 Result = SRGBBilinearBlend(Sample, fX, fY).xyz;
 
