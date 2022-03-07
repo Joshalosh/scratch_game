@@ -1314,6 +1314,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             RowCheckerOn = !RowCheckerOn;
         }
     }
+    TranState->EnvMaps[0].Pz = -2.0f;
+    TranState->EnvMaps[1].Pz = 0.0f;
+    TranState->EnvMaps[2].Pz = 2.0f;
 
 //    Angle = 0.0f;
 
