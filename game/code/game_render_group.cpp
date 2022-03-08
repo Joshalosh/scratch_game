@@ -196,7 +196,7 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
     Assert((X >= 0) && (X < LOD->Width));
     Assert((Y >= 0) && (Y < LOD->Height));
 
-#if 0
+#if 1
     // Turn this on to see where in the map i'm sampling from.
     uint8_t *TexelPtr = ((uint8_t *)LOD->Memory) + Y*LOD->Pitch + X*sizeof(uint32_t);
     *(uint32_t *)TexelPtr = 0xFFFFFFFF;
@@ -291,8 +291,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
             if((Edge0 < 0) && (Edge1 < 0) &&
                (Edge2 < 0) && (Edge3 < 0))
             {
-//                v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
-                v2 ScreenSpaceUV = {0.5f, 0.5f};
+                v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
 
                 real32 ZDiff = PixelsToMetres*((real32)Y - Origin.y);
                 
@@ -375,6 +374,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     }
 
                     Texel.rgb = Texel.rgb + Texel.a*LightColor;
+
+                    Texel.rgb = V3(0.5f, 0.5f, 0.5f) + 0.5f * BounceDirection;
                 }
 
                 Texel = Hadamard(Texel, Color);

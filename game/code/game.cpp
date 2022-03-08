@@ -1284,8 +1284,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     GameState->Time += Input->dtForFrame;
     real32 Angle = 0.1f*GameState->Time;
+#if 0
     v2 Disp = {100.0f*Cos(5.0f*Angle),
                100.0f*Sin(3.0f*Angle)};
+#else
+    v2 Disp = {};
+#endif
 
     v3 MapColor[] =
     {
@@ -1322,7 +1326,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     v2 Origin = ScreenCentre;
 #if 1
-    v2 XAxis = 100.0f*V2(Cos(Angle), Sin(Angle));
+    v2 XAxis = 100.0f*V2(Cos(10.0f*Angle), Sin(10.0f*Angle));
     v2 YAxis = Perp(XAxis);
 #else
     v2 XAxis = {100.0f, 0};
