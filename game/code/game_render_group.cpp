@@ -196,7 +196,7 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
     Assert((X >= 0) && (X < LOD->Width));
     Assert((Y >= 0) && (Y < LOD->Height));
 
-#if 1
+#if 0
     // Turn this on to see where in the map i'm sampling from.
     uint8_t *TexelPtr = ((uint8_t *)LOD->Memory) + Y*LOD->Pitch + X*sizeof(uint32_t);
     *(uint32_t *)TexelPtr = 0xFFFFFFFF;
@@ -244,7 +244,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
     // TODO: This is going to need to be specified seperately
     real32 OriginZ = 0.0f;
-    real32 FixedCastY = InvHeightMax*(Origin + 0.5f*XAxis + 0.5f*YAxis).y;
+    real32 OriginY = (Origin + 0.5f*XAxis + 0.5f*YAxis).y;
+    real32 FixedCastY = InvHeightMax*OriginY;
 
     int XMin = WidthMax;
     int XMax = 0;
@@ -291,9 +292,13 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
             if((Edge0 < 0) && (Edge1 < 0) &&
                (Edge2 < 0) && (Edge3 < 0))
             {
+#if CARD
                 v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
-
-                real32 ZDiff = PixelsToMetres*((real32)Y - Origin.y);
+                real32 ZDiff = PixelsToMetres*((real32)Y - OriginY);
+#else
+                v2 ScreenSpaceUV = {InvWidthMax*(real32)X, InvHeightMax*(real32)Y};
+                real32 ZDiff = 0.0f;
+#endif
                 
                 real32 U = InvXAxisLengthSq*Inner(d, XAxis);
                 real32 V = InvYAxisLengthSq*Inner(d, YAxis);
@@ -364,6 +369,9 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                         tFarMap = 2.0f*(tEnvMap - 0.5f);
                     }
 
+                    tFarMap *= tFarMap;
+                    tFarMap *= tFarMap;
+
                     v3 LightColor = {0, 0, 0}; // SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
                     if(FarMap)
                     {
@@ -375,7 +383,11 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
                     Texel.rgb = Texel.rgb + Texel.a*LightColor;
 
+#if 0
+                    // This draws the bounce direction.
                     Texel.rgb = V3(0.5f, 0.5f, 0.5f) + 0.5f * BounceDirection;
+                    Texel.rgb *= Texel.a;
+#endif
                 }
 
                 Texel = Hadamard(Texel, Color);
