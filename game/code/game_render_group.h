@@ -52,20 +52,6 @@ struct render_entry_saturation
     real32 Level;
 };
 
-struct render_entry_coordinate_system
-{
-    v2 Origin;
-    v2 XAxis;
-    v2 YAxis;
-    v4 Color;
-    loaded_bitmap *Texture;
-    loaded_bitmap *NormalMap;
-
-    environment_map *Top;
-    environment_map *Middle;
-    environment_map *Bottom;
-};
-
 struct render_entry_bitmap
 {
     loaded_bitmap *Bitmap;
@@ -79,6 +65,23 @@ struct render_entry_rectangle
     v4 Color;
     v2 Dim;
 };
+
+// This is purely for testing purposes:
+// {
+struct render_entry_coordinate_system
+{
+    v2 Origin;
+    v2 XAxis;
+    v2 YAxis;
+    v4 Color;
+    loaded_bitmap *Texture;
+    loaded_bitmap *NormalMap;
+
+    environment_map *Top;
+    environment_map *Middle;
+    environment_map *Bottom;
+};
+// }
 
 struct render_group
 {

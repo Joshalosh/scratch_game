@@ -170,7 +170,7 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
 
     // Need to compute the distance to the map and the
     // scaling factor for meters-to-UVs.
-    real32 UVsPerMetre = 0.01f;
+    real32 UVsPerMetre = 0.1f;
     real32 C = (UVsPerMetre*DistanceFromMapInZ) / SampleDirection.y;
     // Make sure to know what direction Z should go in Y.
     v2 Offset = C * V2(SampleDirection.x, SampleDirection.z);
@@ -292,7 +292,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
             if((Edge0 < 0) && (Edge1 < 0) &&
                (Edge2 < 0) && (Edge3 < 0))
             {
-#if CARD
+#if 1
                 v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
                 real32 ZDiff = PixelsToMetres*((real32)Y - OriginY);
 #else
@@ -675,11 +675,10 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
             case RenderGroupEntryType_render_entry_bitmap:
             {
                 render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
-#if 0
+                
                 v2 P = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenCentre);
                 Assert(Entry->Bitmap);
-                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->A);
-#endif
+                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
 
                 BaseAddress += sizeof(*Entry);
             } break;

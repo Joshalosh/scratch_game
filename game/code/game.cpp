@@ -1143,8 +1143,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             FillGroundChunk(TranState, GameState, FurthestBuffer, &ChunkCentreP);
                         }
 
+#if 0
                         PushRectOutline(RenderGroup, RelP.xy, 0.0f, World->ChunkDimInMeters.xy,
                                         V4(1.0f, 1.0f, 0.0f, 1.0f));
+#endif
                     }
                 }
             }
@@ -1324,6 +1326,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+#if 0
     GameState->Time += Input->dtForFrame;
     real32 Angle = 0.1f*GameState->Time;
 #if 1
@@ -1360,9 +1363,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             RowCheckerOn = !RowCheckerOn;
         }
     }
-    TranState->EnvMaps[0].Pz = -2.0f;
+    TranState->EnvMaps[0].Pz = -1.5f;
     TranState->EnvMaps[1].Pz = 0.0f;
-    TranState->EnvMaps[2].Pz = 2.0f;
+    TranState->EnvMaps[2].Pz = 1.5f;
 
 //    Angle = 0.0f;
 
@@ -1404,6 +1407,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CoordinateSystem(RenderGroup, MapP, XAxis, YAxis, V4(1.0f, 1.0f, 1.0f, 1.0f), LOD, 0, 0, 0, 0);
         MapP += YAxis + V2(0.0f, 6.0f);
     }
+#endif
 
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 
