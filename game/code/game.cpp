@@ -73,7 +73,9 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Result.Width = Header->Width;
         Result.Height = Header->Height;
 
+        Assert(Result.Height >= 0);
         Assert(Header->Compression == 3);
+
         uint32_t RedMask = Header->RedMask;
         uint32_t GreenMask = Header->GreenMask;
         uint32_t BlueMask = Header->BlueMask;
@@ -120,8 +122,12 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         }
     }
 
-    Result.Pitch = -Result.Width*BITMAP_BYTES_PER_PIXEL;
-    Result.Memory = (uint8_t *)Result.Memory - Result.Pitch*(Result.Height - 1);
+    Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
+
+#if 0
+    Result.Memory = (uint8_t *)Result.Memory + Result.Pitch*(Result.Height - 1);
+    Result.Pitch = -Result.Pitch;
+#endif
 
     return(Result);
 }
@@ -670,6 +676,14 @@ RequestGroundBuffers(world_position CenterP, rectangle3 Bounds)
 }
 #endif
 
+internal void
+SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
+{
+    Align.y = (real32)(Bitmap->Head.Height - 1) - Align.y;
+
+    Bitmap->Align = Align;
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
@@ -748,25 +762,25 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_head.bmp");
         Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_torso.bmp");
-        Bitmap->Align = V2(72, 182);
+        SetTopDownAlign(Bitmap, V2(72, 182));
         ++Bitmap;
 
         Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_head.bmp");
         Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_torso.bmp");
-        Bitmap->Align = V2(72, 182);
+        SetTopDownAlign(Bitmap, V2(72, 182));
         ++Bitmap;
 
         Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_head.bmp");
         Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_torso.bmp");
-        Bitmap->Align = V2(72, 182);
+        SetTopDownAlign(Bitmap, V2(72, 182));
         ++Bitmap;
 
         Bitmap->Head  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_head.bmp");
         Bitmap->Cape  = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_cape.bmp");
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_torso.bmp");
-        Bitmap->Align = V2(72, 182);
+        SetTopDownAlign(Bitmap, V2(72, 182));
         ++Bitmap;
 
         random_series Series = RandomSeed(1234);

@@ -628,15 +628,16 @@ DrawMatte(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
 
 inline v2 GetRenderEntityBasisP(render_group *RenderGroup, render_entity_basis *EntityBasis, v2 ScreenCentre)
 {
+    // TODO: ZHANDLING
+
     v3 EntityBaseP = EntityBasis->Basis->P;
     real32 ZFudge = (1.0f + 0.1f*(EntityBaseP.z + EntityBasis->OffsetZ));
 
-    real32 EntityGroundPointX = ScreenCentre.x + RenderGroup->MetresToPixels*ZFudge*EntityBaseP.x;
-    real32 EntityGroundPointY = ScreenCentre.y - RenderGroup->MetresToPixels*ZFudge*EntityBaseP.y;
+    v2 EntityGroundPoint = ScreenCentre + RenderGroup->MetresToPixels*ZFudge*EntityBaseP.xy;
     real32 EntityZ = -RenderGroup->MetresToPixels*EntityBaseP.z;
 
-    v2 Centre = {EntityGroundPointX + EntityBasis->Offset.x,
-                 EntityGroundPointY + EntityBasis->Offset.y + EntityBasis->EntityZC*EntityZ};
+    v2 Centre = EntityGroundPoint + EntityBasis->Offset + V2(0, EntityBasis->EntityZC*EntityZ);
+
     return(Centre);
 }
 
@@ -785,7 +786,7 @@ PushPiece(render_group *Group, loaded_bitmap *Bitmap,
     {
         Piece->EntityBasis.Basis = Group->DefaultBasis;
         Piece->Bitmap = Bitmap;
-        Piece->EntityBasis.Offset = Group->MetresToPixels*V2(Offset.x, -Offset.y) - Align;
+        Piece->EntityBasis.Offset = Group->MetresToPixels*V2(Offset.x, Offset.y) - Align;
         Piece->EntityBasis.OffsetZ = OffsetZ;
         Piece->EntityBasis.EntityZC = EntityZC;
         Piece->Color = Color;
@@ -809,7 +810,7 @@ PushRect(render_group *Group, v2 Offset, real32 OffsetZ,
         v2 HalfDim = 0.5f*Group->MetresToPixels*Dim;
 
         Piece->EntityBasis.Basis = Group->DefaultBasis;
-        Piece->EntityBasis.Offset = Group->MetresToPixels*V2(Offset.x, -Offset.y) - HalfDim;
+        Piece->EntityBasis.Offset = Group->MetresToPixels*V2(Offset.x, Offset.y) - HalfDim;
         Piece->EntityBasis.OffsetZ = OffsetZ;
         Piece->EntityBasis.EntityZC = EntityZC;
         Piece->Color = Color;

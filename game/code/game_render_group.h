@@ -1,5 +1,24 @@
 #if !defined(GAME_RENDER_GROUP_H)
 
+/*
+
+   1) Everywhere outside the renderer, Y ALWAYS goes upwards, X to the right.
+
+   2) All bitmaps including the render target are assumed to be bottom-up
+      (meaning that the first row pointer points to the bottom-most row
+       when viewed on screen).
+
+    3) Unless otherwise specified, all inputs to the renderer are in world
+       coordinate ("metres"), NOT pixels. Anything that is in pixel values
+       will be explicitly marked as such.
+
+    4) Z is special coordinate because it is broken up into discrete slices,
+       and the renderer actually understands these slices (potentially).
+
+       // TODO: ZHANDLING
+
+*/
+
 struct loaded_bitmap
 {
     int32_t Width;
