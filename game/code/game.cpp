@@ -447,7 +447,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             // Looks into wang hashing or some other spatial seed generation thing.
             random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
 
-            v2 Centre = V2(ChunkOffsetX*Width, -ChunkOffsetY*Height);
+            v2 Centre = V2(ChunkOffsetX*Width, ChunkOffsetY*Height);
 
             for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
             {
@@ -479,7 +479,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
             random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
 
-            v2 Centre = V2(ChunkOffsetX*Width, -ChunkOffsetY*Height);
+            v2 Centre = V2(ChunkOffsetX*Width, ChunkOffsetY*Height);
 
             for(uint32_t GrassIndex = 0; GrassIndex < 50; ++GrassIndex)
             {
@@ -676,12 +676,17 @@ RequestGroundBuffers(world_position CenterP, rectangle3 Bounds)
 }
 #endif
 
+internal v2
+TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
+{
+    Align.y = (real32)(Bitmap->Height - 1) - Align.y;
+    return(Align);
+}
+
 internal void
 SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
 {
-    Align.y = (real32)(Bitmap->Head.Height - 1) - Align.y;
-
-    Bitmap->Align = Align;
+    Bitmap->Align = TopDownAlign(&Bitmap->Head, Align);
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -1237,7 +1242,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Wall:
                 {
-                    PushBitmap(RenderGroup, &GameState->Tree, V2(0, 0), 0, V2(40, 80));
+                    v2 Alignment = TopDownAlign(&GameState->Tree, V2(40, 80));
+                    PushBitmap(RenderGroup, &GameState->Tree, V2(0, 0), 0, Alignment);
                 } break;
 
                 case EntityType_Stairwell:
@@ -1258,8 +1264,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         MakeEntityNonspatial(Entity);
                     }
 
+                    v2 Alignment = TopDownAlign(&GameState->Sword, V2(29, 10));
                     PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
-                    PushBitmap(RenderGroup, &GameState->Sword, V2(0, 0), 0, V2(29, 10));
+                    PushBitmap(RenderGroup, &GameState->Sword, V2(0, 0), 0, Alignment);
                 } break;
 
                 case EntityType_Familiar:

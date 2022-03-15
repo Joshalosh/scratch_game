@@ -634,7 +634,7 @@ inline v2 GetRenderEntityBasisP(render_group *RenderGroup, render_entity_basis *
     real32 ZFudge = (1.0f + 0.1f*(EntityBaseP.z + EntityBasis->OffsetZ));
 
     v2 EntityGroundPoint = ScreenCentre + RenderGroup->MetresToPixels*ZFudge*EntityBaseP.xy;
-    real32 EntityZ = -RenderGroup->MetresToPixels*EntityBaseP.z;
+    real32 EntityZ = RenderGroup->MetresToPixels*EntityBaseP.z;
 
     v2 Centre = EntityGroundPoint + EntityBasis->Offset + V2(0, EntityBasis->EntityZC*EntityZ);
 
