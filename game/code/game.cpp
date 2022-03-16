@@ -464,6 +464,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
+
                 PushBitmap(RenderGroup, Stamp, P, 0.0f, V2(0, 0));
             }
         }
@@ -1232,7 +1233,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         }
                     }
 
-                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, 
+                               HeroBitmaps->Align, V4(1, 1, 1, ShadowAlpha), 0.0f);
                     PushBitmap(RenderGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
                     PushBitmap(RenderGroup, &HeroBitmaps->Cape, V2(0, 0), 0, HeroBitmaps->Align);
                     PushBitmap(RenderGroup, &HeroBitmaps->Head, V2(0, 0), 0, HeroBitmaps->Align);
@@ -1265,7 +1267,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     }
 
                     v2 Alignment = TopDownAlign(&GameState->Sword, V2(29, 10));
-                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0,
+                               HeroBitmaps->Align, V4(1, 1, 1, ShadowAlpha), 0.0f);
                     PushBitmap(RenderGroup, &GameState->Sword, V2(0, 0), 0, Alignment);
                 } break;
 
@@ -1310,13 +1313,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
                     PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align,
-                               (0.5f*ShadowAlpha) + 0.2f*BobSin, 0.0f);
+                               V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin), 0.0f);
                     PushBitmap(RenderGroup, &HeroBitmaps->Head, V2(0, 0), 0.25f*BobSin, HeroBitmaps->Align);
                 } break;
 
                 case EntityType_Monster:
                 {
-                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, HeroBitmaps->Align, ShadowAlpha, 0.0f);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, 
+                               HeroBitmaps->Align, V4(1, 1, 1, ShadowAlpha), 0.0f);
                     PushBitmap(RenderGroup, &HeroBitmaps->Torso, V2(0, 0), 0, HeroBitmaps->Align);
 
                     DrawHitPoints(Entity, RenderGroup);

@@ -664,15 +664,6 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
                 BaseAddress += sizeof(*Entry);
             } break;
 
-            case RenderGroupEntryType_render_entry_saturation:
-            {
-                render_entry_saturation *Entry = (render_entry_saturation *)Data;
-
-                ChangeSaturation(OutputTarget, Entry->Level);
-
-                BaseAddress += sizeof(*Entry);
-            } break;
-
             case RenderGroupEntryType_render_entry_bitmap:
             {
                 render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
@@ -778,31 +769,27 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 }
 
 inline void
-PushPiece(render_group *Group, loaded_bitmap *Bitmap,
-          v2 Offset, real32 OffsetZ, v2 Align, v2 Dim, v4 Color, real32 EntityZC)
+PushBitmap(render_group *Group, loaded_bitmap *Bitmap, v2 Offset, real32 OffsetZ,
+           v4 Color = V4(1, 1, 1, 1), real32 EntityZC = 1.0f)
 {
-    render_entry_bitmap *Piece = PushRenderElement(Group, render_entry_bitmap);
-    if(Piece)
+    render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap);
+    if(Entry)
     {
-        Piece->EntityBasis.Basis = Group->DefaultBasis;
-        Piece->Bitmap = Bitmap;
-        Piece->EntityBasis.Offset = Group->MetresToPixels*V2(Offset.x, Offset.y) - Align;
-        Piece->EntityBasis.OffsetZ = OffsetZ;
-        Piece->EntityBasis.EntityZC = EntityZC;
-        Piece->Color = Color;
+        v2 Align = V2i(Bitmap->AlignX, Bitmap->AlignY);
+
+        Entry->EntityBasis.Basis = Group->DefaultBasis;
+        Entry->Bitmap = Bitmap;
+        Entry->EntityBasis.Offset = Group->MetresToPixels*V2(Offset.x, Offset.y) - Align;
+        Entry->EntityBasis.OffsetZ = OffsetZ;
+        Entry->EntityBasis.EntityZC = EntityZC;
+        Entry->Color = Color;
     }
+
 }
 
 inline void
-PushBitmap(render_group *Group, loaded_bitmap *Bitmap,
-           v2 Offset, real32 OffsetZ, v2 Align, real32 Alpha = 1.0f, real32 EntityZC = 1.0f)
-{
-    PushPiece(Group, Bitmap, Offset, OffsetZ, Align, V2(0, 0), V4(1.0f, 1.0f, 1.0f, Alpha), EntityZC);
-}
-
-inline void
-PushRect(render_group *Group, v2 Offset, real32 OffsetZ,
-         v2 Dim, v4 Color, real32 EntityZC = 1.0f)
+PushRect(render_group *Group, v2 Offset, real32 OffsetZ, v2 Dim,
+         v4 Color = V4(1, 1, 1, 1), real32 EntityZC = 1.0f)
 {
     render_entry_rectangle *Piece = PushRenderElement(Group, render_entry_rectangle);
     if(Piece)
@@ -819,8 +806,8 @@ PushRect(render_group *Group, v2 Offset, real32 OffsetZ,
 }
 
 inline void
-PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ,
-                v2 Dim, v4 Color, real32 EntityZC = 1.0f)
+PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ, v2 Dim,
+                v4 Color = V4(1, 1, 1, 1), real32 EntityZC = 1.0f)
 {
     real32 Thickness = 0.1f;
 
@@ -840,16 +827,6 @@ Clear(render_group *Group, v4 Color)
     if(Entry)
     {
         Entry->Color = Color;
-    }
-}
-
-inline void
-Saturation(render_group *Group, real32 Level)
-{
-    render_entry_saturation *Entry = PushRenderElement(Group, render_entry_saturation);
-    if(Entry)
-    {
-        Entry->Level = Level;
     }
 }
 

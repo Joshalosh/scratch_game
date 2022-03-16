@@ -17,10 +17,15 @@
 
        // TODO: ZHANDLING
 
+    5) All color values specified to the renderer as V4's are in
+       non-premultiplied aloha.
+
 */
 
 struct loaded_bitmap
 {
+    int32_t AlignX, AlignY;
+
     int32_t Width;
     int32_t Height;
     int32_t Pitch;
@@ -54,7 +59,6 @@ enum render_group_entry_type
     RenderGroupEntryType_render_entry_bitmap,
     RenderGroupEntryType_render_entry_rectangle,
     RenderGroupEntryType_render_entry_coordinate_system,
-    RenderGroupEntryType_render_entry_saturation,
 };
 struct render_group_entry_header
 {
@@ -111,6 +115,21 @@ struct render_group
     uint32_t PushBufferSize;
     uint8_t *PushBufferBase;
 };
+
+// Renderer API
+#if 0
+inline void PushPiece(render_group *Group, loaded_bitmap *Bitmap,
+                      v2 Offset, real32 OffsetZ, v2 Align, v2 Dim, v4 Color, real32 EntityZC);
+inline void PushBitmap(render_group *Group, v2 Offset, real32 OffsetZ,
+                       v2 Dim, v4 Color, real32 EntityZC = 1.0f);
+inline void PushRect(render_group *Group, v2 Offset, real32 OffsetZ,
+                     v2 Dim, v4 Color, real32 EntityZC = 1.0f);
+inline void PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ,
+                            v2 Dim, v4 Color, real32 EntityZC = 1.0f);
+inline void Clear(render_group *Group, v4 Color);
+#endif
+
+
 
 #define GAME_RENDER_GROUP_H
 #endif
