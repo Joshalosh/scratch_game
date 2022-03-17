@@ -118,10 +118,8 @@ struct render_group
 
 // Renderer API
 #if 0
-inline void PushPiece(render_group *Group, loaded_bitmap *Bitmap,
-                      v2 Offset, real32 OffsetZ, v2 Align, v2 Dim, v4 Color, real32 EntityZC);
-inline void PushBitmap(render_group *Group, v2 Offset, real32 OffsetZ,
-                       v2 Dim, v4 Color, real32 EntityZC = 1.0f);
+inline void PushBitmap(render_group *Group, loaded_bitmap *Bitmap, v2 Offset, real32 OffsetZ,
+                       v4 Color = V4(1, 1, 1, 1), real32 EntityZC = 1.0f);
 inline void PushRect(render_group *Group, v2 Offset, real32 OffsetZ,
                      v2 Dim, v4 Color, real32 EntityZC = 1.0f);
 inline void PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ,
