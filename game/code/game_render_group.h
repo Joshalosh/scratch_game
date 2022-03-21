@@ -46,9 +46,7 @@ struct render_basis
 struct render_entity_basis
 {
     render_basis *Basis;
-    v2 Offset;
-    real32 OffsetZ;
-    real32 EntityZC;
+    v3 Offset;
 };
 
 // render_group_entry is a "compact discriminated union"
@@ -119,11 +117,9 @@ struct render_group
 // Renderer API
 #if 0
 inline void PushBitmap(render_group *Group, loaded_bitmap *Bitmap, v2 Offset, real32 OffsetZ,
-                       v4 Color = V4(1, 1, 1, 1), real32 EntityZC = 1.0f);
-inline void PushRect(render_group *Group, v2 Offset, real32 OffsetZ,
-                     v2 Dim, v4 Color, real32 EntityZC = 1.0f);
-inline void PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ,
-                            v2 Dim, v4 Color, real32 EntityZC = 1.0f);
+                       v4 Color = V4(1, 1, 1, 1));
+inline void PushRect(render_group *Group, v2 Offset, real32 OffsetZ, v2 Dim, v4 Color);
+inline void PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ, v2 Dim, v4 Color);
 inline void Clear(render_group *Group, v4 Color);
 #endif
 

@@ -306,7 +306,7 @@ DrawHitPoints(sim_entity *Entity, render_group *RenderGroup)
                 Color = V4(0.2f, 0.2f, 0.2f, 1.0f);
             }
 
-            PushRect(RenderGroup, HitP, 0, HealthDim, Color, 0.0f);
+            PushRect(RenderGroup, V3(HitP, 0), HealthDim, Color);
             HitP += dHitP;
         }
     }
@@ -468,7 +468,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
 
-                PushBitmap(RenderGroup, Stamp, P, 0.0f);
+                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f));
             }
         }
     }
@@ -493,7 +493,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
 
-                PushBitmap(RenderGroup, Stamp, P, 0.0f);
+                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f));
             }
         }
     }
@@ -1121,7 +1121,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             v3 Delta = Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
             Bitmap->AlignX = Bitmap->Width/2;
             Bitmap->AlignY = Bitmap->Height/2;
-            PushBitmap(RenderGroup, Bitmap, Delta.xy, Delta.z);
+            PushBitmap(RenderGroup, Bitmap, Delta);
         }
     }
 
@@ -1246,23 +1246,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         }
                     }
 
-                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, V4(1, 1, 1, ShadowAlpha), 0.0f);
-                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V2(0, 0), 0);
-                    PushBitmap(RenderGroup, &HeroBitmaps->Cape, V2(0, 0), 0);
-                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V2(0, 0), 0);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Cape, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V3(0, 0, 0));
 
                     DrawHitPoints(Entity, RenderGroup);
                 } break;
 
                 case EntityType_Wall:
                 {
-                    PushBitmap(RenderGroup, &GameState->Tree, V2(0, 0), 0);
+                    PushBitmap(RenderGroup, &GameState->Tree, V3(0, 0, 0));
                 } break;
 
                 case EntityType_Stairwell:
                 {
-                    PushRect(RenderGroup, V2(0, 0), 0, Entity->WalkableDim, V4(1, 0.5f, 0, 1), 0.0f);
-                    PushRect(RenderGroup, V2(0, 0), Entity->WalkableHeight, Entity->WalkableDim, V4(1, 1, 0, 1), 0.0f);
+                    PushRect(RenderGroup, V3(0, 0, 0), Entity->WalkableDim, V4(1, 0.5f, 0, 1));
+                    PushRect(RenderGroup, V3(0, 0, Entity->WalkableHeight), Entity->WalkableDim, V4(1, 1, 0, 1));
                 } break;
 
                 case EntityType_Sword:
@@ -1277,8 +1277,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         MakeEntityNonspatial(Entity);
                     }
 
-                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, V4(1, 1, 1, ShadowAlpha), 0.0f);
-                    PushBitmap(RenderGroup, &GameState->Sword, V2(0, 0), 0);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &GameState->Sword, V3(0, 0, 0));
                 } break;
 
                 case EntityType_Familiar:
@@ -1321,15 +1321,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Entity->tBob -= (2.0f*Pi32);
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
-                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, 
-                               V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin), 0.0f);
-                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V2(0, 0), 0.25f*BobSin);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), 
+                               V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V3(0, 0, 0.25f*BobSin));
                 } break;
 
                 case EntityType_Monster:
                 {
-                    PushBitmap(RenderGroup, &GameState->Shadow, V2(0, 0), 0, V4(1, 1, 1, ShadowAlpha), 0.0f);
-                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V2(0, 0), 0);
+                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V3(0, 0, 0));
 
                     DrawHitPoints(Entity, RenderGroup);
                 } break;
@@ -1339,7 +1339,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-                        PushRectOutline(RenderGroup, Volume->OffsetP.xy, 0, Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1), 0.0f);
+                        PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z), Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
                     }
                 } break;
 
@@ -1359,15 +1359,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-#if 0
-    GameState->Time += Input->dtForFrame;
-    real32 Angle = 0.1f*GameState->Time;
 #if 1
-    v2 Disp = {100.0f*Cos(5.0f*Angle),
-               100.0f*Sin(3.0f*Angle)};
-#else
-    v2 Disp = {};
-#endif
+    GameState->Time += Input->dtForFrame;
 
     v3 MapColor[] =
     {
@@ -1387,7 +1380,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             bool32 CheckerOn = RowCheckerOn;
             for(int32_t X = 0; X < LOD->Width; X += CheckerWidth)
             {
-                v4 Color = CheckerOn ? ToV4(MapColor[MapIndex], 1.0f) : V4(0, 0, 0, 1);
+                v4 Color = CheckerOn ? V4(MapColor[MapIndex], 1.0f) : V4(0, 0, 0, 1);
                 v2 MinP = V2i(X, Y);
                 v2 MaxP = MinP + V2i(CheckerWidth, CheckerHeight);
                 DrawRectangle(LOD, MinP, MaxP, Color);
@@ -1403,6 +1396,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 //    Angle = 0.0f;
 
     v2 Origin = ScreenCentre;
+
+    real32 Angle = 0.1f*GameState->Time;
+#if 1
+    v2 Disp = {100.0f*Cos(5.0f*Angle),
+               100.0f*Sin(3.0f*Angle)};
+#else
+    v2 Disp = {};
+#endif
+
 #if 1
     v2 XAxis = 100.0f*V2(Cos(10.0f*Angle), Sin(10.0f*Angle));
     v2 YAxis = Perp(XAxis);
