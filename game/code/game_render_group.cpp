@@ -628,8 +628,7 @@ DrawMatte(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
 
 inline v2 GetRenderEntityBasisP(render_group *RenderGroup, render_entity_basis *EntityBasis, v2 ScreenCentre)
 {
-    // TODO: ZHANDLING
-
+    // TODO: I need to figure out exactly how z-based XY displacement should work.
     v3 EntityBaseP = RenderGroup->MetresToPixels*EntityBasis->Basis->P;
     real32 ZFudge = 1.0f + 0.1f*EntityBaseP.z;
     v2 EntityGroundPoint = ScreenCentre + ZFudge*EntityBaseP.xy + EntityBasis->Offset.xy;
@@ -771,11 +770,9 @@ PushBitmap(render_group *Group, loaded_bitmap *Bitmap, v3 Offset, v4 Color = V4(
     render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap);
     if(Entry)
     {
-        v2 Align = V2i(Bitmap->AlignX, Bitmap->AlignY);
-
         Entry->EntityBasis.Basis = Group->DefaultBasis;
         Entry->Bitmap = Bitmap;
-        Entry->EntityBasis.Offset = Group->MetresToPixels*Offset - V3(Align, 0);
+        Entry->EntityBasis.Offset = Group->MetresToPixels*Offset - V3(Bitmap->Align, 0);
         Entry->Color = Color;
     }
 

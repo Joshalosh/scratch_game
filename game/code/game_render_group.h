@@ -24,7 +24,7 @@
 
 struct loaded_bitmap
 {
-    int32_t AlignX, AlignY;
+    v2 Align;
 
     int32_t Width;
     int32_t Height;

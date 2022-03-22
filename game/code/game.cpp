@@ -59,6 +59,13 @@ struct bitmap_header
 };
 #pragma pack(pop)
 
+inline v2
+TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
+{
+    Align.y = (real32)(Bitmap->Height - 1) - Align.y;
+    return(Align);
+}
+
 internal loaded_bitmap
 DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename,
              int32_t AlignX = 0, int32_t TopDownAlignY = 0)
@@ -73,8 +80,7 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Result.Memory = Pixels;
         Result.Width = Header->Width;
         Result.Height = Header->Height;
-        Result.AlignX = AlignX;
-        Result.AlignY = (Header->Height - 1) - TopDownAlignY;
+        Result.Align = TopDownAlign(&Result, V2i(AlignX, TopDownAlignY));
 
         Assert(Result.Height >= 0);
         Assert(Header->Compression == 3);
@@ -680,24 +686,14 @@ RequestGroundBuffers(world_position CenterP, rectangle3 Bounds)
 }
 #endif
 
-internal v2
-TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
-{
-    Align.y = (real32)(Bitmap->Height - 1) - Align.y;
-    return(Align);
-}
-
 internal void
 SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
 {
     Align = TopDownAlign(&Bitmap->Head, Align);
 
-    Bitmap->Head.AlignX = (int32_t)Align.x;
-    Bitmap->Head.AlignY = (int32_t)Align.y;
-    Bitmap->Cape.AlignX = (int32_t)Align.x;
-    Bitmap->Cape.AlignY = (int32_t)Align.y;
-    Bitmap->Torso.AlignX = (int32_t)Align.x;
-    Bitmap->Torso.AlignY = (int32_t)Align.y;
+    Bitmap->Head.Align = Align;
+    Bitmap->Cape.Align = Align;
+    Bitmap->Torso.Align = Align;
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -1119,8 +1115,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             loaded_bitmap *Bitmap = &GroundBuffer->Bitmap;
             v3 Delta = Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
-            Bitmap->AlignX = Bitmap->Width/2;
-            Bitmap->AlignY = Bitmap->Height/2;
+            Bitmap->Align = 0.5f*V2i(Bitmap->Width, Bitmap->Height);
             PushBitmap(RenderGroup, Bitmap, Delta);
         }
     }
@@ -1392,6 +1387,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     TranState->EnvMaps[0].Pz = -1.5f;
     TranState->EnvMaps[1].Pz = 0.0f;
     TranState->EnvMaps[2].Pz = 1.5f;
+
+    DrawBitmap(TranState->EnvMaps[0].LOD + 0, 
+               &TranState->GroundBuffers[TranState->GroundBufferCount - 1].Bitmap,
+               125.0f, 50.0f, 1.0f);
 
 //    Angle = 0.0f;
 
