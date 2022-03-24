@@ -641,6 +641,7 @@ internal void
 RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
     v2 ScreenCentre = {0.5f*(real32)OutputTarget->Width, 0.5f*(real32)OutputTarget->Height};
+    real32 PixelsToMetres = 1.0f / RenderGroup->MetresToPixels;
 
     for(uint32_t BaseAddress = 0; BaseAddress < RenderGroup->PushBufferSize;)
     {
@@ -666,7 +667,14 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
                 
                 v2 P = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenCentre);
                 Assert(Entry->Bitmap);
+#if 0
                 DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
+#else
+                DrawRectangleSlowly(OutputTarget, P,
+                                    V2i(Entry->Bitmap->Width, 0),
+                                    V2i(0, Entry->Bitmap->Height), Entry->Color,
+                                    Entry->Bitmap, 0, 0, 0, 0, PixelsToMetres);
+#endif
 
                 BaseAddress += sizeof(*Entry);
             } break;
@@ -693,7 +701,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
                                     Entry->Texture,
                                     Entry->NormalMap,
                                     Entry->Top, Entry->Middle, Entry->Bottom,
-                                    1.0f / RenderGroup->MetresToPixels);
+                                    PixelsToMetres);
 
                 v4 Color = {1, 1, 0, 1};
                 v2 Dim = {2, 2};
