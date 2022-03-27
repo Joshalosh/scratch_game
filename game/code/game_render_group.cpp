@@ -626,15 +626,26 @@ DrawMatte(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
     }
 }
 
-inline v2 GetRenderEntityBasisP(render_group *RenderGroup, render_entity_basis *EntityBasis, v2 ScreenCentre)
+struct entity_basis_p_result
 {
+    v2 P;
+    real32 Scale;
+};
+inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, render_entity_basis *EntityBasis,
+                                                   v2 ScreenCentre)
+{
+    entity_basis_p_result Result;
+
     // TODO: I need to figure out exactly how z-based XY displacement should work.
     v3 EntityBaseP = RenderGroup->MetresToPixels*EntityBasis->Basis->P;
-    real32 ZFudge = 1.0f + 0.1f*EntityBaseP.z;
-    v2 EntityGroundPoint = ScreenCentre + ZFudge*EntityBaseP.xy + EntityBasis->Offset.xy;
+    real32 ZFudge = 1.0f + 0.01f*EntityBaseP.z;
+    v2 EntityGroundPoint = ScreenCentre + ZFudge*(EntityBaseP.xy + EntityBasis->Offset.xy);
     v2 Centre = EntityGroundPoint + V2(0, EntityBaseP.z + EntityBasis->Offset.z);
 
-    return(Centre);
+    Result.P = Centre;
+    Result.Scale = ZFudge;
+
+    return(Result);
 }
 
 internal void
@@ -665,14 +676,14 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
             {
                 render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
                 
-                v2 P = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenCentre);
+                entity_basis_p_result Basis = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenCentre);
                 Assert(Entry->Bitmap);
 #if 0
                 DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
 #else
-                DrawRectangleSlowly(OutputTarget, P,
-                                    V2i(Entry->Bitmap->Width, 0),
-                                    V2i(0, Entry->Bitmap->Height), Entry->Color,
+                DrawRectangleSlowly(OutputTarget, Basis.P,
+                                    Basis.Scale*V2i(Entry->Bitmap->Width, 0),
+                                    Basis.Scale*V2i(0, Entry->Bitmap->Height), Entry->Color,
                                     Entry->Bitmap, 0, 0, 0, 0, PixelsToMetres);
 #endif
 
@@ -682,8 +693,8 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
             case RenderGroupEntryType_render_entry_rectangle:
             {
                 render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
-                v2 P = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenCentre);
-                DrawRectangle(OutputTarget, P, P + Entry->Dim, Entry->Color);
+                entity_basis_p_result Basis = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenCentre);
+//                DrawRectangle(OutputTarget, Basis.P, Basis.P + Basis.Scale*Entry->Dim, Entry->Color);
 
                 BaseAddress += sizeof(*Entry);
             } break;
