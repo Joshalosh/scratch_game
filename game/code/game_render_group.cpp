@@ -638,9 +638,9 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
 
     // TODO: I need to figure out exactly how z-based XY displacement should work.
     v3 EntityBaseP = RenderGroup->MetresToPixels*EntityBasis->Basis->P;
-    real32 ZFudge = 1.0f + 0.01f*EntityBaseP.z;
+    real32 ZFudge = 1.0f + 0.002f*EntityBaseP.z;
     v2 EntityGroundPoint = ScreenCentre + ZFudge*(EntityBaseP.xy + EntityBasis->Offset.xy);
-    v2 Centre = EntityGroundPoint + V2(0, EntityBaseP.z + EntityBasis->Offset.z);
+    v2 Centre = EntityGroundPoint; // + V2(0, EntityBaseP.z + EntityBasis->Offset.z);
 
     Result.P = Centre;
     Result.Scale = ZFudge;
@@ -792,7 +792,7 @@ PushBitmap(render_group *Group, loaded_bitmap *Bitmap, v3 Offset, v4 Color = V4(
         Entry->EntityBasis.Basis = Group->DefaultBasis;
         Entry->Bitmap = Bitmap;
         Entry->EntityBasis.Offset = Group->MetresToPixels*Offset - V3(Bitmap->Align, 0);
-        Entry->Color = Color;
+        Entry->Color = Group->GlobalAlpha*Color;
     }
 
 }

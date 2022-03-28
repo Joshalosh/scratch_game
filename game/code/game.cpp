@@ -813,8 +813,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         bool32 DoorDown = false;
         for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
         {
-//            uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 3); 
+#if 1
+            uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 3); 
+#else
             uint32_t DoorDirection = RandomChoice(&Series, 2); 
+#endif
 
             bool32 CreatedZDoor = false;
             if(DoorDirection == 2)
@@ -1103,6 +1106,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // TODO: Need to figure out what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), GameState->MetresToPixels);
 
+    RenderGroup->GlobalAlpha = 1.0f; // Clamp01(1.0f - GameState->ZOffset);
+
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
     DrawBuffer->Width = Buffer->Width;
@@ -1119,6 +1124,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMeters;
     rectangle3 CameraBoundsInMeters = RectCenterDim(V3(0, 0, 0), V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
 
+#if 0
     for(uint32_t GroundBufferIndex = 0;
         GroundBufferIndex < TranState->GroundBufferCount;
         ++GroundBufferIndex)
@@ -1197,6 +1203,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
     }
+#endif
 
     // TODO: How big do I actually want to expand here?
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
