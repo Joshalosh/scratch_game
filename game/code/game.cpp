@@ -1070,7 +1070,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
 
             ConHero->dSword = {};
-#if 0
             if(Controller->ActionUp.EndedDown)
             {
                 ConHero->dSword = V2(0.0f, 1.0f);
@@ -1087,26 +1086,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 ConHero->dSword = V2(1.0f, 0.0f);
             }
-#else
-            real32 ZoomRate = 0.0f;
-            if(Controller->ActionUp.EndedDown)
-            {
-                ZoomRate = 1.0f;
-            }
-            if(Controller->ActionDown.EndedDown)
-            {
-                ZoomRate = -1.0f;
-            }
-            GameState->ZOffset += ZoomRate*Input->dtForFrame;
-#endif
         }
     }
 
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
     // TODO: Need to figure out what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), GameState->MetresToPixels);
-
-    RenderGroup->GlobalAlpha = 1.0f; // Clamp01(1.0f - GameState->ZOffset);
 
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
@@ -1209,8 +1194,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMeters, SimBoundsExpansion);
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
+    world_position SimCentreP = GameState->CameraP;
     sim_region *SimRegion = BeginSim(&TranState->TranArena, GameState, GameState->World,
-                                     GameState->CameraP, SimBounds, Input->dtForFrame);
+                                     SimCentreP, SimBounds, Input->dtForFrame);
+
+    v3 CameraP = Subtract(World, &GameState->CameraP, &SimCentreP);
 
     for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
     {
@@ -1230,6 +1218,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
             RenderGroup->DefaultBasis = Basis;
+
+            // TODO: Probably indicates I want to seperate update and render
+            // for entities sometime soon.
+            v3 CameraRelativeGroundP = GetEntityGroundPoint(Entity) - CameraP;
+            real32 FadeTopEndZ = 1.25f*GameState->TypicalFloorHeight;
+            real32 FadeTopStartZ = GameState->TypicalFloorHeight;
+            real32 FadeBottomStartZ = -2.0f*GameState->TypicalFloorHeight;
+            real32 FadeBottomEnd = -2.25f*GameState->TypicalFloorHeight;
+
+            RenderGroup->GlobalAlpha = Clamp01(1.5f - CameraRelativeGroundP.z);
 
             hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[Entity->FacingDirection];
             switch(Entity->Type)
@@ -1374,9 +1372,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 MoveEntity(GameState, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
 
-            Basis->P = GetEntityGroundPoint(Entity) + V3(0, 0, GameState->ZOffset);
+            Basis->P = GetEntityGroundPoint(Entity);
         }
     }
+
+    RenderGroup->GlobalAlpha = 1.0f;
 
 #if 0
     GameState->Time += Input->dtForFrame;

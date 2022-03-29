@@ -242,9 +242,9 @@ EndSim(sim_region *Region, game_state *GameState)
                 NewCameraP.AbsTileY -= 9;
             }
 #else
-            real32 CamZOffset = NewCameraP.Offset_.z;
+//            real32 CamZOffset = NewCameraP.Offset_.z;
             NewCameraP = Stored->P;
-            NewCameraP.Offset_.z = CamZOffset;
+//            NewCameraP.Offset_.z = CamZOffset;
 #endif
 
             GameState->CameraP = NewCameraP;

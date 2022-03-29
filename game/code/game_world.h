@@ -7,6 +7,7 @@ struct world_position
     // need it at first, and we could get by without it, entity
     // references pull in entities WITHOUT going through their
     // world_chunk, and so still need to know the ChunkX/Y/Z.
+
     int32_t ChunkX;
     int32_t ChunkY;
     int32_t ChunkZ;
