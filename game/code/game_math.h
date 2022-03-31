@@ -219,7 +219,7 @@ Clamp01MapToRange(real32 Min, real32 t, real32 Max)
     real32 Result = 0.0f;
 
     real32 Range = Max - Min;
-    if(Range > 0)
+    if(Range != 0)
     {
         Result = Clamp01((t - Min) / Range);
     }

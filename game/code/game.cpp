@@ -883,7 +883,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     }
                     else if(CreatedZDoor)
                     {
-                        if((TileX == 10) && (TileY == 5))
+                        if(((AbsTileZ % 2) && (TileX == 10) && (TileY == 5)) ||
+                           (!(AbsTileZ % 2) && (TileX == 4) && (TileY == 5)))
                         {
                             AddStair(GameState, AbsTileX, AbsTileY, DoorDown ? AbsTileZ - 1 : AbsTileZ);
                         }
@@ -1107,7 +1108,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMeters;
     real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMeters;
-    rectangle3 CameraBoundsInMeters = RectCenterDim(V3(0, 0, 0), V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
+    rectangle3 CameraBoundsInMetres = RectCenterDim(V3(0, 0, 0.0f),
+                                                    V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
+    CameraBoundsInMetres.Min.z = -3.0f*GameState->TypicalFloorHeight;
+    CameraBoundsInMetres.Max.z =  1.0f*GameState->TypicalFloorHeight;
 
 #if 0
     for(uint32_t GroundBufferIndex = 0;
@@ -1192,8 +1196,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // TODO: How big do I actually want to expand here?
     // TODO: Do we I want to simulate upper floors and stuff?
-    v3 SimBoundsExpansion = {15.0f, 15.0f, GameState->TypicalFloorHeight};
-    rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMeters, SimBoundsExpansion);
+    v3 SimBoundsExpansion = {15.0f, 15.0f, 0.0f};
+    rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
     world_position SimCentreP = GameState->CameraP;
     sim_region *SimRegion = BeginSim(&TranState->TranArena, GameState, GameState->World,
@@ -1230,15 +1234,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             RenderGroup->GlobalAlpha = 1.0f;
             if(CameraRelativeGroundP.z > FadeTopStartZ)
             {
-                RenderGroup->GlobalAlpha = 1.0f - Clamp01MapToRange(FadeTopStartZ,
-                                                                    CameraRelativeGroundP.z,
-                                                                    FadeTopEndZ);
+                RenderGroup->GlobalAlpha = Clamp01MapToRange(FadeTopEndZ,
+                                                             CameraRelativeGroundP.z,
+                                                             FadeTopStartZ);
             }
             else if(CameraRelativeGroundP.z < FadeBottomStartZ)
             {
-                RenderGroup->GlobalAlpha = 1.0f - Clamp01MapToRange(FadeBottomStartZ,
-                                                                    CameraRelativeGroundP.z,
-                                                                    FadeBottomEndZ);
+                RenderGroup->GlobalAlpha = Clamp01MapToRange(FadeBottomEndZ,
+                                                             CameraRelativeGroundP.z,
+                                                             FadeBottomStartZ);
             }
 
             hero_bitmaps *HeroBitmaps = &GameState->HeroBitmaps[Entity->FacingDirection];
