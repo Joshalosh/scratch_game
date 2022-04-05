@@ -637,23 +637,20 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
 {
     entity_basis_p_result Result {};
 
-    // TODO: I need to figure out exactly how z-based XY displacement should work.
-    v3 EntityBaseP = EntityBasis->Basis->P;
+    v3 EntityBaseP = RenderGroup->MetresToPixels*EntityBasis->Basis->P;
 
-    real32 FocalLength = 0.3f;
-    real32 CameraDistanceAboveGround = 10.0f;
-    real32 DistanceToPZ = CameraDistanceAboveGround - EntityBaseP.z;
-    real32 NearClipPlane = 0.2f;
-//    real32 ZFudge = 1.0f + 0.002f*EntityBaseP.z;
+    // TODO: The values of 20 and 20 seem wrong, perhaps I messed something up.
+    real32 FocalLength = RenderGroup->MetresToPixels*20.0f;
+    real32 CameraDistanceAboveGround = RenderGroup->MetresToPixels*20.0f;
+    real32 DistanceToPZ = (CameraDistanceAboveGround - EntityBaseP.z);
+    real32 NearClipPlane = RenderGroup->MetresToPixels*0.2f;
 
     v3 RawXY = V3(EntityBaseP.xy + EntityBasis->Offset.xy, 1.0f);
 
     if(DistanceToPZ > NearClipPlane)
     {
         v3 ProjectedXY = (1.0f / DistanceToPZ) * FocalLength*RawXY;
-        v2 Centre = ScreenCentre + RenderGroup->MetresToPixels*ProjectedXY.xy;
-
-        Result.P = Centre;
+        Result.P = ScreenCentre + ProjectedXY.xy;
         Result.Scale = ProjectedXY.z;
         Result.Valid = true;
     }
