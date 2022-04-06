@@ -24,7 +24,9 @@
 
 struct loaded_bitmap
 {
-    v2 Align;
+    v2 AlignPercentage;
+    real32 WidthOverHeight;
+    real32 NativeHeight;
 
     int32_t Width;
     int32_t Height;
@@ -109,7 +111,6 @@ struct render_group
     real32 GlobalAlpha;
 
     render_basis *DefaultBasis;
-    real32 MetresToPixels;
 
     uint32_t MaxPushBufferSize;
     uint32_t PushBufferSize;

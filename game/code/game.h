@@ -239,8 +239,6 @@ struct game_state
     loaded_bitmap Tree;
     loaded_bitmap Sword;
     loaded_bitmap Stairwell;
-    real32 MetresToPixels;
-    real32 PixelsToMeters;
 
     // Must be a power of two.
     pairwise_collision_rule *CollisionRuleHash[256];

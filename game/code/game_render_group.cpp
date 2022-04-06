@@ -640,8 +640,8 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
     v3 EntityBaseP = RenderGroup->MetresToPixels*EntityBasis->Basis->P;
 
     // TODO: The values of 20 and 20 seem wrong, perhaps I messed something up.
-    real32 FocalLength = RenderGroup->MetresToPixels*20.0f;
-    real32 CameraDistanceAboveGround = RenderGroup->MetresToPixels*20.0f;
+    real32 FocalLength = RenderGroup->MetresToPixels*10.0f;
+    real32 CameraDistanceAboveGround = RenderGroup->MetresToPixels*10.0f;
     real32 DistanceToPZ = (CameraDistanceAboveGround - EntityBaseP.z);
     real32 NearClipPlane = RenderGroup->MetresToPixels*0.2f;
 
@@ -662,7 +662,6 @@ internal void
 RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
     v2 ScreenCentre = {0.5f*(real32)OutputTarget->Width, 0.5f*(real32)OutputTarget->Height};
-    real32 PixelsToMetres = 1.0f / RenderGroup->MetresToPixels;
 
     for(uint32_t BaseAddress = 0; BaseAddress < RenderGroup->PushBufferSize;)
     {
@@ -755,14 +754,13 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 }
 
 internal render_group *
-AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, real32 MetresToPixels)
+AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize)
 {
     render_group *Result = PushStruct(Arena, render_group);
     Result->PushBufferBase = (uint8_t *)PushSize(Arena, MaxPushBufferSize);
 
     Result->DefaultBasis = PushStruct(Arena, render_basis);
     Result->DefaultBasis->P = V3(0, 0, 0);
-    Result->MetresToPixels = MetresToPixels;
 
     Result->MaxPushBufferSize = MaxPushBufferSize;
     Result->PushBufferSize = 0;
@@ -801,10 +799,10 @@ PushBitmap(render_group *Group, loaded_bitmap *Bitmap, v3 Offset, v4 Color = V4(
     {
         Entry->EntityBasis.Basis = Group->DefaultBasis;
         Entry->Bitmap = Bitmap;
-        Entry->EntityBasis.Offset = Group->MetresToPixels*Offset - V3(Bitmap->Align, 0);
+        v2 Align = Hadamard(Bitmap->AlignPercentage, V2i(Bitmap->Width, Bitmap->Height));
+        Entry->EntityBasis.Offset = Group->MetresToPixels*Offset - V3(Align, 0);
         Entry->Color = Group->GlobalAlpha*Color;
     }
-
 }
 
 inline void

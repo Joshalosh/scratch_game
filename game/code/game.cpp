@@ -63,6 +63,10 @@ inline v2
 TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
 {
     Align.y = (real32)(Bitmap->Height - 1) - Align.y;
+
+    Align.x = SafeRatio0(Align.x, (real32)Bitmap->Width);
+    Align.y = SafeRatio0(Align.y, (real32)Bitmap->Height);
+
     return(Align);
 }
 
@@ -80,7 +84,11 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Result.Memory = Pixels;
         Result.Width = Header->Width;
         Result.Height = Header->Height;
-        Result.Align = TopDownAlign(&Result, V2i(AlignX, TopDownAlignY));
+        Result.AlignPercentage = TopDownAlign(&Result, V2i(AlignX, TopDownAlignY));
+        Result.WidthOverHeight = SafeRatio0((real32)Result.Width, (real32)Result.Height);
+
+        real32 PixelsToMetres = 1.0f / 42.0f;
+        Result.NativeHeight = PixelsToMetres * Result.Height;
 
         Assert(Result.Height >= 0);
         Assert(Header->Compression == 3);
@@ -691,9 +699,9 @@ SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
 {
     Align = TopDownAlign(&Bitmap->Head, Align);
 
-    Bitmap->Head.Align = Align;
-    Bitmap->Cape.Align = Align;
-    Bitmap->Torso.Align = Align;
+    Bitmap->Head.AlignPercentage = Align;
+    Bitmap->Cape.AlignPercentage = Align;
+    Bitmap->Torso.AlignPercentage = Align;
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -704,6 +712,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     uint32_t GroundBufferWidth = 256;
     uint32_t GroundBufferHeight = 256;
 
+    // TODO: Remove this!
+    real32 PixelsToMetres = 1.0f / 42.0f;
+
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if(!Memory->IsInitialised)
@@ -712,11 +723,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t TilesPerHeight = 9;
 
         GameState->TypicalFloorHeight = 3.0f;
-        GameState->MetresToPixels = 42.0f;
-        GameState->PixelsToMeters = 1.0f / GameState->MetresToPixels;
 
-        v3 WorldChunkDimInMeters = {GameState->PixelsToMeters*(real32)GroundBufferWidth,
-                                    GameState->PixelsToMeters*(real32)GroundBufferHeight,
+        v3 WorldChunkDimInMeters = {PixelsToMeters*(real32)GroundBufferWidth,
+                                    PixelsToMeters*(real32)GroundBufferHeight,
                                     GameState->TypicalFloorHeight};
 
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
@@ -1018,9 +1027,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     world *World = GameState->World;
 
-    real32 MetresToPixels = GameState->MetresToPixels;
-    real32 PixelsToMeters = 1.0f/MetresToPixels;
-
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
@@ -1092,7 +1098,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
     // TODO: Need to figure out what the pushbuffer size is.
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), GameState->MetresToPixels);
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
 
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
