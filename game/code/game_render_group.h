@@ -79,6 +79,7 @@ struct render_entry_bitmap
 {
     loaded_bitmap *Bitmap;
     render_entity_basis EntityBasis;
+    v2 Size;
     v4 Color;
 };
 

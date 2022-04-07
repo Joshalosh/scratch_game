@@ -441,7 +441,7 @@ internal void
 FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer *GroundBuffer, world_position *ChunkP)
 {
     temporary_memory GroundMemory = BeginTemporaryMemory(&TranState->TranArena);
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), 1.0f);
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
 
     Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
 
@@ -482,7 +482,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
 
-                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f));
+                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f), 1.0f);
             }
         }
     }
@@ -507,7 +507,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
 
-                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f));
+                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f), 1.0f);
             }
         }
     }
@@ -724,8 +724,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->TypicalFloorHeight = 3.0f;
 
-        v3 WorldChunkDimInMeters = {PixelsToMeters*(real32)GroundBufferWidth,
-                                    PixelsToMeters*(real32)GroundBufferHeight,
+        v3 WorldChunkDimInMeters = {PixelsToMetres*(real32)GroundBufferWidth,
+                                    PixelsToMetres*(real32)GroundBufferHeight,
                                     GameState->TypicalFloorHeight};
 
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
@@ -1112,8 +1112,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};
 
-    real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMeters;
-    real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMeters;
+    real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMetres;
+    real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMetres;
     rectangle3 CameraBoundsInMetres = RectCenterDim(V3(0, 0, 0.0f),
                                                     V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
     CameraBoundsInMetres.Min.z = -3.0f*GameState->TypicalFloorHeight;
@@ -1378,7 +1378,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-                        PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z), Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
+//                        PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+//                                        Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
                     }
                 } break;
 
