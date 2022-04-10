@@ -87,9 +87,6 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
         Result.AlignPercentage = TopDownAlign(&Result, V2i(AlignX, TopDownAlignY));
         Result.WidthOverHeight = SafeRatio0((real32)Result.Width, (real32)Result.Height);
 
-        real32 PixelsToMetres = 1.0f / 42.0f;
-        Result.NativeHeight = PixelsToMetres * Result.Height;
-
         Assert(Result.Height >= 0);
         Assert(Header->Compression == 3);
 
@@ -482,7 +479,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
 
-                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f), 1.0f);
+                PushBitmap(RenderGroup, Stamp, 1.0f, V3(P, 0.0f));
             }
         }
     }
@@ -507,7 +504,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
                 v2 P = Centre + Offset - BitmapCenter;
 
-                PushBitmap(RenderGroup, Stamp, V3(P, 0.0f), 1.0f);
+                PushBitmap(RenderGroup, Stamp, 1.0f, V3(P, 0.0f));
             }
         }
     }
@@ -1285,17 +1282,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         }
                     }
 
-                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V3(0, 0, 0));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Cape, V3(0, 0, 0));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V3(0, 0, 0));
+                    real32 HeroSizeC = 2.5f;
+                    PushBitmap(RenderGroup, &GameState->Shadow, 0.25f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, HeroSizeC*1.2f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Cape, HeroSizeC*1.2f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Head, HeroSizeC*1.2f, V3(0, 0, 0));
 
                     DrawHitPoints(Entity, RenderGroup);
                 } break;
 
                 case EntityType_Wall:
                 {
-                    PushBitmap(RenderGroup, &GameState->Tree, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &GameState->Tree, 2.5f, V3(0, 0, 0));
                 } break;
 
                 case EntityType_Stairwell:
@@ -1316,8 +1314,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         MakeEntityNonspatial(Entity);
                     }
 
-                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, &GameState->Sword, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &GameState->Shadow, 0.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &GameState->Sword, 0.5f, V3(0, 0, 0));
                 } break;
 
                 case EntityType_Familiar:
@@ -1360,15 +1358,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Entity->tBob -= (2.0f*Pi32);
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
-                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), 
+                    PushBitmap(RenderGroup, &GameState->Shadow, 0.5f, V3(0, 0, 0), 
                                V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Head, V3(0, 0, 0.25f*BobSin));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Head, 0.5f, V3(0, 0, 0.25f*BobSin));
                 } break;
 
                 case EntityType_Monster:
                 {
-                    PushBitmap(RenderGroup, &GameState->Shadow, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &GameState->Shadow, 0.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, 0.5f, V3(0, 0, 0));
 
                     DrawHitPoints(Entity, RenderGroup);
                 } break;
