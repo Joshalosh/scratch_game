@@ -1283,7 +1283,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     }
 
                     real32 HeroSizeC = 2.5f;
-                    PushBitmap(RenderGroup, &GameState->Shadow, 0.25f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &GameState->Shadow, HeroSizeC*1.0f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
                     PushBitmap(RenderGroup, &HeroBitmaps->Torso, HeroSizeC*1.2f, V3(0, 0, 0));
                     PushBitmap(RenderGroup, &HeroBitmaps->Cape, HeroSizeC*1.2f, V3(0, 0, 0));
                     PushBitmap(RenderGroup, &HeroBitmaps->Head, HeroSizeC*1.2f, V3(0, 0, 0));
@@ -1358,15 +1358,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Entity->tBob -= (2.0f*Pi32);
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
-                    PushBitmap(RenderGroup, &GameState->Shadow, 0.5f, V3(0, 0, 0), 
+                    PushBitmap(RenderGroup, &GameState->Shadow, 2.5f, V3(0, 0, 0), 
                                V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Head, 0.5f, V3(0, 0, 0.25f*BobSin));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Head, 2.5f, V3(0, 0, 0.25f*BobSin));
                 } break;
 
                 case EntityType_Monster:
                 {
-                    PushBitmap(RenderGroup, &GameState->Shadow, 0.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, 0.5f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, &GameState->Shadow, 4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, 4.5f, V3(0, 0, 0));
 
                     DrawHitPoints(Entity, RenderGroup);
                 } break;
