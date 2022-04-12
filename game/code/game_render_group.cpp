@@ -641,17 +641,14 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
 
     v3 EntityBaseP = EntityBasis->Basis->P;
 
-    // TODO: The values of 20 and 20 seem wrong, perhaps I messed something up.
-    real32 FocalLength = 6.0f;
-    real32 CameraDistanceAboveTarget = 5.0f;
-    real32 DistanceToPZ = (CameraDistanceAboveTarget - EntityBaseP.z);
+    real32 DistanceToPZ = (RenderGroup->CameraDistanceAboveTarget - EntityBaseP.z);
     real32 NearClipPlane = 0.2f;
 
     v3 RawXY = V3(EntityBaseP.xy + EntityBasis->Offset.xy, 1.0f);
 
     if(DistanceToPZ > NearClipPlane)
     {
-        v3 ProjectedXY = (1.0f / DistanceToPZ) * FocalLength*RawXY;
+        v3 ProjectedXY = (1.0f / DistanceToPZ) * RenderGroup->FocalLength*RawXY;
         Result.P = ScreenCentre + MetresToPixels*ProjectedXY.xy;
         Result.Scale = MetresToPixels*ProjectedXY.z;
         Result.Valid = true;
@@ -773,6 +770,9 @@ AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize)
     Result->MaxPushBufferSize = MaxPushBufferSize;
     Result->PushBufferSize = 0;
 
+    Result->FocalLength = 6.0f;
+    Result->CameraDistanceAboveTarget = 5.0f;
+
     return(Result);
 }
 
@@ -872,4 +872,31 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
     }
 
     return(Entry);
+}
+
+inline v2
+Unproject(render_group *Group, v2 ProjectedXY, real32 AtDistanceFromCamera)
+{
+    v2 WorldXY = (AtDistanceFromCamera / Group->FocalLength)*ProjectedXY;
+    return(WorldXY);
+}
+
+inline rectangle2
+GetCameraRectangleAtDistance(loaded_bitmap *DrawBuffer, real32 PixelsToMetres, render_group *Group, real32 DistanceFromCamera)
+{
+    v2 ProjectedXY = {0.5f*DrawBuffer->Width*PixelsToMetres, 0.5f*DrawBuffer->Height*PixelsToMetres};
+
+    v2 RawXY = Unproject(Group, ProjectedXY, DistanceFromCamera);
+
+    rectangle2 Result = RectCenterHalfDim(V2(0, 0), RawXY);
+
+    return(Result);
+}
+
+inline rectangle2
+GetCameraRectangleAtTarget(loaded_bitmap *DrawBuffer, real32 PixelsToMetres, render_group *Group)
+{
+    rectangle2 Result = GetCameraRectangleAtDistance(DrawBuffer, PixelsToMetres, Group, Group->CameraDistanceAboveTarget);
+
+    return(Result);
 }

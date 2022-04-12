@@ -1109,6 +1109,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};
 
+    rectangle2 Test = GetCameraRectangleAtTarget(DrawBuffer, PixelsToMetres, RenderGroup);
     real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMetres;
     real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMetres;
     rectangle3 CameraBoundsInMetres = RectCenterDim(V3(0, 0, 0.0f),
@@ -1488,6 +1489,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 #endif
 
+    // TODO: Make sure we hoist the camera update out to a place where the
+    // renderer can know about the location of the camera at the end of the
+    // frame so there isn't a frame of lag in camera updating compared to the
+    // main protagonist.
     RenderGroupToOutput(RenderGroup, DrawBuffer);
 
     EndSim(SimRegion, GameState);
