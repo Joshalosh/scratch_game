@@ -110,8 +110,10 @@ struct render_entry_coordinate_system
 struct render_group
 {
     // TODO: Camera parametres.
-    real32 FocalLength = 6.0f;
-    real32 CameraDistanceAboveTarget = 5.0f;
+    real32 FocalLength;
+    real32 CameraDistanceAboveTarget;
+    real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
+    v2 MonitorHalfDimInMetres;
 
     real32 GlobalAlpha;
 

@@ -633,7 +633,7 @@ struct entity_basis_p_result
     bool32 Valid;
 };
 inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, render_entity_basis *EntityBasis,
-                                                   v2 ScreenDim, real32 MetresToPixels)
+                                                   v2 ScreenDim)
 {
     v2 ScreenCentre = 0.5f*ScreenDim;
 
@@ -649,8 +649,8 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
     if(DistanceToPZ > NearClipPlane)
     {
         v3 ProjectedXY = (1.0f / DistanceToPZ) * RenderGroup->FocalLength*RawXY;
-        Result.P = ScreenCentre + MetresToPixels*ProjectedXY.xy;
-        Result.Scale = MetresToPixels*ProjectedXY.z;
+        Result.P = ScreenCentre + RenderGroup->MetresToPixels*ProjectedXY.xy;
+        Result.Scale = RenderGroup->MetresToPixels*ProjectedXY.z;
         Result.Valid = true;
     }
 
@@ -663,8 +663,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
     v2 ScreenDim = {(real32)OutputTarget->Width, (real32)OutputTarget->Height};
 
     // TODO: Remember to remove this.
-    real32 MetresToPixels = ScreenDim.x / 20.0f;
-    real32 PixelsToMetres = 1.0f / MetresToPixels;
+    real32 PixelsToMetres = 1.0f / RenderGroup->MetresToPixels;
 
     for(uint32_t BaseAddress = 0; BaseAddress < RenderGroup->PushBufferSize;)
     {
@@ -688,8 +687,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
             {
                 render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
                 
-                entity_basis_p_result Basis = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis,
-                                                                    ScreenDim, MetresToPixels);
+                entity_basis_p_result Basis = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenDim);
                 Assert(Entry->Bitmap);
 #if 0
                 DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
@@ -706,8 +704,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
             case RenderGroupEntryType_render_entry_rectangle:
             {
                 render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
-                entity_basis_p_result Basis = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis,
-                                                                    ScreenDim, MetresToPixels);
+                entity_basis_p_result Basis = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenDim);
                 DrawRectangle(OutputTarget, Basis.P, Basis.P + Basis.Scale*Entry->Dim, Entry->Color);
 
                 BaseAddress += sizeof(*Entry);
@@ -759,7 +756,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 }
 
 internal render_group *
-AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize)
+AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, uint32_t ResolutionPixelsX, uint32_t ResolutionPixelsY)
 {
     render_group *Result = PushStruct(Arena, render_group);
     Result->PushBufferBase = (uint8_t *)PushSize(Arena, MaxPushBufferSize);
@@ -770,8 +767,18 @@ AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize)
     Result->MaxPushBufferSize = MaxPushBufferSize;
     Result->PushBufferSize = 0;
 
-    Result->FocalLength = 6.0f;
-    Result->CameraDistanceAboveTarget = 5.0f;
+    Result->FocalLength = 0.6f;
+    Result->CameraDistanceAboveTarget = 9.0f;
+
+    Result->GlobalAlpha = 1.0f;
+
+    // TODO: I need to adjust this based on buffer size.
+    real32 WidthOfMonitor = 0.635f; // This is the horizontal measurement of the monitor in metres.
+    Result->MetresToPixels = (real32)ResolutionPixelsX*WidthOfMonitor;
+
+    real32 PixelsToMetres = 1.0f / Result->MetresToPixels;
+    Result->MonitorHalfDimInMetres = {0.5f*ResolutionPixelsX*PixelsToMetres,
+                                      0.5f*ResolutionPixelsY*PixelsToMetres};
 
     return(Result);
 }
@@ -882,11 +889,9 @@ Unproject(render_group *Group, v2 ProjectedXY, real32 AtDistanceFromCamera)
 }
 
 inline rectangle2
-GetCameraRectangleAtDistance(loaded_bitmap *DrawBuffer, real32 PixelsToMetres, render_group *Group, real32 DistanceFromCamera)
+GetCameraRectangleAtDistance(render_group *Group, real32 DistanceFromCamera)
 {
-    v2 ProjectedXY = {0.5f*DrawBuffer->Width*PixelsToMetres, 0.5f*DrawBuffer->Height*PixelsToMetres};
-
-    v2 RawXY = Unproject(Group, ProjectedXY, DistanceFromCamera);
+    v2 RawXY = Unproject(Group, Group->MonitorHalfDimInMetres, DistanceFromCamera);
 
     rectangle2 Result = RectCenterHalfDim(V2(0, 0), RawXY);
 
@@ -894,9 +899,9 @@ GetCameraRectangleAtDistance(loaded_bitmap *DrawBuffer, real32 PixelsToMetres, r
 }
 
 inline rectangle2
-GetCameraRectangleAtTarget(loaded_bitmap *DrawBuffer, real32 PixelsToMetres, render_group *Group)
+GetCameraRectangleAtTarget(render_group *Group)
 {
-    rectangle2 Result = GetCameraRectangleAtDistance(DrawBuffer, PixelsToMetres, Group, Group->CameraDistanceAboveTarget);
+    rectangle2 Result = GetCameraRectangleAtDistance(Group, Group->CameraDistanceAboveTarget);
 
     return(Result);
 }

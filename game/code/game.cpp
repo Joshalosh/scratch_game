@@ -437,8 +437,11 @@ MakeNullCollision(game_state *GameState)
 internal void
 FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer *GroundBuffer, world_position *ChunkP)
 {
+    // TODO: Decide what the pushbuffer size is.
     temporary_memory GroundMemory = BeginTemporaryMemory(&TranState->TranArena);
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
+
+    // TODO: How do I want to control the ground chunk resolution.
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), 1920, 1080);
 
     Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
 
@@ -1094,8 +1097,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
-    // TODO: Need to figure out what the pushbuffer size is.
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
 
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
@@ -1104,12 +1105,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBuffer->Pitch = Buffer->Pitch;
     DrawBuffer->Memory = Buffer->Memory;
 
+    // TODO: Need to figure out what the pushbuffer size is.
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4),
+                                                    DrawBuffer->Width, DrawBuffer->Height);
+
     Clear(RenderGroup, V4(0.25f, 0.25f, 0.25f, 0.0f));
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};
 
-    rectangle2 Test = GetCameraRectangleAtTarget(DrawBuffer, PixelsToMetres, RenderGroup);
+    rectangle2 Test = GetCameraRectangleAtTarget(RenderGroup);
     real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMetres;
     real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMetres;
     rectangle3 CameraBoundsInMetres = RectCenterDim(V3(0, 0, 0.0f),
