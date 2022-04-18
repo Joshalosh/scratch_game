@@ -641,14 +641,14 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
 
     v3 EntityBaseP = EntityBasis->Basis->P;
 
-    real32 DistanceToPZ = (RenderGroup->CameraDistanceAboveTarget - EntityBaseP.z);
+    real32 DistanceToPZ = (RenderGroup->RenderCamera.DistanceAboveTarget - EntityBaseP.z);
     real32 NearClipPlane = 0.2f;
 
     v3 RawXY = V3(EntityBaseP.xy + EntityBasis->Offset.xy, 1.0f);
 
     if(DistanceToPZ > NearClipPlane)
     {
-        v3 ProjectedXY = (1.0f / DistanceToPZ) * RenderGroup->FocalLength*RawXY;
+        v3 ProjectedXY = (1.0f / DistanceToPZ) * RenderGroup->RenderCamera.FocalLength*RawXY;
         Result.P = ScreenCentre + RenderGroup->MetresToPixels*ProjectedXY.xy;
         Result.Scale = RenderGroup->MetresToPixels*ProjectedXY.z;
         Result.Valid = true;
@@ -767,8 +767,10 @@ AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, uint32_t Re
     Result->MaxPushBufferSize = MaxPushBufferSize;
     Result->PushBufferSize = 0;
 
-    Result->FocalLength = 0.6f;
-    Result->CameraDistanceAboveTarget = 9.0f;
+    Result->GameCamera.FocalLength = 0.6f;
+    Result->GameCamera.DistanceAboveTarget = 9.0f;
+    Result->RenderCamera = Result->GameCamera;
+    Result->RenderCamera.DistanceAboveTarget = 30.0f;
 
     Result->GlobalAlpha = 1.0f;
 
@@ -884,7 +886,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
 inline v2
 Unproject(render_group *Group, v2 ProjectedXY, real32 AtDistanceFromCamera)
 {
-    v2 WorldXY = (AtDistanceFromCamera / Group->FocalLength)*ProjectedXY;
+    v2 WorldXY = (AtDistanceFromCamera / Group->GameCamera.FocalLength)*ProjectedXY;
     return(WorldXY);
 }
 
@@ -901,7 +903,7 @@ GetCameraRectangleAtDistance(render_group *Group, real32 DistanceFromCamera)
 inline rectangle2
 GetCameraRectangleAtTarget(render_group *Group)
 {
-    rectangle2 Result = GetCameraRectangleAtDistance(Group, Group->CameraDistanceAboveTarget);
+    rectangle2 Result = GetCameraRectangleAtDistance(Group, Group->GameCamera.DistanceAboveTarget);
 
     return(Result);
 }

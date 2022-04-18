@@ -107,11 +107,18 @@ struct render_entry_coordinate_system
 };
 // }
 
-struct render_group
+struct render_group_camera
 {
     // TODO: Camera parametres.
     real32 FocalLength;
-    real32 CameraDistanceAboveTarget;
+    real32 DistanceAboveTarget;
+};
+
+struct render_group
+{
+    render_group_camera GameCamera;
+    render_group_camera RenderCamera;
+
     real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
     v2 MonitorHalfDimInMetres;
 

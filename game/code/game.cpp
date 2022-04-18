@@ -828,7 +828,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             uint32_t DoorDirection = RandomChoice(&Series, 2); 
 #endif
 
-            DoorDirection = 3;
+//            DoorDirection = 3;
 
             bool32 CreatedZDoor = false;
             if(DoorDirection == 3)
@@ -1114,13 +1114,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};
 
-    rectangle2 Test = GetCameraRectangleAtTarget(RenderGroup);
-    real32 ScreenWidthInMeters = DrawBuffer->Width*PixelsToMetres;
-    real32 ScreenHeightInMeters = DrawBuffer->Height*PixelsToMetres;
-    rectangle3 CameraBoundsInMetres = RectCenterDim(V3(0, 0, 0.0f),
-                                                    V3(ScreenWidthInMeters, ScreenHeightInMeters, 0.0f));
+    rectangle2 ScreenBounds = GetCameraRectangleAtTarget(RenderGroup);
+    rectangle3 CameraBoundsInMetres = RectMinMax(V3(ScreenBounds.Min, 0.0f), V3(ScreenBounds.Max, 0.0f));
     CameraBoundsInMetres.Min.z = -3.0f*GameState->TypicalFloorHeight;
     CameraBoundsInMetres.Max.z =  1.0f*GameState->TypicalFloorHeight;
+
+    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
 
 #if 0
     for(uint32_t GroundBufferIndex = 0;
