@@ -767,15 +767,15 @@ AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, uint32_t Re
     Result->MaxPushBufferSize = MaxPushBufferSize;
     Result->PushBufferSize = 0;
 
+    real32 WidthOfMonitor = 0.635f; // This is the horizontal measurement of the monitor in metres.
     Result->GameCamera.FocalLength = 0.6f;
     Result->GameCamera.DistanceAboveTarget = 9.0f;
     Result->RenderCamera = Result->GameCamera;
-    Result->RenderCamera.DistanceAboveTarget = 30.0f;
+    Result->RenderCamera.DistanceAboveTarget = 9.0f;
 
     Result->GlobalAlpha = 1.0f;
 
     // TODO: I need to adjust this based on buffer size.
-    real32 WidthOfMonitor = 0.635f; // This is the horizontal measurement of the monitor in metres.
     Result->MetresToPixels = (real32)ResolutionPixelsX*WidthOfMonitor;
 
     real32 PixelsToMetres = 1.0f / Result->MetresToPixels;
