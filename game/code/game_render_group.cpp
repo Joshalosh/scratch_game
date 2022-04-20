@@ -35,7 +35,7 @@ Linear1ToSRGB255(v4 C)
     Result.r = One255*SquareRoot(C.r);
     Result.g = One255*SquareRoot(C.g);
     Result.b = One255*SquareRoot(C.b);
-    Result.a = One255*C.a;
+    Result.a = 255.0f*C.a;
 
     return(Result);
 }
@@ -226,7 +226,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
     // NzScale could be a parameter if I want people to have
     // control over the amount of scaling in the Z direction
     // that the normals appear to have.
-    real32 NzScale = 0.5*(XAxisLength + YAxisLength);
+    real32 NzScale = 0.5f*(XAxisLength + YAxisLength);
 
     real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
     real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
@@ -538,7 +538,7 @@ ChangeSaturation(loaded_bitmap *Buffer, real32 Level)
     }
 }
 
-internal void
+inline void
 DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R = 2.0f)
 {
     // For the top and bottom.
@@ -552,7 +552,7 @@ DrawRectangleOutline(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v3 Color, real32 R
 
 internal void
 DrawMatte(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
-           real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
+          real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
 {
     int32_t MinX = RoundReal32ToInt32(RealX);
     int32_t MinY = RoundReal32ToInt32(RealY);
@@ -637,7 +637,7 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
 {
     v2 ScreenCentre = 0.5f*ScreenDim;
 
-    entity_basis_p_result Result {};
+    entity_basis_p_result Result = {};
 
     v3 EntityBaseP = EntityBasis->Basis->P;
 
@@ -771,7 +771,7 @@ AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, uint32_t Re
     Result->GameCamera.FocalLength = 0.6f;
     Result->GameCamera.DistanceAboveTarget = 9.0f;
     Result->RenderCamera = Result->GameCamera;
-    Result->RenderCamera.DistanceAboveTarget = 9.0f;
+//    Result->RenderCamera.DistanceAboveTarget = 50.0f;
 
     Result->GlobalAlpha = 1.0f;
 

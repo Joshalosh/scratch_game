@@ -298,7 +298,7 @@ AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_
 }
 
 internal void
-DrawHitPoints(sim_entity *Entity, render_group *RenderGroup)
+DrawHitPoints(sim_entity *Entity, render_group *PieceGroup)
 {
     if(Entity->HitPointMax >= 1)
     {
@@ -317,7 +317,7 @@ DrawHitPoints(sim_entity *Entity, render_group *RenderGroup)
                 Color = V4(0.2f, 0.2f, 0.2f, 1.0f);
             }
 
-            PushRect(RenderGroup, V3(HitP, 0), HealthDim, Color);
+            PushRect(PieceGroup, V3(HitP, 0), HealthDim, Color);
             HitP += dHitP;
         }
     }
@@ -776,7 +776,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                          "test/test_hero_shadow.bmp", 72, 182);
         GameState->Tree = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
         GameState->Stairwell = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock02.bmp");
-        GameState->Sword = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock03.bmp", 20, 10);
+        GameState->Sword = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
 
         hero_bitmaps *Bitmap;
 
@@ -839,7 +839,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             else if(DoorDirection == 2)
             {
                 CreatedZDoor = true;
-                DoorDown = true;
+                DoorUp = true;
             }
             else if(DoorDirection == 1)
             {
@@ -885,10 +885,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                     if(ShouldBeDoor)
                     {
-                        if((TileY % 2) || (TileX % 2))
-                        {
-                            AddWall(GameState, AbsTileX, AbsTileY, AbsTileZ);
-                        }
+                        AddWall(GameState, AbsTileX, AbsTileY, AbsTileZ);
                     }
                     else if(CreatedZDoor)
                     {
@@ -1381,12 +1378,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Space:
                 {
+#if 0
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-//                        PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-//                                        Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
+                        PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                                        Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
                     }
+#endif
                 } break;
 
                 default:
@@ -1441,7 +1440,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     TranState->EnvMaps[1].Pz = 0.0f;
     TranState->EnvMaps[2].Pz = 1.5f;
 
-    DrawBitmap(TranState->EnvMaps[0].LOD + 0, 
+    DrawBitmap(TranState->EnvMaps[0].LOD + 0,
                &TranState->GroundBuffers[TranState->GroundBufferCount - 1].Bitmap,
                125.0f, 50.0f, 1.0f);
 
@@ -1496,11 +1495,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 #endif
 
+    RenderGroupToOutput(RenderGroup, DrawBuffer);
+
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the
     // frame so there isn't a frame of lag in camera updating compared to the
     // main protagonist.
-    RenderGroupToOutput(RenderGroup, DrawBuffer);
 
     EndSim(SimRegion, GameState);
     EndTemporaryMemory(SimMemory);
