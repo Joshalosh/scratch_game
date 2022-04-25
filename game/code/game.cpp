@@ -440,18 +440,16 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
     // TODO: Decide what the pushbuffer size is.
     temporary_memory GroundMemory = BeginTemporaryMemory(&TranState->TranArena);
 
-    // TODO: How do I want to control the ground chunk resolution.
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), 1920, 1080);
+    // TODO: I need to be able to set an orthographic display mode here.
+    loaded_bitmap *Buffer = &GroundBuffer->Bitmap;
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), Buffer->Width, Buffer->Height);
 
     Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
 
-    loaded_bitmap *Buffer = &GroundBuffer->Bitmap;
-    
-#if 0
     GroundBuffer->P = *ChunkP;
 
-    real32 Width = (real32)Buffer->Width;
-    real32 Height = (real32)Buffer->Height;
+    real32 Width  = GameState->World->ChunkDimInMeters.x;
+    real32 Height = GameState->World->ChunkDimInMeters.y;
 
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
     {
@@ -512,7 +510,6 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             }
         }
     }
-#endif
 
     RenderGroupToOutput(RenderGroup, Buffer);
     EndTemporaryMemory(GroundMemory);
@@ -1119,13 +1116,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
             RenderGroup->DefaultBasis = Basis;
             Basis->P = Delta;
-            PushBitmap(RenderGroup, Bitmap, 1.0f, V3(0, 0, 0));
+
+            real32 GroundSideInMetres = World->ChunkDimInMeters.x;
+            PushBitmap(RenderGroup, Bitmap, GroundSideInMetres, V3(0, 0, 0));
 #if 1
-            PushRectOutline(RenderGroup, V3(0, 0, 0), V2(1.0f, 1.0f), V4(1.0f, 1.0f, 0.0f, 1.0f));
+            PushRectOutline(RenderGroup, V3(0, 0, 0), V2(GroundSideInMetres, GroundSideInMetres), V4(1.0f, 1.0f, 0.0f, 1.0f));
 #endif
         }
     }
 
+    // This is Ground chunk updating.
     {
         world_position MinChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMinCorner(CameraBoundsInMetres));
         world_position MaxChunkP = MapIntoChunkSpace(World, GameState->CameraP, GetMaxCorner(CameraBoundsInMetres));
@@ -1195,6 +1195,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
     Basis->P = V3(0, 0, 0);
+    RenderGroup->DefaultBasis = Basis;
     PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
 //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
     PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
