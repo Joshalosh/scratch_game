@@ -72,7 +72,7 @@ TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
 
 internal loaded_bitmap
 DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename,
-             int32_t AlignX = 0, int32_t TopDownAlignY = 0)
+             int32_t AlignX, int32_t TopDownAlignY)
 {
     loaded_bitmap Result = {};
     
@@ -143,6 +143,14 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
     Result.Pitch = -Result.Pitch;
 #endif
 
+    return(Result);
+}
+
+internal loaded_bitmap
+DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
+{
+    loaded_bitmap Result = DEBUGLoadBMP(Thread, ReadEntireFile, Filename, 0, 0);
+    Result.AlignPercentage = V2(0.5f, 0.5f);
     return(Result);
 }
 
@@ -442,6 +450,9 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
     // TODO: I need to be able to set an orthographic display mode here.
     loaded_bitmap *Buffer = &GroundBuffer->Bitmap;
+    Buffer->AlignPercentage = V2(0.5f, 0.5f);
+    Buffer->WidthOverHeight = 1.0f;
+
     render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), Buffer->Width, Buffer->Height);
 
     Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
@@ -450,6 +461,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
     real32 Width  = GameState->World->ChunkDimInMeters.x;
     real32 Height = GameState->World->ChunkDimInMeters.y;
+    v2 HalfDim    = 0.5f*V2(Width, Height);
 
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
     {
@@ -477,11 +489,8 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                     Stamp = GameState->Stone + RandomChoice(&Series, ArrayCount(GameState->Stone));
                 }
 
-                v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
-                v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
-                v2 P = Centre + Offset - BitmapCenter;
-
-                PushBitmap(RenderGroup, Stamp, 1.0f, V3(P, 0.0f));
+                v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
+                PushBitmap(RenderGroup, Stamp, 5.0f, V3(P, 0.0f));
             }
         }
     }
@@ -502,11 +511,8 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             {
                 loaded_bitmap *Stamp = GameState->Tuft + RandomChoice(&Series, ArrayCount(GameState->Tuft));
 
-                v2 BitmapCenter = 0.5f*V2i(Stamp->Width, Stamp->Height);
-                v2 Offset = {Width*RandomUnilateral(&Series), Height*RandomUnilateral(&Series)};
-                v2 P = Centre + Offset - BitmapCenter;
-
-                PushBitmap(RenderGroup, Stamp, 1.0f, V3(P, 0.0f));
+                v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
+                PushBitmap(RenderGroup, Stamp, 5.0f, V3(P, 0.0f));
             }
         }
     }
@@ -1111,7 +1117,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             loaded_bitmap *Bitmap = &GroundBuffer->Bitmap;
             v3 Delta = Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
-            Bitmap->AlignPercentage = V2(0.5f, 0.5f);
 
             render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
             RenderGroup->DefaultBasis = Basis;
