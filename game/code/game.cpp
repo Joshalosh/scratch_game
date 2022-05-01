@@ -463,6 +463,9 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
     real32 Height = GameState->World->ChunkDimInMeters.y;
     v2 HalfDim    = 0.5f*V2(Width, Height);
 
+    // TODO: Once I switch to orthographic stop multiplying this.
+    HalfDim = 2.0f*HalfDim;
+
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
     {
         for(int32_t ChunkOffsetX = -1; ChunkOffsetX <= 1; ++ChunkOffsetX)
@@ -490,7 +493,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 }
 
                 v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
-                PushBitmap(RenderGroup, Stamp, 5.0f, V3(P, 0.0f));
+                PushBitmap(RenderGroup, Stamp, 4.0f, V3(P, 0.0f));
             }
         }
     }
@@ -512,7 +515,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 loaded_bitmap *Stamp = GameState->Tuft + RandomChoice(&Series, ArrayCount(GameState->Tuft));
 
                 v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
-                PushBitmap(RenderGroup, Stamp, 5.0f, V3(P, 0.0f));
+                PushBitmap(RenderGroup, Stamp, 0.4f, V3(P, 0.0f));
             }
         }
     }
@@ -1118,15 +1121,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             loaded_bitmap *Bitmap = &GroundBuffer->Bitmap;
             v3 Delta = Subtract(GameState->World, &GroundBuffer->P, &GameState->CameraP);
 
-            render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
-            RenderGroup->DefaultBasis = Basis;
-            Basis->P = Delta;
+            if((Delta.z >= -1.0f) && (Delta.z < 1.0f))
+            {
+                render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
+                RenderGroup->DefaultBasis = Basis;
+                Basis->P = Delta;
 
-            real32 GroundSideInMetres = World->ChunkDimInMeters.x;
-            PushBitmap(RenderGroup, Bitmap, GroundSideInMetres, V3(0, 0, 0));
+                real32 GroundSideInMetres = World->ChunkDimInMeters.x;
+                PushBitmap(RenderGroup, Bitmap, GroundSideInMetres, V3(0, 0, 0));
 #if 1
-            PushRectOutline(RenderGroup, V3(0, 0, 0), V2(GroundSideInMetres, GroundSideInMetres), V4(1.0f, 1.0f, 0.0f, 1.0f));
+                PushRectOutline(RenderGroup, V3(0, 0, 0), V2(GroundSideInMetres, GroundSideInMetres), V4(1.0f, 1.0f, 0.0f, 1.0f));
 #endif
+            }
         }
     }
 
