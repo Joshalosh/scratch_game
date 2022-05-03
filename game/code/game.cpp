@@ -701,6 +701,8 @@ SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
+    uint64_t StartCycleCount = __rdtsc();
+
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
            (ArrayCount(Input->Controllers[0].Buttons)));
 
@@ -1507,6 +1509,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     CheckArena(&GameState->WorldArena);
     CheckArena(&TranState->TranArena);
+
+    uint64_t EndCycleCount = __rdtsc();
+    uint64_t CyclesElapsed = EndCycleCount - StartCycleCount;
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
