@@ -701,8 +701,14 @@ SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
     Bitmap->Torso.AlignPercentage = Align;
 }
 
+#if GAME_INTERNAL
+game_memory *DebugGlobalMemory;
+#endif
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
+#if GAME_INTERNAL
+    DebugGlobalMemory = Memory;
+#endif
     BEGIN_TIMED_BLOCK(GameUpdateAndRender);
 
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==

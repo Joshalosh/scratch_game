@@ -110,18 +110,23 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 enum
 {
     DebugCycleCounter_GameUpdateAndRender,
+    DebugCycleCounter_RenderGroupToOutput,
+    DebugCycleCounter_DrawRectangleSlowly,
     DebugCycleCounter_Count,
 };
 typedef struct debug_cycle_counter
 {
     uint64_t CycleCount;
+    uint64_t HitCount;
 } debug_cycle_counter;
 
+extern struct game_memory *DebugGlobalMemory;
 #if _MSC_VER
 #define BEGIN_TIMED_BLOCK(ID) uint64_t StartCycleCount##ID = __rdtsc();
-#define END_TIMED_BLOCK(ID) Memory->Counters[DebugCycleCounter_##ID].CycleCount += __rdtsc() - StartCycleCount##ID;
+#define END_TIMED_BLOCK(ID) DebugGlobalMemory->Counters[DebugCycleCounter_##ID].CycleCount += __rdtsc() - StartCycleCount##ID; ++DebugGlobalMemory->Counters[DebugCycleCounter_##ID].HitCount
 #else
-
+#define BEGIN_TIMED_BLOCK(ID)
+#define END_TIMED_BLOCK(ID)
 #endif
 
 #endif

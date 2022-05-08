@@ -214,6 +214,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     environment_map *Top, environment_map *Middle, environment_map *Bottom,
                     real32 PixelsToMetres)
 {
+    BEGIN_TIMED_BLOCK(DrawRectangleSlowly)
+
     // Premultiply color up front
     Color.rgb *= Color.a;
 
@@ -422,6 +424,8 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
         Row += Buffer->Pitch;
     }
+
+    END_TIMED_BLOCK(DrawRectangleSlowly);
 }
 
 internal void
@@ -660,6 +664,8 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, re
 internal void
 RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
+    BEGIN_TIMED_BLOCK(RenderGroupToOutput);
+
     v2 ScreenDim = {(real32)OutputTarget->Width, (real32)OutputTarget->Height};
 
     // TODO: Remember to remove this.
@@ -753,6 +759,8 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
             InvalidDefaultCase;
         }
     }
+
+    END_TIMED_BLOCK(RenderGroupToOutput);
 }
 
 internal render_group *
