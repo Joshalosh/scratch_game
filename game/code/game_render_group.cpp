@@ -280,6 +280,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
         uint32_t *Pixel = (uint32_t *)Row;
         for(int X = XMin; X <= XMax; ++X)
         {
+            BEGIN_TIMED_BLOCK(TestPixel);
 #if 1
             v2 PixelP = V2i(X, Y);
             v2 d = PixelP - Origin;
@@ -294,6 +295,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
             if((Edge0 < 0) && (Edge1 < 0) &&
                (Edge2 < 0) && (Edge3 < 0))
             {
+                BEGIN_TIMED_BLOCK(FillPixel);
 #if 1
                 v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
                 real32 ZDiff = PixelsToMetres*((real32)Y - OriginY);
@@ -325,6 +327,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 bilinear_sample TexelSample = BilinearSample(Texture, X, Y);
                 v4 Texel = SRGBBilinearBlend(TexelSample, fX, fY);
 
+#if 0
                 if(NormalMap)
                 {
                     bilinear_sample NormalSample = BilinearSample(NormalMap, X, Y);
@@ -391,6 +394,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     Texel.rgb *= Texel.a;
 #endif
                 }
+#endif
 
                 Texel = Hadamard(Texel, Color);
                 Texel.r = Clamp01(Texel.r);
@@ -414,12 +418,16 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                           ((uint32_t)(Blended255.r + 0.5f) << 16) |
                           ((uint32_t)(Blended255.g + 0.5f) << 8) |
                           ((uint32_t)(Blended255.b + 0.5f) << 0));
+
+                END_TIMED_BLOCK(FillPixel);
             }
 #else
             *Pixel = Color32;
 #endif
 
             ++Pixel;
+
+            END_TIMED_BLOCK(TestPixel);
         }
 
         Row += Buffer->Pitch;

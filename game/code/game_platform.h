@@ -112,12 +112,14 @@ enum
     DebugCycleCounter_GameUpdateAndRender,
     DebugCycleCounter_RenderGroupToOutput,
     DebugCycleCounter_DrawRectangleSlowly,
+    DebugCycleCounter_TestPixel,
+    DebugCycleCounter_FillPixel,
     DebugCycleCounter_Count,
 };
 typedef struct debug_cycle_counter
 {
     uint64_t CycleCount;
-    uint64_t HitCount;
+    uint32_t HitCount;
 } debug_cycle_counter;
 
 extern struct game_memory *DebugGlobalMemory;
