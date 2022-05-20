@@ -437,6 +437,151 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 }
 
 internal void
+DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
+                              loaded_bitmap *Texture, real32 PixelsToMetres)
+{
+    BEGIN_TIMED_BLOCK(DrawRectangleHopefullyQuickly)
+
+    // Premultiply color up front
+    Color.rgb *= Color.a;
+
+    real32 XAxisLength = Length(XAxis);
+    real32 YAxisLength = Length(YAxis);
+
+    v2 NxAxis = (YAxisLength / XAxisLength) * XAxis;
+    v2 NyAxis = (XAxisLength / YAxisLength) * YAxis;
+
+    // NzScale could be a parameter if I want people to have
+    // control over the amount of scaling in the Z direction
+    // that the normals appear to have.
+    real32 NzScale = 0.5f*(XAxisLength + YAxisLength);
+
+    real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
+    real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
+
+    uint32_t Color32 = ((RoundReal32ToUInt32(Color.a * 255.0f) << 24) |
+                        (RoundReal32ToUInt32(Color.r * 255.0f) << 16) |
+                        (RoundReal32ToUInt32(Color.g * 255.0f) << 8) |
+                        (RoundReal32ToUInt32(Color.b * 255.0f) << 0));
+
+    int WidthMax = (Buffer->Width - 1);
+    int HeightMax = (Buffer->Height - 1);
+
+    real32 InvWidthMax = 1.0f / (real32)WidthMax;
+    real32 InvHeightMax = 1.0f / (real32)HeightMax;
+
+    // TODO: This is going to need to be specified seperately
+    real32 OriginZ = 0.0f;
+    real32 OriginY = (Origin + 0.5f*XAxis + 0.5f*YAxis).y;
+    real32 FixedCastY = InvHeightMax*OriginY;
+
+    int XMin = WidthMax;
+    int XMax = 0;
+    int YMin = HeightMax;
+    int YMax = 0;
+
+    v2 P[4] = {Origin, Origin + XAxis, Origin + XAxis + YAxis, Origin + YAxis};
+    for(int PIndex = 0; PIndex < ArrayCount(P); ++PIndex)
+    {
+        v2 TestP = P[PIndex];
+        int FloorX = FloorReal32ToInt32(TestP.x);
+        int CeilX = CeilReal32ToInt32(TestP.x);
+        int FloorY = FloorReal32ToInt32(TestP.y);
+        int CeilY = CeilReal32ToInt32(TestP.y);
+
+        if(XMin > FloorX) {XMin = FloorX;}
+        if(YMin > FloorY) {YMin = FloorY;}
+        if(XMax < CeilX) {XMax = CeilX;}
+        if(YMax < CeilY) {YMax = CeilY;}
+    }
+
+    if(XMin < 0) {XMin = 0;}
+    if(YMin < 0) {YMin = 0;}
+    if(XMax > WidthMax) {XMax = WidthMax;}
+    if(YMax > HeightMax) {YMax = HeightMax;}
+
+    v2 nXAxis = InvXAxisLengthSq*XAxis;
+    v2 nYAxis = InvYAxisLengthSq*YAxis;
+
+    uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
+    for(int Y = YMin; Y <= YMax; ++Y)
+    {
+        uint32_t *Pixel = (uint32_t *)Row;
+        for(int X = XMin; X <= XMax; ++X)
+        {
+            BEGIN_TIMED_BLOCK(TestPixel);
+
+            v2 PixelP = V2i(X, Y);
+            v2 d = PixelP - Origin;
+
+            real32 U = Inner(d, nXAxis);
+            real32 V = Inner(d, nYAxis);
+
+            if((U >= 0.0f) && (U <= 1.0f) &&
+               (V >= 0.0f) && (V <= 1.0f))
+            {
+                BEGIN_TIMED_BLOCK(FillPixel);
+                v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
+                real32 ZDiff = PixelsToMetres*((real32)Y - OriginY);
+                
+#if 0
+                Assert((U >= 0.0f) && (U <= 1.0f));
+                Assert((V >= 0.0f) && (V <= 1.0f));
+#endif
+
+                real32 tX = ((U*(real32)(Texture->Width - 2)));
+                real32 tY = ((V*(real32)(Texture->Height - 2)));
+
+                int32_t X = (int32_t)tX;
+                int32_t Y = (int32_t)tY;
+
+                real32 fX = tX - (real32)X;
+                real32 fY = tY - (real32)Y;
+
+                Assert((X >= 0) && (X < Texture->Width));
+                Assert((Y >= 0) && (Y < Texture->Height));
+
+                bilinear_sample TexelSample = BilinearSample(Texture, X, Y);
+                v4 Texel = SRGBBilinearBlend(TexelSample, fX, fY);
+
+                Texel = Hadamard(Texel, Color);
+                Texel.r = Clamp01(Texel.r);
+                Texel.g = Clamp01(Texel.g);
+                Texel.b = Clamp01(Texel.b);
+
+                v4 Dest = {(real32)((*Pixel >> 16) & 0xFF),
+                           (real32)((*Pixel >> 8) & 0xFF),
+                           (real32)((*Pixel >> 0) & 0xFF),
+                           (real32)((*Pixel >> 24) & 0xFF)};
+
+                // Go from sRGB to "linear" brightness space.
+                Dest = SRGB255ToLinear1(Dest);
+
+                v4 Blended = (1.0f-Texel.a)*Dest + Texel;
+
+                // Go from "linear" brightness space to sRGB.
+                v4 Blended255 = Linear1ToSRGB255(Blended);
+
+                *Pixel = (((uint32_t)(Blended255.a + 0.5f) << 24) |
+                          ((uint32_t)(Blended255.r + 0.5f) << 16) |
+                          ((uint32_t)(Blended255.g + 0.5f) << 8) |
+                          ((uint32_t)(Blended255.b + 0.5f) << 0));
+
+                END_TIMED_BLOCK(FillPixel);
+            }
+
+            ++Pixel;
+
+            END_TIMED_BLOCK(TestPixel);
+        }
+
+        Row += Buffer->Pitch;
+    }
+
+    END_TIMED_BLOCK(DrawRectangleHopefullyQuickly);
+}
+
+internal void
 DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
            real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
 {
@@ -706,10 +851,10 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 #if 0
                 DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
 #else
-                DrawRectangleSlowly(OutputTarget, Basis.P,
-                                    Basis.Scale*V2(Entry->Size.x, 0),
-                                    Basis.Scale*V2(0, Entry->Size.y), Entry->Color,
-                                    Entry->Bitmap, 0, 0, 0, 0, PixelsToMetres);
+                DrawRectangleHopefullyQuickly(OutputTarget, Basis.P,
+                                              Basis.Scale*V2(Entry->Size.x, 0),
+                                              Basis.Scale*V2(0, Entry->Size.y), Entry->Color,
+                                              Entry->Bitmap, PixelsToMetres);
 #endif
 
                 BaseAddress += sizeof(*Entry);
