@@ -35,7 +35,7 @@ Linear1ToSRGB255(v4 C)
     Result.r = One255*SquareRoot(C.r);
     Result.g = One255*SquareRoot(C.g);
     Result.b = One255*SquareRoot(C.b);
-    Result.a = 255.0f*C.a;
+    Result.a = One255*C.a;
 
     return(Result);
 }
@@ -503,6 +503,9 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
     v2 nXAxis = InvXAxisLengthSq*XAxis;
     v2 nYAxis = InvYAxisLengthSq*YAxis;
 
+    real32 Inv255 = 1.0f / 255.0f;
+    real32 One255 = 255.0f;
+
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
     for(int Y = YMin; Y <= YMax; ++Y)
     {
@@ -521,14 +524,8 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                (V >= 0.0f) && (V <= 1.0f))
             {
                 BEGIN_TIMED_BLOCK(FillPixel);
-                v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
-                real32 ZDiff = PixelsToMetres*((real32)Y - OriginY);
-                
-#if 0
-                Assert((U >= 0.0f) && (U <= 1.0f));
-                Assert((V >= 0.0f) && (V <= 1.0f));
-#endif
 
+                // TODO: Need to formalise texture boundaries.
                 real32 tX = ((U*(real32)(Texture->Width - 2)));
                 real32 tY = ((V*(real32)(Texture->Height - 2)));
 
@@ -542,30 +539,45 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 Assert((Y >= 0) && (Y < Texture->Height));
 
                 bilinear_sample TexelSample = BilinearSample(Texture, X, Y);
+
                 v4 Texel = SRGBBilinearBlend(TexelSample, fX, fY);
 
-                Texel = Hadamard(Texel, Color);
-                Texel.r = Clamp01(Texel.r);
-                Texel.g = Clamp01(Texel.g);
-                Texel.b = Clamp01(Texel.b);
+                float Texelr = Texel.r * Color.r;
+                float Texelg = Texel.g * Color.g;
+                float Texelb = Texel.b * Color.b;
+                float Texela = Texel.a * Color.a;
 
-                v4 Dest = {(real32)((*Pixel >> 16) & 0xFF),
-                           (real32)((*Pixel >> 8) & 0xFF),
-                           (real32)((*Pixel >> 0) & 0xFF),
-                           (real32)((*Pixel >> 24) & 0xFF)};
+                Texelr = Clamp01(Texelr);
+                Texelg = Clamp01(Texelg);
+                Texelb = Clamp01(Texelb);
+
+                float Destr = (real32)((*Pixel >> 16) & 0xFF);
+                float Destg = (real32)((*Pixel >> 8)  & 0xFF);
+                float Destb = (real32)((*Pixel >> 0)  & 0xFF);
+                float Desta = (real32)((*Pixel >> 24) & 0xFF);
 
                 // Go from sRGB to "linear" brightness space.
-                Dest = SRGB255ToLinear1(Dest);
+                Destr = Square(Inv255*Destr);
+                Destg = Square(Inv255*Destg);
+                Destb = Square(Inv255*Destb);
+                Desta = Inv255*Desta;
 
-                v4 Blended = (1.0f-Texel.a)*Dest + Texel;
+                float InvTexelA = (1.0f - Texel.a);
+                float Blendedr = InvTexelA*Destr + Texelr;
+                float Blendedg = InvTexelA*Destg + Texelg;
+                float Blendedb = InvTexelA*Destb + Texelb;
+                float Blendeda = InvTexelA*Desta + Texela;
 
                 // Go from "linear" brightness space to sRGB.
-                v4 Blended255 = Linear1ToSRGB255(Blended);
+                Blendedr = One255*SquareRoot(Blendedr);
+                Blendedg = One255*SquareRoot(Blendedg);
+                Blendedb = One255*SquareRoot(Blendedb);
+                Blendeda = One255*Blendeda;
 
-                *Pixel = (((uint32_t)(Blended255.a + 0.5f) << 24) |
-                          ((uint32_t)(Blended255.r + 0.5f) << 16) |
-                          ((uint32_t)(Blended255.g + 0.5f) << 8) |
-                          ((uint32_t)(Blended255.b + 0.5f) << 0));
+                *Pixel = (((uint32_t)(Blendeda + 0.5f) << 24) |
+                          ((uint32_t)(Blendedr + 0.5f) << 16) |
+                          ((uint32_t)(Blendedg + 0.5f) << 8) |
+                          ((uint32_t)(Blendedb + 0.5f) << 0));
 
                 END_TIMED_BLOCK(FillPixel);
             }
