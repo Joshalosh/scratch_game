@@ -538,19 +538,49 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 Assert((X >= 0) && (X < Texture->Width));
                 Assert((Y >= 0) && (Y < Texture->Height));
 
-                bilinear_sample TexelSample = BilinearSample(Texture, X, Y);
+                uint8_t *TexelPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
+                uint32_t SampleA = *(uint32_t *)(TexelPtr);
+                uint32_t SampleB = *(uint32_t *)(TexelPtr + sizeof(uint32_t));
+                uint32_t SampleC = *(uint32_t *)(TexelPtr + Texture->Pitch);
+                uint32_t SampleD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
 
-                v4 Texel = SRGBBilinearBlend(TexelSample, fX, fY);
+                v4 TexelA = Unpack4x8(SampleA);
+                v4 TexelB = Unpack4x8(SampleB);
+                v4 TexelC = Unpack4x8(SampleC);
+                v4 TexelD = Unpack4x8(SampleD);
 
-                float Texelr = Texel.r * Color.r;
-                float Texelg = Texel.g * Color.g;
-                float Texelb = Texel.b * Color.b;
-                float Texela = Texel.a * Color.a;
+                // Go from sRGB to "linear" brightness space.
+                TexelA = SRGB255ToLinear1(TexelA);
+                TexelB = SRGB255ToLinear1(TexelB);
+                TexelC = SRGB255ToLinear1(TexelC);
+                TexelD = SRGB255ToLinear1(TexelD);
 
+                // This is the bilinear texture blend.
+                float ifX = 1.0f - fX;
+                float ifY = 1.0f - fY;
+
+                float l0 = ifY*ifX;
+                float l1 = ifY*fX;
+                float l2 = fY*ifX;
+                float l3 = fY*fX;
+                
+                float Texelr = l0*TexelA.r + l1*TexelB.r + l2*TexelC.r + l3*TexelD.r;
+                float Texelg = l0*TexelA.g + l1*TexelB.g + l2*TexelC.g + l3*TexelD.g;
+                float Texelb = l0*TexelA.b + l1*TexelB.b + l2*TexelC.b + l3*TexelD.b;
+                float Texela = l0*TexelA.a + l1*TexelB.a + l2*TexelC.a + l3*TexelD.a;
+
+                // This modulates by the incoming colour.
+                Texelr = Texelr * Color.r;
+                Texelg = Texelg * Color.g;
+                Texelb = Texelb * Color.b;
+                Texela = Texela * Color.a;
+
+                // This clamps the colours to a valid range.
                 Texelr = Clamp01(Texelr);
                 Texelg = Clamp01(Texelg);
                 Texelb = Clamp01(Texelb);
 
+                // This loads the destination.
                 float Destr = (real32)((*Pixel >> 16) & 0xFF);
                 float Destg = (real32)((*Pixel >> 8)  & 0xFF);
                 float Destb = (real32)((*Pixel >> 0)  & 0xFF);
@@ -562,7 +592,8 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 Destb = Square(Inv255*Destb);
                 Desta = Inv255*Desta;
 
-                float InvTexelA = (1.0f - Texel.a);
+                // This is destination blend.
+                float InvTexelA = (1.0f - Texela);
                 float Blendedr = InvTexelA*Destr + Texelr;
                 float Blendedg = InvTexelA*Destg + Texelg;
                 float Blendedb = InvTexelA*Destb + Texelb;
@@ -574,6 +605,7 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 Blendedb = One255*SquareRoot(Blendedb);
                 Blendeda = One255*Blendeda;
 
+                // This is the repack.
                 *Pixel = (((uint32_t)(Blendeda + 0.5f) << 24) |
                           ((uint32_t)(Blendedr + 0.5f) << 16) |
                           ((uint32_t)(Blendedg + 0.5f) << 8) |
