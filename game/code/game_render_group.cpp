@@ -544,30 +544,60 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 uint32_t SampleC = *(uint32_t *)(TexelPtr + Texture->Pitch);
                 uint32_t SampleD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
 
-                v4 TexelA = Unpack4x8(SampleA);
-                v4 TexelB = Unpack4x8(SampleB);
-                v4 TexelC = Unpack4x8(SampleC);
-                v4 TexelD = Unpack4x8(SampleD);
+                real32 TexelAr = (real32)((SampleA >> 16) & 0xFF);
+                real32 TexelAg = (real32)((SampleA >> 8)  & 0xFF);
+                real32 TexelAb = (real32)((SampleA >> 0)  & 0xFF);
+                real32 TexelAa = (real32)((SampleA >> 24) & 0xFF);
 
-                // Go from sRGB to "linear" brightness space.
-                TexelA = SRGB255ToLinear1(TexelA);
-                TexelB = SRGB255ToLinear1(TexelB);
-                TexelC = SRGB255ToLinear1(TexelC);
-                TexelD = SRGB255ToLinear1(TexelD);
+                real32 TexelBr = (real32)((SampleB >> 16) & 0xFF);
+                real32 TexelBg = (real32)((SampleB >> 8)  & 0xFF);
+                real32 TexelBb = (real32)((SampleB >> 0)  & 0xFF);
+                real32 TexelBa = (real32)((SampleB >> 24) & 0xFF);
+
+                real32 TexelCr = (real32)((SampleC >> 16) & 0xFF);
+                real32 TexelCg = (real32)((SampleC >> 8)  & 0xFF);
+                real32 TexelCb = (real32)((SampleC >> 0)  & 0xFF);
+                real32 TexelCa = (real32)((SampleC >> 24) & 0xFF);
+
+                real32 TexelDr = (real32)((SampleD >> 16) & 0xFF);
+                real32 TexelDg = (real32)((SampleD >> 8)  & 0xFF);
+                real32 TexelDb = (real32)((SampleD >> 0)  & 0xFF);
+                real32 TexelDa = (real32)((SampleD >> 24) & 0xFF);
+
+                // Convert texture from sRGB to "linear" brightness space.
+                TexelAr = Square(Inv255*TexelAr);
+                TexelAg = Square(Inv255*TexelAg);
+                TexelAb = Square(Inv255*TexelAb);
+                TexelAa = Inv255*TexelAa;
+
+                TexelBr = Square(Inv255*TexelBr);
+                TexelBg = Square(Inv255*TexelBg);
+                TexelBb = Square(Inv255*TexelBb);
+                TexelBa = Inv255*TexelBa;
+
+                TexelCr = Square(Inv255*TexelCr);
+                TexelCg = Square(Inv255*TexelCg);
+                TexelCb = Square(Inv255*TexelCb);
+                TexelCa = Inv255*TexelCa;
+
+                TexelDr = Square(Inv255*TexelDr);
+                TexelDg = Square(Inv255*TexelDg);
+                TexelDb = Square(Inv255*TexelDb);
+                TexelDa = Inv255*TexelDa;
 
                 // This is the bilinear texture blend.
-                float ifX = 1.0f - fX;
-                float ifY = 1.0f - fY;
+                real32 ifX = 1.0f - fX;
+                real32 ifY = 1.0f - fY;
 
-                float l0 = ifY*ifX;
-                float l1 = ifY*fX;
-                float l2 = fY*ifX;
-                float l3 = fY*fX;
+                real32 l0 = ifY*ifX;
+                real32 l1 = ifY*fX;
+                real32 l2 = fY*ifX;
+                real32 l3 = fY*fX;
                 
-                float Texelr = l0*TexelA.r + l1*TexelB.r + l2*TexelC.r + l3*TexelD.r;
-                float Texelg = l0*TexelA.g + l1*TexelB.g + l2*TexelC.g + l3*TexelD.g;
-                float Texelb = l0*TexelA.b + l1*TexelB.b + l2*TexelC.b + l3*TexelD.b;
-                float Texela = l0*TexelA.a + l1*TexelB.a + l2*TexelC.a + l3*TexelD.a;
+                real32 Texelr = l0*TexelAr + l1*TexelBr + l2*TexelCr + l3*TexelDr;
+                real32 Texelg = l0*TexelAg + l1*TexelBg + l2*TexelCg + l3*TexelDg;
+                real32 Texelb = l0*TexelAb + l1*TexelBb + l2*TexelCb + l3*TexelDb;
+                real32 Texela = l0*TexelAa + l1*TexelBa + l2*TexelCa + l3*TexelDa;
 
                 // This modulates by the incoming colour.
                 Texelr = Texelr * Color.r;
@@ -581,10 +611,10 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 Texelb = Clamp01(Texelb);
 
                 // This loads the destination.
-                float Destr = (real32)((*Pixel >> 16) & 0xFF);
-                float Destg = (real32)((*Pixel >> 8)  & 0xFF);
-                float Destb = (real32)((*Pixel >> 0)  & 0xFF);
-                float Desta = (real32)((*Pixel >> 24) & 0xFF);
+                real32 Destr = (real32)((*Pixel >> 16) & 0xFF);
+                real32 Destg = (real32)((*Pixel >> 8)  & 0xFF);
+                real32 Destb = (real32)((*Pixel >> 0)  & 0xFF);
+                real32 Desta = (real32)((*Pixel >> 24) & 0xFF);
 
                 // Go from sRGB to "linear" brightness space.
                 Destr = Square(Inv255*Destr);
@@ -593,11 +623,11 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 Desta = Inv255*Desta;
 
                 // This is destination blend.
-                float InvTexelA = (1.0f - Texela);
-                float Blendedr = InvTexelA*Destr + Texelr;
-                float Blendedg = InvTexelA*Destg + Texelg;
-                float Blendedb = InvTexelA*Destb + Texelb;
-                float Blendeda = InvTexelA*Desta + Texela;
+                real32 InvTexelA = (1.0f - Texela);
+                real32 Blendedr = InvTexelA*Destr + Texelr;
+                real32 Blendedg = InvTexelA*Destg + Texelg;
+                real32 Blendedb = InvTexelA*Destb + Texelb;
+                real32 Blendeda = InvTexelA*Desta + Texela;
 
                 // Go from "linear" brightness space to sRGB.
                 Blendedr = One255*SquareRoot(Blendedr);
