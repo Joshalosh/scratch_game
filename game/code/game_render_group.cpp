@@ -440,7 +440,11 @@ internal void
 DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
                               loaded_bitmap *Texture, real32 PixelsToMetres)
 {
-    BEGIN_TIMED_BLOCK(DrawRectangleHopefullyQuickly)
+    BEGIN_TIMED_BLOCK(DrawRectangleHopefullyQuickly);
+
+    __m128 ValueA = _mm_set1_ps(1.0f);
+    __m128 ValueB = _mm_set1_ps(2.0f);
+    __m128 Sum = _mm_add_ps(ValueA, ValueB);
 
     // Premultiply color up front
     Color.rgb *= Color.a;
