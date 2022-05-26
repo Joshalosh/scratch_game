@@ -442,8 +442,8 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
 {
     BEGIN_TIMED_BLOCK(DrawRectangleHopefullyQuickly);
 
-    __m128 ValueA = _mm_set1_ps(1.0f);
-    __m128 ValueB = _mm_set1_ps(2.0f);
+    __m128 ValueA = _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f);
+    __m128 ValueB = _mm_set_ps(10.0f, 100.0f, 1000.0f, 10000.0f);
     __m128 Sum = _mm_add_ps(ValueA, ValueB);
 
     // Premultiply color up front
@@ -514,141 +514,149 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
     for(int Y = YMin; Y <= YMax; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = XMin; X <= XMax; ++X)
+        for(int X = XMin; X <= XMax; X += 4)
         {
             BEGIN_TIMED_BLOCK(TestPixel);
 
-            v2 PixelP = V2i(X, Y);
-            v2 d = PixelP - Origin;
-
-            real32 U = Inner(d, nXAxis);
-            real32 V = Inner(d, nYAxis);
-
-            if((U >= 0.0f) && (U <= 1.0f) &&
-               (V >= 0.0f) && (V <= 1.0f))
+            for(int PIndex = 0; PIndex < 4; ++PIndex)
             {
-                BEGIN_TIMED_BLOCK(FillPixel);
+                v2 PixelP = V2i(X, Y);
+                v2 d = PixelP - Origin;
 
-                // TODO: Need to formalise texture boundaries.
-                real32 tX = ((U*(real32)(Texture->Width - 2)));
-                real32 tY = ((V*(real32)(Texture->Height - 2)));
+                real32 U = Inner(d, nXAxis);
+                real32 V = Inner(d, nYAxis);
 
-                int32_t X = (int32_t)tX;
-                int32_t Y = (int32_t)tY;
+                if((U >= 0.0f) && (U <= 1.0f) &&
+                   (V >= 0.0f) && (V <= 1.0f))
+                {
+                    BEGIN_TIMED_BLOCK(FillPixel);
 
-                real32 fX = tX - (real32)X;
-                real32 fY = tY - (real32)Y;
+                    // TODO: Need to formalise texture boundaries.
+                    real32 tX = ((U*(real32)(Texture->Width - 2)));
+                    real32 tY = ((V*(real32)(Texture->Height - 2)));
 
-                Assert((X >= 0) && (X < Texture->Width));
-                Assert((Y >= 0) && (Y < Texture->Height));
+                    int32_t X = (int32_t)tX;
+                    int32_t Y = (int32_t)tY;
 
-                uint8_t *TexelPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
-                uint32_t SampleA = *(uint32_t *)(TexelPtr);
-                uint32_t SampleB = *(uint32_t *)(TexelPtr + sizeof(uint32_t));
-                uint32_t SampleC = *(uint32_t *)(TexelPtr + Texture->Pitch);
-                uint32_t SampleD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
+                    real32 fX = tX - (real32)X;
+                    real32 fY = tY - (real32)Y;
 
-                real32 TexelAr = (real32)((SampleA >> 16) & 0xFF);
-                real32 TexelAg = (real32)((SampleA >> 8)  & 0xFF);
-                real32 TexelAb = (real32)((SampleA >> 0)  & 0xFF);
-                real32 TexelAa = (real32)((SampleA >> 24) & 0xFF);
+                    Assert((X >= 0) && (X < Texture->Width));
+                    Assert((Y >= 0) && (Y < Texture->Height));
 
-                real32 TexelBr = (real32)((SampleB >> 16) & 0xFF);
-                real32 TexelBg = (real32)((SampleB >> 8)  & 0xFF);
-                real32 TexelBb = (real32)((SampleB >> 0)  & 0xFF);
-                real32 TexelBa = (real32)((SampleB >> 24) & 0xFF);
+                    uint8_t *TexelPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
+                    uint32_t SampleA = *(uint32_t *)(TexelPtr);
+                    uint32_t SampleB = *(uint32_t *)(TexelPtr + sizeof(uint32_t));
+                    uint32_t SampleC = *(uint32_t *)(TexelPtr + Texture->Pitch);
+                    uint32_t SampleD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
 
-                real32 TexelCr = (real32)((SampleC >> 16) & 0xFF);
-                real32 TexelCg = (real32)((SampleC >> 8)  & 0xFF);
-                real32 TexelCb = (real32)((SampleC >> 0)  & 0xFF);
-                real32 TexelCa = (real32)((SampleC >> 24) & 0xFF);
+                    real32 TexelAr = (real32)((SampleA >> 16) & 0xFF);
+                    real32 TexelAg = (real32)((SampleA >> 8)  & 0xFF);
+                    real32 TexelAb = (real32)((SampleA >> 0)  & 0xFF);
+                    real32 TexelAa = (real32)((SampleA >> 24) & 0xFF);
 
-                real32 TexelDr = (real32)((SampleD >> 16) & 0xFF);
-                real32 TexelDg = (real32)((SampleD >> 8)  & 0xFF);
-                real32 TexelDb = (real32)((SampleD >> 0)  & 0xFF);
-                real32 TexelDa = (real32)((SampleD >> 24) & 0xFF);
+                    real32 TexelBr = (real32)((SampleB >> 16) & 0xFF);
+                    real32 TexelBg = (real32)((SampleB >> 8)  & 0xFF);
+                    real32 TexelBb = (real32)((SampleB >> 0)  & 0xFF);
+                    real32 TexelBa = (real32)((SampleB >> 24) & 0xFF);
 
-                // Convert texture from sRGB to "linear" brightness space.
-                TexelAr = Square(Inv255*TexelAr);
-                TexelAg = Square(Inv255*TexelAg);
-                TexelAb = Square(Inv255*TexelAb);
-                TexelAa = Inv255*TexelAa;
+                    real32 TexelCr = (real32)((SampleC >> 16) & 0xFF);
+                    real32 TexelCg = (real32)((SampleC >> 8)  & 0xFF);
+                    real32 TexelCb = (real32)((SampleC >> 0)  & 0xFF);
+                    real32 TexelCa = (real32)((SampleC >> 24) & 0xFF);
 
-                TexelBr = Square(Inv255*TexelBr);
-                TexelBg = Square(Inv255*TexelBg);
-                TexelBb = Square(Inv255*TexelBb);
-                TexelBa = Inv255*TexelBa;
+                    real32 TexelDr = (real32)((SampleD >> 16) & 0xFF);
+                    real32 TexelDg = (real32)((SampleD >> 8)  & 0xFF);
+                    real32 TexelDb = (real32)((SampleD >> 0)  & 0xFF);
+                    real32 TexelDa = (real32)((SampleD >> 24) & 0xFF);
 
-                TexelCr = Square(Inv255*TexelCr);
-                TexelCg = Square(Inv255*TexelCg);
-                TexelCb = Square(Inv255*TexelCb);
-                TexelCa = Inv255*TexelCa;
+                    // Convert texture from sRGB to "linear" brightness space.
+                    TexelAr = Inv255*TexelAr;
+                    TexelAr *= TexelAr;
+                    TexelAg = Inv255*TexelAg;
+                    TexelAg *= TexelAg;
+                    TexelAb = Inv255*TexelAb;
+                    TexelAb *= TexelAb;
+                    TexelAa = Inv255*TexelAa;
 
-                TexelDr = Square(Inv255*TexelDr);
-                TexelDg = Square(Inv255*TexelDg);
-                TexelDb = Square(Inv255*TexelDb);
-                TexelDa = Inv255*TexelDa;
+                    TexelBr = Square(Inv255*TexelBr);
+                    TexelBg = Square(Inv255*TexelBg);
+                    TexelBb = Square(Inv255*TexelBb);
+                    TexelBa = Inv255*TexelBa;
 
-                // This is the bilinear texture blend.
-                real32 ifX = 1.0f - fX;
-                real32 ifY = 1.0f - fY;
+                    TexelCr = Square(Inv255*TexelCr);
+                    TexelCg = Square(Inv255*TexelCg);
+                    TexelCb = Square(Inv255*TexelCb);
+                    TexelCa = Inv255*TexelCa;
 
-                real32 l0 = ifY*ifX;
-                real32 l1 = ifY*fX;
-                real32 l2 = fY*ifX;
-                real32 l3 = fY*fX;
-                
-                real32 Texelr = l0*TexelAr + l1*TexelBr + l2*TexelCr + l3*TexelDr;
-                real32 Texelg = l0*TexelAg + l1*TexelBg + l2*TexelCg + l3*TexelDg;
-                real32 Texelb = l0*TexelAb + l1*TexelBb + l2*TexelCb + l3*TexelDb;
-                real32 Texela = l0*TexelAa + l1*TexelBa + l2*TexelCa + l3*TexelDa;
+                    TexelDr = Square(Inv255*TexelDr);
+                    TexelDg = Square(Inv255*TexelDg);
+                    TexelDb = Square(Inv255*TexelDb);
+                    TexelDa = Inv255*TexelDa;
 
-                // This modulates by the incoming colour.
-                Texelr = Texelr * Color.r;
-                Texelg = Texelg * Color.g;
-                Texelb = Texelb * Color.b;
-                Texela = Texela * Color.a;
+                    // This is the bilinear texture blend.
+                    real32 ifX = 1.0f - fX;
+                    real32 ifY = 1.0f - fY;
 
-                // This clamps the colours to a valid range.
-                Texelr = Clamp01(Texelr);
-                Texelg = Clamp01(Texelg);
-                Texelb = Clamp01(Texelb);
+                    real32 l0 = ifY*ifX;
+                    real32 l1 = ifY*fX;
+                    real32 l2 = fY*ifX;
+                    real32 l3 = fY*fX;
+                    
+                    real32 Texelr = l0*TexelAr + l1*TexelBr + l2*TexelCr + l3*TexelDr;
+                    real32 Texelg = l0*TexelAg + l1*TexelBg + l2*TexelCg + l3*TexelDg;
+                    real32 Texelb = l0*TexelAb + l1*TexelBb + l2*TexelCb + l3*TexelDb;
+                    real32 Texela = l0*TexelAa + l1*TexelBa + l2*TexelCa + l3*TexelDa;
 
-                // This loads the destination.
-                real32 Destr = (real32)((*Pixel >> 16) & 0xFF);
-                real32 Destg = (real32)((*Pixel >> 8)  & 0xFF);
-                real32 Destb = (real32)((*Pixel >> 0)  & 0xFF);
-                real32 Desta = (real32)((*Pixel >> 24) & 0xFF);
+                    // This modulates by the incoming colour.
+                    Texelr = Texelr * Color.r;
+                    Texelg = Texelg * Color.g;
+                    Texelb = Texelb * Color.b;
+                    Texela = Texela * Color.a;
 
-                // Go from sRGB to "linear" brightness space.
-                Destr = Square(Inv255*Destr);
-                Destg = Square(Inv255*Destg);
-                Destb = Square(Inv255*Destb);
-                Desta = Inv255*Desta;
+                    // This clamps the colours to a valid range.
+                    Texelr = Clamp01(Texelr);
+                    Texelg = Clamp01(Texelg);
+                    Texelb = Clamp01(Texelb);
 
-                // This is destination blend.
-                real32 InvTexelA = (1.0f - Texela);
-                real32 Blendedr = InvTexelA*Destr + Texelr;
-                real32 Blendedg = InvTexelA*Destg + Texelg;
-                real32 Blendedb = InvTexelA*Destb + Texelb;
-                real32 Blendeda = InvTexelA*Desta + Texela;
+                    // This loads the destination.
+                    real32 Destr = (real32)((*Pixel >> 16) & 0xFF);
+                    real32 Destg = (real32)((*Pixel >> 8)  & 0xFF);
+                    real32 Destb = (real32)((*Pixel >> 0)  & 0xFF);
+                    real32 Desta = (real32)((*Pixel >> 24) & 0xFF);
 
-                // Go from "linear" brightness space to sRGB.
-                Blendedr = One255*SquareRoot(Blendedr);
-                Blendedg = One255*SquareRoot(Blendedg);
-                Blendedb = One255*SquareRoot(Blendedb);
-                Blendeda = One255*Blendeda;
+                    // Go from sRGB to "linear" brightness space.
+                    Destr = Square(Inv255*Destr);
+                    Destg = Square(Inv255*Destg);
+                    Destb = Square(Inv255*Destb);
+                    Desta = Inv255*Desta;
 
-                // This is the repack.
-                *Pixel = (((uint32_t)(Blendeda + 0.5f) << 24) |
-                          ((uint32_t)(Blendedr + 0.5f) << 16) |
-                          ((uint32_t)(Blendedg + 0.5f) << 8) |
-                          ((uint32_t)(Blendedb + 0.5f) << 0));
+                    // This is destination blend.
+                    real32 InvTexelA = (1.0f - Texela);
+                    real32 Blendedr = InvTexelA*Destr + Texelr;
+                    real32 Blendedg = InvTexelA*Destg + Texelg;
+                    real32 Blendedb = InvTexelA*Destb + Texelb;
+                    real32 Blendeda = InvTexelA*Desta + Texela;
 
-                END_TIMED_BLOCK(FillPixel);
+                    // Go from "linear" brightness space to sRGB.
+                    Blendedr = One255*SquareRoot(Blendedr);
+                    Blendedg = One255*SquareRoot(Blendedg);
+                    Blendedb = One255*SquareRoot(Blendedb);
+                    Blendeda = One255*Blendeda;
+
+                    // This is the repack.
+                    *Pixel = (((uint32_t)(Blendeda + 0.5f) << 24) |
+                              ((uint32_t)(Blendedr + 0.5f) << 16) |
+                              ((uint32_t)(Blendedg + 0.5f) << 8) |
+                              ((uint32_t)(Blendedb + 0.5f) << 0));
+
+                    ++Pixel;
+
+                    END_TIMED_BLOCK(FillPixel);
+                }
             }
 
-            ++Pixel;
+//            Pixel += 4;
 
             END_TIMED_BLOCK(TestPixel);
         }
