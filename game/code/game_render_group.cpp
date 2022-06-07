@@ -280,7 +280,6 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
         uint32_t *Pixel = (uint32_t *)Row;
         for(int X = XMin; X <= XMax; ++X)
         {
-            BEGIN_TIMED_BLOCK(TestPixel);
 #if 1
             v2 PixelP = V2i(X, Y);
             v2 d = PixelP - Origin;
@@ -295,7 +294,6 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
             if((Edge0 < 0) && (Edge1 < 0) &&
                (Edge2 < 0) && (Edge3 < 0))
             {
-                BEGIN_TIMED_BLOCK(FillPixel);
 #if 1
                 v2 ScreenSpaceUV = {InvWidthMax*(real32)X, FixedCastY};
                 real32 ZDiff = PixelsToMetres*((real32)Y - OriginY);
@@ -419,7 +417,6 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                           ((uint32_t)(Blended255.g + 0.5f) << 8) |
                           ((uint32_t)(Blended255.b + 0.5f) << 0));
 
-                END_TIMED_BLOCK(FillPixel);
             }
 #else
             *Pixel = Color32;
@@ -427,7 +424,6 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
             ++Pixel;
 
-            END_TIMED_BLOCK(TestPixel);
         }
 
         Row += Buffer->Pitch;
@@ -512,13 +508,13 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
     real32 One255 = 255.0f;
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
+
+    BEGIN_TIMED_BLOCK(ProcessPixel);
     for(int Y = YMin; Y <= YMax; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
         for(int XI = XMin; XI <= XMax; XI += 4)
         {
-            BEGIN_TIMED_BLOCK(TestPixel);
-
             real32 TexelAr[4];
             real32 TexelAg[4];
             real32 TexelAb[4];
@@ -701,11 +697,11 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
 
             Pixel += 4;
 
-            END_TIMED_BLOCK(TestPixel);
         }
 
         Row += Buffer->Pitch;
     }
+    END_TIMED_BLOCK_COUNTED(ProcessPixel, (XMax - XMin + 1)*(YMax - YMin + 1));
 
     END_TIMED_BLOCK(DrawRectangleHopefullyQuickly);
 }
