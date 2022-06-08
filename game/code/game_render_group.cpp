@@ -505,6 +505,7 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
     v2 nYAxis = InvYAxisLengthSq*YAxis;
 
     real32 Inv255 = 1.0f / 255.0f;
+    __m128 Inv255_4x = _mm_set1_ps(Inv255);
     real32 One255 = 255.0f;
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
@@ -515,25 +516,25 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
         uint32_t *Pixel = (uint32_t *)Row;
         for(int XI = XMin; XI <= XMax; XI += 4)
         {
-            real32 TexelAr[4];
-            real32 TexelAg[4];
-            real32 TexelAb[4];
-            real32 TexelAa[4];
+            __m128 TexelAr = _mm_set1_ps(0.0f);
+            __m128 TexelAg = _mm_set1_ps(0.0f);
+            __m128 TexelAb = _mm_set1_ps(0.0f);
+            __m128 TexelAa = _mm_set1_ps(0.0f);
 
-            real32 TexelBr[4];
-            real32 TexelBg[4];
-            real32 TexelBb[4];
-            real32 TexelBa[4];
+            __m128 TexelBr = _mm_set1_ps(0.0f);
+            __m128 TexelBg = _mm_set1_ps(0.0f);
+            __m128 TexelBb = _mm_set1_ps(0.0f);
+            __m128 TexelBa = _mm_set1_ps(0.0f);
 
-            real32 TexelCr[4];
-            real32 TexelCg[4];
-            real32 TexelCb[4];
-            real32 TexelCa[4];
+            __m128 TexelCr = _mm_set1_ps(0.0f);
+            __m128 TexelCg = _mm_set1_ps(0.0f);
+            __m128 TexelCb = _mm_set1_ps(0.0f);
+            __m128 TexelCa = _mm_set1_ps(0.0f);
 
-            real32 TexelDr[4];
-            real32 TexelDg[4];
-            real32 TexelDb[4];
-            real32 TexelDa[4];
+            __m128 TexelDr = _mm_set1_ps(0.0f);
+            __m128 TexelDg = _mm_set1_ps(0.0f);
+            __m128 TexelDb = _mm_set1_ps(0.0f);
+            __m128 TexelDa = _mm_set1_ps(0.0f);
 
             real32 Destr[4];
             real32 Destg[4];
@@ -545,11 +546,13 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             real32 Blendedb[4];
             real32 Blendeda[4];
 
-            real32 fX[4];
-            real32 fY[4];
+            __m128 fX = _mm_set1_ps(0.0f);
+            __m128 fY = _mm_set1_ps(0.0f);
 
             bool ShouldFill[4];
 
+#define mmSquare(a) _mm_mul_ps(a, a)
+#define M(a, i) ((float *)&(a))[i]
             for(int I = 0; I < 4; ++I)
             {
                 v2 PixelP = V2i(XI + I, Y);
@@ -572,8 +575,8 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                     int32_t X = (int32_t)tX;
                     int32_t Y = (int32_t)tY;
 
-                    fX[I] = tX - (real32)X;
-                    fY[I] = tY - (real32)Y;
+                    M(fX, I) = tX - (real32)X;
+                    M(fY, I) = tY - (real32)Y;
 
                     Assert((X >= 0) && (X < Texture->Width));
                     Assert((Y >= 0) && (Y < Texture->Height));
@@ -584,25 +587,25 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                     uint32_t SampleC = *(uint32_t *)(TexelPtr + Texture->Pitch);
                     uint32_t SampleD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
 
-                    TexelAr[I] = (real32)((SampleA >> 16) & 0xFF);
-                    TexelAg[I] = (real32)((SampleA >> 8)  & 0xFF);
-                    TexelAb[I] = (real32)((SampleA >> 0)  & 0xFF);
-                    TexelAa[I] = (real32)((SampleA >> 24) & 0xFF);
+                    M(TexelAr, I) = (real32)((SampleA >> 16) & 0xFF);
+                    M(TexelAg, I) = (real32)((SampleA >> 8)  & 0xFF);
+                    M(TexelAb, I) = (real32)((SampleA >> 0)  & 0xFF);
+                    M(TexelAa, I) = (real32)((SampleA >> 24) & 0xFF);
 
-                    TexelBr[I] = (real32)((SampleB >> 16) & 0xFF);
-                    TexelBg[I] = (real32)((SampleB >> 8)  & 0xFF);
-                    TexelBb[I] = (real32)((SampleB >> 0)  & 0xFF);
-                    TexelBa[I] = (real32)((SampleB >> 24) & 0xFF);
+                    M(TexelBr, I) = (real32)((SampleB >> 16) & 0xFF);
+                    M(TexelBg, I) = (real32)((SampleB >> 8)  & 0xFF);
+                    M(TexelBb, I) = (real32)((SampleB >> 0)  & 0xFF);
+                    M(TexelBa, I) = (real32)((SampleB >> 24) & 0xFF);
 
-                    TexelCr[I] = (real32)((SampleC >> 16) & 0xFF);
-                    TexelCg[I] = (real32)((SampleC >> 8)  & 0xFF);
-                    TexelCb[I] = (real32)((SampleC >> 0)  & 0xFF);
-                    TexelCa[I] = (real32)((SampleC >> 24) & 0xFF);
+                    M(TexelCr, I) = (real32)((SampleC >> 16) & 0xFF);
+                    M(TexelCg, I) = (real32)((SampleC >> 8)  & 0xFF);
+                    M(TexelCb, I) = (real32)((SampleC >> 0)  & 0xFF);
+                    M(TexelCa, I) = (real32)((SampleC >> 24) & 0xFF);
 
-                    TexelDr[I] = (real32)((SampleD >> 16) & 0xFF);
-                    TexelDg[I] = (real32)((SampleD >> 8)  & 0xFF);
-                    TexelDb[I] = (real32)((SampleD >> 0)  & 0xFF);
-                    TexelDa[I] = (real32)((SampleD >> 24) & 0xFF);
+                    M(TexelDr, I) = (real32)((SampleD >> 16) & 0xFF);
+                    M(TexelDg, I) = (real32)((SampleD >> 8)  & 0xFF);
+                    M(TexelDb, I) = (real32)((SampleD >> 0)  & 0xFF);
+                    M(TexelDa, I) = (real32)((SampleD >> 24) & 0xFF);
                     
                     // This loads the destination.
                     Destr[I] = (real32)((*(Pixel + I) >> 16) & 0xFF);
@@ -612,46 +615,43 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                 }
             }
 
+            // Convert texture from 0-255 sRGB to "linear" 0-1 brightness space.
+            TexelAr = mmSquare(_mm_mul_ps(Inv255_4x, TexelAr));
+            TexelAg = mmSquare(_mm_mul_ps(Inv255_4x, TexelAg));
+            TexelAb = mmSquare(_mm_mul_ps(Inv255_4x, TexelAb));
+            TexelAa = _mm_mul_ps(Inv255_4x, TexelAa);
+
+            TexelBr = mmSquare(_mm_mul_ps(Inv255_4x, TexelBr));
+            TexelBg = mmSquare(_mm_mul_ps(Inv255_4x, TexelBg));
+            TexelBb = mmSquare(_mm_mul_ps(Inv255_4x, TexelBb));
+            TexelBa = _mm_mul_ps(Inv255_4x, TexelBa);
+
+            TexelCr = mmSquare(_mm_mul_ps(Inv255_4x, TexelCr));
+            TexelCg = mmSquare(_mm_mul_ps(Inv255_4x, TexelCg));
+            TexelCb = mmSquare(_mm_mul_ps(Inv255_4x, TexelCb));
+            TexelCa = _mm_mul_ps(Inv255_4x, TexelCa);
+
+            TexelDr = mmSquare(_mm_mul_ps(Inv255_4x, TexelDr));
+            TexelDg = mmSquare(_mm_mul_ps(Inv255_4x, TexelDg));
+            TexelDb = mmSquare(_mm_mul_ps(Inv255_4x, TexelDb));
+            TexelDa = _mm_mul_ps(Inv255_4x, TexelDa);
+
+            // This is the bilinear texture blend.
+            real32 ifX = 1.0f - fX[I];
+            real32 ifY = 1.0f - fY[I];
+
+            real32 l0 = ifY*ifX;
+            real32 l1 = ifY*fX[I];
+            real32 l2 = fY[I]*ifX;
+            real32 l3 = fY[I]*fX[I];
+            
+            real32 Texelr = l0*M(TexelAr, I) + l1*M(TexelBr, I) + l2*M(TexelCr, I) + l3*M(TexelDr, I);
+            real32 Texelg = l0*M(TexelAg, I) + l1*M(TexelBg, I) + l2*M(TexelCg, I) + l3*M(TexelDg, I);
+            real32 Texelb = l0*M(TexelAb, I) + l1*M(TexelBb, I) + l2*M(TexelCb, I) + l3*M(TexelDb, I);
+            real32 Texela = l0*M(TexelAa, I) + l1*M(TexelBa, I) + l2*M(TexelCa, I) + l3*M(TexelDa, I);
+
             for(int I = 0; I < 4; ++I)
             {
-                // Convert texture from sRGB to "linear" brightness space.
-                TexelAr[I] = Inv255*TexelAr[I];
-                TexelAr[I] *= TexelAr[I];
-                TexelAg[I] = Inv255*TexelAg[I];
-                TexelAg[I] *= TexelAg[I];
-                TexelAb[I] = Inv255*TexelAb[I];
-                TexelAb[I] *= TexelAb[I];
-                TexelAa[I] = Inv255*TexelAa[I];
-
-                TexelBr[I] = Square(Inv255*TexelBr[I]);
-                TexelBg[I] = Square(Inv255*TexelBg[I]);
-                TexelBb[I] = Square(Inv255*TexelBb[I]);
-                TexelBa[I] = Inv255*TexelBa[I];
-
-                TexelCr[I] = Square(Inv255*TexelCr[I]);
-                TexelCg[I] = Square(Inv255*TexelCg[I]);
-                TexelCb[I] = Square(Inv255*TexelCb[I]);
-                TexelCa[I] = Inv255*TexelCa[I];
-
-                TexelDr[I] = Square(Inv255*TexelDr[I]);
-                TexelDg[I] = Square(Inv255*TexelDg[I]);
-                TexelDb[I] = Square(Inv255*TexelDb[I]);
-                TexelDa[I] = Inv255*TexelDa[I];
-
-                // This is the bilinear texture blend.
-                real32 ifX = 1.0f - fX[I];
-                real32 ifY = 1.0f - fY[I];
-
-                real32 l0 = ifY*ifX;
-                real32 l1 = ifY*fX[I];
-                real32 l2 = fY[I]*ifX;
-                real32 l3 = fY[I]*fX[I];
-                
-                real32 Texelr = l0*TexelAr[I] + l1*TexelBr[I] + l2*TexelCr[I] + l3*TexelDr[I];
-                real32 Texelg = l0*TexelAg[I] + l1*TexelBg[I] + l2*TexelCg[I] + l3*TexelDg[I];
-                real32 Texelb = l0*TexelAb[I] + l1*TexelBb[I] + l2*TexelCb[I] + l3*TexelDb[I];
-                real32 Texela = l0*TexelAa[I] + l1*TexelBa[I] + l2*TexelCa[I] + l3*TexelDa[I];
-
                 // This modulates by the incoming colour.
                 Texelr = Texelr * Color.r;
                 Texelg = Texelg * Color.g;
