@@ -510,6 +510,12 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
     __m128 Colorg_4x = _mm_set1_ps(Color.g);
     __m128 Colorb_4x = _mm_set1_ps(Color.b);
     __m128 Colora_4x = _mm_set1_ps(Color.a);
+    __m128 nXAxisx_4x = _mm_set1_ps(nXAxis.x);
+    __m128 nXAxisy_4x = _mm_set1_ps(nXAxis.y);
+    __m128 nYAxisx_4x = _mm_set1_ps(nYAxis.x);
+    __m128 nYAxisy_4x = _mm_set1_ps(nYAxis.y);
+    __m128 Originx_4x = _mm_set1_ps(Origin.x);
+    __m128 Originy_4x = _mm_set1_ps(Origin.y);
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
 
@@ -556,24 +562,30 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
 
 #define mmSquare(a) _mm_mul_ps(a, a)
 #define M(a, i) ((float *)&(a))[i]
+
+            __m128 PixelPx = _mm_set_ps((real32)(XI + 3),
+                                        (real32)(XI + 2),
+                                        (real32)(XI + 1),
+                                        (real32)(XI + 0));
+            __m128 PixelPy = _mm_set1_ps((real32)Y);
+
+            __m128 dx = _mm_sub_ps(PixelPx, Originx_4x);
+            __m128 dy = _mm_sub_ps(PixelPy, Originy_4x);
+            __m128 U = _mm_add_ps(_mm_mul_ps(dx, nXAxisx_4x), _mm_mul_ps(dy, nXAxisy_4x));
+            __m128 V = _mm_add_ps(_mm_mul_ps(dx, nYAxisx_4x), _mm_mul_ps(dy, nYAxisy_4x));
+
             for(int I = 0; I < 4; ++I)
             {
-                v2 PixelP = V2i(XI + I, Y);
-                v2 d = PixelP - Origin;
-
-                real32 U = Inner(d, nXAxis);
-                real32 V = Inner(d, nYAxis);
-
-                ShouldFill[I] = ((U >= 0.0f) &&
-                                 (U <= 1.0f) &&
-                                 (V >= 0.0f) &&
-                                 (V <= 1.0f));
+                ShouldFill[I] = ((M(U, I) >= 0.0f) &&
+                                 (M(U, I) <= 1.0f) &&
+                                 (M(V, I) >= 0.0f) &&
+                                 (M(V, I) <= 1.0f));
 
                 if(ShouldFill[I])
                 {
                     // TODO: Need to formalise texture boundaries.
-                    real32 tX = ((U*(real32)(Texture->Width - 2)));
-                    real32 tY = ((V*(real32)(Texture->Height - 2)));
+                    real32 tX = ((M(U, I)*(real32)(Texture->Width - 2)));
+                    real32 tY = ((M(V, I)*(real32)(Texture->Height - 2)));
 
                     int32_t X = (int32_t)tX;
                     int32_t Y = (int32_t)tY;
@@ -671,13 +683,10 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             Texelb = _mm_mul_ps(Texelb, Colorb_4x);
             Texela = _mm_mul_ps(Texela, Colora_4x);
 
-            for(int I = 0; I < 4; ++I)
-            {
-                // This clamps the colours to a valid range.
-                M(Texelr, I) = Clamp01(M(Texelr, I));
-                M(Texelg, I) = Clamp01(M(Texelg, I));
-                M(Texelb, I) = Clamp01(M(Texelb, I));
-            }
+            // This clamps the colours to a valid range.
+            Texelr = _mm_min_ps(_mm_max_ps(Texelr, Zero), One);
+            Texelg = _mm_min_ps(_mm_max_ps(Texelg, Zero), One);
+            Texelb = _mm_min_ps(_mm_max_ps(Texelb, Zero), One);
 
             // Go from sRGB to "linear" brightness space.
             Destr = mmSquare(_mm_mul_ps(Inv255_4x, Destr));
