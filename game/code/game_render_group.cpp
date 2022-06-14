@@ -707,9 +707,14 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             Blendedb = _mm_mul_ps(One255_4x, _mm_sqrt_ps(Blendedb));
             Blendeda = _mm_mul_ps(One255_4x, Blendeda);
 
+            RGBA0 = ;
+            RGBA1 = ;
+            RGBA2 = ;
+            RGBA3 = ;
+
             for(int I = 0; I < 4; ++I)
             {
-                if(ShouldFill[I])
+//                if(ShouldFill[I])
                 {
                     // This is the repack.
                     *(Pixel + I) = (((uint32_t)(M(Blendeda, I) + 0.5f) << 24) |
