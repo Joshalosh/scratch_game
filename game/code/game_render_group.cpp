@@ -707,22 +707,41 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             Blendedb = _mm_mul_ps(One255_4x, _mm_sqrt_ps(Blendedb));
             Blendeda = _mm_mul_ps(One255_4x, Blendeda);
 
+            // TODO: Make sure to set the rounding method to something known.
+            __m128i Intr = _mm_cvtps_epi32(Blendedr);
+            __m128i Intg = _mm_cvtps_epi32(Blendedg);
+            __m128i Intb = _mm_cvtps_epi32(Blendedb);
+            __m128i Inta = _mm_cvtps_epi32(Blendeda);
+
 #if 1
-            uint32_t Rs[] = {0x50505050, 0x51515151, 0x52525252, 0x53535353};
-            uint32_t Gs[] = {0xC0C0C0C0, 0xC1C1C1C1, 0xC2C2C2C2, 0xC3C3C3C3};
-            uint32_t Bs[] = {0xB0B0B0B0, 0xB1B1B1B1, 0xB2B2B2B2, 0xB3B3B3B3};
-            uint32_t As[] = {0xA0A0A0A0, 0xA1A1A1A1, 0xA2A2A2A2, 0xA3A3A3A3};
-            Blendedr = *(__m128 *)Rs;
-            Blendedg = *(__m128 *)Gs;
-            Blendedb = *(__m128 *)Bs;
-            Blendeda = *(__m128 *)As;
+            uint32_t Rs[] = {0x00000050, 0x00000051, 0x00000052, 0x00000053};
+            uint32_t Gs[] = {0x000000C0, 0x000000C1, 0x000000C2, 0x000000C3};
+            uint32_t Bs[] = {0x000000B0, 0x000000B1, 0x000000B2, 0x000000B3};
+            uint32_t As[] = {0x000000A0, 0x000000A1, 0x000000A2, 0x000000A3};
+            Intr = *(__m128i *)Rs;
+            Intg = *(__m128i *)Gs;
+            Intb = *(__m128i *)Bs;
+            Inta = *(__m128i *)As;
 #endif
 
+            __m128i Sr = _mm_slli_epi32(Intr, 16);
+            __m128i Sg = _mm_slli_epi32(Intg, 8);
+            __m128i Sb = Intb;
+            __m128i Sa = _mm_slli_epi32(Inta, 24);
+
+            __m128i Out = _mm_or_si128(_mm_or_si128(_mm_or_si128(Sr, Sg), Sb), Sa);
+#if 0
             __m128i R1B1R0B0 = _mm_unpacklo_epi32(_mm_castps_si128(Blendedb), _mm_castps_si128(Blendedr));
             __m128i A1G1A0G0 = _mm_unpacklo_epi32(_mm_castps_si128(Blendedg), _mm_castps_si128(Blendeda));
 
+            __m128i R3B3R2B2 = _mm_unpackhi_epi32(_mm_castps_si128(Blendedb), _mm_castps_si128(Blendedr));
+            __m128i A3G3A2G2 = _mm_unpackhi_epi32(_mm_castps_si128(Blendedg), _mm_castps_si128(Blendeda));
+
             __m128i ARGB0 = _mm_unpacklo_epi32(R1B1R0B0, A1G1A0G0);
             __m128i ARGB1 = _mm_unpackhi_epi32(R1B1R0B0, A1G1A0G0);
+
+            __m128i ARGB2 = _mm_unpacklo_epi32(R3B3R2B2, A3G3A2G2);
+            __m128i ARGB3 = _mm_unpackhi_epi32(R3B3R2B2, A3G3A2G2);
 
 #if 0
             ARGB2 = ;
@@ -740,6 +759,7 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                                     ((uint32_t)(M(Blendedb, I) + 0.5f) << 0));
                 }
             }
+#endif
 
             Pixel += 4;
 
