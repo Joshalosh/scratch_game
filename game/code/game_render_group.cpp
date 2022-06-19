@@ -660,22 +660,14 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             __m128 l2 = _mm_mul_ps(fY, ifX);
             __m128 l3 = _mm_mul_ps(fY, fX);
             
-            __m128 Texelr = _mm_add_ps(_mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAr), 
-                                                             _mm_mul_ps(l1, TexelBr)),
-                                                  _mm_mul_ps(l2, TexelCr)),
-                                       _mm_mul_ps(l3, TexelDr));
-            __m128 Texelg = _mm_add_ps(_mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAg), 
-                                                             _mm_mul_ps(l1, TexelBg)),
-                                                  _mm_mul_ps(l2, TexelCg)),
-                                       _mm_mul_ps(l3, TexelDg));
-            __m128 Texelb = _mm_add_ps(_mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAb), 
-                                                             _mm_mul_ps(l1, TexelBb)),
-                                                  _mm_mul_ps(l2, TexelCb)),
-                                       _mm_mul_ps(l3, TexelDb));
-            __m128 Texela = _mm_add_ps(_mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAa), 
-                                                             _mm_mul_ps(l1, TexelBa)),
-                                                  _mm_mul_ps(l2, TexelCa)),
-                                       _mm_mul_ps(l3, TexelDa));
+            __m128 Texelr = _mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAr), _mm_mul_ps(l1, TexelBr)),
+                                       _mm_add_ps(_mm_mul_ps(l2, TexelCr), _mm_mul_ps(l3, TexelDr)));
+            __m128 Texelg = _mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAg), _mm_mul_ps(l1, TexelBg)),
+                                       _mm_add_ps(_mm_mul_ps(l2, TexelCg), _mm_mul_ps(l3, TexelDg)));
+            __m128 Texelb = _mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAb), _mm_mul_ps(l1, TexelBb)),
+                                       _mm_add_ps(_mm_mul_ps(l2, TexelCb), _mm_mul_ps(l3, TexelDb)));
+            __m128 Texela = _mm_add_ps(_mm_add_ps(_mm_mul_ps(l0, TexelAa), _mm_mul_ps(l1, TexelBa)),
+                                       _mm_add_ps(_mm_mul_ps(l2, TexelCa), _mm_mul_ps(l3, TexelDa)));
             
             // This modulates by the incoming colour.
             Texelr = _mm_mul_ps(Texelr, Colorr_4x);
@@ -713,56 +705,17 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             __m128i Intb = _mm_cvtps_epi32(Blendedb);
             __m128i Inta = _mm_cvtps_epi32(Blendeda);
 
-#if 1
-            uint32_t Rs[] = {0x00000050, 0x00000051, 0x00000052, 0x00000053};
-            uint32_t Gs[] = {0x000000C0, 0x000000C1, 0x000000C2, 0x000000C3};
-            uint32_t Bs[] = {0x000000B0, 0x000000B1, 0x000000B2, 0x000000B3};
-            uint32_t As[] = {0x000000A0, 0x000000A1, 0x000000A2, 0x000000A3};
-            Intr = *(__m128i *)Rs;
-            Intg = *(__m128i *)Gs;
-            Intb = *(__m128i *)Bs;
-            Inta = *(__m128i *)As;
-#endif
-
             __m128i Sr = _mm_slli_epi32(Intr, 16);
             __m128i Sg = _mm_slli_epi32(Intg, 8);
             __m128i Sb = Intb;
             __m128i Sa = _mm_slli_epi32(Inta, 24);
 
-            __m128i Out = _mm_or_si128(_mm_or_si128(_mm_or_si128(Sr, Sg), Sb), Sa);
-#if 0
-            __m128i R1B1R0B0 = _mm_unpacklo_epi32(_mm_castps_si128(Blendedb), _mm_castps_si128(Blendedr));
-            __m128i A1G1A0G0 = _mm_unpacklo_epi32(_mm_castps_si128(Blendedg), _mm_castps_si128(Blendeda));
+            __m128i Out = _mm_or_si128(_mm_or_si128(Sr, Sg), _mm_or_si128(Sb, Sa));
 
-            __m128i R3B3R2B2 = _mm_unpackhi_epi32(_mm_castps_si128(Blendedb), _mm_castps_si128(Blendedr));
-            __m128i A3G3A2G2 = _mm_unpackhi_epi32(_mm_castps_si128(Blendedg), _mm_castps_si128(Blendeda));
-
-            __m128i ARGB0 = _mm_unpacklo_epi32(R1B1R0B0, A1G1A0G0);
-            __m128i ARGB1 = _mm_unpackhi_epi32(R1B1R0B0, A1G1A0G0);
-
-            __m128i ARGB2 = _mm_unpacklo_epi32(R3B3R2B2, A3G3A2G2);
-            __m128i ARGB3 = _mm_unpackhi_epi32(R3B3R2B2, A3G3A2G2);
-
-#if 0
-            ARGB2 = ;
-            ARGB3 = ;
-#endif
-
-            for(int I = 0; I < 4; ++I)
-            {
-//                if(ShouldFill[I])
-                {
-                    // This is the repack.
-                    *(Pixel + I) = (((uint32_t)(M(Blendeda, I) + 0.5f) << 24) |
-                                    ((uint32_t)(M(Blendedr, I) + 0.5f) << 16) |
-                                    ((uint32_t)(M(Blendedg, I) + 0.5f) << 8) |
-                                    ((uint32_t)(M(Blendedb, I) + 0.5f) << 0));
-                }
-            }
-#endif
+            // TODO: Make sure to write only the pixels where ShouldFill[i] == true.
+            _mm_storeu_si128((__m128i *)Pixel, Out);
 
             Pixel += 4;
-
         }
 
         Row += Buffer->Pitch;
