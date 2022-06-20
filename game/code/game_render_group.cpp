@@ -562,6 +562,7 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
 
 #define mmSquare(a) _mm_mul_ps(a, a)
 #define M(a, i) ((float *)&(a))[i]
+#define Mi(a, i) ((uint32_t *)&(a))[i]
 
             __m128 PixelPx = _mm_set_ps((real32)(XI + 3),
                                         (real32)(XI + 2),
@@ -573,6 +574,14 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             __m128 dy = _mm_sub_ps(PixelPy, Originy_4x);
             __m128 U = _mm_add_ps(_mm_mul_ps(dx, nXAxisx_4x), _mm_mul_ps(dy, nXAxisy_4x));
             __m128 V = _mm_add_ps(_mm_mul_ps(dx, nYAxisx_4x), _mm_mul_ps(dy, nYAxisy_4x));
+
+            __m128i OriginalDest = _mm_loadu_si128((__m128i *)Pixel);
+            __m128i WriteMask = _mm_set1_epi32(0);
+
+            uint32_t SampleA[4];
+            uint32_t SampleB[4];
+            uint32_t SampleC[4];
+            uint32_t SampleD[4];
 
             for(int I = 0; I < 4; ++I)
             {
@@ -597,38 +606,101 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
                     Assert((Y >= 0) && (Y < Texture->Height));
 
                     uint8_t *TexelPtr = ((uint8_t *)Texture->Memory) + Y*Texture->Pitch + X*sizeof(uint32_t);
-                    uint32_t SampleA = *(uint32_t *)(TexelPtr);
-                    uint32_t SampleB = *(uint32_t *)(TexelPtr + sizeof(uint32_t));
-                    uint32_t SampleC = *(uint32_t *)(TexelPtr + Texture->Pitch);
-                    uint32_t SampleD = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
-
-                    M(TexelAr, I) = (real32)((SampleA >> 16) & 0xFF);
-                    M(TexelAg, I) = (real32)((SampleA >> 8)  & 0xFF);
-                    M(TexelAb, I) = (real32)((SampleA >> 0)  & 0xFF);
-                    M(TexelAa, I) = (real32)((SampleA >> 24) & 0xFF);
-
-                    M(TexelBr, I) = (real32)((SampleB >> 16) & 0xFF);
-                    M(TexelBg, I) = (real32)((SampleB >> 8)  & 0xFF);
-                    M(TexelBb, I) = (real32)((SampleB >> 0)  & 0xFF);
-                    M(TexelBa, I) = (real32)((SampleB >> 24) & 0xFF);
-
-                    M(TexelCr, I) = (real32)((SampleC >> 16) & 0xFF);
-                    M(TexelCg, I) = (real32)((SampleC >> 8)  & 0xFF);
-                    M(TexelCb, I) = (real32)((SampleC >> 0)  & 0xFF);
-                    M(TexelCa, I) = (real32)((SampleC >> 24) & 0xFF);
-
-                    M(TexelDr, I) = (real32)((SampleD >> 16) & 0xFF);
-                    M(TexelDg, I) = (real32)((SampleD >> 8)  & 0xFF);
-                    M(TexelDb, I) = (real32)((SampleD >> 0)  & 0xFF);
-                    M(TexelDa, I) = (real32)((SampleD >> 24) & 0xFF);
+                    SampleA[I] = *(uint32_t *)(TexelPtr);
+                    SampleB[I] = *(uint32_t *)(TexelPtr + sizeof(uint32_t));
+                    SampleC[I] = *(uint32_t *)(TexelPtr + Texture->Pitch);
+                    SampleD[I] = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
                     
                     // This loads the destination.
                     M(Destr, I) = (real32)((*(Pixel + I) >> 16) & 0xFF);
                     M(Destg, I) = (real32)((*(Pixel + I) >> 8)  & 0xFF);
                     M(Destb, I) = (real32)((*(Pixel + I) >> 0)  & 0xFF);
                     M(Desta, I) = (real32)((*(Pixel + I) >> 24) & 0xFF);
+
+                    Mi(WriteMask, I) = 0xFFFFFFFF;
                 }
             }
+
+            M(TexelAr, 0) = (real32)((SampleA[0] >> 16) & 0xFF);
+            M(TexelAg, 0) = (real32)((SampleA[0] >> 8)  & 0xFF);
+            M(TexelAb, 0) = (real32)((SampleA[0] >> 0)  & 0xFF);
+            M(TexelAa, 0) = (real32)((SampleA[0] >> 24) & 0xFF);
+
+            M(TexelAr, 1) = (real32)((SampleA[1] >> 16) & 0xFF);
+            M(TexelAg, 1) = (real32)((SampleA[1] >> 8)  & 0xFF);
+            M(TexelAb, 1) = (real32)((SampleA[1] >> 0)  & 0xFF);
+            M(TexelAa, 1) = (real32)((SampleA[1] >> 24) & 0xFF);
+
+            M(TexelAr, 2) = (real32)((SampleA[2] >> 16) & 0xFF);
+            M(TexelAg, 2) = (real32)((SampleA[2] >> 8)  & 0xFF);
+            M(TexelAb, 2) = (real32)((SampleA[2] >> 0)  & 0xFF);
+            M(TexelAa, 2) = (real32)((SampleA[2] >> 24) & 0xFF);
+
+            M(TexelAr, 3) = (real32)((SampleA[3] >> 16) & 0xFF);
+            M(TexelAg, 3) = (real32)((SampleA[3] >> 8)  & 0xFF);
+            M(TexelAb, 3) = (real32)((SampleA[3] >> 0)  & 0xFF);
+            M(TexelAa, 3) = (real32)((SampleA[3] >> 24) & 0xFF);
+
+            M(TexelBr, 0) = (real32)((SampleB[0] >> 16) & 0xFF);
+            M(TexelBg, 0) = (real32)((SampleB[0] >> 8)  & 0xFF);
+            M(TexelBb, 0) = (real32)((SampleB[0] >> 0)  & 0xFF);
+            M(TexelBa, 0) = (real32)((SampleB[0] >> 24) & 0xFF);
+
+            M(TexelBr, 1) = (real32)((SampleB[1] >> 16) & 0xFF);
+            M(TexelBg, 1) = (real32)((SampleB[1] >> 8)  & 0xFF);
+            M(TexelBb, 1) = (real32)((SampleB[1] >> 0)  & 0xFF);
+            M(TexelBa, 1) = (real32)((SampleB[1] >> 24) & 0xFF);
+
+            M(TexelBr, 2) = (real32)((SampleB[2] >> 16) & 0xFF);
+            M(TexelBg, 2) = (real32)((SampleB[2] >> 8)  & 0xFF);
+            M(TexelBb, 2) = (real32)((SampleB[2] >> 0)  & 0xFF);
+            M(TexelBa, 2) = (real32)((SampleB[2] >> 24) & 0xFF);
+
+            M(TexelBr, 3) = (real32)((SampleB[3] >> 16) & 0xFF);
+            M(TexelBg, 3) = (real32)((SampleB[3] >> 8)  & 0xFF);
+            M(TexelBb, 3) = (real32)((SampleB[3] >> 0)  & 0xFF);
+            M(TexelBa, 3) = (real32)((SampleB[3] >> 24) & 0xFF);
+
+            M(TexelCr, 0) = (real32)((SampleC[0] >> 16) & 0xFF);
+            M(TexelCg, 0) = (real32)((SampleC[0] >> 8)  & 0xFF);
+            M(TexelCb, 0) = (real32)((SampleC[0] >> 0)  & 0xFF);
+            M(TexelCa, 0) = (real32)((SampleC[0] >> 24) & 0xFF);
+
+            M(TexelCr, 1) = (real32)((SampleC[1] >> 16) & 0xFF);
+            M(TexelCg, 1) = (real32)((SampleC[1] >> 8)  & 0xFF);
+            M(TexelCb, 1) = (real32)((SampleC[1] >> 0)  & 0xFF);
+            M(TexelCa, 1) = (real32)((SampleC[1] >> 24) & 0xFF);
+
+            M(TexelCr, 2) = (real32)((SampleC[2] >> 16) & 0xFF);
+            M(TexelCg, 2) = (real32)((SampleC[2] >> 8)  & 0xFF);
+            M(TexelCb, 2) = (real32)((SampleC[2] >> 0)  & 0xFF);
+            M(TexelCa, 2) = (real32)((SampleC[2] >> 24) & 0xFF);
+
+            M(TexelCr, 3) = (real32)((SampleC[3] >> 16) & 0xFF);
+            M(TexelCg, 3) = (real32)((SampleC[3] >> 8)  & 0xFF);
+            M(TexelCb, 3) = (real32)((SampleC[3] >> 0)  & 0xFF);
+            M(TexelCa, 3) = (real32)((SampleC[3] >> 24) & 0xFF);
+
+            M(TexelDr, 0) = (real32)((SampleD[0] >> 16) & 0xFF);
+            M(TexelDg, 0) = (real32)((SampleD[0] >> 8)  & 0xFF);
+            M(TexelDb, 0) = (real32)((SampleD[0] >> 0)  & 0xFF);
+            M(TexelDa, 0) = (real32)((SampleD[0] >> 24) & 0xFF);
+
+            M(TexelDr, 1) = (real32)((SampleD[1] >> 16) & 0xFF);
+            M(TexelDg, 1) = (real32)((SampleD[1] >> 8)  & 0xFF);
+            M(TexelDb, 1) = (real32)((SampleD[1] >> 0)  & 0xFF);
+            M(TexelDa, 1) = (real32)((SampleD[1] >> 24) & 0xFF);
+
+            M(TexelDr, 2) = (real32)((SampleD[2] >> 16) & 0xFF);
+            M(TexelDg, 2) = (real32)((SampleD[2] >> 8)  & 0xFF);
+            M(TexelDb, 2) = (real32)((SampleD[2] >> 0)  & 0xFF);
+            M(TexelDa, 2) = (real32)((SampleD[2] >> 24) & 0xFF);
+
+            M(TexelDr, 3) = (real32)((SampleD[3] >> 16) & 0xFF);
+            M(TexelDg, 3) = (real32)((SampleD[3] >> 8)  & 0xFF);
+            M(TexelDb, 3) = (real32)((SampleD[3] >> 0)  & 0xFF);
+            M(TexelDa, 3) = (real32)((SampleD[3] >> 24) & 0xFF);
+
 
             // Convert texture from 0-255 sRGB to "linear" 0-1 brightness space.
             TexelAr = mmSquare(_mm_mul_ps(Inv255_4x, TexelAr));
@@ -699,7 +771,6 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
             Blendedb = _mm_mul_ps(One255_4x, _mm_sqrt_ps(Blendedb));
             Blendeda = _mm_mul_ps(One255_4x, Blendeda);
 
-            // TODO: Make sure to set the rounding method to something known.
             __m128i Intr = _mm_cvtps_epi32(Blendedr);
             __m128i Intg = _mm_cvtps_epi32(Blendedg);
             __m128i Intb = _mm_cvtps_epi32(Blendedb);
@@ -712,8 +783,11 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
 
             __m128i Out = _mm_or_si128(_mm_or_si128(Sr, Sg), _mm_or_si128(Sb, Sa));
 
+            __m128i MaskedOut = _mm_or_si128(_mm_and_si128(WriteMask, Out),
+                                             _mm_andnot_si128(WriteMask, OriginalDest));
+
             // TODO: Make sure to write only the pixels where ShouldFill[i] == true.
-            _mm_storeu_si128((__m128i *)Pixel, Out);
+            _mm_storeu_si128((__m128i *)Pixel, MaskedOut);
 
             Pixel += 4;
         }
