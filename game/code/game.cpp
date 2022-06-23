@@ -976,7 +976,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
                         (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
 
-        TranState->GroundBufferCount = 64;
+        TranState->GroundBufferCount = 256;
         TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
         for(uint32_t GroundBufferIndex = 0;
             GroundBufferIndex < TranState->GroundBufferCount;

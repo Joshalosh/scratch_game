@@ -693,11 +693,13 @@ DrawRectangleHopefullyQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAx
 
                 __m128i Out = _mm_or_si128(_mm_or_si128(Sr, Sg), _mm_or_si128(Sb, Sa));
 
+#if 1
                 __m128i MaskedOut = _mm_or_si128(_mm_and_si128(WriteMask, Out),
                                                  _mm_andnot_si128(WriteMask, OriginalDest));
-
-                // TODO: Make sure to write only the pixels where ShouldFill[i] == true.
                 _mm_storeu_si128((__m128i *)Pixel, MaskedOut);
+#else
+                _mm_maskmoveu_si128(Out, WriteMask, (char *)Pixel);
+#endif
             }
 
             Pixel += 4;
