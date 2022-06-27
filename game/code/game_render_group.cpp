@@ -435,6 +435,28 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
     END_TIMED_BLOCK(DrawRectangleSlowly);
 }
 
+struct counts
+{
+    int mm_add_ps;
+    int mm_sub_ps;
+    int mm_mul_ps;
+    int mm_castps_si128;
+    int mm_and_ps;
+    int mm_or_si128;
+    int mm_cmpge_ps;
+    int mm_cmple_ps;
+    int mm_min_ps;
+    int mm_max_ps;
+    int mm_cvttps_epi32;
+    int mm_cvtps_epi32;
+    int mm_cvtepi32_ps;
+    int mm_and_si128;
+    int mm_andnot_si128;
+    int mm_srli_epi32;
+    int mm_slli_epi32;
+    int mm_sqrt_ps;
+};
+
 internal void
 DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
                      loaded_bitmap *Texture, real32 PixelsToMetres)
@@ -546,6 +568,33 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 #define mmSquare(a) _mm_mul_ps(a, a)
 #define M(a, i) ((float *)&(a))[i]
 #define Mi(a, i) ((uint32_t *)&(a))[i]
+
+            counts Counts = {};
+#define _mm_add_ps(a, b) ++Counts.mm_add_ps; a; b
+#define _mm_sub_ps(a, b) ++Counts.mm_sub_ps; a; b
+#define _mm_mul_ps(a, b) ++Counts.mm_mul_ps; a; b
+#define _mm_castps_si128(a) ++Counts.mm_castps_si128; a
+#define _mm_and_ps(a, b) ++Counts.mm_and_ps; a; b
+#define _mm_or_si128(a, b) ++Counts.mm_or_si128; a; b
+#define _mm_cmpge_ps(a, b) ++Counts.mm_cmpge_ps; a; b
+#define _mm_cmple_ps(a, b) ++Counts.mm_cmple_ps; a; b
+#define _mm_min_ps(a, b) ++Counts.mm_min_ps; a; b
+#define _mm_max_ps(a, b) ++Counts.mm_max_ps; a; b
+#define _mm_cvttps_epi32(a) ++Counts.mm_cvttps_epi32; a 
+#define _mm_cvtps_epi32(a) ++Counts.mm_cvtps_epi32; a
+#define _mm_cvtepi32_ps(a) ++Counts.mm_cvtepi32_ps; a
+#define _mm_and_si128(a, b) ++Counts.mm_and_si128; a; b
+#define _mm_andnot_si128(a, b) ++Counts.mm_andnot_si128; a; b
+#define _mm_srli_epi32(a, b) ++Counts.mm_srli_epi32; a
+#define _mm_slli_epi32(a, b) ++Counts.mm_slli_epi32; a
+#define _mm_sqrt_ps(a) ++Counts.mm_sqrt_ps; a
+#undef mmSquare
+#define mmSquare(a) ++Counts.mm_mul_ps; a
+#define __m128 int
+#define __m128i int
+
+#define _mm_loadu_si128(a) 0
+#define _mm_storeu_si128(a, b)
 
             __m128 U = _mm_add_ps(_mm_mul_ps(PixelPx, nXAxisx_4x), _mm_mul_ps(PixelPy, nXAxisy_4x));
             __m128 V = _mm_add_ps(_mm_mul_ps(PixelPx, nYAxisx_4x), _mm_mul_ps(PixelPy, nYAxisy_4x));
@@ -704,6 +753,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 _mm_storeu_si128((__m128i *)Pixel, MaskedOut);
             }
 
+#undef _mm_add_ps
             PixelPx = _mm_add_ps(PixelPx, Four_4x);
             Pixel += 4;
         }
