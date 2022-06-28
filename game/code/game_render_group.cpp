@@ -569,6 +569,9 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 #define M(a, i) ((float *)&(a))[i]
 #define Mi(a, i) ((uint32_t *)&(a))[i]
 
+#define COUNT_CYCLES 0
+
+#if COUNT_CYCLES
             counts Counts = {};
 #define _mm_add_ps(a, b) ++Counts.mm_add_ps; a; b
 #define _mm_sub_ps(a, b) ++Counts.mm_sub_ps; a; b
@@ -595,6 +598,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
 #define _mm_loadu_si128(a) 0
 #define _mm_storeu_si128(a, b)
+#endif
 
             __m128 U = _mm_add_ps(_mm_mul_ps(PixelPx, nXAxisx_4x), _mm_mul_ps(PixelPy, nXAxisy_4x));
             __m128 V = _mm_add_ps(_mm_mul_ps(PixelPx, nYAxisx_4x), _mm_mul_ps(PixelPy, nYAxisy_4x));
@@ -625,6 +629,12 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128i SampleB;
                 __m128i SampleC;
                 __m128i SampleD;
+#if COUNT_CYCLES
+                SampleA = 0;
+                SampleB = 0;
+                SampleC = 0;
+                SampleD = 0;
+#else
                 for(int I = 0; I < 4; ++I)
                 {
                     int32_t FetchX = Mi(FetchX_4x, I);
@@ -639,6 +649,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                     Mi(SampleC, I) = *(uint32_t *)(TexelPtr + Texture->Pitch);
                     Mi(SampleD, I) = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
                 }
+#endif
 
                 // Unpack bilinear texel samples
                 __m128 TexelAb = _mm_cvtepi32_ps(_mm_and_si128(SampleA, MaskFF));
@@ -753,7 +764,33 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 _mm_storeu_si128((__m128i *)Pixel, MaskedOut);
             }
 
+#if COUNT_CYCLES
 #undef _mm_add_ps
+
+            real32 Third = 1.0f / 3.0f;
+
+            real32 Total = 0.0f;
+#define Sum(L, A) (L*(real32)A); Total += (L*(real32)A)
+            real32 mm_add_ps       = Sum(1, Counts.mm_add_ps);
+            real32 mm_sub_ps       = Sum(1, Counts.mm_sub_ps);
+            real32 mm_mul_ps       = Sum(1, Counts.mm_mul_ps);
+            real32 mm_and_ps       = Sum(Third, Counts.mm_and_ps);
+            real32 mm_or_si128     = Sum(Third, Counts.mm_or_si128);
+            real32 mm_cmpge_ps     = Sum(1, Counts.mm_cmpge_ps);
+            real32 mm_cmple_ps     = Sum(1, Counts.mm_cmple_ps);
+            real32 mm_min_ps       = Sum(1, Counts.mm_min_ps);
+            real32 mm_max_ps       = Sum(1, Counts.mm_max_ps);
+            real32 mm_castps_si128 = Sum(0, 0);
+            real32 mm_cvttps_epi32 = Sum(1, Counts.mm_cvttps_epi32);
+            real32 mm_cvtps_epi32  = Sum(1, Counts.mm_cvtps_epi32);
+            real32 mm_cvtepi32_ps  = Sum(1, Counts.mm_cvtepi32_ps);
+            real32 mm_and_si128    = Sum(Third, Counts.mm_and_si128);
+            real32 mm_andnot_si128 = Sum(Third, Counts.mm_andnot_si128);
+            real32 mm_srli_epi32   = Sum(1, Counts.mm_srli_epi32);
+            real32 mm_slli_epi32   = Sum(1, Counts.mm_slli_epi32);
+            real32 mm_sqrt_ps      = Sum(16, Counts.mm_sqrt_ps);
+#endif
+
             PixelPx = _mm_add_ps(PixelPx, Four_4x);
             Pixel += 4;
         }
