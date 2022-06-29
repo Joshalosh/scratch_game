@@ -625,10 +625,12 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128 fX = _mm_sub_ps(tX, _mm_cvtepi32_ps(FetchX_4x));
                 __m128 fY = _mm_sub_ps(tY, _mm_cvtepi32_ps(FetchY_4x));
 
+#if 1
                 __m128i SampleA;
                 __m128i SampleB;
                 __m128i SampleC;
                 __m128i SampleD;
+
 #if COUNT_CYCLES
                 SampleA = 0;
                 SampleB = 0;
@@ -758,6 +760,10 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128i Sa = _mm_slli_epi32(Inta, 24);
 
                 __m128i Out = _mm_or_si128(_mm_or_si128(Sr, Sg), _mm_or_si128(Sb, Sa));
+#else
+                __m128i Out = _mm_or_si128(FetchX_4x, FetchY_4x);
+#endif
+
 
                 __m128i MaskedOut = _mm_or_si128(_mm_and_si128(WriteMask, Out),
                                                  _mm_andnot_si128(WriteMask, OriginalDest));
