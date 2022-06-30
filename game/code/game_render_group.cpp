@@ -457,6 +457,8 @@ struct counts
     int mm_sqrt_ps;
 };
 
+#include <iacaMarks.h>
+
 internal void
 DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
                      loaded_bitmap *Texture, real32 PixelsToMetres)
@@ -600,6 +602,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 #define _mm_storeu_si128(a, b)
 #endif
 
+            IACA_VC64_START;
             __m128 U = _mm_add_ps(_mm_mul_ps(PixelPx, nXAxisx_4x), _mm_mul_ps(PixelPy, nXAxisy_4x));
             __m128 V = _mm_add_ps(_mm_mul_ps(PixelPx, nYAxisx_4x), _mm_mul_ps(PixelPy, nYAxisy_4x));
 
@@ -799,6 +802,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
             PixelPx = _mm_add_ps(PixelPx, Four_4x);
             Pixel += 4;
+
+            IACA_VC64_END;
         }
 
         Row += Buffer->Pitch;
