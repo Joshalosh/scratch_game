@@ -457,7 +457,12 @@ struct counts
     int mm_sqrt_ps;
 };
 
+#if 0
 #include <iacaMarks.h>
+#else
+#define IACA_VC64_START
+#define IACA_VC64_END
+#endif
 
 internal void
 DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
@@ -530,6 +535,9 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
     __m128 Inv255_4x = _mm_set1_ps(Inv255);
     real32 One255 = 255.0f;
 
+    real32 NormaliseC = 1.0f / 255.0f;
+    real32 NormaliseSqC = 1.0f / Square(255.0f);
+
     __m128 One = _mm_set1_ps(1.0f);
     __m128 Four_4x = _mm_set1_ps(4.0f);
     __m128 One255_4x = _mm_set1_ps(255.0f);
@@ -545,6 +553,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
     __m128 nYAxisy_4x = _mm_set1_ps(nYAxis.y);
     __m128 Originx_4x = _mm_set1_ps(Origin.x);
     __m128 Originy_4x = _mm_set1_ps(Origin.y);
+    __m128 MaxColorValue = _mm_set1_ps(255.0f*255.0f);
 
     __m128 WidthM2 = _mm_set1_ps((real32)(Texture->Width - 2));
     __m128 HeightM2 = _mm_set1_ps((real32)(Texture->Height - 2));
@@ -570,37 +579,6 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 #define mmSquare(a) _mm_mul_ps(a, a)
 #define M(a, i) ((float *)&(a))[i]
 #define Mi(a, i) ((uint32_t *)&(a))[i]
-
-#define COUNT_CYCLES 0
-
-#if COUNT_CYCLES
-            counts Counts = {};
-#define _mm_add_ps(a, b) ++Counts.mm_add_ps; a; b
-#define _mm_sub_ps(a, b) ++Counts.mm_sub_ps; a; b
-#define _mm_mul_ps(a, b) ++Counts.mm_mul_ps; a; b
-#define _mm_castps_si128(a) ++Counts.mm_castps_si128; a
-#define _mm_and_ps(a, b) ++Counts.mm_and_ps; a; b
-#define _mm_or_si128(a, b) ++Counts.mm_or_si128; a; b
-#define _mm_cmpge_ps(a, b) ++Counts.mm_cmpge_ps; a; b
-#define _mm_cmple_ps(a, b) ++Counts.mm_cmple_ps; a; b
-#define _mm_min_ps(a, b) ++Counts.mm_min_ps; a; b
-#define _mm_max_ps(a, b) ++Counts.mm_max_ps; a; b
-#define _mm_cvttps_epi32(a) ++Counts.mm_cvttps_epi32; a 
-#define _mm_cvtps_epi32(a) ++Counts.mm_cvtps_epi32; a
-#define _mm_cvtepi32_ps(a) ++Counts.mm_cvtepi32_ps; a
-#define _mm_and_si128(a, b) ++Counts.mm_and_si128; a; b
-#define _mm_andnot_si128(a, b) ++Counts.mm_andnot_si128; a; b
-#define _mm_srli_epi32(a, b) ++Counts.mm_srli_epi32; a
-#define _mm_slli_epi32(a, b) ++Counts.mm_slli_epi32; a
-#define _mm_sqrt_ps(a) ++Counts.mm_sqrt_ps; a
-#undef mmSquare
-#define mmSquare(a) ++Counts.mm_mul_ps; a
-#define __m128 int
-#define __m128i int
-
-#define _mm_loadu_si128(a) 0
-#define _mm_storeu_si128(a, b)
-#endif
 
             IACA_VC64_START;
             __m128 U = _mm_add_ps(_mm_mul_ps(PixelPx, nXAxisx_4x), _mm_mul_ps(PixelPy, nXAxisy_4x));
@@ -628,18 +606,11 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128 fX = _mm_sub_ps(tX, _mm_cvtepi32_ps(FetchX_4x));
                 __m128 fY = _mm_sub_ps(tY, _mm_cvtepi32_ps(FetchY_4x));
 
-#if 1
                 __m128i SampleA;
                 __m128i SampleB;
                 __m128i SampleC;
                 __m128i SampleD;
 
-#if COUNT_CYCLES
-                SampleA = 0;
-                SampleB = 0;
-                SampleC = 0;
-                SampleD = 0;
-#else
                 for(int I = 0; I < 4; ++I)
                 {
                     int32_t FetchX = Mi(FetchX_4x, I);
@@ -654,7 +625,6 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                     Mi(SampleC, I) = *(uint32_t *)(TexelPtr + Texture->Pitch);
                     Mi(SampleD, I) = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
                 }
-#endif
 
                 // Unpack bilinear texel samples
                 __m128 TexelAb = _mm_cvtepi32_ps(_mm_and_si128(SampleA, MaskFF));
@@ -684,25 +654,21 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128 Desta = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 24), MaskFF));
 
                 // Convert texture from 0-255 sRGB to "linear" 0-1 brightness space.
-                TexelAr = mmSquare(_mm_mul_ps(Inv255_4x, TexelAr));
-                TexelAg = mmSquare(_mm_mul_ps(Inv255_4x, TexelAg));
-                TexelAb = mmSquare(_mm_mul_ps(Inv255_4x, TexelAb));
-                TexelAa = _mm_mul_ps(Inv255_4x, TexelAa);
+                TexelAr = mmSquare(TexelAr);
+                TexelAg = mmSquare(TexelAg);
+                TexelAb = mmSquare(TexelAb);
 
-                TexelBr = mmSquare(_mm_mul_ps(Inv255_4x, TexelBr));
-                TexelBg = mmSquare(_mm_mul_ps(Inv255_4x, TexelBg));
-                TexelBb = mmSquare(_mm_mul_ps(Inv255_4x, TexelBb));
-                TexelBa = _mm_mul_ps(Inv255_4x, TexelBa);
+                TexelBr = mmSquare(TexelBr);
+                TexelBg = mmSquare(TexelBg);
+                TexelBb = mmSquare(TexelBb);
 
-                TexelCr = mmSquare(_mm_mul_ps(Inv255_4x, TexelCr));
-                TexelCg = mmSquare(_mm_mul_ps(Inv255_4x, TexelCg));
-                TexelCb = mmSquare(_mm_mul_ps(Inv255_4x, TexelCb));
-                TexelCa = _mm_mul_ps(Inv255_4x, TexelCa);
+                TexelCr = mmSquare(TexelCr);
+                TexelCg = mmSquare(TexelCg);
+                TexelCb = mmSquare(TexelCb);
 
-                TexelDr = mmSquare(_mm_mul_ps(Inv255_4x, TexelDr));
-                TexelDg = mmSquare(_mm_mul_ps(Inv255_4x, TexelDg));
-                TexelDb = mmSquare(_mm_mul_ps(Inv255_4x, TexelDb));
-                TexelDa = _mm_mul_ps(Inv255_4x, TexelDa);
+                TexelDr = mmSquare(TexelDr);
+                TexelDg = mmSquare(TexelDg);
+                TexelDb = mmSquare(TexelDb);
 
                 // This is the bilinear texture blend.
                 __m128 ifX = _mm_sub_ps(One, fX);
@@ -728,29 +694,27 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 Texelb = _mm_mul_ps(Texelb, Colorb_4x);
                 Texela = _mm_mul_ps(Texela, Colora_4x);
 
-                // This clamps the colours to a valid range.
-                Texelr = _mm_min_ps(_mm_max_ps(Texelr, Zero), One);
-                Texelg = _mm_min_ps(_mm_max_ps(Texelg, Zero), One);
-                Texelb = _mm_min_ps(_mm_max_ps(Texelb, Zero), One);
+                Texelr = _mm_min_ps(_mm_max_ps(Texelr, Zero), MaxColorValue);
+                Texelg = _mm_min_ps(_mm_max_ps(Texelg, Zero), MaxColorValue);
+                Texelb = _mm_min_ps(_mm_max_ps(Texelb, Zero), MaxColorValue);
 
                 // Go from sRGB to "linear" brightness space.
-                Destr = mmSquare(_mm_mul_ps(Inv255_4x, Destr));
-                Destg = mmSquare(_mm_mul_ps(Inv255_4x, Destg));
-                Destb = mmSquare(_mm_mul_ps(Inv255_4x, Destb));
-                Desta = _mm_mul_ps(Inv255_4x, Desta);
+                Destr = mmSquare(Destr);
+                Destg = mmSquare(Destg);
+                Destb = mmSquare(Destb);
 
                 // This is destination blend.
-                __m128 InvTexelA = _mm_sub_ps(One, Texela);
+                __m128 InvTexelA = _mm_sub_ps(One, _mm_mul_ps(Inv255_4x, Texela));
                 __m128 Blendedr = _mm_add_ps(_mm_mul_ps(InvTexelA, Destr), Texelr);
                 __m128 Blendedg = _mm_add_ps(_mm_mul_ps(InvTexelA, Destg), Texelg);
                 __m128 Blendedb = _mm_add_ps(_mm_mul_ps(InvTexelA, Destb), Texelb);
                 __m128 Blendeda = _mm_add_ps(_mm_mul_ps(InvTexelA, Desta), Texela);
 
                 // Go from "linear" 0-1 brightness space to sRGB 0-255.
-                Blendedr = _mm_mul_ps(One255_4x, _mm_sqrt_ps(Blendedr));
-                Blendedg = _mm_mul_ps(One255_4x, _mm_sqrt_ps(Blendedg));
-                Blendedb = _mm_mul_ps(One255_4x, _mm_sqrt_ps(Blendedb));
-                Blendeda = _mm_mul_ps(One255_4x, Blendeda);
+                Blendedr = _mm_sqrt_ps(Blendedr);
+                Blendedg = _mm_sqrt_ps(Blendedg);
+                Blendedb = _mm_sqrt_ps(Blendedb);
+                Blendeda = Blendeda;
 
                 __m128i Intr = _mm_cvtps_epi32(Blendedr);
                 __m128i Intg = _mm_cvtps_epi32(Blendedg);
@@ -763,42 +727,11 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128i Sa = _mm_slli_epi32(Inta, 24);
 
                 __m128i Out = _mm_or_si128(_mm_or_si128(Sr, Sg), _mm_or_si128(Sb, Sa));
-#else
-                __m128i Out = _mm_or_si128(FetchX_4x, FetchY_4x);
-#endif
-
 
                 __m128i MaskedOut = _mm_or_si128(_mm_and_si128(WriteMask, Out),
                                                  _mm_andnot_si128(WriteMask, OriginalDest));
                 _mm_storeu_si128((__m128i *)Pixel, MaskedOut);
             }
-
-#if COUNT_CYCLES
-#undef _mm_add_ps
-
-            real32 Third = 1.0f / 3.0f;
-
-            real32 Total = 0.0f;
-#define Sum(L, A) (L*(real32)A); Total += (L*(real32)A)
-            real32 mm_add_ps       = Sum(1, Counts.mm_add_ps);
-            real32 mm_sub_ps       = Sum(1, Counts.mm_sub_ps);
-            real32 mm_mul_ps       = Sum(1, Counts.mm_mul_ps);
-            real32 mm_and_ps       = Sum(Third, Counts.mm_and_ps);
-            real32 mm_or_si128     = Sum(Third, Counts.mm_or_si128);
-            real32 mm_cmpge_ps     = Sum(1, Counts.mm_cmpge_ps);
-            real32 mm_cmple_ps     = Sum(1, Counts.mm_cmple_ps);
-            real32 mm_min_ps       = Sum(1, Counts.mm_min_ps);
-            real32 mm_max_ps       = Sum(1, Counts.mm_max_ps);
-            real32 mm_castps_si128 = Sum(0, 0);
-            real32 mm_cvttps_epi32 = Sum(1, Counts.mm_cvttps_epi32);
-            real32 mm_cvtps_epi32  = Sum(1, Counts.mm_cvtps_epi32);
-            real32 mm_cvtepi32_ps  = Sum(1, Counts.mm_cvtepi32_ps);
-            real32 mm_and_si128    = Sum(Third, Counts.mm_and_si128);
-            real32 mm_andnot_si128 = Sum(Third, Counts.mm_andnot_si128);
-            real32 mm_srli_epi32   = Sum(1, Counts.mm_srli_epi32);
-            real32 mm_slli_epi32   = Sum(1, Counts.mm_slli_epi32);
-            real32 mm_sqrt_ps      = Sum(16, Counts.mm_sqrt_ps);
-#endif
 
             PixelPx = _mm_add_ps(PixelPx, Four_4x);
             Pixel += 4;
