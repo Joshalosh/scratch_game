@@ -543,6 +543,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
     __m128 One255_4x = _mm_set1_ps(255.0f);
     __m128 Zero = _mm_set1_ps(0.0f);
     __m128i MaskFF = _mm_set1_epi32(0xFF);
+    __m128i MaskFFFF = _mm_set1_epi32(0xFFFF);
+    __m128i MaskFF00FF = _mm_set1_epi32(0x00FF00FF);
     __m128 Colorr_4x = _mm_set1_ps(Color.r);
     __m128 Colorg_4x = _mm_set1_ps(Color.g);
     __m128 Colorb_4x = _mm_set1_ps(Color.b);
@@ -560,6 +562,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
 
+    int32_t TexturePitch = Texture->Pitch;
+    void *TextureMemory = Texture->Memory;
     BEGIN_TIMED_BLOCK(ProcessPixel);
     for(int Y = YMin; Y <= YMax; ++Y)
     {
@@ -619,33 +623,37 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                     Assert((FetchX >= 0) && (FetchX < Texture->Width));
                     Assert((FetchY >= 0) && (FetchY < Texture->Height));
 
-                    uint8_t *TexelPtr = ((uint8_t *)Texture->Memory) + FetchY*Texture->Pitch + FetchX*sizeof(uint32_t);
+                    uint8_t *TexelPtr = ((uint8_t *)TextureMemory) + FetchY*TexturePitch + FetchX*sizeof(uint32_t);
                     Mi(SampleA, I) = *(uint32_t *)(TexelPtr);
                     Mi(SampleB, I) = *(uint32_t *)(TexelPtr + sizeof(uint32_t));
-                    Mi(SampleC, I) = *(uint32_t *)(TexelPtr + Texture->Pitch);
-                    Mi(SampleD, I) = *(uint32_t *)(TexelPtr + Texture->Pitch + sizeof(uint32_t));
+                    Mi(SampleC, I) = *(uint32_t *)(TexelPtr + TexturePitch);
+                    Mi(SampleD, I) = *(uint32_t *)(TexelPtr + TexturePitch + sizeof(uint32_t));
                 }
 
                 // Unpack bilinear texel samples
-                __m128 TexelAb = _mm_cvtepi32_ps(_mm_and_si128(SampleA, MaskFF));
-                __m128 TexelAg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleA, 8),  MaskFF));
-                __m128 TexelAr = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleA, 16), MaskFF));
-                __m128 TexelAa = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleA, 24), MaskFF));
+                __m128i TexelArb = _mm_and_si128(SampleA, MaskFF00FF);
+                __m128i TexelAag = _mm_and_si128(_mm_srli_epi32(SampleA, 8),  MaskFF00FF);
+                TexelArb = _mm_mullo_epi16(TexelArb, TexelArb);
+                __m128 TexelAa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelAag, 16));
+                TexelAag = _mm_mullo_epi16(TexelAag, TexelAag);
 
-                __m128 TexelBb = _mm_cvtepi32_ps(_mm_and_si128(SampleB, MaskFF));
-                __m128 TexelBg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleB, 8),  MaskFF));
-                __m128 TexelBr = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleB, 16), MaskFF));
-                __m128 TexelBa = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleB, 24), MaskFF));
+                __m128i TexelBrb = _mm_and_si128(SampleB, MaskFF00FF);
+                __m128i TexelBag = _mm_and_si128(_mm_srli_epi32(SampleB, 8),  MaskFF00FF);
+                TexelBrb = _mm_mullo_epi16(TexelBrb, TexelBrb);
+                __m128 TexelBa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelBag, 16));
+                TexelBag = _mm_mullo_epi16(TexelBag, TexelBag);
 
-                __m128 TexelCb = _mm_cvtepi32_ps(_mm_and_si128(SampleC, MaskFF));
-                __m128 TexelCg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleC, 8),  MaskFF));
-                __m128 TexelCr = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleC, 16), MaskFF));
-                __m128 TexelCa = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleC, 24), MaskFF));
+                __m128i TexelCrb = _mm_and_si128(SampleC, MaskFF00FF);
+                __m128i TexelCag = _mm_and_si128(_mm_srli_epi32(SampleC, 8),  MaskFF00FF);
+                TexelCrb = _mm_mullo_epi16(TexelCrb, TexelCrb);
+                __m128 TexelCa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelCag, 16));
+                TexelCag = _mm_mullo_epi16(TexelCag, TexelCag);
 
-                __m128 TexelDb = _mm_cvtepi32_ps(_mm_and_si128(SampleD, MaskFF));
-                __m128 TexelDg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleD, 8),  MaskFF));
-                __m128 TexelDr = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleD, 16), MaskFF));
-                __m128 TexelDa = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(SampleD, 24), MaskFF));
+                __m128i TexelDrb = _mm_and_si128(SampleD, MaskFF00FF);
+                __m128i TexelDag = _mm_and_si128(_mm_srli_epi32(SampleD, 8),  MaskFF00FF);
+                TexelDrb = _mm_mullo_epi16(TexelDrb, TexelDrb);
+                __m128 TexelDa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelDag, 16));
+                TexelDag = _mm_mullo_epi16(TexelDag, TexelDag);
 
                 // This loads the destination.
                 __m128 Destb = _mm_cvtepi32_ps(_mm_and_si128(OriginalDest, MaskFF));
@@ -654,21 +662,21 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128 Desta = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 24), MaskFF));
 
                 // Convert texture from 0-255 sRGB to "linear" 0-1 brightness space.
-                TexelAr = mmSquare(TexelAr);
-                TexelAg = mmSquare(TexelAg);
-                TexelAb = mmSquare(TexelAb);
+                __m128 TexelAr = _mm_cvtepi32_ps(_mm_srli_epi32(TexelArb, 16));
+                __m128 TexelAg = _mm_cvtepi32_ps(_mm_and_si128(TexelAag, MaskFFFF));
+                __m128 TexelAb = _mm_cvtepi32_ps(_mm_and_si128(TexelArb, MaskFFFF));
 
-                TexelBr = mmSquare(TexelBr);
-                TexelBg = mmSquare(TexelBg);
-                TexelBb = mmSquare(TexelBb);
+                __m128 TexelBr = _mm_cvtepi32_ps(_mm_srli_epi32(TexelBrb, 16));
+                __m128 TexelBg = _mm_cvtepi32_ps(_mm_and_si128(TexelBag, MaskFFFF));
+                __m128 TexelBb = _mm_cvtepi32_ps(_mm_and_si128(TexelBrb, MaskFFFF));
 
-                TexelCr = mmSquare(TexelCr);
-                TexelCg = mmSquare(TexelCg);
-                TexelCb = mmSquare(TexelCb);
+                __m128 TexelCr = _mm_cvtepi32_ps(_mm_srli_epi32(TexelCrb, 16));
+                __m128 TexelCg = _mm_cvtepi32_ps(_mm_and_si128(TexelCag, MaskFFFF));
+                __m128 TexelCb = _mm_cvtepi32_ps(_mm_and_si128(TexelCrb, MaskFFFF));
 
-                TexelDr = mmSquare(TexelDr);
-                TexelDg = mmSquare(TexelDg);
-                TexelDb = mmSquare(TexelDb);
+                __m128 TexelDr = _mm_cvtepi32_ps(_mm_srli_epi32(TexelDrb, 16));
+                __m128 TexelDg = _mm_cvtepi32_ps(_mm_and_si128(TexelDag, MaskFFFF));
+                __m128 TexelDb = _mm_cvtepi32_ps(_mm_and_si128(TexelDrb, MaskFFFF));
 
                 // This is the bilinear texture blend.
                 __m128 ifX = _mm_sub_ps(One, fX);
