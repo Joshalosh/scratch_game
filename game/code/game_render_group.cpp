@@ -719,9 +719,15 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                 __m128 Blendeda = _mm_add_ps(_mm_mul_ps(InvTexelA, Desta), Texela);
 
                 // Go from "linear" 0-1 brightness space to sRGB 0-255.
+#if 1
+                Blendedr = _mm_mul_ps(Blendedr, _mm_rsqrt_ps(Blendedr));
+                Blendedg = _mm_mul_ps(Blendedg, _mm_rsqrt_ps(Blendedg));
+                Blendedb = _mm_mul_ps(Blendedb, _mm_rsqrt_ps(Blendedb));
+#else
                 Blendedr = _mm_sqrt_ps(Blendedr);
                 Blendedg = _mm_sqrt_ps(Blendedg);
                 Blendedb = _mm_sqrt_ps(Blendedb);
+#endif
                 Blendeda = Blendeda;
 
                 __m128i Intr = _mm_cvtps_epi32(Blendedr);
