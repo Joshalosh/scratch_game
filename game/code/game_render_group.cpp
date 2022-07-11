@@ -523,10 +523,12 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         if(YMax < CeilY) {YMax = CeilY;}
     }
 
-    if(XMin < 0) {XMin = 0;}
-    if(YMin < 0) {YMin = 0;}
-    if(XMax > WidthMax) {XMax = WidthMax;}
-    if(YMax > HeightMax) {YMax = HeightMax;}
+    rectangle2i ClipRect = {128, 128, 256, 256};
+
+    if(XMin < ClipRect.MinX) {XMin = ClipRect.MinX;}
+    if(YMin < ClipRect.MinY) {YMin = ClipRect.MinY;}
+    if(XMax > ClipRect.MaxX) {XMax = ClipRect.MaxX;}
+    if(YMax > ClipRect.MaxY) {YMax = ClipRect.MaxY;}
 
     if(!Even == (YMin & 1))
     {
@@ -776,7 +778,12 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
         Row += RowAdvance;
     }
-    END_TIMED_BLOCK_COUNTED(ProcessPixel, (XMax - XMin + 1)*(YMax - YMin + 1));
+    uint32_t PixelCount = 0;
+    if((XMax >= XMin) && (YMax >= YMin))
+    {
+        PixelCount = (XMax - XMin + 1)*((YMax - YMin + 1) / 2);
+    }
+    END_TIMED_BLOCK_COUNTED(ProcessPixel, PixelCount);
 
     END_TIMED_BLOCK(DrawRectangleQuickly);
 }

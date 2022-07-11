@@ -912,5 +912,41 @@ ToRectangle2(rectangle3 A)
     return(Result);
 }
 
+//
+//
+//
+
+struct rectangle2i
+{
+    int32_t MinX, MinY;
+    int32_t MaxX, MaxY;
+};
+
+inline rectangle2i
+Intersect(rectangle2i A, rectangle2i B)
+{
+    rectangle2i Result;
+
+    Result.MinX = (A.MinX < BMinX) ? B.MinX : A.MinX;
+    Result.MinY = (A.MinY < BMinY) ? B.MinY : A.MinY;
+    Result.MaxX = (A.MaxX > BMaxX) ? B.MaxX : A.MaxX;
+    Result.MaxY = (A.MaxY > BMaxY) ? B.MaxY : A.MaxY;
+
+    return(Result);
+}
+
+inline rectangle2i
+Union(rectangle2i A, rectangle2i B)
+{
+    rectangle2i Result;
+
+    Result.MinX = (A.MinX < BMinX) ? A.MinX : B.MinX;
+    Result.MinY = (A.MinY < BMinY) ? A.MinY : B.MinY;
+    Result.MaxX = (A.MaxX > BMaxX) ? A.MaxX : B.MaxX;
+    Result.MaxY = (A.MaxY > BMaxY) ? A.MaxY : B.MaxY;
+
+    return(Result);
+}
+
 #define GAME_MATH_H
 #endif
