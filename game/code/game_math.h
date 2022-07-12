@@ -927,10 +927,10 @@ Intersect(rectangle2i A, rectangle2i B)
 {
     rectangle2i Result;
 
-    Result.MinX = (A.MinX < BMinX) ? B.MinX : A.MinX;
-    Result.MinY = (A.MinY < BMinY) ? B.MinY : A.MinY;
-    Result.MaxX = (A.MaxX > BMaxX) ? B.MaxX : A.MaxX;
-    Result.MaxY = (A.MaxY > BMaxY) ? B.MaxY : A.MaxY;
+    Result.MinX = (A.MinX < B.MinX) ? B.MinX : A.MinX;
+    Result.MinY = (A.MinY < B.MinY) ? B.MinY : A.MinY;
+    Result.MaxX = (A.MaxX > B.MaxX) ? B.MaxX : A.MaxX;
+    Result.MaxY = (A.MaxY > B.MaxY) ? B.MaxY : A.MaxY;
 
     return(Result);
 }
@@ -940,10 +940,24 @@ Union(rectangle2i A, rectangle2i B)
 {
     rectangle2i Result;
 
-    Result.MinX = (A.MinX < BMinX) ? A.MinX : B.MinX;
-    Result.MinY = (A.MinY < BMinY) ? A.MinY : B.MinY;
-    Result.MaxX = (A.MaxX > BMaxX) ? A.MaxX : B.MaxX;
-    Result.MaxY = (A.MaxY > BMaxY) ? A.MaxY : B.MaxY;
+    Result.MinX = (A.MinX < B.MinX) ? A.MinX : B.MinX;
+    Result.MinY = (A.MinY < B.MinY) ? A.MinY : B.MinY;
+    Result.MaxX = (A.MaxX > B.MaxX) ? A.MaxX : B.MaxX;
+    Result.MaxY = (A.MaxY > B.MaxY) ? A.MaxY : B.MaxY;
+
+    return(Result);
+}
+
+inline int32_t
+GetClampedRectArea(rectangle2i A)
+{
+    int32_t Width = (A.MaxX - A.MinX);
+    int32_t Height = (A.MaxY - A.MinY);
+    int32_t Result = 0;
+    if((Width > 0) && (Height > 0))
+    {
+        Result = Width*Height;
+    }
 
     return(Result);
 }
