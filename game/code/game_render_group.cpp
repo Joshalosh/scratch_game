@@ -554,29 +554,34 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
     void *TextureMemory = Texture->Memory;
     int32_t TexturePitch = Texture->Pitch;
+    int MinY = FillRect.MinY;
+    int MaxY = FillRect.MaxY;
+    int MinX = FillRect.MinX;
+    int MaxX = FillRect.MaxX;
     BEGIN_TIMED_BLOCK(ProcessPixel);
-    for(int Y = FillRect.MinY; Y < FillRect.MaxY; Y += 2)
+    for(int Y = MinY; Y < MaxY; Y += 2)
     {
         __m128 PixelPy = _mm_set1_ps((real32)Y);
         PixelPy = _mm_sub_ps(PixelPy, Originy_4x);
+        __m128 PynX = _mm_mul_ps(PixelPy, nXAxisy_4x);
+        __m128 PynY = _mm_mul_ps(PixelPy, nYAxisy_4x);
 
-        // TODO: Try to remove this.
-        __m128 PixelPx = _mm_set_ps((real32)(FillRect.MinX + 3),
-                                    (real32)(FillRect.MinX + 2),
-                                    (real32)(FillRect.MinX + 1),
-                                    (real32)(FillRect.MinX + 0));
+        __m128 PixelPx = _mm_set_ps((real32)(MinX + 3),
+                                    (real32)(MinX + 2),
+                                    (real32)(MinX + 1),
+                                    (real32)(MinX + 0));
         PixelPx = _mm_sub_ps(PixelPx, Originx_4x);
 
         uint32_t *Pixel = (uint32_t *)Row;
-        for(int XI = FillRect.MinX; XI < FillRect.MaxX; XI += 4)
+        for(int XI = MinX; XI < MaxX; XI += 4)
         {
 #define mmSquare(a) _mm_mul_ps(a, a)
 #define M(a, i) ((float *)&(a))[i]
 #define Mi(a, i) ((uint32_t *)&(a))[i]
 
             IACA_VC64_START;
-            __m128 U = _mm_add_ps(_mm_mul_ps(PixelPx, nXAxisx_4x), _mm_mul_ps(PixelPy, nXAxisy_4x));
-            __m128 V = _mm_add_ps(_mm_mul_ps(PixelPx, nYAxisx_4x), _mm_mul_ps(PixelPy, nYAxisy_4x));
+            __m128 U = _mm_add_ps(_mm_mul_ps(PixelPx, nXAxisx_4x), PynX);
+            __m128 V = _mm_add_ps(_mm_mul_ps(PixelPx, nYAxisx_4x), PynY);
 
             __m128i WriteMask = _mm_castps_si128(_mm_and_ps(_mm_and_ps(_mm_cmpge_ps(U, Zero),
                                                                        _mm_cmple_ps(U, One)),
