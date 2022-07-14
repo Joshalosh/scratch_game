@@ -508,12 +508,23 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         if(FillRect.MaxY < CeilY)  {FillRect.MaxY = CeilY;}
     }
 
+//    rectangle2i ClipRect = {0, 0, WidthMax, HeightMax};
     rectangle2i ClipRect = {128, 128, 256, 256};
     FillRect = Intersect(ClipRect, FillRect);
 
     if(!Even == (FillRect.MinY & 1))
     {
         FillRect.MinY += 1;
+    }
+
+    __m128i StartupClipMask = _mm_set1_epi8(-1);
+    int FillWidth = FillRect.MaxX - FillRect.MinX;
+    int FillWidthAlign = FillWidth & 3;
+    if(FillWidthAlign > 0)
+    {
+        int Adjustment = (4 - FillWidthAlign);
+        FillWidth += Adjustment;
+        FillRect.MinX = FillRect.MaxX - FillWidth;
     }
 
     v2 nXAxis = InvXAxisLengthSq*XAxis;
@@ -554,6 +565,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
     void *TextureMemory = Texture->Memory;
     int32_t TexturePitch = Texture->Pitch;
+
     int MinY = FillRect.MinY;
     int MaxY = FillRect.MaxY;
     int MinX = FillRect.MinX;
@@ -572,6 +584,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                                     (real32)(MinX + 0));
         PixelPx = _mm_sub_ps(PixelPx, Originx_4x);
 
+        __m128i ClipMask = StartupClipMask;
+
         uint32_t *Pixel = (uint32_t *)Row;
         for(int XI = MinX; XI < MaxX; XI += 4)
         {
@@ -587,6 +601,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                                                                        _mm_cmple_ps(U, One)),
                                                             _mm_and_ps(_mm_cmpge_ps(V, Zero),
                                                                        _mm_cmple_ps(V, One))));
+            WriteMask = _mm_and_si128(WriteMask, ClipMask);
+
 // TODO: Check this later and see if it helps.
 //            if(_mm_movemask_epi8(WriteMask))
             {
@@ -758,6 +774,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
             PixelPx = _mm_add_ps(PixelPx, Four_4x);
             Pixel += 4;
+            ClipMask = _mm_set1_epi8(-1);
 
             IACA_VC64_END;
         }
