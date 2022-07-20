@@ -614,7 +614,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                     __m128 fY = _mm_sub_ps(tY, _mm_cvtepi32_ps(FetchY_4x));
 
                     FetchX_4x = _mm_slli_epi32(FetchX_4x, 2);
-                    FetchY_4x = _mm_mullo_epi32(FetchY_4x, TexturePitch_4x);
+                    FetchY_4x = _mm_or_si128(_mm_mullo_epi16(FetchY_4x, TexturePitch_4x),
+                                             _mm_slli_epi32(_mm_mulhi_epi16(FetchY_4x, TexturePitch_4x), 16));
                     __m128i Fetch_4x = _mm_add_epi32(FetchX_4x, FetchY_4x);
 
                     int32_t Fetch0 = Mi(Fetch_4x, 0);
