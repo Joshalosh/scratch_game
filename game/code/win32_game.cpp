@@ -1042,9 +1042,13 @@ DWORD WINAPI
 ThreadProc(LPVOID lpParameter)
 {
     char *StringToPrint = (char *)lpParameter;
-    OutputDebugString(StringToPrint);
+    for(;;)
+    {
+        OutputDebugString(StringToPrint);
+        Sleep(1000);
+    }
 
-    return(0);
+//    return(0);
 }
 
 int CALLBACK
@@ -1058,6 +1062,7 @@ WinMain(HINSTANCE Instance,
     char *Param = "Thread started!";
     DWORD ThreadID;
     HANDLE ThreadHandle = CreateThread(0, 0, ThreadProc, Param, 0, &ThreadID);
+    CloseHandle(ThreadHandle);
 
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
