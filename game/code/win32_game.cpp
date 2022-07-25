@@ -1038,14 +1038,43 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
 }
 #endif
 
+struct work_queue_entry
+{
+    char *StringToPrint;
+};
+
+global_variable uint32_t NextEntryToDo;
+global_variable uint32_t EntryCount;
+work_queue_entry Entries[256];
+
+internal void
+PushString(char *String)
+{
+    Assert(EntryCount < ArrayCount(Entries));
+    work_queue_entry *Entry = Entries + EntryCount++;
+    Entry->StringToPrint = String;
+}
+
+struct win32_thread_info
+{
+    int LogicalThreadIndex;
+};
+
 DWORD WINAPI
 ThreadProc(LPVOID lpParameter)
 {
-    char *StringToPrint = (char *)lpParameter;
+    win32_thread_info *ThreadInfo = (win32_thread_info *)lpParameter;
+
     for(;;)
     {
-        OutputDebugString(StringToPrint);
-        Sleep(1000);
+        if(NextEntryToDo < EntryCount)
+        {
+            work_queue_entry *Entry = Entries + NextEntryToDo++;
+
+            char Buffer[256];
+            wsprintf(Buffer, "Thread %u: %s\n", ThreadInfo->LogicalThreadIndex, Entry->StringToPrint);
+            OutputDebugStringA(Buffer);
+        }
     }
 
 //    return(0);
@@ -1059,10 +1088,26 @@ WinMain(HINSTANCE Instance,
 {
     win32_state Win32State = {};
 
-    char *Param = "Thread started!";
-    DWORD ThreadID;
-    HANDLE ThreadHandle = CreateThread(0, 0, ThreadProc, Param, 0, &ThreadID);
-    CloseHandle(ThreadHandle);
+    for(int ThreadIndex = 0; ThreadIndex < 15; ++ThreadIndex)
+    {
+        win32_thread_info Info = {};
+        Info.LogicalThreadIndex = ThreadIndex;
+
+        DWORD ThreadID;
+        HANDLE ThreadHandle = CreateThread(0, 0, ThreadProc, &Info, 0, &ThreadID);
+        CloseHandle(ThreadHandle);
+    }
+
+    PushString("String 0");
+    PushString("String 1");
+    PushString("String 2");
+    PushString("String 3");
+    PushString("String 4");
+    PushString("String 5");
+    PushString("String 6");
+    PushString("String 7");
+    PushString("String 8");
+    PushString("String 9");
 
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
