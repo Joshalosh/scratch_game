@@ -1051,6 +1051,8 @@ internal void
 PushString(char *String)
 {
     Assert(EntryCount < ArrayCount(Entries));
+
+    // TODO: These writes are not in order.
     work_queue_entry *Entry = Entries + EntryCount++;
     Entry->StringToPrint = String;
 }
@@ -1069,7 +1071,12 @@ ThreadProc(LPVOID lpParameter)
     {
         if(NextEntryToDo < EntryCount)
         {
-            work_queue_entry *Entry = Entries + NextEntryToDo++;
+            // TODO: This line here is not interlocked which means that two threads could see the same value.
+            // TODO: The compiler doesn't know that multiple threads could write this value.
+            int EntryIndex = NextEntryToDo++;
+
+            // TODO: These reads are not in order.
+            work_queue_entry *Entry = Entries + EntryIndex;
 
             char Buffer[256];
             wsprintf(Buffer, "Thread %u: %s\n", ThreadInfo->LogicalThreadIndex, Entry->StringToPrint);
@@ -1088,13 +1095,14 @@ WinMain(HINSTANCE Instance,
 {
     win32_state Win32State = {};
 
-    for(int ThreadIndex = 0; ThreadIndex < 15; ++ThreadIndex)
+    win32_thread_info ThreadInfo[15];
+    for(int ThreadIndex = 0; ArrayCount(ThreadInfo); ++ThreadIndex)
     {
-        win32_thread_info Info = {};
-        Info.LogicalThreadIndex = ThreadIndex;
+        win32_thread_info *Info = ThreadInfo + ThreadIndex;
+        Info->LogicalThreadIndex = ThreadIndex;
 
         DWORD ThreadID;
-        HANDLE ThreadHandle = CreateThread(0, 0, ThreadProc, &Info, 0, &ThreadID);
+        HANDLE ThreadHandle = CreateThread(0, 0, ThreadProc, Info, 0, &ThreadID);
         CloseHandle(ThreadHandle);
     }
 
