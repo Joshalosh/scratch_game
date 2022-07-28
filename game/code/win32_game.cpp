@@ -1043,18 +1043,25 @@ struct work_queue_entry
     char *StringToPrint;
 };
 
-global_variable uint32_t NextEntryToDo;
-global_variable uint32_t EntryCount;
+global_variable uint32_t volatile NextEntryToDo;
+global_variable uint32_t volatile EntryCount;
 work_queue_entry Entries[256];
+
+// TODO: Make sure to double-check the write ordering stuff on the CPU.
+#define CompletePastWritesBeforeFutureWrites _WriteBarrier(); _mm_sfence()
+#define CompletePastReadsBeforeFutureReads _ReadBarrier()
 
 internal void
 PushString(char *String)
 {
     Assert(EntryCount < ArrayCount(Entries));
 
-    // TODO: These writes are not in order.
-    work_queue_entry *Entry = Entries + EntryCount++;
+    work_queue_entry *Entry = Entries + EntryCount;
     Entry->StringToPrint = String;
+
+    CompletePastWritesBeforeFutureWrites;
+
+    ++EntryCount;
 }
 
 struct win32_thread_info
@@ -1071,9 +1078,8 @@ ThreadProc(LPVOID lpParameter)
     {
         if(NextEntryToDo < EntryCount)
         {
-            // TODO: This line here is not interlocked which means that two threads could see the same value.
             // TODO: The compiler doesn't know that multiple threads could write this value.
-            int EntryIndex = NextEntryToDo++;
+            int EntryIndex = InterlockedIncrement((LONG volatile *)&NextEntryToDo) - 1;
 
             // TODO: These reads are not in order.
             work_queue_entry *Entry = Entries + EntryIndex;
