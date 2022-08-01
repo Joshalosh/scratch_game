@@ -1074,6 +1074,27 @@ struct win32_thread_info
     int LogicalThreadIndex;
 };
 
+inline bool32
+DoWorkerWork(int LogicalThreadIndex)
+{
+    bool32 DidSomeWork = false;
+    if(NextEntryToDo < EntryCount)
+    {
+        int EntryIndex = InterlockedIncrement((LONG volatile *)&NextEntryToDo) - 1;
+        CompletePastReadsBeforeFutureReads;
+        work_queue_entry *Entry = Entries + EntryIndex;
+
+        char Buffer[256];
+        wsprintf(Buffer, "Thread %u: %s\n", LogicalThreadIndex, Entry->StringToPrint);
+        OutputDebugStringA(Buffer);
+
+        InterlockedIncrement((LONG volatile *)&EntryCompletionCount);
+        DidSomeWork = true;
+    }
+
+    return(DidSomeWork);
+}
+
 DWORD WINAPI
 ThreadProc(LPVOID lpParameter)
 {
@@ -1081,19 +1102,7 @@ ThreadProc(LPVOID lpParameter)
 
     for(;;)
     {
-        if(NextEntryToDo < EntryCount)
-        {
-            int EntryIndex = InterlockedIncrement((LONG volatile *)&NextEntryToDo) - 1;
-            CompletePastReadsBeforeFutureReads;
-            work_queue_entry *Entry = Entries + EntryIndex;
-
-            char Buffer[256];
-            wsprintf(Buffer, "Thread %u: %s\n", ThreadInfo->LogicalThreadIndex, Entry->StringToPrint);
-            OutputDebugStringA(Buffer);
-
-            InterlockedIncrement((LONG volatile *)&EntryCompletionCount);
-        }
-        else
+        if(!DoWorkerWork(ThreadInfo->LogicalThreadIndex))
         {
             WaitForSingleObjectEx(ThreadInfo->SemaphoreHandle, INFINITE, FALSE);
         }
@@ -1110,7 +1119,7 @@ WinMain(HINSTANCE Instance,
 {
     win32_state Win32State = {};
 
-    win32_thread_info ThreadInfo[8];
+    win32_thread_info ThreadInfo[7];
 
     uint32_t InitialCount = 0;
     uint32_t ThreadCount = ArrayCount(ThreadInfo);
@@ -1127,18 +1136,29 @@ WinMain(HINSTANCE Instance,
         CloseHandle(ThreadHandle);
     }
 
-    PushString(SemaphoreHandle, "String 0");
-    PushString(SemaphoreHandle, "String 1");
-    PushString(SemaphoreHandle, "String 2");
-    PushString(SemaphoreHandle, "String 3");
-    PushString(SemaphoreHandle, "String 4");
-    PushString(SemaphoreHandle, "String 5");
-    PushString(SemaphoreHandle, "String 6");
-    PushString(SemaphoreHandle, "String 7");
-    PushString(SemaphoreHandle, "String 8");
-    PushString(SemaphoreHandle, "String 9");
+    PushString(SemaphoreHandle, "String A0");
+    PushString(SemaphoreHandle, "String A1");
+    PushString(SemaphoreHandle, "String A2");
+    PushString(SemaphoreHandle, "String A3");
+    PushString(SemaphoreHandle, "String A4");
+    PushString(SemaphoreHandle, "String A5");
+    PushString(SemaphoreHandle, "String A6");
+    PushString(SemaphoreHandle, "String A7");
+    PushString(SemaphoreHandle, "String A8");
+    PushString(SemaphoreHandle, "String A9");
 
-    while(EntryCount != EntryCompletionCount);
+    PushString(SemaphoreHandle, "String B0");
+    PushString(SemaphoreHandle, "String B1");
+    PushString(SemaphoreHandle, "String B2");
+    PushString(SemaphoreHandle, "String B3");
+    PushString(SemaphoreHandle, "String B4");
+    PushString(SemaphoreHandle, "String B5");
+    PushString(SemaphoreHandle, "String B6");
+    PushString(SemaphoreHandle, "String B7");
+    PushString(SemaphoreHandle, "String B8");
+    PushString(SemaphoreHandle, "String B9");
+
+    while(EntryCount != EntryCompletionCount) {DoWorkerWork(7);}
 
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
