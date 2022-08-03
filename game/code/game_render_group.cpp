@@ -1110,16 +1110,34 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
     END_TIMED_BLOCK(RenderGroupToOutput);
 }
 
+struct tile_render_work
+{
+    render_group *RenderGroup;
+    loaded_bitmap *OutputTarget;
+    rectangle2i ClipRect;
+};
+
+internal void
+DoTiledRenderWork(void *Data)
+{
+    tile_render_work *Work = (tile_render_work *)Data;
+
+    RenderGroupToOutput(Work->RenderGroup, Work->OutputTarget, Work->ClipRect, true);
+    RenderGroupToOutput(Work->RenderGroup, Work->OutputTarget, Work->ClipRect, false);
+}
+
 internal void
 TiledRenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
-    int TileCountX = 4;
-    int TileCountY = 4;
+    int const TileCountX = 4;
+    int const TileCountY = 4;
+    tile_render_work Work[TileCountX*TileCountY];
 
     // TODO: Make sure that the allocator allocates enough space so I can round these.
     // TODO: Probably need to round to 4.
     int TileWidth = OutputTarget->Width / TileCountX;
     int TileHeight = OutputTarget->Height / TileCountY;
+
     for(int TileY = 0; TileY < TileCountY; ++TileY)
     {
         for(int TileX = 0; TileX < TileCountX; ++TileX)

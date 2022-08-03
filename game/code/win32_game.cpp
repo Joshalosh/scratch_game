@@ -1038,56 +1038,58 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
 }
 #endif
 
+struct work_queue_entry_storage
+{
+    void *UserPointer;
+};
+
 struct work_queue
 {
-    uint32_t MaxEntryCount;
     uint32_t volatile EntryCompletionCount;
     uint32_t volatile NextEntryToDo;
     uint32_t volatile EntryCount;
     HANDLE SemaphoreHandle;
+
+    work_queue_entry_storage Entries[256];
 };
 
-internal uint32_t
-GetNextAvailableWorkQueueIndex(work_queue *Queue)
+struct work_queue_entry
 {
-    uint32_t Result = Queue->EntryCount;
-    return(Result);
-}
+    void *Data;
+    bool32 IsValid;
+};
 
 internal void
-AddWorkQueueEntry(work_queue *Queue)
+AddWorkQueueEntry(work_queue *Queue, void *Pointer)
 {
+    Assert(Queue->EntryCount < ArrayCount(Queue->Entries));
+    Queue->Entries[Queue->EntryCount].UserPointer = Pointer;
     _WriteBarrier();
     _mm_sfence();
     ++Queue->EntryCount;
     ReleaseSemaphore(Queue->SemaphoreHandle, 1, 0);
 }
 
-struct work_queue_entry
-{
-    bool32 IsValid;
-    uint32_t Index;
-};
 internal work_queue_entry
-GetNextWorkQueueEntry(work_queue *Queue)
+CompleteAndGetNextWorkQueueEntry(work_queue *Queue, work_queue_entry Completed)
 {
     work_queue_entry Result;
     Result.IsValid = false;
 
+    if(Completed.IsValid)
+    {
+        InterlockedIncrement((LONG volatile *)&Queue->EntryCompletionCount);
+    }
+
     if(Queue->NextEntryToDo < Queue->EntryCount)
     {
-        Result.Index = InterlockedIncrement((LONG volatile *)&Queue->NextEntryToDo) - 1;
+        uint32_t Index = InterlockedIncrement((LONG volatile *)&Queue->NextEntryToDo) - 1;
+        Result.Data = Queue->Entries[Index].UserPointer;
         Result.IsValid = true;
         _ReadBarrier();
     }
 
     return(Result);
-}
-
-internal void
-MarkQueueEntryCompleted(work_queue *Queue, work_queue_entry Entry)
-{
-    InterlockedIncrement((LONG volatile *)&Queue->EntryCompletionCount);
 }
 
 internal bool32
@@ -1097,28 +1099,14 @@ QueueWorkStillInProgress(work_queue *Queue)
     return(Result);
 }
 
-struct string_entry
+inline void
+DoWorkerWork(work_queue_entry Entry, int LogicalThreadIndex)
 {
-    char *StringToPrint;
-};
-string_entry Entries[256];
+    Assert(Entry.IsValid);
 
-inline bool32
-DoWorkerWork(work_queue *Queue, int LogicalThreadIndex)
-{
-
-    work_queue_entry Entry = GetNextWorkQueueEntry(Queue);
-    if(Entry.IsValid)
-    {
-        char Buffer[256];
-        string_entry *String = Entries + Entry.Index;
-        wsprintf(Buffer, "Thread %u: %s\n", LogicalThreadIndex, String->StringToPrint);
-        OutputDebugStringA(Buffer);
-
-        MarkQueueEntryCompleted(Queue, Entry);
-    }
-
-    return(Entry.IsValid);
+    char Buffer[256];
+    wsprintf(Buffer, "Thread %u: %s\n", LogicalThreadIndex, (char *)Entry.Data);
+    OutputDebugStringA(Buffer);
 }
 
 struct win32_thread_info
@@ -1131,9 +1119,15 @@ ThreadProc(LPVOID lpParameter)
 {
     win32_thread_info *ThreadInfo = (win32_thread_info *)lpParameter;
 
+    work_queue_entry Entry = {};
     for(;;)
     {
-        if(!DoWorkerWork(ThreadInfo->Queue, ThreadInfo->LogicalThreadIndex))
+        Entry = CompleteAndGetNextWorkQueueEntry(ThreadInfo->Queue, Entry);
+        if(Entry.IsValid)
+        {
+            DoWorkerWork(Entry, ThreadInfo->LogicalThreadIndex);
+        }
+        else
         {
             WaitForSingleObjectEx(ThreadInfo->Queue->SemaphoreHandle, INFINITE, FALSE);
         }
@@ -1145,9 +1139,7 @@ ThreadProc(LPVOID lpParameter)
 internal void
 PushString(work_queue *Queue, char *String)
 {
-    uint32_t Index = GetNextAvailableWorkQueueIndex(Queue);
-    Entries[Index].StringToPrint = String;
-    AddWorkQueueEntry(Queue);
+    AddWorkQueueEntry(Queue, String);
 }
 
 int CALLBACK
@@ -1199,7 +1191,15 @@ WinMain(HINSTANCE Instance,
     PushString(&Queue, "String B8");
     PushString(&Queue, "String B9");
 
-    while(QueueWorkStillInProgress(&Queue)) {DoWorkerWork(&Queue, 7);}
+    work_queue_entry Entry = {};
+    while(QueueWorkStillInProgress(&Queue))
+    {
+        Entry = CompleteAndGetNextWorkQueueEntry(&Queue, Entry);
+        if(Entry.IsValid)
+        {
+            DoWorkerWork(Entry, 7);
+        }
+    }
 
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
