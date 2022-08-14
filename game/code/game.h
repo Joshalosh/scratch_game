@@ -285,5 +285,8 @@ GetLowEntity(game_state *GameState, uint32_t Index)
     return(Result);
 }
 
+global_variable platform_add_entry *PlatformAddEntry;
+global_variable platform_complete_all_work *PlatformCompleteAllWork;
+
 #define GAME_H
 #endif

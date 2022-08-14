@@ -1127,7 +1127,7 @@ DoTiledRenderWork(void *Data)
 }
 
 internal void
-TiledRenderGroupToOutput(//platform_work_queue *RenderQueue,
+TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
                          render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
     int const TileCountX = 4;
@@ -1157,10 +1157,10 @@ TiledRenderGroupToOutput(//platform_work_queue *RenderQueue,
             Work->OutputTarget = OutputTarget;
             Work->ClipRect = ClipRect;
 
-            // RenderQueue->AddEntry(RenderQueue, DoTiledWork, Work);
+            PlatformAddEntry(RenderQueue, DoTiledWork, Work);
         }
     }
-    // RenderQueue->CompleteAllWork(RenderQueue);
+    PlatformCompleteAllWork(RenderQueue);
 
     for(int WorkIndex = 0; WorkIndex < WorkCount; ++WorkIndex)
     {

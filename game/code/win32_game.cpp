@@ -1038,9 +1038,11 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
 }
 #endif
 
+typedef void work_queue_callback(work_queue *Queue, void *Data);
 struct work_queue_entry_storage
 {
-    void *UserPointer;
+    platform_work_queue_callback *Callback;
+    void *Data
 };
 
 struct work_queue
@@ -1060,19 +1062,19 @@ struct work_queue_entry
 };
 
 internal void
-AddWorkQueueEntry(work_queue *Queue, void *Pointer)
+Win32AddEntry(work_queue *Queue, platform_work_queue_callback *Callback, void *Data)
 {
+    // TODO: Switch to InterlockedCompareExchange eventually so that any thread can add
     Assert(Queue->EntryCount < ArrayCount(Queue->Entries));
-    Queue->Entries[Queue->EntryCount].UserPointer = Pointer;
+    work_queue_entry *Entry = Queue->Entries + Queue->EntryCount;
+    Entry->Callback = Callback;
+    Entry->Data = Data;
     _WriteBarrier();
     _mm_sfence();
     ++Queue->EntryCount;
     ReleaseSemaphore(Queue->SemaphoreHandle, 1, 0);
 }
 
-internal work_queue_entry
-CompleteAndGetNextWorkQueueEntry(work_queue *Queue, work_queue_entry Completed)
-{
     work_queue_entry Result;
     Result.IsValid = false;
 
@@ -1081,22 +1083,34 @@ CompleteAndGetNextWorkQueueEntry(work_queue *Queue, work_queue_entry Completed)
         InterlockedIncrement((LONG volatile *)&Queue->EntryCompletionCount);
     }
 
-    if(Queue->NextEntryToDo < Queue->EntryCount)
+    uint32_t OriginalNextEntryToDo = Queue->NextEntryToDo;
+    if(OriginalNextEntryToDo < Queue->EntryCount)
     {
-        uint32_t Index = InterlockedIncrement((LONG volatile *)&Queue->NextEntryToDo) - 1;
-        Result.Data = Queue->Entries[Index].UserPointer;
-        Result.IsValid = true;
-        _ReadBarrier();
+        uint32_t Index = InterlockedComapreExchange((LONG volatile *)&Queue->NextEntryToDo,
+                                                    OriginalNextEntryToDo + 1,
+                                                    OriginalNextEntryToDo);
+        if(Index == OriginalNextEntryToDo)
+        {
+            Result.Data = Queue->Entries[Index].UserPointer;
+            Result.IsValid = true;
+            _ReadBarrier();
+        }
     }
 
     return(Result);
-}
 
-internal bool32
-QueueWorkStillInProgress(work_queue *Queue)
+internal void
+Win32CompleteAllWork(work_queue *Queue)
 {
-    bool32 Result = (Queue->EntryCount != Queue->EntryCompletionCount);
-    return(Result);
+    work_queue_entry Entry = {};
+    while(Queue->EntryCount != Queue->EntryCompletionCount)
+    {
+        Entry = CompleteAndGetNextWorkQueueEntry(&Queue, Entry);
+        if(Entry.IsValid)
+        {
+            DoWorkerWork(Entry, 7);
+        }
+    }
 }
 
 inline void
@@ -1191,15 +1205,7 @@ WinMain(HINSTANCE Instance,
     PushString(&Queue, "String B8");
     PushString(&Queue, "String B9");
 
-    work_queue_entry Entry = {};
-    while(QueueWorkStillInProgress(&Queue))
-    {
-        Entry = CompleteAndGetNextWorkQueueEntry(&Queue, Entry);
-        if(Entry.IsValid)
-        {
-            DoWorkerWork(Entry, 7);
-        }
-    }
+    Win32CompleteAllWork(Queue);
 
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
