@@ -265,6 +265,7 @@ struct transient_state
     memory_arena TranArena;
     uint32_t GroundBufferCount;
     ground_buffer *GroundBuffers;
+    platform_work_queue *RenderQueue;
 
     uint32_t EnvMapWidth;
     uint32_t EnvMapHeight;
