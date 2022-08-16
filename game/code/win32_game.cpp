@@ -1046,9 +1046,11 @@ struct platform_work_queue_entry
 
 struct platform_work_queue
 {
-    uint32_t volatile EntryCompletionCount;
-    uint32_t volatile NextEntryToDo;
-    uint32_t volatile EntryCount;
+    uint32_t volatile CompletionGoal;
+    uint32_t volatile CompletionCount;
+
+    uint32_t volatile NextEntryToWrite;
+    uint32_t volatile NextEntryToRead;
     HANDLE SemaphoreHandle;
 
     platform_work_queue_entry Entries[256];
@@ -1058,13 +1060,15 @@ internal void
 Win32AddEntry(platform_work_queue *Queue, platform_work_queue_callback *Callback, void *Data)
 {
     // TODO: Switch to InterlockedCompareExchange eventually so that any thread can add
-    Assert(Queue->EntryCount < ArrayCount(Queue->Entries));
-    platform_work_queue_entry *Entry = Queue->Entries + Queue->EntryCount;
+    uint32_t NewNextEntryToWrite = (Queue->NextEntryToWrite + 1) % ArrayCount(Queue->Entries);
+    Assert(NewNextEntryToWrite != Queue->NextEntryToRead);
+    platform_work_queue_entry *Entry = Queue->Entries + Queue->NextEntryToWrite;
     Entry->Callback = Callback;
     Entry->Data = Data;
+    ++Queue->CompletionGoal;
     _WriteBarrier();
     _mm_sfence();
-    ++Queue->EntryCount;
+    Queue->NextEntryToWrite = NewNextEntryToWrite;
     ReleaseSemaphore(Queue->SemaphoreHandle, 1, 0);
 }
 
@@ -1073,17 +1077,18 @@ Win32DoNextWorkQueueEntry(platform_work_queue *Queue)
 {
     bool32 WeShouldSleep = false;
 
-    uint32_t OriginalNextEntryToDo = Queue->NextEntryToDo;
-    if(OriginalNextEntryToDo < Queue->EntryCount)
+    uint32_t OriginalNextEntryToRead = Queue->NextEntryToRead;
+    uint32_t NewNextEntryToRead = (OriginalNextEntryToRead + 1) % ArrayCount(Queue->Entries);
+    if(OriginalNextEntryToRead != Queue->NextEntryToWrite)
     {
-        uint32_t Index = InterlockedCompareExchange((LONG volatile *)&Queue->NextEntryToDo,
-                                                    OriginalNextEntryToDo + 1,
-                                                    OriginalNextEntryToDo);
-        if(Index == OriginalNextEntryToDo)
+        uint32_t Index = InterlockedCompareExchange((LONG volatile *)&Queue->NextEntryToRead,
+                                                    NewNextEntryToRead,
+                                                    OriginalNextEntryToRead);
+        if(Index == OriginalNextEntryToRead)
         {
             platform_work_queue_entry Entry = Queue->Entries[Index];
             Entry.Callback(Queue, Entry.Data);
-            InterlockedIncrement((LONG volatile *)&Queue->EntryCompletionCount);
+            InterlockedIncrement((LONG volatile *)&Queue->CompletionCount);
         }
     }
     else
@@ -1097,10 +1102,13 @@ Win32DoNextWorkQueueEntry(platform_work_queue *Queue)
 internal void
 Win32CompleteAllWork(platform_work_queue *Queue)
 {
-    while(Queue->EntryCount != Queue->EntryCompletionCount)
+    while(Queue->CompletionGoal != Queue->CompletionCount)
     {
         Win32DoNextWorkQueueEntry(Queue);
     }
+
+    Queue->CompletionGoal = 0;
+    Queue->CompletionCount = 0;
 }
 
 struct win32_thread_info
@@ -1212,8 +1220,8 @@ WinMain(HINSTANCE Instance,
 #endif
     WNDCLASSA WindowClass = {};
 
-    Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
-//    Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);
+//    Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);
 
     WindowClass.style = CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
@@ -1293,6 +1301,9 @@ WinMain(HINSTANCE Instance,
             game_memory GameMemory = {};
             GameMemory.PermanentStorageSize = Megabytes(256);
             GameMemory.TransientStorageSize = Gigabytes(1);
+            GameMemory.HighPriorityQueue = &Queue;
+            GameMemory.PlatformAddEntry = Win32AddEntry;
+            GameMemory.PlatformCompleteAllWork = Win32CompleteAllWork;
             GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
             GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
             GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
