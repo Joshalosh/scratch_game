@@ -1156,7 +1156,13 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
             Work->OutputTarget = OutputTarget;
             Work->ClipRect = ClipRect;
 
+#if 1
+            // This is the multi-threaded path.
             PlatformAddEntry(RenderQueue, DoTiledRenderWork, Work);
+#else
+            // This is the single-threaded path.
+            DoTiledRenderWork(RenderQueue, Work);
+#endif
         }
     }
 
