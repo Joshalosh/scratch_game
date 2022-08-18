@@ -502,21 +502,35 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
     if(HasArea(FillRect))
     {
-        __m128i StartupClipMask = _mm_set1_epi8(-1);
-        int FillWidth = FillRect.MaxX - FillRect.MinX;
-        int FillWidthAlign = FillWidth & 3;
-        if(FillWidthAlign > 0)
+        __m128i StartClipMask = _mm_set1_epi8(-1);
+        __m128i EndClipMask = _mm_set1_epi8(-1);
+
+        __m128i StartClipMasks[] =
         {
-            int Adjustment = (4 - FillWidthAlign);
-            // TODO: This is dumb.
-            switch(Adjustment)
-            {
-                case 1: {StartupClipMask = _mm_slli_si128(StartupClipMask, 1*4);} break;
-                case 2: {StartupClipMask = _mm_slli_si128(StartupClipMask, 2*4);} break;
-                case 3: {StartupClipMask = _mm_slli_si128(StartupClipMask, 3*4);} break;
-            }
-            FillWidth += Adjustment;
-            FillRect.MinX = FillRect.MaxX - FillWidth;
+            _mm_slli_si128(StartClipMask, 0*4),
+            _mm_slli_si128(StartClipMask, 1*4),
+            _mm_slli_si128(StartClipMask, 2*4),
+            _mm_slli_si128(StartClipMask, 3*4),
+        };
+
+        __m128i EndClipMasks[] =
+        {
+            _mm_srli_si128(EndClipMask, 0*4),
+            _mm_srli_si128(EndClipMask, 3*4),
+            _mm_srli_si128(EndClipMask, 2*4),
+            _mm_srli_si128(EndClipMask, 1*4),
+        };
+
+        if(FillRect.MinX & 3)
+        {
+            StartClipMask = StartClipMasks[FillRect.MinX & 3];
+            FillRect.MinX = FillRect.MinX & ~3;
+        }
+
+        if(FillRect.MaxX & 3)
+        {
+            EndClipMask = EndClipMasks[FillRect.MaxX & 3];
+            FillRect.MaxX = (FillRect.MaxX & ~3) + 4;
         }
 
         v2 nXAxis = InvXAxisLengthSq*XAxis;
@@ -576,7 +590,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                                         (real32)(MinX + 0));
             PixelPx = _mm_sub_ps(PixelPx, Originx_4x);
 
-            __m128i ClipMask = StartupClipMask;
+            __m128i ClipMask = StartClipMask;
 
             uint32_t *Pixel = (uint32_t *)Row;
             for(int XI = MinX; XI < MaxX; XI += 4)
@@ -598,7 +612,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
     // TODO: Check this later and see if it helps.
     //            if(_mm_movemask_epi8(WriteMask))
                 {
-                    __m128i OriginalDest = _mm_loadu_si128((__m128i *)Pixel);
+                    __m128i OriginalDest = _mm_load_si128((__m128i *)Pixel);
 
                     U = _mm_min_ps(_mm_max_ps(U, Zero), One);
                     V = _mm_min_ps(_mm_max_ps(V, Zero), One);
@@ -762,12 +776,20 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
                     __m128i MaskedOut = _mm_or_si128(_mm_and_si128(WriteMask, Out),
                                                      _mm_andnot_si128(WriteMask, OriginalDest));
-                    _mm_storeu_si128((__m128i *)Pixel, MaskedOut);
+                    _mm_store_si128((__m128i *)Pixel, MaskedOut);
                 }
 
                 PixelPx = _mm_add_ps(PixelPx, Four_4x);
                 Pixel += 4;
-                ClipMask = _mm_set1_epi8(-1);
+
+                if((XI + 8) < MaxX)
+                {
+                    ClipMask = _mm_set1_epi8(-1);
+                }
+                else
+                {
+                    ClipMask = EndClipMask;
+                }
 
                 IACA_VC64_END;
             }
@@ -1133,10 +1155,11 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
     int const TileCountY = 4;
     tile_render_work WorkArray[TileCountX*TileCountY];
 
-    // TODO: Make sure that the allocator allocates enough space so I can round these.
-    // TODO: Probably need to round to 4.
+    Assert(((uintptr_t)OutputTarget->Memory & 15) == 0);
     int TileWidth = OutputTarget->Width / TileCountX;
     int TileHeight = OutputTarget->Height / TileCountY;
+
+    TileWidth = ((TileWidth + 3) / 4) * 4;
 
     int WorkCount = 0;
     for(int TileY = 0; TileY < TileCountY; ++TileY)
@@ -1145,12 +1168,16 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
         {
             tile_render_work *Work = WorkArray + WorkCount++;
             
-            //TODO: Buffers with overflow.
             rectangle2i ClipRect;
-            ClipRect.MinX = TileX*TileWidth + 4;
-            ClipRect.MaxX = ClipRect.MinX + TileWidth - 4;
-            ClipRect.MinY = TileY*TileHeight + 4;
-            ClipRect.MaxY = ClipRect.MinY + TileHeight - 4;
+            ClipRect.MinX = TileX*TileWidth;
+            ClipRect.MaxX = ClipRect.MinX + TileWidth;
+            ClipRect.MinY = TileY*TileHeight;
+            ClipRect.MaxY = ClipRect.MinY + TileHeight;
+
+            if(ClipRect.MaxX > OutputTarget->Width)
+            {
+                ClipRect.MaxX = OutputTarget->Width;
+            }
 
             Work->RenderGroup = RenderGroup;
             Work->OutputTarget = OutputTarget;

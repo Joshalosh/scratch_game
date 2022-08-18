@@ -73,6 +73,8 @@ typedef double real64;
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
+#define Align16(Value) ((Value + 15) & ~15)
+
 inline uint32_t
 SafeTruncateUInt64(uint64_t Value)
 {
