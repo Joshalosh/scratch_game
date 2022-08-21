@@ -4,12 +4,27 @@
  TODO
 
  - Rendering
-   - Lighting
    - Straighten out all of the coordinate systems.
      - Screen
      - World
      - Texture
-   - Optimisation
+   - Particle systems
+   - Lighting
+   - Final Optimisation
+
+ - Asset streaming
+
+ - Debug code
+   - Logging
+   - Diagramming
+   - A little GUI, switches / sliders / etc.
+   - Draw tile chunks so we can verify that things are aligned /
+     in the chunks we want them to be in
+
+ - Audio
+   - Sound effect triggers
+   - Ambient sounds
+   - Music
 
  ARCHITECTURE EXPLORATION
  - Z
@@ -38,20 +53,6 @@
    - Per-entity clocking
    - Sim region merging? For multiple players?
    - Simple zoomed-out view for testing
-
- - Debug code
-   - Logging
-   - Diagramming
-   - A little GUI, switches / sliders / etc.
-   - Draw tile chunks so we can verify that things are aligned /
-     in the chunks we want them to be in
-
- - Asset streaming
-
- - Audio
-   - Sound effect triggers
-   - Ambient sounds
-   - Music
 
  - Metagame / save game
    - How do you enter a 'save slot'?

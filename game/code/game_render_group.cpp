@@ -1151,6 +1151,16 @@ internal void
 TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
                          render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
+    /*
+      TODO:
+
+      - Make sure that tiles are all cache-aligned
+      - Can I get hyperthreads synced so they do interleaved lines?
+      - How big should the tiles be for performance?
+      - Actually ballpark the memory bandwidth for our DrawRectangleQuickly
+      - Re-Test some of our instruction choices
+    */
+
     int const TileCountX = 4;
     int const TileCountY = 4;
     tile_render_work WorkArray[TileCountX*TileCountY];
@@ -1174,9 +1184,13 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
             ClipRect.MinY = TileY*TileHeight;
             ClipRect.MaxY = ClipRect.MinY + TileHeight;
 
-            if(ClipRect.MaxX > OutputTarget->Width)
+            if(TileX == (TileCountX - 1))
             {
                 ClipRect.MaxX = OutputTarget->Width;
+            }
+            if(TileY == (TileCountY - 1))
+            {
+                ClipRect.MaxY = OutputTarget->Height;
             }
 
             Work->RenderGroup = RenderGroup;
