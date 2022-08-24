@@ -107,24 +107,21 @@ struct render_entry_coordinate_system
 };
 // }
 
-struct render_group_camera
+struct render_group_transform
 {
     // TODO: Camera parametres.
+    real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
+    v2 MonitorHalfDimInMetres;
+
     real32 FocalLength;
     real32 DistanceAboveTarget;
 };
 
 struct render_group
 {
-    render_group_camera GameCamera;
-    render_group_camera RenderCamera;
-
-    real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
-    v2 MonitorHalfDimInMetres;
-
     real32 GlobalAlpha;
 
-    render_basis *DefaultBasis;
+    render_group_transform Transform;
 
     uint32_t MaxPushBufferSize;
     uint32_t PushBufferSize;
