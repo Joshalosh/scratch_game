@@ -998,10 +998,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
 {
     BEGIN_TIMED_BLOCK(RenderGroupToOutput);
 
-    v2 ScreenDim = {(real32)OutputTarget->Width, (real32)OutputTarget->Height};
-
-    // TODO: Remember to remove this.
-    real32 PixelsToMetres = 1.0f / RenderGroup->MetresToPixels;
+    real32 NullPixelToMetres = 1.0f;
 
     for(uint32_t BaseAddress = 0; BaseAddress < RenderGroup->PushBufferSize;)
     {
@@ -1028,14 +1025,14 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
 #if 0
 //                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
                 DrawRectangleSlowly(OutputTarget, Entry->P,
-                                    Entry->Scale*V2(Entry->Size.x, 0),
-                                    Entry->Scale*V2(0, Entry->Size.y), Entry->Color,
-                                    Entry->Bitmap, 0, 0, 0, 0, PixelsToMetres);
+                                    V2(Entry->Size.x, 0),
+                                    V2(0, Entry->Size.y), Entry->Color,
+                                    Entry->Bitmap, 0, 0, 0, 0, NullPixelsToMetres);
 #else
-                DrawRectangleQuickly(OutputTarget, Basis.P,
-                                     Basis.Scale*V2(Entry->Size.x, 0),
-                                     Basis.Scale*V2(0, Entry->Size.y), Entry->Color,
-                                     Entry->Bitmap, PixelsToMetres, ClipRect, Even);
+                DrawRectangleQuickly(OutputTarget, Entry->P,
+                                     V2(Entry->Size.x, 0),
+                                     V2(0, Entry->Size.y), Entry->Color,
+                                     Entry->Bitmap, NullPixelsToMetres, ClipRect, Even);
 #endif
 
                 BaseAddress += sizeof(*Entry);
@@ -1044,7 +1041,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
             case RenderGroupEntryType_render_entry_rectangle:
             {
                 render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
-                DrawRectangle(OutputTarget, Basis.P, Basis.P + Basis.Scale*Entry->Dim, Entry->Color, ClipRect, Even);
+                DrawRectangle(OutputTarget, Entry->P, Entry->P + Entry->Dim, Entry->Color, ClipRect, Even);
 
                 BaseAddress += sizeof(*Entry);
             } break;
@@ -1182,26 +1179,23 @@ AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, uint32_t Re
     render_group *Result = PushStruct(Arena, render_group);
     Result->PushBufferBase = (uint8_t *)PushSize(Arena, MaxPushBufferSize);
 
-    Result->DefaultBasis = PushStruct(Arena, render_basis);
-    Result->DefaultBasis->P = V3(0, 0, 0);
-
     Result->MaxPushBufferSize = MaxPushBufferSize;
     Result->PushBufferSize = 0;
-
-    real32 WidthOfMonitor = 0.635f; // This is the horizontal measurement of the monitor in metres.
-    Result->GameCamera.FocalLength = 0.6f;
-    Result->GameCamera.DistanceAboveTarget = 9.0f;
-    Result->RenderCamera = Result->GameCamera;
-//    Result->RenderCamera.DistanceAboveTarget = 50.0f;
 
     Result->GlobalAlpha = 1.0f;
 
     // TODO: I need to adjust this based on buffer size.
-    Result->MetresToPixels = (real32)ResolutionPixelsX*WidthOfMonitor;
-
-    real32 PixelsToMetres = 1.0f / Result->MetresToPixels;
-    Result->MonitorHalfDimInMetres = {0.5f*ResolutionPixelsX*PixelsToMetres,
+    real32 WidthOfMonitor = 0.635f; // This is the horizontal measurement of the monitor in metres.
+    Result->MonitorHalfDimInMetres = {0.5f*ResolutionPixelsX*PixelsToMetres, 
                                       0.5f*ResolutionPixelsY*PixelsToMetres};
+    // Default Transform.
+    Result->Transform->MetresToPixels = (real32)ResolutionPixelsX*WidthOfMonitor;
+    Result->Transform->FocalLength = 0.6f; // Metres the person is sitting from their monitor.
+    Result->Transform->DistanceAboveTarget = 9.0f;
+    Result->Transform->ScreenCentre = V2(0.5f*ResolutionPixelsX,
+                                         0.5f*ResolutionPixelsY);
+    Result->Transform->OffsetP = 0.0f;
+    Result->Transform->Scale = 1.0f;
 
     return(Result);
 }
@@ -1212,25 +1206,22 @@ struct entity_basis_p_result
     real32 Scale;
     bool32 Valid;
 };
-inline entity_basis_p_result GetRenderEntityBasisP(render_group *RenderGroup, render_entity_basis *EntityBasis,
-                                                   v2 ScreenDim)
+inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, v3 P)
 {
     v2 ScreenCentre = 0.5f*ScreenDim;
 
     entity_basis_p_result Result = {};
 
-    v3 EntityBaseP = EntityBasis->Basis->P;
-
-    real32 DistanceToPZ = (RenderGroup->RenderCamera.DistanceAboveTarget - EntityBaseP.z);
+    real32 DistanceToPZ = (Transform->DistanceAboveTarget - P.z);
     real32 NearClipPlane = 0.2f;
 
-    v3 RawXY = V3(EntityBaseP.xy + EntityBasis->Offset.xy, 1.0f);
+    v3 RawXY = V3(P.xy, 1.0f);
 
     if(DistanceToPZ > NearClipPlane)
     {
-        v3 ProjectedXY = (1.0f / DistanceToPZ) * RenderGroup->RenderCamera.FocalLength*RawXY;
-        Result.P = ScreenCentre + RenderGroup->MetresToPixels*ProjectedXY.xy;
-        Result.Scale = RenderGroup->MetresToPixels*ProjectedXY.z;
+        v3 ProjectedXY = (1.0f / DistanceToPZ) * Transform->FocalLength*RawXY;
+        Result.P = ScreenCentre + Transform->MetresToPixels*ProjectedXY.xy;
+        Result.Scale = Transform->MetresToPixels*ProjectedXY.z;
         Result.Valid = true;
     }
 

@@ -40,19 +40,6 @@ struct environment_map
     real32 Pz;
 };
 
-struct render_basis
-{
-    v3 P;
-};
-
-struct render_entity_basis
-{
-    render_basis *Basis;
-    v3 Offset;
-};
-
-// render_group_entry is a "compact discriminated union"
-// TODO: Remove the header.
 enum render_group_entry_type
 {
     RenderGroupEntryType_render_entry_clear,
@@ -78,15 +65,16 @@ struct render_entry_saturation
 struct render_entry_bitmap
 {
     loaded_bitmap *Bitmap;
-    render_entity_basis EntityBasis;
-    v2 Size;
+
     v4 Color;
+    v2 P;
+    v2 Size;
 };
 
 struct render_entry_rectangle
 {
-    render_entity_basis EntityBasis;
     v4 Color;
+    v2 P;
     v2 Dim;
 };
 
@@ -101,27 +89,32 @@ struct render_entry_coordinate_system
     loaded_bitmap *Texture;
     loaded_bitmap *NormalMap;
 
+//    real32 PixelsToMetres; // TODO: I need to store this for lighting.
+
     environment_map *Top;
     environment_map *Middle;
     environment_map *Bottom;
 };
 // }
 
-struct render_group_transform
+struct render_transform
 {
     // TODO: Camera parametres.
     real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
-    v2 MonitorHalfDimInMetres;
 
     real32 FocalLength;
     real32 DistanceAboveTarget;
+
+    v2 OffsetP;
+    real32 Scale;
 };
 
 struct render_group
 {
     real32 GlobalAlpha;
 
-    render_group_transform Transform;
+    v2 MonitorHalfDimInMetres;
+    render_transform Transform;
 
     uint32_t MaxPushBufferSize;
     uint32_t PushBufferSize;
