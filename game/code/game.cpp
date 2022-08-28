@@ -711,7 +711,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #if GAME_INTERNAL
     DebugGlobalMemory = Memory;
 #endif
-    BEGIN_TIMED_BLOCK(GameUpdateAndRender);
+    BEGIN_TIMED_BLOCK(GameUpdateAndRender)
 
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
            (ArrayCount(Input->Controllers[0].Buttons)));
@@ -731,6 +731,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->TypicalFloorHeight = 3.0f;
 
+        // TODO: Remove this.
+        real32 PixelsToMetres = 1.0f / 42.0f;
         v3 WorldChunkDimInMeters = {PixelsToMetres*(real32)GroundBufferWidth,
                                     PixelsToMetres*(real32)GroundBufferHeight,
                                     GameState->TypicalFloorHeight};
@@ -1099,6 +1101,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    //
+    // Render
+    //
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
 
     loaded_bitmap DrawBuffer_ = {};
@@ -1128,6 +1133,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     CameraBoundsInMetres.Min.z = -3.0f*GameState->TypicalFloorHeight;
     CameraBoundsInMetres.Max.z =  1.0f*GameState->TypicalFloorHeight;
 
+    // Ground chunk rendering.
     for(uint32_t GroundBufferIndex = 0;
         GroundBufferIndex < TranState->GroundBufferCount;
         ++GroundBufferIndex)
@@ -1140,14 +1146,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             if((Delta.z >= -1.0f) && (Delta.z < 1.0f))
             {
-                render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
-                RenderGroup->DefaultBasis = Basis;
-                Basis->P = Delta;
-
                 real32 GroundSideInMetres = World->ChunkDimInMeters.x;
-                PushBitmap(RenderGroup, Bitmap, GroundSideInMetres, V3(0, 0, 0));
+                PushBitmap(RenderGroup, Bitmap, GroundSideInMetres, Delta);
 #if 1
-                PushRectOutline(RenderGroup, V3(0, 0, 0), V2(GroundSideInMetres, GroundSideInMetres), V4(1.0f, 1.0f, 0.0f, 1.0f));
+                PushRectOutline(RenderGroup, Delta, V2(GroundSideInMetres, GroundSideInMetres),
+                                V4(1.0f, 1.0f, 0.0f, 1.0f));
 #endif
             }
         }
@@ -1221,9 +1224,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     v3 CameraP = Subtract(World, &GameState->CameraP, &SimCentreP);
 
-    render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
-    Basis->P = V3(0, 0, 0);
-    RenderGroup->DefaultBasis = Basis;
     PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
 //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
     PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
@@ -1236,6 +1236,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             real32 dt = Input->dtForFrame;
         
+            // This is wrong, should be computed after update.
             real32 ShadowAlpha = 1.0f - 0.5f*Entity->P.z;
             if(ShadowAlpha < 0)
             {
@@ -1244,9 +1245,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
             move_spec MoveSpec = DefaultMoveSpec();
             v3 ddP = {};
-
-            render_basis *Basis = PushStruct(&TranState->TranArena, render_basis);
-            RenderGroup->DefaultBasis = Basis;
 
             // TODO: Probably indicates I want to seperate update and render
             // for entities sometime soon.
@@ -1311,7 +1309,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 {
                     MoveSpec.UnitMaxAccelVector = false;
                     MoveSpec.Speed = 0.0f;
-                    MoveSpec.Drag  = 0.0f;
+                    MoveSpec.Drag = 0.0f;
 
                     if(Entity->DistanceLimit == 0.0f)
                     {
@@ -1354,6 +1352,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     MoveSpec.Speed = 50.0f;
                     MoveSpec.Drag = 8.0f;
                 } break;
+            }
 
             if(!IsSet(Entity, EntityFlag_Nonspatial) &&
                IsSet(Entity, EntityFlag_Moveable))
@@ -1361,7 +1360,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 MoveEntity(GameState, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
             }
 
-            Basis->P = GetEntityGroundPoint(Entity);
+            RenderGroup->Transform.OffsetP = GetEntityGroundPoint(Entity);
 
             //
             // Post-Physics entity work.

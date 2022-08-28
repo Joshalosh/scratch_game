@@ -101,11 +101,12 @@ struct render_transform
 {
     // TODO: Camera parametres.
     real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
+    v2 ScreenCentre;
 
     real32 FocalLength;
     real32 DistanceAboveTarget;
 
-    v2 OffsetP;
+    v3 OffsetP;
     real32 Scale;
 };
 
@@ -114,6 +115,7 @@ struct render_group
     real32 GlobalAlpha;
 
     v2 MonitorHalfDimInMetres;
+
     render_transform Transform;
 
     uint32_t MaxPushBufferSize;
