@@ -1213,9 +1213,20 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
 {
     entity_basis_p_result Result = {};
 
-    v3 P = OriginalP + Transform->OffsetP;
+    v3 P = V3(OriginalP.xy, 0.0f) + Transform->OffsetP;
 
-    real32 DistanceToPZ = (Transform->DistanceAboveTarget - P.z);
+    real32 OffsetZ = 0.0f;
+
+    real32 DistanceAboveTarget = Transform->DistanceAboveTarget;
+#if 0
+    // TODO: Figure out how I want to control the debug camera.
+    if(1)
+    {
+        DistanceAboveTarget += 50.0f;
+    }
+#endif
+
+    real32 DistanceToPZ = (DistanceAboveTarget - P.z);
     real32 NearClipPlane = 0.2f;
 
     v3 RawXY = V3(P.xy, 1.0f);
@@ -1223,8 +1234,8 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
     if(DistanceToPZ > NearClipPlane)
     {
         v3 ProjectedXY = (1.0f / DistanceToPZ) * Transform->FocalLength*RawXY;
-        Result.P = Transform->ScreenCentre + Transform->MetresToPixels*ProjectedXY.xy;
         Result.Scale = Transform->MetresToPixels*ProjectedXY.z;
+        Result.P = Transform->ScreenCentre + Transform->MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
         Result.Valid = true;
     }
 

@@ -459,7 +459,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
     GroundBuffer->P = *ChunkP;
 
-#if 0
+#if 1
     real32 Width  = GameState->World->ChunkDimInMeters.x;
     real32 Height = GameState->World->ChunkDimInMeters.y;
     v2 HalfDim    = 0.5f*V2(Width, Height);
@@ -1148,7 +1148,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 real32 GroundSideInMetres = World->ChunkDimInMeters.x;
                 PushBitmap(RenderGroup, Bitmap, GroundSideInMetres, Delta);
-#if 1
+#if 0
                 PushRectOutline(RenderGroup, Delta, V2(GroundSideInMetres, GroundSideInMetres),
                                 V4(1.0f, 1.0f, 0.0f, 1.0f));
 #endif
