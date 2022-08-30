@@ -445,27 +445,21 @@ MakeNullCollision(game_state *GameState)
 internal void
 FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer *GroundBuffer, world_position *ChunkP)
 {
-    // TODO: Decide what the pushbuffer size is.
     temporary_memory GroundMemory = BeginTemporaryMemory(&TranState->TranArena);
+    GroundBuffer->P = *ChunkP;
 
-    // TODO: I need to be able to set an orthographic display mode here.
     loaded_bitmap *Buffer = &GroundBuffer->Bitmap;
     Buffer->AlignPercentage = V2(0.5f, 0.5f);
     Buffer->WidthOverHeight = 1.0f;
 
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4), Buffer->Width, Buffer->Height);
-
-    Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
-
-    GroundBuffer->P = *ChunkP;
-
-#if 1
     real32 Width  = GameState->World->ChunkDimInMeters.x;
     real32 Height = GameState->World->ChunkDimInMeters.y;
     v2 HalfDim    = 0.5f*V2(Width, Height);
 
-    // TODO: Once I switch to orthographic stop multiplying this.
-    HalfDim = 2.0f*HalfDim;
+    // TODO: Decide what the pushbuffer size is.
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
+    Orthographic(RenderGroup, Buffer->Width, Buffer->Height, Width  / Buffer->Height);
+    Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
 
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
     {
@@ -520,7 +514,6 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             }
         }
     }
-#endif
 
     TiledRenderGroupToOutput(TranState->RenderQueue, RenderGroup, Buffer);
     EndTemporaryMemory(GroundMemory);
@@ -1120,9 +1113,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
 
     // TODO: Need to figure out what the pushbuffer size is.
-    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4),
-                                                    DrawBuffer->Width, DrawBuffer->Height);
-
+    render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
+    real32 WidthOfMonitor = 0.635f; // Horizontal measurement of monitor in metres
+    real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
+    Perspective(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, MetresToPixels, 0.6f, 9.0f);
     Clear(RenderGroup, V4(0.25f, 0.25f, 0.25f, 0.0f));
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,

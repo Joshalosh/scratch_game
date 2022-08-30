@@ -1175,7 +1175,7 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
 }
 
 internal render_group *
-AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, uint32_t ResolutionPixelsX, uint32_t ResolutionPixelsY)
+AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize)
 {
     render_group *Result = PushStruct(Arena, render_group);
     Result->PushBufferBase = (uint8_t *)PushSize(Arena, MaxPushBufferSize);
@@ -1185,22 +1185,39 @@ AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize, uint32_t Re
 
     Result->GlobalAlpha = 1.0f;
 
-    // TODO: I need to adjust this based on buffer size.
-    real32 WidthOfMonitor = 0.635f; // This is the horizontal measurement of the monitor in metres.
-    real32 MetresToPixels = (real32)ResolutionPixelsX*WidthOfMonitor;
-    real32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
-    Result->MonitorHalfDimInMetres = {0.5f*ResolutionPixelsX*PixelsToMetres, 
-                                      0.5f*ResolutionPixelsY*PixelsToMetres};
     // Default Transform.
-    Result->Transform.MetresToPixels = MetresToPixels;
-    Result->Transform.FocalLength = 0.6f; // Metres the person is sitting from their monitor.
-    Result->Transform.DistanceAboveTarget = 9.0f;
-    Result->Transform.ScreenCentre = V2(0.5f*ResolutionPixelsX,
-                                         0.5f*ResolutionPixelsY);
     Result->Transform.OffsetP = V3(0.0f, 0.0f, 0.0f);
     Result->Transform.Scale = 1.0f;
 
     return(Result);
+}
+
+inline void
+Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
+            real32 MetresToPixels, real32 FocalLength, real32 DistanceAboveTarget)
+{
+    // TODO: I need to adjust this based on buffer size.
+    real32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
+    RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
+                                      0.5f*PixelHeight*PixelsToMetres};
+
+    RenderGroup->Transform.MetresToPixels = MetresToPixels;
+    RenderGroup->Transform.FocalLength = FocalLength; // Metres the person is sitting from their monitor.
+    RenderGroup->Transform.DistanceAboveTarget = DistanceAboveTarget;
+    RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
+}
+
+inline void
+Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight, real32 MetresToPixels)
+{
+    real32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
+    RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
+                                           0.5f*PixelHeight*PixelsToMetres};
+
+    RenderGroup->Transform.MetresToPixels = MetresToPixels;
+    RenderGroup->Transform.FocalLength = 1.0f; // Metres the person is sitting from their monitor.
+    RenderGroup->Transform.DistanceAboveTarget = 1.0f;
+    RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
 }
 
 struct entity_basis_p_result
