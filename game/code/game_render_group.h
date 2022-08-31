@@ -99,7 +99,9 @@ struct render_entry_coordinate_system
 
 struct render_transform
 {
-    // TODO: Camera parametres.
+    bool32 Orthographic;
+
+    // TODO: Camera parameters.
     real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
     v2 ScreenCentre;
 

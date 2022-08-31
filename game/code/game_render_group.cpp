@@ -1198,6 +1198,7 @@ Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
 {
     // TODO: I need to adjust this based on buffer size.
     real32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
+
     RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
                                       0.5f*PixelHeight*PixelsToMetres};
 
@@ -1205,6 +1206,8 @@ Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->Transform.FocalLength = FocalLength; // Metres the person is sitting from their monitor.
     RenderGroup->Transform.DistanceAboveTarget = DistanceAboveTarget;
     RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
+
+    RenderGroup->Transform.Orthographic = false;
 }
 
 inline void
@@ -1218,6 +1221,8 @@ Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->Transform.FocalLength = 1.0f; // Metres the person is sitting from their monitor.
     RenderGroup->Transform.DistanceAboveTarget = 1.0f;
     RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
+
+    RenderGroup->Transform.Orthographic = true;
 }
 
 struct entity_basis_p_result
@@ -1232,28 +1237,37 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
 
     v3 P = V3(OriginalP.xy, 0.0f) + Transform->OffsetP;
 
-    real32 OffsetZ = 0.0f;
-
-    real32 DistanceAboveTarget = Transform->DistanceAboveTarget;
-#if 0
-    // TODO: Figure out how I want to control the debug camera.
-    if(1)
+    if(Transform->Orthographic)
     {
-        DistanceAboveTarget += 50.0f;
+        Result.P = Transform->ScreenCentre + Transform->MetresToPixels*P.xy;
+        Result.Scale = Transform->MetresToPixels;
+        Result.Valid = true;
     }
+    else
+    {
+        real32 OffsetZ = 0.0f;
+
+        real32 DistanceAboveTarget = Transform->DistanceAboveTarget;
+#if 0
+        // TODO: Figure out how I want to control the debug camera.
+        if(1)
+        {
+            DistanceAboveTarget += 50.0f;
+        }
 #endif
 
-    real32 DistanceToPZ = (DistanceAboveTarget - P.z);
-    real32 NearClipPlane = 0.2f;
+        real32 DistanceToPZ = (DistanceAboveTarget - P.z);
+        real32 NearClipPlane = 0.2f;
 
-    v3 RawXY = V3(P.xy, 1.0f);
+        v3 RawXY = V3(P.xy, 1.0f);
 
-    if(DistanceToPZ > NearClipPlane)
-    {
-        v3 ProjectedXY = (1.0f / DistanceToPZ) * Transform->FocalLength*RawXY;
-        Result.Scale = Transform->MetresToPixels*ProjectedXY.z;
-        Result.P = Transform->ScreenCentre + Transform->MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
-        Result.Valid = true;
+        if(DistanceToPZ > NearClipPlane)
+        {
+            v3 ProjectedXY = (1.0f / DistanceToPZ) * Transform->FocalLength*RawXY;
+            Result.Scale = Transform->MetresToPixels*ProjectedXY.z;
+            Result.P = Transform->ScreenCentre + Transform->MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
+            Result.Valid = true;
+        }
     }
 
     return(Result);

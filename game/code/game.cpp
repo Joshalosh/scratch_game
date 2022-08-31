@@ -458,7 +458,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
     // TODO: Decide what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
-    Orthographic(RenderGroup, Buffer->Width, Buffer->Height, Width  / Buffer->Height);
+    Orthographic(RenderGroup, Buffer->Width, Buffer->Height, Buffer->Width  / Width);
     Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
 
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
@@ -488,7 +488,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 }
 
                 v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
-                PushBitmap(RenderGroup, Stamp, 4.0f, V3(P, 0.0f));
+                PushBitmap(RenderGroup, Stamp, 0.5f, V3(P, 0.0f));
             }
         }
     }
@@ -510,7 +510,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 loaded_bitmap *Stamp = GameState->Tuft + RandomChoice(&Series, ArrayCount(GameState->Tuft));
 
                 v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
-                PushBitmap(RenderGroup, Stamp, 0.4f, V3(P, 0.0f));
+                PushBitmap(RenderGroup, Stamp, 0.1f, V3(P, 0.0f));
             }
         }
     }
