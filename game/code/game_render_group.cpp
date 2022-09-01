@@ -1030,9 +1030,11 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
                                     V2(0, Entry->Size.y), Entry->Color,
                                     Entry->Bitmap, 0, 0, 0, 0, NullPixelsToMetres);
 #else
+                v2 XAxis = {1, 0};
+                v2 YAxis = {0, 1};
                 DrawRectangleQuickly(OutputTarget, Entry->P,
-                                     V2(Entry->Size.x, 0),
-                                     V2(0, Entry->Size.y), Entry->Color,
+                                     Entry->Size.x*XAxis,
+                                     Entry->Size.y*YAxis, Entry->Color,
                                      Entry->Bitmap, NullPixelsToMetres, ClipRect, Even);
 #endif
 

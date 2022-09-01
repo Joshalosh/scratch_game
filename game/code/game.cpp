@@ -459,7 +459,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
     // TODO: Decide what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
     Orthographic(RenderGroup, Buffer->Width, Buffer->Height, Buffer->Width  / Width);
-    Clear(RenderGroup, V4(1.0f, 1.0f, 0.0f, 1.0f));
+    Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));
 
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
     {
@@ -472,6 +472,12 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             // TODO Make random number generation more systemic.
             // Looks into wang hashing or some other spatial seed generation thing.
             random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
+
+            v4 Color = V4(1, 0, 0, 1);
+            if((ChunkX % 2) == (ChunkY % 2))
+            {
+                Color = V4(0, 0, 1, 1);
+            }
 
             v2 Centre = V2(ChunkOffsetX*Width, ChunkOffsetY*Height);
 
@@ -488,7 +494,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                 }
 
                 v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
-                PushBitmap(RenderGroup, Stamp, 0.5f, V3(P, 0.0f));
+                PushBitmap(RenderGroup, Stamp, 2.0f, V3(P, 0.0f), Color);
             }
         }
     }
