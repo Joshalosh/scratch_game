@@ -458,7 +458,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
     // TODO: Decide what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
-    Orthographic(RenderGroup, Buffer->Width, Buffer->Height, Buffer->Width  / Width);
+    Orthographic(RenderGroup, Buffer->Width, Buffer->Height, (Buffer->Width - 2) / Width);
     Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));
 
     for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
@@ -473,11 +473,15 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             // Looks into wang hashing or some other spatial seed generation thing.
             random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
 
+#if 0
             v4 Color = V4(1, 0, 0, 1);
             if((ChunkX % 2) == (ChunkY % 2))
             {
                 Color = V4(0, 0, 1, 1);
             }
+#else
+            v4 Color = {1, 1, 1, 1};
+#endif
 
             v2 Centre = V2(ChunkOffsetX*Width, ChunkOffsetY*Height);
 
@@ -1122,7 +1126,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
     real32 WidthOfMonitor = 0.635f; // Horizontal measurement of monitor in metres
     real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
-    Perspective(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, MetresToPixels, 0.6f, 9.0f);
+    real32 FocalLength = 0.6f;
+    real32 DistanceAboveGround = 9.0f;
+    Perspective(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, MetresToPixels, FocalLength, DistanceAboveGround);
     Clear(RenderGroup, V4(0.25f, 0.25f, 0.25f, 0.0f));
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
