@@ -238,6 +238,7 @@ typedef struct game_memory
     void *TransientStorage; // Required to be cleared to zero at startup
 
     platform_work_queue *HighPriorityQueue;
+    platform_work_queue *LowPriorityQueue;
 
     platform_add_entry *PlatformAddEntry;
     platform_complete_all_work *PlatformCompleteAllWork;

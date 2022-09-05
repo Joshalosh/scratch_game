@@ -442,6 +442,16 @@ MakeNullCollision(game_state *GameState)
     return(Group);
 }
 
+/*
+internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
+{
+    tile_render_work *Work = (tile_render_work *)Data;
+
+    RenderGroupToOutput(Work->RenderGroup, Work->OutputTarget, Work->ClipRect, true);
+    RenderGroupToOutput(Work->RenderGroup, Work->OutputTarget, Work->ClipRect, false);
+}
+*/
+
 internal void
 FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer *GroundBuffer, world_position *ChunkP)
 {
@@ -525,7 +535,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
         }
     }
 
-    TiledRenderGroupToOutput(TranState->RenderQueue, RenderGroup, Buffer);
+    TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, Buffer);
     EndTemporaryMemory(GroundMemory);
 }
 
@@ -983,7 +993,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
                         (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
 
-        TranState->RenderQueue = Memory->HighPriorityQueue;
+        TranState->HighPriorityQueue = Memory->HighPriorityQueue;
+        TranState->LowPriorityQueue  = Memory->LowPriorityQueue;
         TranState->GroundBufferCount = 256;
         TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
         for(uint32_t GroundBufferIndex = 0;
@@ -1531,7 +1542,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 #endif
 
-    TiledRenderGroupToOutput(TranState->RenderQueue, RenderGroup, DrawBuffer);
+    TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer);
 
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the
