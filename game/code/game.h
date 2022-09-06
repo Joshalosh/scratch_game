@@ -117,11 +117,22 @@ InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
 #define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
 #define PushSize(Arena, Size) PushSize_(Arena, Size)
 inline void *
-PushSize_(memory_arena *Arena, memory_index Size)
+PushSize_(memory_arena *Arena, memory_index Size, memory_index Alignment = 4)
 {
+    memory_index ResultPointer = (memory_index)Arena->Base + Arena->Used;
+    memory_index AlignmentOffset = 0;
+
+    memory_index AlignmentMask = Alignment - 1;
+    if(ResultPointer & AlignmentMask)
+    {
+        AlignmentOffset = Alignment - (ResultPointer & AlignmentMask);
+    }
+    Size += AlignmentOffset;
+
     Assert((Arena->Used + Size) <= Arena->Size);
-    void *Result = Arena->Base + Arena->Used;
     Arena->Used += Size;
+
+    void *Result = (void *)(ResultPointer + AlignmentOffset);
 
     return(Result);
 }
