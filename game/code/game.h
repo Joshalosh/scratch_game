@@ -113,9 +113,9 @@ InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
     Arena->TempCount = 0;
 }
 
-#define PushStruct(Arena, type) (type *)PushSize_(Arena, sizeof(type))
-#define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
-#define PushSize(Arena, Size) PushSize_(Arena, Size)
+#define PushStruct(Arena, type, ...) (type *)PushSize_(Arena, sizeof(type), ## __VA_ARGS__)
+#define PushArray(Arena, Count, type, ...) (type *)PushSize_(Arena, (Count)*sizeof(type), ## __VA_ARGS__)
+#define PushSize(Arena, Size, ...) PushSize_(Arena, Size, ## __VA_ARGS__)
 inline void *
 PushSize_(memory_arena *Arena, memory_index Size, memory_index Alignment = 4)
 {
@@ -271,10 +271,21 @@ struct game_state
     loaded_bitmap TestNormal;
 };
 
+struct task_with_memory
+{
+    bool32_t BeingUsed;
+    memory_arena Arena;
+
+    temporary_memory MemoryFlush;
+};
+
 struct transient_state
 {
     bool32 IsInitialised;
     memory_arena TranArena;
+
+    task_with_memory Tasks[4];
+
     uint32_t GroundBufferCount;
     ground_buffer *GroundBuffers;
     platform_work_queue *HighPriorityQueue;
