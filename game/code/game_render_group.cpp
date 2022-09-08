@@ -1116,6 +1116,25 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 }
 
 internal void
+RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
+{
+    Assert(((uintptr_t)OutputTarget->Memory & 15) == 0);
+
+    rectangle2i ClipRect;
+    ClipRect.MinX = 0;
+    ClipRect.MaxX = OutputTarget->Width;
+    ClipRect.MinY = 0;
+    ClipRect.MaxY = OutputTarget->Height;
+
+    tile_render_work Work;
+    Work.RenderGroup = RenderGroup;
+    Work.OutputTarget = OutputTarget;
+    Work.ClipRect = ClipRect;
+
+    DoTiledRenderWork(0, &Work);
+}
+
+internal void
 TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
                          render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {

@@ -273,7 +273,7 @@ struct game_state
 
 struct task_with_memory
 {
-    bool32_t BeingUsed;
+    bool32 BeingUsed;
     memory_arena Arena;
 
     temporary_memory MemoryFlush;

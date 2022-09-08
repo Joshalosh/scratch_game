@@ -447,7 +447,7 @@ BeginTaskWithMemory(transient_state *TranState)
 {
     task_with_memory *FoundTask = 0;
 
-    for(uint32_t TaskIndex = 0; TaskIndex < ArrayCount(TranState->Tasks); ++TasIndex)
+    for(uint32_t TaskIndex = 0; TaskIndex < ArrayCount(TranState->Tasks); ++TaskIndex)
     {
         task_with_memory *Task = TranState->Tasks + TaskIndex;
         if(!Task->BeingUsed)
@@ -461,19 +461,22 @@ BeginTaskWithMemory(transient_state *TranState)
     return(FoundTask);
 }
 
-internal void
-EndTaskWithMemory()
+inline void
+EndTaskWithMemory(task_with_memory *Task)
 {
     EndTemporaryMemory(Task->MemoryFlush);
+
+    CompletePreviousWritesBeforeFutureWrites;
+    Task->BeingUsed = false;
 }
 
-internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
+internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 {
     tile_render_work *Work = (tile_render_work *)Data;
 
-    TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, Buffer);
+    RenderGroupToOutput(RenderGroup, Buffer);
 
-    EndTaskWithMemory();
+    EndTaskWithMemory(Task);
 }
 
 internal void

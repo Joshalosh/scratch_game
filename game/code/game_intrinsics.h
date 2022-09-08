@@ -2,6 +2,13 @@
 
 #include "math.h"
 
+#if COMPILER_MSVC
+#define CompletePreviousWritesBeforeFutureWrites _WriteBarrier();
+#else
+// I need to define these on GCC/LLVM
+#define CompletePreviousWritesBeforeFutureWrites
+#endif
+
 inline int32_t
 SignOf(int32_t Value)
 {
