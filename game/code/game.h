@@ -113,26 +113,45 @@ InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
     Arena->TempCount = 0;
 }
 
-#define PushStruct(Arena, type, ...) (type *)PushSize_(Arena, sizeof(type), ## __VA_ARGS__)
-#define PushArray(Arena, Count, type, ...) (type *)PushSize_(Arena, (Count)*sizeof(type), ## __VA_ARGS__)
-#define PushSize(Arena, Size, ...) PushSize_(Arena, Size, ## __VA_ARGS__)
-inline void *
-PushSize_(memory_arena *Arena, memory_index Size, memory_index Alignment = 4)
+inline memory_index
+GetAlignmentOffset(memory_arena *Arena, memory_index Alignment)
 {
-    memory_index ResultPointer = (memory_index)Arena->Base + Arena->Used;
     memory_index AlignmentOffset = 0;
 
+    memory_index ResultPointer = (memory_index)Arena->Base + Arena->Used;
     memory_index AlignmentMask = Alignment - 1;
     if(ResultPointer & AlignmentMask)
     {
         AlignmentOffset = Alignment - (ResultPointer & AlignmentMask);
     }
+
+    return(AlignmentOffset);
+}
+
+inline memory_index
+GetArenaSizeRemaining(memory_arena *Arena, memory_index Alignment = 4)
+{
+    memory_index Result = Arena->Size - (Arena->Used + GetAlignmentOffset(Arena, Alignment));
+
+    return(Result);
+}
+
+#define PushStruct(Arena, type, ...) (type *)PushSize_(Arena, sizeof(type), ## __VA_ARGS__)
+#define PushArray(Arena, Count, type, ...) (type *)PushSize_(Arena, (Count)*sizeof(type), ## __VA_ARGS__)
+#define PushSize(Arena, Size, ...) PushSize_(Arena, Size, ## __VA_ARGS__)
+inline void *
+PushSize_(memory_arena *Arena, memory_index SizeInit, memory_index Alignment = 4)
+{
+    memory_index Size = SizeInit;
+
+    memory_index AlignmentOffset = GetAlignmentOffset(Arena, Alignment);
     Size += AlignmentOffset;
 
     Assert((Arena->Used + Size) <= Arena->Size);
+    void *Result = Arena->Base + Arena->Used + AlignmentOffset;
     Arena->Used += Size;
 
-    void *Result = (void *)(ResultPointer + AlignmentOffset);
+    Assert(Size >= SizeInit);
 
     return(Result);
 }
@@ -164,6 +183,15 @@ inline void
 CheckArena(memory_arena *Arena)
 {
     Assert(Arena->TempCount == 0);
+}
+
+inline void
+SubArena(memory_arena *Result, memory_arena *Arena, memory_index Size, memory_index Alignment = 16)
+{
+    Result->Size = Size;
+    Result->Base = (uint8_t *)PushSize_(Arena, Size, Alignment);
+    Result->Used = 0;
+    Result->TempCount = 0;
 }
 
 #define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))

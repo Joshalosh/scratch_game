@@ -1201,6 +1201,12 @@ internal render_group *
 AllocateRenderGroup(memory_arena *Arena, uint32_t MaxPushBufferSize)
 {
     render_group *Result = PushStruct(Arena, render_group);
+
+    if(MaxPushBufferSize == 0)
+    {
+        // TODO: Safe cast from memory_index to uint32_t.
+        MaxPushBufferSize = (uint32_t)GetArenaSizeRemaining(Arena);
+    }
     Result->PushBufferBase = (uint8_t *)PushSize(Arena, MaxPushBufferSize);
 
     Result->MaxPushBufferSize = MaxPushBufferSize;
@@ -1271,7 +1277,7 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
         real32 OffsetZ = 0.0f;
 
         real32 DistanceAboveTarget = Transform->DistanceAboveTarget;
-#if 0
+#if 1
         // TODO: Figure out how I want to control the debug camera.
         if(1)
         {

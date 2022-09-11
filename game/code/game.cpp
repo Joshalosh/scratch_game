@@ -453,6 +453,7 @@ BeginTaskWithMemory(transient_state *TranState)
         if(!Task->BeingUsed)
         {
             FoundTask = Task;
+            Task->BeingUsed = true;
             Task->MemoryFlush = BeginTemporaryMemory(&Task->Arena);
             break;
         }
@@ -470,13 +471,19 @@ EndTaskWithMemory(task_with_memory *Task)
     Task->BeingUsed = false;
 }
 
+struct fill_ground_chunk_work
+{
+    render_group *RenderGroup;
+    loaded_bitmap *Buffer;
+    task_with_memory *Task;
+};
 internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 {
-    tile_render_work *Work = (tile_render_work *)Data;
+    fill_ground_chunk_work *Work = (fill_ground_chunk_work *)Data;
 
-    RenderGroupToOutput(RenderGroup, Buffer);
+    RenderGroupToOutput(Work->RenderGroup, Work->Buffer);
 
-    EndTaskWithMemory(Task);
+    EndTaskWithMemory(Work->Task);
 }
 
 internal void
@@ -485,6 +492,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
     task_with_memory *Task = BeginTaskWithMemory(TranState);
     if(Task)
     {
+        fill_ground_chunk_work *Work = PushStruct(&Task->Arena, fill_ground_chunk_work);
         GroundBuffer->P = *ChunkP;
 
         loaded_bitmap *Buffer = &GroundBuffer->Bitmap;
@@ -496,7 +504,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
         v2 HalfDim    = 0.5f*V2(Width, Height);
 
         // TODO: Decide what the pushbuffer size is.
-        render_group *RenderGroup = AllocateRenderGroup(&TranState->TranArena, Megabytes(4));
+        render_group *RenderGroup = AllocateRenderGroup(&Task->Arena, 0);
         Orthographic(RenderGroup, Buffer->Width, Buffer->Height, (Buffer->Width - 2) / Width);
         Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));
 
@@ -564,6 +572,11 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             }
         }
 
+        Work->RenderGroup = RenderGroup;
+        Work->Buffer = Buffer;
+        Work->Task = Task;
+
+        PlatformAddEntry(TranState->LowPriorityQueue, FillGroundChunkWork, Work);
     }
 }
 
