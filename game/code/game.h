@@ -252,6 +252,21 @@ struct ground_buffer
     loaded_bitmap Bitmap;
 };
 
+struct game_assets
+{
+    loaded_bitmap Grass[2];
+    loaded_bitmap Stone[4];
+    loaded_bitmap Tuft[3];
+
+    loaded_bitmap Backdrop;
+    loaded_bitmap Shadow;
+    hero_bitmaps HeroBitmaps[4];
+
+    loaded_bitmap Tree;
+    loaded_bitmap Sword;
+    loaded_bitmap Stairwell;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -267,18 +282,6 @@ struct game_state
 
     uint32_t LowEntityCount;
     low_entity LowEntities[100000];
-
-    loaded_bitmap Grass[2];
-    loaded_bitmap Stone[4];
-    loaded_bitmap Tuft[3];
-
-    loaded_bitmap Backdrop;
-    loaded_bitmap Shadow;
-    hero_bitmaps HeroBitmaps[4];
-
-    loaded_bitmap Tree;
-    loaded_bitmap Sword;
-    loaded_bitmap Stairwell;
 
     // Must be a power of two.
     pairwise_collision_rule *CollisionRuleHash[256];
@@ -297,6 +300,8 @@ struct game_state
 
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;
+
+    game_assets Assets;
 };
 
 struct task_with_memory
