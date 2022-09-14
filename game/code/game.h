@@ -265,6 +265,11 @@ enum game_asset_id
 
 struct game_assets
 {
+    // TODO: This back pointer kind of sucks.
+    struct transient_state *TranState;
+    memory_arena Arena;
+    debug_platform_read_entire_file *ReadEntireFile;
+
     loaded_bitmap *Bitmaps[GAI_Count];
 
     // Array'd assets.
@@ -361,6 +366,8 @@ GetLowEntity(game_state *GameState, uint32_t Index)
 
 global_variable platform_add_entry *PlatformAddEntry;
 global_variable platform_complete_all_work *PlatformCompleteAllWork;
+
+internal void LoadAsset(game_assets *Assets, game_asset_id ID);
 
 #define GAME_H
 #endif

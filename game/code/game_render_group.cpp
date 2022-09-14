@@ -1355,6 +1355,10 @@ PushBitmap(render_group *Group, game_asset_id ID, real32 Height, v3 Offset, v4 C
     {
         PushBitmap(Group, Bitmap, Height, Offset, Color);
     }
+    else
+    {
+        LoadAsset(Group->Assets, ID);
+    }
 }
 
 inline void

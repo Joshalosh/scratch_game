@@ -755,39 +755,81 @@ SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
     Bitmap->Torso.AlignPercentage = Align;
 }
 
-internal loaded_bitmap *
-DEBUGAllocateLoadBMP(transient_state *TranState, thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile,
-                     char *Filename, int32_t AlignX, int32_t TopDownAlignY)
+struct load_asset_work
 {
-    loaded_bitmap *Result = PushStruct(&TranState->TranArena, loaded_bitmap);
-    *Result = DEBUGLoadBMP(Thread, ReadEntireFile, Filename, AlignX, TopDownAlignY);
-
-    return(Result);
-}
-
-internal loaded_bitmap *
-DEBUGAllocateLoadBMP(transient_state *TranState, thread_context *Thread, 
-                     debug_platform_read_entire_file *ReadEntireFile, char *Filename)
+    game_assets *Assets;
+    char *Filename;
+    game_asset_id ID;
+    task_with_memory *Task;
+    loaded_bitmap *Bitmap;
+};
+internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
 {
-    loaded_bitmap *Result = PushStruct(&TranState->TranArena, loaded_bitmap);
-    *Result = DEBUGLoadBMP(Thread, ReadEntireFile, Filename);
+    load_asset_work *Work = (load_asset_work *)Data;
+    
+    // TODO: Get rid of this thread thingamabob when I load through
+    // a queue instead of the debug call.
+    thread_context *Thread = 0;
+    *Work->Bitmap = DEBUGLoadBMP(Thread, Work->Assets->ReadEntireFile, Work->Filename);
+    // AlignX, TopDownAlignY
 
-    return(Result);
+    // TODO: Fence
+
+    Work->Assets->Bitmaps[Work->ID] = Work->Bitmap;
+
+    EndTaskWithMemory(Work->Task);
 }
 
 internal void
-LoadAssets(transient_state *TranState, game_assets *Assets, thread_context *Thread,
-           debug_platform_read_entire_file *ReadEntireFile)
+LoadAsset(game_assets *Assets, game_asset_id ID)
 {
-    Assets->Bitmaps[GAI_Backdrop] = DEBUGAllocateLoadBMP(TranState, Thread, ReadEntireFile, "test/test_background.bmp");
-    Assets->Bitmaps[GAI_Shadow] = DEBUGAllocateLoadBMP(TranState, Thread, ReadEntireFile, 
-                                                       "test/test_hero_shadow.bmp", 72, 182);
-    Assets->Bitmaps[GAI_Tree] = DEBUGAllocateLoadBMP(TranState, Thread, ReadEntireFile, "test2/tree00.bmp", 40, 80);
-    Assets->Bitmaps[GAI_Stairwell] = DEBUGAllocateLoadBMP(TranState, Thread, ReadEntireFile, "test2/rock02.bmp");
-    Assets->Bitmaps[GAI_Sword] = DEBUGAllocateLoadBMP(TranState, Thread, ReadEntireFile, "test2/rock03.bmp", 29, 10);
+    task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
+    if(Task)
+    {
+        debug_platform_read_entire_file *ReadEntireFile = Assets->ReadEntireFile;
+        
+        load_asset_work *Work = PushStruct(&Task->Arena, load_asset_work);
 
-    // Memory->DEBUGPlatformReadEntireFile
+        Work->Assets = Assets;
+        Work->ID = ID;
+        Work->Filename = "";
+        Work->Task = Task;
+        Work->Bitmap = PushStruct(&Assets->Arena, loaded_bitmap);
 
+        PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
+
+        thread_context *Thread = 0;
+        switch(ID)
+        {
+            case GAI_Backdrop:
+            {
+                Work->Filename = "test/test_background.bmp";
+            } break;
+
+            case GAI_Shadow:
+            {
+                Work->Filename = "test/test_hero_shadow.bmp";
+                // 72, 182
+            } break;
+
+            case GAI_Tree:
+            {
+                Work->Filename = "test2/tree00.bmp";
+                // 40, 80
+            } break;
+
+            case GAI_Stairwell:
+            {
+                Work->Filename = "test2/rock02.bmp";
+            } break;
+
+            case GAI_Sword:
+            {
+                Work->Filename = "test2/rock03.bmp";
+                // 29, 10
+            } break;
+        }
+    }
 }
 
 #if GAME_INTERNAL
@@ -1023,6 +1065,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
                         (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
 
+        SubArena(&TranState->Assets.Arena, &TranState->TranArena, Megabytes(64));
+        TranState->Assets.ReadEntireFile = Memory->DEBUGPlatformReadEntireFile;
+        TranState->Assets.TranState = TranState;
+
         for(uint32_t TaskIndex = 0; TaskIndex < ArrayCount(TranState->Tasks); ++TaskIndex)
         {
             task_with_memory *Task = TranState->Tasks + TaskIndex;
@@ -1104,6 +1150,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_torso.bmp");
         SetTopDownAlign(Bitmap, V2(72, 182));
         ++Bitmap;
+
+//        LoadAssets(TranState, &TranState->Assets, Thread, Memory->DEBUGPlatformReadEntireFile);
 
         TranState->IsInitialised = true;
     }
