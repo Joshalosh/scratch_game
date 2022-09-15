@@ -263,6 +263,18 @@ enum game_asset_id
     GAI_Count,
 };
 
+enum asset_state
+{
+    AssetState_Unloaded,
+    AssetState_Queued,
+    AssetState_Loaded,
+};
+struct asset_handle
+{
+    asset_state State;
+    loaded_bitmap *Bitmap;
+};
+
 struct game_assets
 {
     // TODO: This back pointer kind of sucks.

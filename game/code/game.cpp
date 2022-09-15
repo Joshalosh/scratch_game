@@ -762,6 +762,10 @@ struct load_asset_work
     game_asset_id ID;
     task_with_memory *Task;
     loaded_bitmap *Bitmap;
+
+    bool32 HasAlignment;
+    int32_t AlignX;
+    int32_t TopDownAlignY;
 };
 internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
 {
@@ -770,8 +774,16 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
     // TODO: Get rid of this thread thingamabob when I load through
     // a queue instead of the debug call.
     thread_context *Thread = 0;
-    *Work->Bitmap = DEBUGLoadBMP(Thread, Work->Assets->ReadEntireFile, Work->Filename);
-    // AlignX, TopDownAlignY
+
+    if(Work->HasAlignment)
+    {
+        *Work->Bitmap = DEBUGLoadBMP(Thread, Work->Assets->ReadEntireFile, Work->Filename,
+                                     Work->AlignX, Work->TopDownAlignY);
+    }
+    else
+    {
+        *Work->Bitmap = DEBUGLoadBMP(Thread, Work->Assets->ReadEntireFile, Work->Filename);
+    }
 
     // TODO: Fence
 
