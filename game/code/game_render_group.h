@@ -124,6 +124,8 @@ struct render_group
     uint32_t MaxPushBufferSize;
     uint32_t PushBufferSize;
     uint8_t *PushBufferBase;
+
+    uint32_t MissingResourceCount;
 };
 
 // Renderer API

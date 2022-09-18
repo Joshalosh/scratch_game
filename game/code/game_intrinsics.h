@@ -4,9 +4,14 @@
 
 #if COMPILER_MSVC
 #define CompletePreviousWritesBeforeFutureWrites _WriteBarrier();
+inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t Expected, uint32_t New)
+{
+    uint32_t Result = _InterlockedCompareExchange((long *)Value, Expected, New);
+
+    return(Result);
+}
 #else
-// I need to define these on GCC/LLVM
-#define CompletePreviousWritesBeforeFutureWrites
+// I need to GCC/LLVM equivalents.
 #endif
 
 inline int32_t

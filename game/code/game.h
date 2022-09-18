@@ -269,7 +269,7 @@ enum asset_state
     AssetState_Queued,
     AssetState_Loaded,
 };
-struct asset_handle
+struct asset_slot
 {
     asset_state State;
     loaded_bitmap *Bitmap;
@@ -282,7 +282,7 @@ struct game_assets
     memory_arena Arena;
     debug_platform_read_entire_file *ReadEntireFile;
 
-    loaded_bitmap *Bitmaps[GAI_Count];
+    asset_slot Bitmaps[GAI_Count];
 
     // Array'd assets.
     loaded_bitmap Grass[2];
@@ -294,7 +294,7 @@ struct game_assets
 };
 inline loaded_bitmap *GetBitmap(game_assets *Assets, game_asset_id ID)
 {
-    loaded_bitmap *Result = Assets->Bitmaps[ID];
+    loaded_bitmap *Result = Assets->Bitmaps[ID].Bitmap;
 
     return(Result);
 }
