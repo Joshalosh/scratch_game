@@ -486,6 +486,36 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
     EndTaskWithMemory(Work->Task);
 }
 
+internal int32_t
+PickBest(int32_t InfoCount, asset_bitmap_info *Infos, asset_tag *Tags,
+         real32 *MatchVector, real32 *WeightVector)
+{
+    real32 BestDiff = Real32Maximum;
+    int32_t BestIndex = 0;
+
+    for(int32_t InfoIndex = 0; InfoIndex < InfoCount; ++InfoIndex)
+    {
+        asset_bitmap_info *Info = Infos + InfoIndex;
+
+        real32 TotalWeightedDiff = 0.0f;
+        for(uint32_t TagIndex = Info->FirstTagIndex; TagIndex < Info->OnePastLastTagIndex; ++TagIndex)
+        {
+            asset_tag *Tag = Tags + TagIndex;
+            real32 Difference = MatchVector[Tag->ID] - Tag->Value;
+            real32 Weighted = WeightVector[Tag->ID]*AbsoluteValue(Difference);
+            TotalWeightedDiff += Weighted;
+        }
+
+        if(BestDiff > TotalWeightedDiff)
+        {
+            BestDiff = TotalWeightedDiff;
+            BestIndex = InfoIndex;
+        }
+    }
+
+    return(BestIndex);
+}
+
 internal void
 FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer *GroundBuffer, world_position *ChunkP)
 {
@@ -770,6 +800,8 @@ struct load_asset_work
     bool32 HasAlignment;
     int32_t AlignX;
     int32_t TopDownAlignY;
+
+    asset_state FinalState;
 };
 internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
 {
@@ -792,7 +824,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
     CompletePreviousWritesBeforeFutureWrites;
 
     Work->Assets->Bitmaps[Work->ID].Bitmap = Work->Bitmap;
-    Work->Assets->Bitmaps[Work->ID].State = AssetState_Loaded;
+    Work->Assets->Bitmaps[Work->ID].State = Work->FinalState;
 
     EndTaskWithMemory(Work->Task);
 }
@@ -816,6 +848,7 @@ LoadAsset(game_assets *Assets, game_asset_id ID)
             Work->Task = Task;
             Work->Bitmap = PushStruct(&Assets->Arena, loaded_bitmap);
             Work->HasAlignment = false;
+            Work->FinalState = AssetState_Loaded;
 
             PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
 

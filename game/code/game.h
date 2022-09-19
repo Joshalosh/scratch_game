@@ -252,6 +252,19 @@ struct ground_buffer
     loaded_bitmap Bitmap;
 };
 
+enum asset_state
+{
+    AssetState_Unloaded,
+    AssetState_Queued,
+    AssetState_Loaded,
+    AssetSTate_Locked,
+};
+struct asset_slot
+{
+    asset_state State;
+    loaded_bitmap *Bitmap;
+};
+
 enum game_asset_id
 {
     GAI_Backdrop,
@@ -263,16 +276,25 @@ enum game_asset_id
     GAI_Count,
 };
 
-enum asset_state
+struct asset_tag
 {
-    AssetState_Unloaded,
-    AssetState_Queued,
-    AssetState_Loaded,
+    uint32_t ID;
+    real32 Value;
 };
-struct asset_slot
+struct asset_bitmap_info
 {
-    asset_state State;
-    loaded_bitmap *Bitmap;
+    v2 AlignPercentage;
+    real32 WidthOverHeight;
+    int32_t Width;
+    int32_t Height;
+
+    uint32_t FirstTagIndex;
+    uint32_t OnePastLastTagIndex;
+};
+struct asset_group
+{
+    uint32_t FirstTagIndex;
+    uint32_t OnePastLastTagIndex;
 };
 
 struct game_assets
