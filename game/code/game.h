@@ -272,6 +272,7 @@ enum game_asset_id
     GAI_Tree,
     GAI_Sword,
     GAI_Stairwell,
+    GAI_Rock,
 
     GAI_Count,
 };

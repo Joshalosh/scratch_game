@@ -843,14 +843,12 @@ LoadAsset(game_assets *Assets, game_asset_id ID)
             load_asset_work *Work = PushStruct(&Task->Arena, load_asset_work);
 
             Work->Assets = Assets;
-            Work->ID = ID;
             Work->Filename = "";
+            Work->ID = ID;
             Work->Task = Task;
             Work->Bitmap = PushStruct(&Assets->Arena, loaded_bitmap);
             Work->HasAlignment = false;
             Work->FinalState = AssetState_Loaded;
-
-            PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
 
             thread_context *Thread = 0;
             switch(ID)
@@ -889,6 +887,8 @@ LoadAsset(game_assets *Assets, game_asset_id ID)
                     Work->TopDownAlignY = 10;
                 } break;
             }
+
+            PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
     }
 }
