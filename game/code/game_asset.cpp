@@ -36,13 +36,22 @@ TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
     return(Align);
 }
 
+internal void
+SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
+{
+    Align = TopDownAlign(&Bitmap->Head, Align);
+
+    Bitmap->Head.AlignPercentage = Align;
+    Bitmap->Cape.AlignPercentage = Align;
+    Bitmap->Torso.AlignPercentage = Align;
+}
+
 internal loaded_bitmap
-DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename,
-             int32_t AlignX, int32_t TopDownAlignY)
+DEBUGLoadBMP(char *Filename, int32_t AlignX, int32_t TopDownAlignY)
 {
     loaded_bitmap Result = {};
     
-    debug_read_file_result ReadResult = ReadEntireFile(Thread, Filename);
+    debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile(Filename);
     if(ReadResult.ContentsSize != 0)
     {
         bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
@@ -113,9 +122,9 @@ DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntire
 }
 
 internal loaded_bitmap
-DEBUGLoadBMP(thread_context *Thread, debug_platform_read_entire_file *ReadEntireFile, char *Filename)
+DEBUGLoadBMP(char *Filename)
 {
-    loaded_bitmap Result = DEBUGLoadBMP(Thread, ReadEntireFile, Filename, 0, 0);
+    loaded_bitmap Result = DEBUGLoadBMP(Filename, 0, 0);
     Result.AlignPercentage = V2(0.5f, 0.5f);
     return(Result);
 }
@@ -138,18 +147,13 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadBitmapWork)
 {
     load_bitmap_work *Work = (load_bitmap_work *)Data;
     
-    // TODO: Get rid of this thread thingamabob when I load through
-    // a queue instead of the debug call.
-    thread_context *Thread = 0;
-
     if(Work->HasAlignment)
     {
-        *Work->Bitmap = DEBUGLoadBMP(Thread, Work->Assets->ReadEntireFile, Work->Filename,
-                                     Work->AlignX, Work->TopDownAlignY);
+        *Work->Bitmap = DEBUGLoadBMP(Work->Filename, Work->AlignX, Work->TopDownAlignY);
     }
     else
     {
-        *Work->Bitmap = DEBUGLoadBMP(Thread, Work->Assets->ReadEntireFile, Work->Filename);
+        *Work->Bitmap = DEBUGLoadBMP(Work->Filename);
     }
 
     CompletePreviousWritesBeforeFutureWrites;
@@ -169,8 +173,6 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
         if(Task)
         {
-            debug_platform_read_entire_file *ReadEntireFile = Assets->ReadEntireFile;
-            
             load_bitmap_work *Work = PushStruct(&Task->Arena, load_bitmap_work);
 
             Work->Assets = Assets;
@@ -181,7 +183,6 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
             Work->HasAlignment = false;
             Work->FinalState = AssetState_Loaded;
 
-            thread_context *Thread = 0;
             switch(ID.Value)
             {
                 case Asset_Backdrop:
@@ -239,13 +240,56 @@ GetFirstBitmapID(game_assets *Assets, asset_type_id TypeID)
 }
 
 internal game_assets *
-AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState,
-                   debug_platform_read_entire_file *ReadEntireFile)
+AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState)
 {
     game_assets *Assets = PushStruct(Arena, game_assets);
     SubArena(&Assets->Arena, Arena, Size);
-    Assets->ReadEntireFile = ReadEntireFile;
     Assets->TranState = TranState;
+
+    Assets->BitmapCount = Asset_Count;
+    Assets->Bitmaps = PushArray(Arena, Assets->BitmapCount, asset_slot);
+
+    Assets->SoundCount = 1;
+    Assets->Sounds = PushArray(Arena, Assets->SoundCount, asset_slot);
+
+    Assets->Grass[0] = DEBUGLoadBMP("test2/grass00.bmp");
+    Assets->Grass[1] = DEBUGLoadBMP("test2/grass01.bmp");
+
+    Assets->Tuft[0] = DEBUGLoadBMP("test2/tuft00.bmp");
+    Assets->Tuft[1] = DEBUGLoadBMP("test2/tuft01.bmp");
+    Assets->Tuft[2] = DEBUGLoadBMP("test2/tuft02.bmp");
+
+    Assets->Stone[0] = DEBUGLoadBMP("test2/ground00.bmp");
+    Assets->Stone[1] = DEBUGLoadBMP("test2/ground01.bmp");
+    Assets->Stone[2] = DEBUGLoadBMP("test2/ground02.bmp");
+    Assets->Stone[3] = DEBUGLoadBMP("test2/ground03.bmp");
+
+    hero_bitmaps *Bitmap;
+
+    Bitmap = Assets->HeroBitmaps;
+    Bitmap->Head = DEBUGLoadBMP("test/test_hero_right_head.bmp");
+    Bitmap->Cape = DEBUGLoadBMP("test/test_hero_right_cape.bmp");
+    Bitmap->Torso = DEBUGLoadBMP("test/test_hero_right_torso.bmp");
+    SetTopDownAlign(Bitmap, V2(72, 182));
+    ++Bitmap;
+
+    Bitmap->Head = DEBUGLoadBMP("test/test_hero_back_head.bmp");
+    Bitmap->Cape = DEBUGLoadBMP("test/test_hero_back_cape.bmp");
+    Bitmap->Torso = DEBUGLoadBMP("test/test_hero_back_torso.bmp");
+    SetTopDownAlign(Bitmap, V2(72, 182));
+    ++Bitmap;
+
+    Bitmap->Head = DEBUGLoadBMP("test/test_hero_left_head.bmp");
+    Bitmap->Cape = DEBUGLoadBMP("test/test_hero_left_cape.bmp");
+    Bitmap->Torso = DEBUGLoadBMP("test/test_hero_left_torso.bmp");
+    SetTopDownAlign(Bitmap, V2(72, 182));
+    ++Bitmap;
+
+    Bitmap->Head = DEBUGLoadBMP("test/test_hero_front_head.bmp");
+    Bitmap->Cape = DEBUGLoadBMP("test/test_hero_front_cape.bmp");
+    Bitmap->Torso = DEBUGLoadBMP("test/test_hero_front_torso.bmp");
+    SetTopDownAlign(Bitmap, V2(72, 182));
+    ++Bitmap;
 
     return(Assets);
 }

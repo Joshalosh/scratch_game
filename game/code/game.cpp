@@ -661,16 +661,6 @@ MakePyramidNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
     }
 }
 
-internal void
-SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
-{
-    Align = TopDownAlign(&Bitmap->Head, Align);
-
-    Bitmap->Head.AlignPercentage = Align;
-    Bitmap->Cape.AlignPercentage = Align;
-    Bitmap->Torso.AlignPercentage = Align;
-}
-
 #if GAME_INTERNAL
 game_memory *DebugGlobalMemory;
 #endif
@@ -678,6 +668,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     PlatformAddEntry = Memory->PlatformAddEntry;
     PlatformCompleteAllWork = Memory->PlatformCompleteAllWork;
+    DEBUGPlatformReadEntireFile = Memory->DEBUGPlatformReadEntireFile;
 #if GAME_INTERNAL
     DebugGlobalMemory = Memory;
 #endif
@@ -914,8 +905,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             SubArena(&Task->Arena, &TranState->TranArena, Megabytes(1));
         }
 
-        TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(64),
-                                               TranState, Memory->DEBUGPlatformReadEntireFile);
+        TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(64), TranState);
 
         TranState->GroundBufferCount = 256;
         TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
@@ -949,47 +939,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 Height >>= 1;
             }
         }
-
-        TranState->Assets->Grass[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass00.bmp");
-        TranState->Assets->Grass[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/grass01.bmp");
-
-        TranState->Assets->Tuft[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft00.bmp");
-        TranState->Assets->Tuft[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft01.bmp");
-        TranState->Assets->Tuft[2] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/tuft02.bmp");
-
-        TranState->Assets->Stone[0] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground00.bmp");
-        TranState->Assets->Stone[1] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground01.bmp");
-        TranState->Assets->Stone[2] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground02.bmp");
-        TranState->Assets->Stone[3] = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test2/ground03.bmp");
-
-        hero_bitmaps *Bitmap;
-
-        Bitmap = TranState->Assets->HeroBitmaps;
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_right_torso.bmp");
-        SetTopDownAlign(Bitmap, V2(72, 182));
-        ++Bitmap;
-
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_back_torso.bmp");
-        SetTopDownAlign(Bitmap, V2(72, 182));
-        ++Bitmap;
-
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_left_torso.bmp");
-        SetTopDownAlign(Bitmap, V2(72, 182));
-        ++Bitmap;
-
-        Bitmap->Head = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_head.bmp");
-        Bitmap->Cape = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_cape.bmp");
-        Bitmap->Torso = DEBUGLoadBMP(Thread, Memory->DEBUGPlatformReadEntireFile, "test/test_hero_front_torso.bmp");
-        SetTopDownAlign(Bitmap, V2(72, 182));
-        ++Bitmap;
-
-//        LoadAssets(TranState, &TranState->Assets, Thread, Memory->DEBUGPlatformReadEntireFile);
 
         TranState->IsInitialised = true;
     }

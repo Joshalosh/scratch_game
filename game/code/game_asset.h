@@ -76,7 +76,6 @@ struct game_assets
     // TODO: This back pointer kind of sucks.
     struct transient_state *TranState;
     memory_arena Arena;
-    debug_platform_read_entire_file *ReadEntireFile;
 
     uint32_t BitmapCount;
     asset_slot *Bitmaps;
