@@ -32,12 +32,15 @@ enum asset_type_id
 {
     Asset_None,
 
-    Asset_Backdrop,
     Asset_Shadow,
     Asset_Tree,
     Asset_Sword,
-    Asset_Stairwell,
+//    Asset_Stairwell,
     Asset_Rock,
+
+    Asset_Grass,
+    Asset_Tuft,
+    Asset_Stone,
 
     Asset_Count,
 };
@@ -59,12 +62,11 @@ struct asset_type
     uint32_t FirstAssetIndex;
     uint32_t OnePastLastAssetIndex;
 };
+
 struct asset_bitmap_info
 {
+    char *Filename;
     v2 AlignPercentage;
-    real32 WidthOverHeight;
-    int32_t Width;
-    int32_t Height;
 };
 
 struct game_assets
@@ -74,6 +76,7 @@ struct game_assets
     memory_arena Arena;
 
     uint32_t BitmapCount;
+    asset_bitmap_info *BitmapInfos;
     asset_slot *Bitmaps;
 
     uint32_t SoundCount;
@@ -94,6 +97,11 @@ struct game_assets
 
     // Structured assets.
     hero_bitmaps HeroBitmaps[4];
+
+    // TODO: These should go away once I actually load an asset pack file.
+    uint32_t DEBUGUsedBitmapCount;
+    uint32_t DEBUGUsedAssetCount;
+    asset_type *DEBUGAssetType;
 };
 
 struct bitmap_id
