@@ -685,7 +685,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
     game_state *GameState = (game_state *)Memory->PermanentStorage;
-    if(!Memory->IsInitialised)
+    if(!GameState->IsInitialised)
     {
         uint32_t TilesPerWidth = 17;
         uint32_t TilesPerHeight = 9;
@@ -884,7 +884,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
         }
 
-        Memory->IsInitialised = true;
+        GameState->IsInitialised = true;
     }
 
     // Transient initialisation

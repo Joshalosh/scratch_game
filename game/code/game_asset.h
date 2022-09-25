@@ -30,6 +30,8 @@ enum asset_tag_id
 
 enum asset_type_id
 {
+    Asset_None,
+
     Asset_Backdrop,
     Asset_Shadow,
     Asset_Tree,
@@ -54,7 +56,6 @@ struct asset
 
 struct asset_type
 {
-    uint32_t Count;
     uint32_t FirstAssetIndex;
     uint32_t OnePastLastAssetIndex;
 };
@@ -64,11 +65,6 @@ struct asset_bitmap_info
     real32 WidthOverHeight;
     int32_t Width;
     int32_t Height;
-};
-struct asset_group
-{
-    uint32_t FirstTagIndex;
-    uint32_t OnePastLastTagIndex;
 };
 
 struct game_assets
@@ -83,7 +79,13 @@ struct game_assets
     uint32_t SoundCount;
     asset_slot *Sounds;
 
-    asset_type AssetsTypes[Asset_Count];
+    uint32_t TagCount;
+    asset_tag *Tags;
+
+    uint32_t AssetCount;
+    asset *Assets;
+
+    asset_type AssetTypes[Asset_Count];
 
     // Array'd assets.
     loaded_bitmap Grass[2];

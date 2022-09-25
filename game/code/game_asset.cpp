@@ -167,8 +167,9 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadBitmapWork)
 internal void
 LoadBitmap(game_assets *Assets, bitmap_id ID)
 {
-    if(AtomicCompareExchangeUInt32((uint32_t *)&Assets->Bitmaps[ID.Value].State, AssetState_Unloaded, AssetState_Queued) ==
-       AssetState_Unloaded)
+    if(ID.Value &&
+       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Bitmaps[ID.Value].State, AssetState_Unloaded, AssetState_Queued) ==
+        AssetState_Unloaded))
     {
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
         if(Task)
@@ -233,8 +234,14 @@ LoadSound(game_assets *Assets, uint32_t ID)
 internal bitmap_id
 GetFirstBitmapID(game_assets *Assets, asset_type_id TypeID)
 {
-    // TODO: I should actually look
-    bitmap_id Result = {TypeID};
+    bitmap_id Result = {};
+
+    asset_type *Type = Assets->AssetTypes + TypeID;
+    if(Type->FirstAssetIndex != Type->OnePastLastAssetIndex)
+    {
+        asset *Asset = Assets->Assets + Type->FirstAssetIndex;
+        Result.Value = Asset->SlotID;
+    }
 
     return(Result);
 }
@@ -251,6 +258,24 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
     Assets->SoundCount = 1;
     Assets->Sounds = PushArray(Arena, Assets->SoundCount, asset_slot);
+
+    Assets->TagCount = 0;
+    Assets->Tags = 0;
+
+    Assets->AssetCount = Assets->BitmapCount;
+    Assets->Assets = PushArray(Arena, Assets->AssetCount, asset);
+
+    for(uint32_t AssetID = 0; AssetID < Asset_Count; ++AssetID)
+    {
+        asset_type *Type = Assets->AssetTypes + AssetID;
+        Type->FirstAssetIndex = AssetID;
+        Type->OnePastLastAssetIndex = AssetID + 1;
+
+        asset *Asset = Assets->Assets + Type->FirstAssetIndex;
+        Asset->FirstTagIndex = 0;
+        Asset->OnePastLastTagIndex = 0;
+        Asset->SlotID = Type->FirstAssetIndex;
+    }   
 
     Assets->Grass[0] = DEBUGLoadBMP("test2/grass00.bmp");
     Assets->Grass[1] = DEBUGLoadBMP("test2/grass01.bmp");
