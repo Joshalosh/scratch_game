@@ -445,7 +445,8 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
                 for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
                 {
-                    loaded_bitmap *Stamp;
+                    bitmap_id Stamp = RandomAssetFrom(TranState->Assets, Asset_Grass, &Series);
+#if 0
                     if(RandomChoice(&Series, 2))
                     {
                         Stamp = TranState->Assets->Grass + RandomChoice(&Series, ArrayCount(TranState->Assets->Grass));
@@ -454,6 +455,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
                     {
                         Stamp = TranState->Assets->Stone + RandomChoice(&Series, ArrayCount(TranState->Assets->Stone));
                     }
+#endif
 
                     v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
                     PushBitmap(RenderGroup, Stamp, 2.0f, V3(P, 0.0f), Color);

@@ -178,7 +178,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
                 case Asset_Tree:
                 {
                     Work->Filename = "test2/tree00.bmp";
-                    Work->AlignPercentage = V2(0.493827164f, 0.295652181f)
+                    Work->AlignPercentage = V2(0.493827164f, 0.295652181f);
                 } break;
 
                 case Asset_Sword:
@@ -196,6 +196,24 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
 internal void
 LoadSound(game_assets *Assets, uint32_t ID)
 {
+}
+
+internal bitmap_id
+RandomAssetFrom(game_assets *Assets, asset_type_id TypeID, random_series *Series)
+{
+    bitmap_id Result = {};
+
+    asset_type *Type = Assets->AssetTypes + TypeID;
+    if(Type->FirstAssetIndex != Type->OnePastLastAssetIndex)
+    {
+        uint32_t Count = (Type->OnePastLastAssetIndex - Type->FirstAssetIndex);
+        uint32_t Choice = RandomChoice(Series, Count);
+
+        asset *Asset = Assets->Assets + Count;
+        Result.Value = Asset->SlotID;
+    }
+
+    return(Result);
 }
 
 internal bitmap_id
@@ -229,26 +247,28 @@ DEBUGAddBitmapInfo(game_assets *Assets, char *Filename, v2 AlignPercentage)
 internal void
 BeginAssetType(game_assets *Assets, asset_type_id TypeID)
 {
-    Assert(Assets->DEBUGAssetType);
+    Assert(Assets->DEBUGAssetType == 0);
     Assets->DEBUGAssetType = Assets->AssetTypes + TypeID;
+    Assets->DEBUGAssetType->FirstAssetIndex = Assets->DEBUGUsedAssetCount;
+    Assets->DEBUGAssetType->OnePastLastAssetIndex = Assets->DEBUGAssetType->FirstAssetIndex;
 }
 
 internal void
-AddBitmapAsset(game_assets *Assets, char *Filename, v2 AlignPercentage)
+AddBitmapAsset(game_assets *Assets, char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
 {
-    Type->FirstAssetIndex = AssetID;
-    Type->OnePastLastAssetIndex = AssetID + 1;
-
-    asset *Asset = Assets->Assets + Type->FirstAssetIndex;
+    Assert(Assets->DEBUGAssetType);
+    asset *Asset = Assets->Assets + Assets->DEBUGAssetType->OnePastLastAssetIndex++;
     Asset->FirstTagIndex = 0;
     Asset->OnePastLastTagIndex = 0;
-    Asset->SlotID = Type->FirstAssetIndex;
-
+    Asset->SlotID = DEBUGAddBitmapInfo(Assets, Filename, AlignPercentage).Value;
 }
 
 internal void
 EndAssetType(game_assets *Assets)
 {
+    Assert(Assets->DEBUGAssetType);
+    Assets->DEBUGUsedAssetCount = Assets->DEBUGAssetType->OnePastLastAssetIndex;
+    Assets->DEBUGAssetType = 0;
 }
 
 internal game_assets *
@@ -259,30 +279,34 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assets->TranState = TranState;
 
     Assets->BitmapCount = 256*Asset_Count;
-    Assets->DEBUGUsedBitmapCount = 1;
     Assets->BitmapInfos = PushArray(Arena, Assets->BitmapCount, asset_bitmap_info);
     Assets->Bitmaps = PushArray(Arena, Assets->BitmapCount, asset_slot);
 
     Assets->SoundCount = 1;
     Assets->Sounds = PushArray(Arena, Assets->SoundCount, asset_slot);
 
-    Assets->AssetCount = Asset_Count;
+    Assets->AssetCount = Assets->SoundCount + Assets->BitmapCount;
     Assets->Assets = PushArray(Arena, Assets->AssetCount, asset);
+
+    Assets->DEBUGUsedBitmapCount = 1;
+    Assets->DEBUGUsedAssetCount = 1;
 
     BeginAssetType(Assets, Asset_Shadow);
     AddBitmapAsset(Assets, "test/test_hero_shadow.bmp", V2(0.5f, 0.156682029f));
     EndAssetType(Assets);
 
     BeginAssetType(Assets, Asset_Tree);
-    AddBitmapAssets(Assets, "test2/tree00.bmp", V2(0.493827164f, 0.295652181f));
+    AddBitmapAsset(Assets, "test2/tree00.bmp", V2(0.493827164f, 0.295652181f));
     EndAssetType(Assets);
 
     BeginAssetType(Assets, Asset_Sword);
     AddBitmapAsset(Assets, "test2/rock03.bmp", V2(0.5f, 0.65625f));
     EndAssetType(Assets);
 
-    Assets->Grass[0] = DEBUGLoadBMP("test2/grass00.bmp");
-    Assets->Grass[1] = DEBUGLoadBMP("test2/grass01.bmp");
+    BeginAssetType(Assets, Asset_Grass);
+    AddBitmapAsset(Assets, "test2/grass00.bmp");
+    AddBitmapAsset(Assets, "test2/grass01.bmp");
+    EndAssetType(Assets);
 
     Assets->Tuft[0] = DEBUGLoadBMP("test2/tuft00.bmp");
     Assets->Tuft[1] = DEBUGLoadBMP("test2/tuft01.bmp");

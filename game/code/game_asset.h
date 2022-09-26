@@ -91,7 +91,6 @@ struct game_assets
     asset_type AssetTypes[Asset_Count];
 
     // Array'd assets.
-    loaded_bitmap Grass[2];
     loaded_bitmap Stone[4];
     loaded_bitmap Tuft[3];
 
