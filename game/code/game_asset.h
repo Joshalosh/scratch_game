@@ -90,10 +90,6 @@ struct game_assets
 
     asset_type AssetTypes[Asset_Count];
 
-    // Array'd assets.
-    loaded_bitmap Stone[4];
-    loaded_bitmap Tuft[3];
-
     // Structured assets.
     hero_bitmaps HeroBitmaps[4];
 
