@@ -36,16 +36,6 @@ TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
     return(Align);
 }
 
-internal void
-SetTopDownAlign(hero_bitmaps *Bitmap, v2 Align)
-{
-    Align = TopDownAlign(&Bitmap->Head, Align);
-
-    Bitmap->Head.AlignPercentage = Align;
-    Bitmap->Cape.AlignPercentage = Align;
-    Bitmap->Torso.AlignPercentage = Align;
-}
-
 internal loaded_bitmap
 DEBUGLoadBMP(char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
 {
@@ -174,6 +164,39 @@ LoadSound(game_assets *Assets, uint32_t ID)
 }
 
 internal bitmap_id
+BestMatchAsset(game_assets *Assets, asset_type_id TypeID,
+               asset_vector *MatchVector, asset_vector *WeightVector)
+{
+    bitmap_id Result = {};
+
+    real32 BestDiff = Real32Maximum;
+    asset_type *Type = Assets->AssetTypes + TypeID;
+    for(uint32_t AssetIndex = Type->FirstAssetIndex;
+        AssetIndex < Type->OnePastLastAssetIndex;
+        ++AssetIndex)
+    {
+        asset *Asset = Assets->Assets + AssetIndex;
+
+        real32 TotalWeightedDiff = 0.0f;
+        for(uint32_t TagIndex = Asset->FirstTagIndex; TagIndex < Asset->OnePastLastTagIndex; ++TagIndex)
+        {
+            asset_tag *Tag = Assets->Tags + TagIndex;
+            real32 Difference = MatchVector->E[Tag->ID] - Tag->Value;
+            real32 Weighted = WeightVector->E[Tag->ID]*AbsoluteValue(Difference);
+            TotalWeightedDiff += Weighted;
+        }
+
+        if(BestDiff > TotalWeightedDiff)
+        {
+            BestDiff = TotalWeightedDiff;
+            Result.Value = Asset->SlotID;
+        }
+    }
+
+    return(Result);
+}
+
+internal bitmap_id
 RandomAssetFrom(game_assets *Assets, asset_type_id TypeID, random_series *Series)
 {
     bitmap_id Result = {};
@@ -296,6 +319,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     AddBitmapAsset(Assets, "test2/ground03.bmp");
     EndAssetType(Assets);
 
+#if 0
     hero_bitmaps *Bitmap;
 
     Bitmap = Assets->HeroBitmaps;
@@ -322,6 +346,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Bitmap->Torso = DEBUGLoadBMP("test/test_hero_front_torso.bmp");
     SetTopDownAlign(Bitmap, V2(72, 182));
     ++Bitmap;
+#endif
 
     return(Assets);
 }

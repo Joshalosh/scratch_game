@@ -366,38 +366,6 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
     EndTaskWithMemory(Work->Task);
 }
 
-#if 0
-internal int32_t
-PickBest(int32_t InfoCount, asset_bitmap_info *Infos, asset_tag *Tags,
-         real32 *MatchVector, real32 *WeightVector)
-{
-    real32 BestDiff = Real32Maximum;
-    int32_t BestIndex = 0;
-
-    for(int32_t InfoIndex = 0; InfoIndex < InfoCount; ++InfoIndex)
-    {
-        asset_bitmap_info *Info = Infos + InfoIndex;
-
-        real32 TotalWeightedDiff = 0.0f;
-        for(uint32_t TagIndex = Info->FirstTagIndex; TagIndex < Info->OnePastLastTagIndex; ++TagIndex)
-        {
-            asset_tag *Tag = Tags + TagIndex;
-            real32 Difference = MatchVector[Tag->ID] - Tag->Value;
-            real32 Weighted = WeightVector[Tag->ID]*AbsoluteValue(Difference);
-            TotalWeightedDiff += Weighted;
-        }
-
-        if(BestDiff > TotalWeightedDiff)
-        {
-            BestDiff = TotalWeightedDiff;
-            BestIndex = InfoIndex;
-        }
-    }
-
-    return(BestIndex);
-}
-#endif
-
 internal void
 FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer *GroundBuffer, world_position *ChunkP)
 {
@@ -1195,7 +1163,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             //
             // Pre-physics entity work.
             //
-            hero_bitmaps *HeroBitmaps = &TranState->Assets->HeroBitmaps[Entity->FacingDirection];
+            hero_bitmap_ids HeroBitmaps = {};
+            asset_vector MatchVector = {};
+            MatchVector.E[Tag_FacingDirection] = (real32)Entity->FacingDirection;
+            asset_vector WeightVector = {};
+            WeightVector.E[Tag_FacingDirection] = 1.0f;
+            HeroBitmaps.Head = BestMatchAsset(TranState->Assets, Asset_Head, &MatchVector, &WeightVector);
+            HeroBitmaps.Cape = BestMatchAsset(TranState->Assets, Asset_Cape, &MatchVector, &WeightVector);
+            HeroBitmaps.Torso = BestMatchAsset(TranState->Assets, Asset_Torso, &MatchVector, &WeightVector);
             switch(Entity->Type)
             {
                 case EntityType_Hero:
@@ -1297,9 +1272,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     real32 HeroSizeC = 2.5f;
                     PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow), 
                                HeroSizeC*1.0f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, HeroSizeC*1.2f, V3(0, 0, 0));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Cape, HeroSizeC*1.2f, V3(0, 0, 0));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Head, HeroSizeC*1.2f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, HeroBitmaps.Torso, HeroSizeC*1.2f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, HeroBitmaps.Cape, HeroSizeC*1.2f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
                     DrawHitPoints(Entity, RenderGroup);
                 } break;
 
@@ -1331,14 +1306,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     real32 BobSin = Sin(2.0f*Entity->tBob);
                     PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow),
                                2.5f, V3(0, 0, 0), V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Head, 2.5f, V3(0, 0, 0.25f*BobSin));
+                    PushBitmap(RenderGroup, HeroBitmaps.Head, 2.5f, V3(0, 0, 0.25f*BobSin));
                 } break;
 
                 case EntityType_Monster:
                 {
                     PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow),
                                4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, &HeroBitmaps->Torso, 4.5f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, HeroBitmaps.Torso, 4.5f, V3(0, 0, 0));
 
                     DrawHitPoints(Entity, RenderGroup);
                 } break;
