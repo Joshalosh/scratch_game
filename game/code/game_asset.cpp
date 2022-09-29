@@ -246,6 +246,7 @@ internal void
 BeginAssetType(game_assets *Assets, asset_type_id TypeID)
 {
     Assert(Assets->DEBUGAssetType == 0);
+
     Assets->DEBUGAssetType = Assets->AssetTypes + TypeID;
     Assets->DEBUGAssetType->FirstAssetIndex = Assets->DEBUGUsedAssetCount;
     Assets->DEBUGAssetType->OnePastLastAssetIndex = Assets->DEBUGAssetType->FirstAssetIndex;
@@ -255,10 +256,26 @@ internal void
 AddBitmapAsset(game_assets *Assets, char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
 {
     Assert(Assets->DEBUGAssetType);
+    Assert(Assets->DEBUGAssetType->OnePastLastAssetIndex < Assets->AssetCount);
+
     asset *Asset = Assets->Assets + Assets->DEBUGAssetType->OnePastLastAssetIndex++;
-    Asset->FirstTagIndex = 0;
-    Asset->OnePastLastTagIndex = 0;
+    Asset->FirstTagIndex = Assets->DEBUGUsedTagCount;
+    Asset->OnePastLastTagIndex = Asset->FirstTagIndex;
     Asset->SlotID = DEBUGAddBitmapInfo(Assets, Filename, AlignPercentage).Value;
+
+    Assets->DEBUGAsset = Asset;
+}
+
+internal void
+AddTag(game_assets *Assets, asset_tag_id ID, real32 Value)
+{
+    Assert(Assets->DEBUGAsset);
+
+    ++Assets->DEBUGAsset->OnePastLastTagIndex;
+    asset_tag *Tag = Assets->Tags + Assets->DEBUGUsedTagCount++;
+
+    Tag->ID = ID;
+    Tag->Value = Value;
 }
 
 internal void
@@ -285,6 +302,9 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
     Assets->AssetCount = Assets->SoundCount + Assets->BitmapCount;
     Assets->Assets = PushArray(Arena, Assets->AssetCount, asset);
+
+    Assets->TagCount = 1024*Asset_Count;
+    Assets->Tags = PushArray(Arena, Assets->TagCount, asset_tag);
 
     Assets->DEBUGUsedBitmapCount = 1;
     Assets->DEBUGUsedAssetCount = 1;
@@ -317,6 +337,39 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     AddBitmapAsset(Assets, "test2/ground01.bmp");
     AddBitmapAsset(Assets, "test2/ground02.bmp");
     AddBitmapAsset(Assets, "test2/ground03.bmp");
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Head);
+    AddBitmapAsset(Assets, "test/test_hero_right_head.bmp");
+    AddTag(Assets, Tag_FacingDirection, 0.0f);
+    AddBitmapAsset(Assets, "test/test_hero_back_head.bmp");
+    AddTag(Assets, Tag_FacingDirection, 1.0f);
+    AddBitmapAsset(Assets, "test/test_hero_left_head.bmp");
+    AddTag(Assets, Tag_FacingDirection, 2.0f);
+    AddBitmapAsset(Assets, "test/test_hero_front_head.bmp");
+    AddTag(Assets, Tag_FacingDirection, 3.0f);
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Cape);
+    AddBitmapAsset(Assets, "test/test_hero_right_cape.bmp");
+    AddTag(Assets, Tag_FacingDirection, 0.0f);
+    AddBitmapAsset(Assets, "test/test_hero_back_cape.bmp");
+    AddTag(Assets, Tag_FacingDirection, 1.0f);
+    AddBitmapAsset(Assets, "test/test_hero_left_cape.bmp");
+    AddTag(Assets, Tag_FacingDirection, 2.0f);
+    AddBitmapAsset(Assets, "test/test_hero_front_cape.bmp");
+    AddTag(Assets, Tag_FacingDirection, 3.0f);
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Torso);
+    AddBitmapAsset(Assets, "test/test_hero_right_torso.bmp");
+    AddTag(Assets, Tag_FacingDirection, 0.0f);
+    AddBitmapAsset(Assets, "test/test_hero_back_torso.bmp");
+    AddTag(Assets, Tag_FacingDirection, 1.0f);
+    AddBitmapAsset(Assets, "test/test_hero_left_torso.bmp");
+    AddTag(Assets, Tag_FacingDirection, 2.0f);
+    AddBitmapAsset(Assets, "test/test_hero_front_torso.bmp");
+    AddTag(Assets, Tag_FacingDirection, 3.0f);
     EndAssetType(Assets);
 
 #if 0
