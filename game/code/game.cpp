@@ -25,10 +25,10 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
         *SampleOut++ = SampleValue;
 
 #if 0
-        GameState->tSine += 2.0f*Pi32*1.0f/(real32)WavePeriod;
-        if(GameState->tSine > 2.0f*Pi32)
+        GameState->tSine += Tau32*1.0f/(real32)WavePeriod;
+        if(GameState->tSine > Tau32)
         {
-            GameState->tSine -= 2.0f*Pi32;
+            GameState->tSine -= Tau32;
         }
 #endif
     }
@@ -1165,7 +1165,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             //
             hero_bitmap_ids HeroBitmaps = {};
             asset_vector MatchVector = {};
-            MatchVector.E[Tag_FacingDirection] = (real32)Entity->FacingDirection;
+            MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
             asset_vector WeightVector = {};
             WeightVector.E[Tag_FacingDirection] = 1.0f;
             HeroBitmaps.Head = BestMatchAsset(TranState->Assets, Asset_Head, &MatchVector, &WeightVector);
@@ -1299,9 +1299,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 case EntityType_Familiar:
                 {
                     Entity->tBob += dt;
-                    if(Entity->tBob > (2.0f*Pi32))
+                    if(Entity->tBob > Tau32)
                     {
-                        Entity->tBob -= (2.0f*Pi32);
+                        Entity->tBob -= Tau32;
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
                     PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow),
