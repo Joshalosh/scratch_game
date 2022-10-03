@@ -22,6 +22,13 @@ SignOf(int32_t Value)
 }
 
 inline real32
+SignOf(real32 Value)
+{
+    real32 Result = (Value >= 0) ? 1.0f : -1.0f;
+    return(Result);
+}
+
+inline real32
 SquareRoot(real32 Real32)
 {
     real32 Result = sqrtf(Real32);

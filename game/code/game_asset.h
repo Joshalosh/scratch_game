@@ -78,6 +78,8 @@ struct game_assets
     struct transient_state *TranState;
     memory_arena Arena;
 
+    real32 TagRange[Tag_Count];
+
     uint32_t BitmapCount;
     asset_bitmap_info *BitmapInfos;
     asset_slot *Bitmaps;
