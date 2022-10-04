@@ -3,6 +3,15 @@
 /*
  TODO
 
+ - Audio
+   - Sound effect triggers
+   - Ambient sounds
+   - Music
+
+ - Asset streaming
+   - Fileformat
+   - Memory management
+
  - Rendering
    - Straighten out all of the coordinate systems.
      - Screen
@@ -12,19 +21,12 @@
    - Lighting
    - Final Optimisation
 
- - Asset streaming
-
  - Debug code
    - Logging
    - Diagramming
    - A little GUI, switches / sliders / etc.
    - Draw tile chunks so we can verify that things are aligned /
      in the chunks we want them to be in
-
- - Audio
-   - Sound effect triggers
-   - Ambient sounds
-   - Music
 
  ARCHITECTURE EXPLORATION
  - Z
