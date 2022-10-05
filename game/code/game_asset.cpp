@@ -158,9 +158,52 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
     }
 }
 
-internal void
-LoadSound(game_assets *Assets, uint32_t ID)
+struct load_sound_work
 {
+    game_assets *Assets;
+    sound_id ID;
+    task_with_memory *Task;
+    loaded_sound *Sound;
+
+    asset_state FinalState;
+};
+
+internal PLATFORM_WORK_QUEUE_CALLBACK(LoadSoundWork)
+{
+    load_sound_work *Work = (load_sound_work *)Data;
+
+    asset_sound_info *Info = Work->Assets->SoundInfos + Work->ID.Value;
+    *Work->Sound = DEBUGLoadWAV(Info->Filename);
+
+    CompletePreviousWritesBeforeFutureWrites;
+
+    Work->Assets->Sounds[Work->ID.Value].Sound = Work->Sound;
+    Work->Assets->Sounds[Work->ID.Value].State = Work->FinalState;
+
+    EndTaskWithMemory(Work->Task);
+}
+
+internal void
+LoadSound(game_assets *Assets, sound_id ID)
+{
+    if(ID.Value &&
+       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Sounds[ID.Value].State, AssetState_Unloaded, AssetState_Queued) ==
+        AssetState_Unloaded))
+    {
+        task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
+        if(Task)
+        {
+            load_sound_work *Work = PushStruct(&Task->Arena, load_sound_work);
+
+            Work->Assets = Assets;
+            Work->ID = ID;
+            Work->Task = Task;
+            Work->Sound = PushStruct(&Assets->Arena, loaded_sound);
+            Work->FinalState = AssetState_Loaded;
+
+            PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadSoundWork, Work);
+        }
+    }
 }
 
 internal bitmap_id

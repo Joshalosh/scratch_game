@@ -1,5 +1,11 @@
 #if !defined(GAME_ASSET_H)
 
+struct loaded_sound
+{
+    int32_t SampleCount;
+    void *Memory;
+};
+
 enum asset_state
 {
     AssetState_Unloaded,
@@ -10,7 +16,11 @@ enum asset_state
 struct asset_slot
 {
     asset_state State;
-    loaded_bitmap *Bitmap;
+    union 
+    {
+        loaded_bitmap *Bitmap;
+        loaded_sound *Sound;
+    };
 };
 
 enum asset_tag_id
@@ -72,6 +82,11 @@ struct asset_bitmap_info
     v2 AlignPercentage;
 };
 
+struct asset_sound_info
+{
+    char *Filename;
+};
+
 struct game_assets
 {
     // TODO: This back pointer kind of sucks.
@@ -85,6 +100,7 @@ struct game_assets
     asset_slot *Bitmaps;
 
     uint32_t SoundCount;
+    asset_sound_info *SoundInfos;
     asset_slot *Sounds;
 
     uint32_t TagCount;
@@ -111,7 +127,7 @@ struct bitmap_id
     uint32_t Value;
 };
 
-struct audio_id
+struct sound_id
 {
     uint32_t Value;
 };
@@ -124,7 +140,7 @@ inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID)
 }
 
 internal void LoadBitmap(game_assets *Assets, bitmap_id ID);
-internal void LoadSound(game_assets *Assets, audio_id ID);
+internal void LoadSound(game_assets *Assets, sound_id ID);
 
 #define GAME_ASSET_H
 #endif
