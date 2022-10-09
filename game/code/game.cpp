@@ -633,6 +633,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     PlatformAddEntry = Memory->PlatformAddEntry;
     PlatformCompleteAllWork = Memory->PlatformCompleteAllWork;
     DEBUGPlatformReadEntireFile = Memory->DEBUGPlatformReadEntireFile;
+
+    loaded_sound Sound = DEBUGLoadWAV("test3/bloop_00.wav");
+
 #if GAME_INTERNAL
     DebugGlobalMemory = Memory;
 #endif

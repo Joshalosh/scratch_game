@@ -23,6 +23,41 @@ struct bitmap_header
     uint32_t GreenMask;
     uint32_t BlueMask;
 };
+
+struct WAVE_header
+{
+    uint32_t RIFFID;
+    uint32_t Size;
+    uint32_t WAVEID;
+};
+
+#define RIFF_CODE(a, b, c, d) (((uint32_t)(a) << 0) | ((uint32_t)(b) << 8) | ((uint32_t)(c) << 16) | ((uint32_t)(d) << 24))
+enum
+{
+    WAVE_ChunkID_fmt = RIFF_CODE('f', 'm', 't', ' '),
+    WAVE_ChunkID_RIFF = RIFF_CODE('R', 'I', 'F', 'F'),
+    WAVE_ChunkID_WAVE = RIFF_CODE('W', 'A', 'V', 'E'),
+};
+struct WAVE_chunk 
+{
+    uint32_t ID;
+    uint32_t Size;
+};
+
+struct WAVE_fmt 
+{
+    uint16_t wFormatTag;
+    uint16_t nChannels;
+    uint32_t nSamplesPerSec;
+    uint32_t nAvgBytesPerSec;
+    uint16_t nBlockAlign;
+    uint16_t wBitsPerSample;
+    uint16_t cbSize;
+    uint16_t wValidBitsPerSample;
+    uint32_t dwChannelMask;
+    uint8_t SubFormat[16];
+};
+
 #pragma pack(pop)
 
 inline v2
@@ -110,40 +145,6 @@ DEBUGLoadBMP(char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
 
     return(Result);
 }
-
-struct WAVE_header
-{
-    uint32_t RIFFID;
-    uint32_t Size;
-    uint32_t WAVEID;
-};
-
-#define RIFF_CODE(a, b, c, d) (((uint32_t)(a) << 0) | ((uint32_t)(b) << 8) | ((uint32_t)(c) << 16) | ((uint32_t)(d) << 24))
-enum
-{
-    WAVE_ChunkID_fmt = RIFF_CODE('f', 'm', 't', ' '),
-    WAVE_ChunkID_RIFF = RIFF_CODE('R', 'I', 'F', 'F'),
-    WAVE_ChunkID_WAVE = RIFF_CODE('W', 'A', 'V', 'E'),
-};
-struct WAVE_chunk 
-{
-    uint32_t ID;
-    uint32_t Size;
-};
-
-struct WAVE_fmt 
-{
-    uint16_t wFormatTag;
-    uint16_t nChannels;
-    uint32_t nSamplesPerSec;
-    uint32_t nAvgBytesPerSec;
-    uint32_t nBlockAlign;
-    uint16_t wBitsPerSample;
-    uint16_t cbSize;
-    uint16_t wValidBitsPerSample;
-    uint32_t dwChannelMask;
-    uint8_t SubFormat[16];
-};
 
 internal loaded_sound
 DEBUGLoadWAV(char *Filename)
