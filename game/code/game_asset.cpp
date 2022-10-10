@@ -35,6 +35,7 @@ struct WAVE_header
 enum
 {
     WAVE_ChunkID_fmt = RIFF_CODE('f', 'm', 't', ' '),
+    WAVE_ChunkID_data = RIFF_CODE('d', 'a', 't', 'a'),
     WAVE_ChunkID_RIFF = RIFF_CODE('R', 'I', 'F', 'F'),
     WAVE_ChunkID_WAVE = RIFF_CODE('W', 'A', 'V', 'E'),
 };
@@ -146,6 +147,57 @@ DEBUGLoadBMP(char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
     return(Result);
 }
 
+struct riff_iterator
+{
+    WAVE_chunk *Chunk;
+    uint8_t *At;
+    uint8_t *Stop;
+};
+
+inline riff_iterator
+ParseChunkAt(void *At, void *Stop)
+{
+    riff_iterator Iter;
+
+    Iter.Chunk = (WAVE_chunk *)At;
+    Iter.At = (uint8_t *)At;
+    Iter.Stop = (uint8_t *)Stop;
+
+    return(Iter);
+}
+
+inline riff_iterator
+NextChunk(riff_iterator Iter)
+{
+    Iter.At += sizeof(WAVE_chunk) + Iter.Chunk->Size;
+
+    return(Iter);
+}
+
+inline bool32
+IsValid(riff_iterator Iter)
+{
+    bool32 Result = (Iter.At < Iter.Stop);
+
+    return(Result);
+}
+
+inline void *
+GetChunkData(riff_iterator Iter)
+{
+    void *Result = (Iter.At + sizeof(WAVE_chunk));
+
+    return(Result);
+}
+
+inline uint32_t
+GetType(riff_iterator Iter)
+{
+    uint32_t Result = Iter.Chunk->ID;
+
+    return(Result);
+}
+
 internal loaded_sound
 DEBUGLoadWAV(char *Filename)
 {
@@ -157,6 +209,25 @@ DEBUGLoadWAV(char *Filename)
         WAVE_header *Header = (WAVE_header *)ReadResult.Contents;
         Assert(Header->RIFFID == WAVE_ChunkID_RIFF);
         Assert(Header->WAVEID == WAVE_ChunkID_WAVE);
+
+        void *SampleData;
+        for(riff_iterator Iter = ParseChunkAt(Header + 1, (uint8_t *)(Header + 1) + Header->Size);
+            IsValid(Iter);
+            Iter = NextChunk(Iter))
+        {
+            switch(GetType(Iter))
+            {
+                case WAVE_ChunkID_fmt:
+                {
+                    WAVE_fmt *fmt = (WAVE_fmt *)GetChunkData(Iter);
+                } break;
+
+                case WAVE_ChunkID_data:
+                {
+                    SampleData = GetChunkData(Iter);
+                } break;
+            }
+        }
     }
 
     return(Result);
