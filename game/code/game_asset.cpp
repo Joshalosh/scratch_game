@@ -149,7 +149,6 @@ DEBUGLoadBMP(char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
 
 struct riff_iterator
 {
-    WAVE_chunk *Chunk;
     uint8_t *At;
     uint8_t *Stop;
 };
@@ -159,7 +158,6 @@ ParseChunkAt(void *At, void *Stop)
 {
     riff_iterator Iter;
 
-    Iter.Chunk = (WAVE_chunk *)At;
     Iter.At = (uint8_t *)At;
     Iter.Stop = (uint8_t *)Stop;
 
@@ -169,7 +167,9 @@ ParseChunkAt(void *At, void *Stop)
 inline riff_iterator
 NextChunk(riff_iterator Iter)
 {
-    Iter.At += sizeof(WAVE_chunk) + Iter.Chunk->Size;
+    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
+    uint32_t Size = (Chunk->Size + 1) & ~1;
+    Iter.At += sizeof(WAVE_chunk) + Size;
 
     return(Iter);
 }
@@ -193,7 +193,17 @@ GetChunkData(riff_iterator Iter)
 inline uint32_t
 GetType(riff_iterator Iter)
 {
-    uint32_t Result = Iter.Chunk->ID;
+    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
+    uint32_t Result = Chunk->ID;
+
+    return(Result);
+}
+
+inline uint32_t
+GetChunkDataSize(riff_iterator Iter)
+{
+    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
+    uint32_t Result = Chunk->Size;
 
     return(Result);
 }
@@ -210,8 +220,10 @@ DEBUGLoadWAV(char *Filename)
         Assert(Header->RIFFID == WAVE_ChunkID_RIFF);
         Assert(Header->WAVEID == WAVE_ChunkID_WAVE);
 
+        uin32_t ChannelCount = 0;
+        uint32_t SampleDataSize = 0;
         void *SampleData;
-        for(riff_iterator Iter = ParseChunkAt(Header + 1, (uint8_t *)(Header + 1) + Header->Size);
+        for(riff_iterator Iter = ParseChunkAt(Header + 1, (uint8_t *)(Header + 1) + Header->Size - 4);
             IsValid(Iter);
             Iter = NextChunk(Iter))
         {
@@ -220,6 +232,11 @@ DEBUGLoadWAV(char *Filename)
                 case WAVE_ChunkID_fmt:
                 {
                     WAVE_fmt *fmt = (WAVE_fmt *)GetChunkData(Iter);
+                    Assert(fmt->wFormatTage == 1);
+                    Assert(fmt->nSamplesPerSec == 48000);
+                    Assert(fmt->wBitsPerSample == 16);
+                    Assert(fmt->nBlockAlign == (sizeof(uint16_t)*fmt->nChannels));
+                    ChannelCount = fmt->nChannels;
                 } break;
 
                 case WAVE_ChunkID_data:
@@ -227,6 +244,25 @@ DEBUGLoadWAV(char *Filename)
                     SampleData = GetChunkData(Iter);
                 } break;
             }
+        }
+
+        Assert(ChannelCount && SampleData);
+
+        Result.ChannelCount = ChannelCount;
+        Result.SampleCount = SampleDataSize / (ChannelCount*sizeof(uint16_t));
+        if(ChannelCount == 1)
+        {
+            Result.Samples[0] = SampleData;
+            Result.Samples[1] = 0;
+        }
+        else if(ChannelCount == 2)
+        {
+            Result.Samples[0] = SampleData;
+            Result.Samples[1] = 0;
+        }
+        else
+        {
+            Assert(!"Invalid channel count in WAV file");
         }
     }
 

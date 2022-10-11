@@ -2,8 +2,9 @@
 
 struct loaded_sound
 {
-    int32_t SampleCount;
-    void *Memory;
+    uint32_t SampleCount;
+    uint32_t ChannelCount;
+    void *Samples[2];
 };
 
 enum asset_state
