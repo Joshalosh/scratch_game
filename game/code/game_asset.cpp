@@ -220,9 +220,9 @@ DEBUGLoadWAV(char *Filename)
         Assert(Header->RIFFID == WAVE_ChunkID_RIFF);
         Assert(Header->WAVEID == WAVE_ChunkID_WAVE);
 
-        uin32_t ChannelCount = 0;
+        uint32_t ChannelCount = 0;
         uint32_t SampleDataSize = 0;
-        void *SampleData;
+        int16_t *SampleData = 0;
         for(riff_iterator Iter = ParseChunkAt(Header + 1, (uint8_t *)(Header + 1) + Header->Size - 4);
             IsValid(Iter);
             Iter = NextChunk(Iter))
@@ -232,16 +232,17 @@ DEBUGLoadWAV(char *Filename)
                 case WAVE_ChunkID_fmt:
                 {
                     WAVE_fmt *fmt = (WAVE_fmt *)GetChunkData(Iter);
-                    Assert(fmt->wFormatTage == 1);
+                    Assert(fmt->wFormatTag == 1);
                     Assert(fmt->nSamplesPerSec == 48000);
                     Assert(fmt->wBitsPerSample == 16);
-                    Assert(fmt->nBlockAlign == (sizeof(uint16_t)*fmt->nChannels));
+                    Assert(fmt->nBlockAlign == (sizeof(int16_t)*fmt->nChannels));
                     ChannelCount = fmt->nChannels;
                 } break;
 
                 case WAVE_ChunkID_data:
                 {
-                    SampleData = GetChunkData(Iter);
+                    SampleData = (int16_t *)GetChunkData(Iter);
+                    SampleDataSize = GetChunkDataSize(Iter);
                 } break;
             }
         }
@@ -249,7 +250,7 @@ DEBUGLoadWAV(char *Filename)
         Assert(ChannelCount && SampleData);
 
         Result.ChannelCount = ChannelCount;
-        Result.SampleCount = SampleDataSize / (ChannelCount*sizeof(uint16_t));
+        Result.SampleCount = SampleDataSize / (ChannelCount*sizeof(int16_t));
         if(ChannelCount == 1)
         {
             Result.Samples[0] = SampleData;
@@ -258,12 +259,30 @@ DEBUGLoadWAV(char *Filename)
         else if(ChannelCount == 2)
         {
             Result.Samples[0] = SampleData;
-            Result.Samples[1] = 0;
+            Result.Samples[1] = SampleData + Result.SampleCount;
+
+#if 0
+            for(uint32_t SampleIndex = 0; SampleIndex < Result.SampleCount; ++SampleIndex)
+            {
+                SampleData[2*SampleIndex + 0] = (int16_t)SampleIndex;
+                SampleData[2*SampleIndex + 1] = (int16_t)SampleIndex;
+            }
+#endif
+
+            for(uint32_t SampleIndex = 0; SampleIndex < Result.SampleCount; ++SampleIndex)
+            {
+                int16_t Source = SampleData[2*SampleIndex];
+                SampleData[2*SampleIndex] = SampleData[SampleIndex];
+                SampleData[SampleIndex] = Source;
+            }
         }
         else
         {
             Assert(!"Invalid channel count in WAV file");
         }
+
+        // TODO: Load right channels.
+        Result.ChannelCount = 1;
     }
 
     return(Result);

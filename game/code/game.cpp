@@ -15,7 +15,7 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
     int16_t *SampleOut = SoundBuffer->Samples; 
     for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
     {
-#if 0
+#if 1
         real32 SineValue = sinf(GameState->tSine);
         int16_t SampleValue = (int16_t)(SineValue * ToneVolume);
 #else
@@ -24,7 +24,7 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
         *SampleOut++ = SampleValue;
         *SampleOut++ = SampleValue;
 
-#if 0
+#if 1
         GameState->tSine += Tau32*1.0f/(real32)WavePeriod;
         if(GameState->tSine > Tau32)
         {
@@ -634,8 +634,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     PlatformCompleteAllWork = Memory->PlatformCompleteAllWork;
     DEBUGPlatformReadEntireFile = Memory->DEBUGPlatformReadEntireFile;
 
-    loaded_sound Sound = DEBUGLoadWAV("test3/bloop_00.wav");
-
 #if GAME_INTERNAL
     DebugGlobalMemory = Memory;
 #endif
@@ -658,6 +656,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t TilesPerHeight = 9;
 
         GameState->TypicalFloorHeight = 3.0f;
+
+        GameState->TestSound = DEBUGLoadWAV("test3/music_test.wav");
 
         // TODO: Remove this.
         real32 PixelsToMetres = 1.0f / 42.0f;
@@ -1451,5 +1451,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
     game_state *GameState = (game_state *)Memory->PermanentStorage;
-    GameOutputSound(GameState, SoundBuffer, 400);
+//    GameOutputSound(GameState, SoundBuffer, 400);
+    
+    int16_t *SampleOut = SoundBuffer->Samples;
+    for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
+    {
+        uint32_t TestSoundSampleIndex = (GameState->TestSampleIndex + SampleIndex) % GameState->TestSound.SampleCount;
+        int16_t SampleValue = GameState->TestSound.Samples[0][TestSoundSampleIndex];
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+    }
+
+    GameState->TestSampleIndex += SoundBuffer->SampleCount;
 }
