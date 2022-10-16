@@ -256,6 +256,14 @@ struct hero_bitmap_ids
     bitmap_id Torso;
 };
 
+struct playing_sound
+{
+    real32 Volume[2];
+    sound_id ID;
+    int32_t SamplesPlayed;
+    playing_sound *Next;
+};
+
 struct game_state
 {
     bool32 IsInitialised;
@@ -292,9 +300,9 @@ struct game_state
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;
 
-    loaded_sound TestSound;
     real32 tSine;
-    uint32_t TestSampleIndex;
+
+    playing_sound *FirstPlayingSound;
 };
 
 struct task_with_memory

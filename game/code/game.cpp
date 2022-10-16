@@ -657,8 +657,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->TypicalFloorHeight = 3.0f;
 
-        GameState->TestSound = DEBUGLoadWAV("test3/music_test.wav");
-
         // TODO: Remove this.
         real32 PixelsToMetres = 1.0f / 42.0f;
         v3 WorldChunkDimInMeters = {PixelsToMetres*(real32)GroundBufferWidth,
@@ -1451,16 +1449,55 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
     game_state *GameState = (game_state *)Memory->PermanentStorage;
+    transient_state *TranState = (transient_state *)Memory->TransientStorage;
 //    GameOutputSound(GameState, SoundBuffer, 400);
     
-    int16_t *SampleOut = SoundBuffer->Samples;
-    for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
+    real32 *RealChannel0 = ;
+    real32 *RealChannel1 = ;
     {
-        uint32_t TestSoundSampleIndex = (GameState->TestSampleIndex + SampleIndex) % GameState->TestSound.SampleCount;
-        int16_t SampleValue = GameState->TestSound.Samples[0][TestSoundSampleIndex];
-        *SampleOut++ = SampleValue;
-        *SampleOut++ = SampleValue;
+        real32 *Dest0 = RealChannel0;
+        real32 *Dest1 = RealChannel1;
+        for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
+        {
+            *Dest0++ = 0.0f;
+            *Dest1++ = 0.0f;
+        }
     }
 
-    GameState->TestSampleIndex += SoundBuffer->SampleCount;
+    for(playing_sound *PlayingSound = GameState->FirstPlayingSound; PlayingSound; PlayingSound = PlayingSound->Next)
+    {
+        loaded_sound *LoadedSound = GetSound(TranState->Assets, PlayingSound->ID);
+        if(LoadedSound)
+        {
+            // TODO: Handle stero.
+            real32 Volume0 = PlayingSound->Volume[0];
+            real32 Volume1 = PlayingSound->Volume[1];
+            real32 *Dest0 = RealChannel0;
+            real32 *Dest1 = RealChannel1;
+            for(int SampleIndex = PlayingSound->SamplesPlayed;
+                SampleIndex < (PlayingSound->SamplesPlayed + SoundBuffer->SampleCount); 
+                ++SampleIndex)
+            {
+                real32 SampleValue = LoadedSound->Samples[0][SampleIndex];
+                *Dest0++ += Volume0*SampleValue;
+                *Dest1++ += Volume1*SampleValue;
+            }
+        }
+        else
+        {
+            LoadedSound(TranState->Assets, PlayingSound->ID);
+        }
+    }
+
+    {
+        real32 *Source0 = RealChannel0;
+        real32 *Source1 = RealChannel1;
+
+        int16_t *SampleOut = SoundBuffer->Samples;
+        for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
+        {
+            *SampleOut++ = (int16_t)(*Source0++ + 0.5f);
+            *SampleOut++ = (int16_t)(*Source1++ + 0.5f);
+        }
+    }
 }
