@@ -531,6 +531,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assets->Bitmaps = PushArray(Arena, Assets->BitmapCount, asset_slot);
 
     Assets->SoundCount = 1;
+    Assets->SoundInfos = PushArray(Arena, Assets->SoundCount, asset_sound_info);
     Assets->Sounds = PushArray(Arena, Assets->SoundCount, asset_slot);
 
     Assets->AssetCount = Assets->SoundCount + Assets->BitmapCount;
@@ -610,6 +611,39 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     AddTag(Assets, Tag_FacingDirection, AngleLeft);
     AddBitmapAsset(Assets, "test/test_hero_front_torso.bmp", HeroAlign);
     AddTag(Assets, Tag_FacingDirection, AngleFront);
+    EndAssetType(Assets);
+
+    //
+    //
+    //
+
+    BeginAssetType(Assets, Asset_Bloop);
+    AddSoundAsset(Assets, "test3/bloop_00.wav");
+    AddSoundAsset(Assets, "test3/bloop_01.wav");
+    AddSoundAsset(Assets, "test3/bloop_02.wav");
+    AddSoundAsset(Assets, "test3/bloop_03.wav");
+    AddSoundAsset(Assets, "test3/bloop_04.wav");
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Crack);
+    AddSoundAsset(Assets, "test3/crack_00.wav");
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Drop);
+    AddSoundAsset(Assets, "test3/drop_00.wav");
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Glide);
+    AddSoundAsset(Assets, "test3/glide_00.wav");
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Music);
+    AddSoundAsset(Assets, "test3/music_test.wav");
+    EndAssetType(Assets);
+    
+    BeginAssetType(Assets, Asset_Puhp);
+    AddSoundAsset(Assets, "test3/puhp_00.wav");
+    AddSoundAsset(Assets, "test3/puhp_01.wav");
     EndAssetType(Assets);
 
     return(Assets);

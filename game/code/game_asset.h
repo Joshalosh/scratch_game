@@ -37,6 +37,10 @@ enum asset_type_id
 {
     Asset_None,
 
+    //
+    // Bitmaps
+    //
+
     Asset_Shadow,
     Asset_Tree,
     Asset_Sword,
@@ -50,6 +54,21 @@ enum asset_type_id
     Asset_Head,
     Asset_Cape,
     Asset_Torso,
+
+    //
+    // Sounds
+    //
+
+    Asset_Bloop,
+    Asset_Crack,
+    Asset_Drop,
+    Asset_Glide,
+    Asset_Music,
+    Asset_Puhp,
+    
+    //
+    //
+    //
 
     Asset_Count,
 };

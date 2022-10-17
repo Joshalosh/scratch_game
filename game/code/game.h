@@ -268,6 +268,7 @@ struct game_state
 {
     bool32 IsInitialised;
     
+    memory_arena MetaArena;
     memory_arena WorldArena;
     world *World;
 
@@ -303,6 +304,7 @@ struct game_state
     real32 tSine;
 
     playing_sound *FirstPlayingSound;
+    playing_sound *FirstFreePlayingSound;
 };
 
 struct task_with_memory

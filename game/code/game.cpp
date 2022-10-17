@@ -1452,8 +1452,12 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     transient_state *TranState = (transient_state *)Memory->TransientStorage;
 //    GameOutputSound(GameState, SoundBuffer, 400);
     
-    real32 *RealChannel0 = ;
-    real32 *RealChannel1 = ;
+    temporary_memory MixerMemory = BeginTemporaryMemory(TranState->TranArena);
+
+    real32 *RealChannel0 = PushArray(TranState->TranArena, SoundBuffer->SampleCount, real32);
+    real32 *RealChannel1 = PushArray(TranState->TranArena, SoundBuffer->SampleCount, real32);
+
+    // Clear out the mixer channels.
     {
         real32 *Dest0 = RealChannel0;
         real32 *Dest1 = RealChannel1;
@@ -1464,8 +1468,11 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
         }
     }
 
-    for(playing_sound *PlayingSound = GameState->FirstPlayingSound; PlayingSound; PlayingSound = PlayingSound->Next)
+    // Sum all sounds.
+    for(playing_sound *PlayingSound = GameState->FirstPlayingSound; PlayingSound;)
     {
+        playing_sound *NextPlayingSound = PlayingSound->Next;
+
         loaded_sound *LoadedSound = GetSound(TranState->Assets, PlayingSound->ID);
         if(LoadedSound)
         {
@@ -1474,21 +1481,41 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
             real32 Volume1 = PlayingSound->Volume[1];
             real32 *Dest0 = RealChannel0;
             real32 *Dest1 = RealChannel1;
+
+            Assert(PlayingSound->SamplesPlayed >= 0);
+
+            uint32_t SamplesToMix = SoundBuffer->SampleCount;
+            uint32_t SamplesRemainingInSound = LoadedSound->SampleCount - PlayingSound->SamplesPlayed;
+            if(SamplesToMix > SamplesRemainingInSound)
+            {
+                SamplesToMix = SamplesRemainingInSound;
+            }
+
             for(int SampleIndex = PlayingSound->SamplesPlayed;
-                SampleIndex < (PlayingSound->SamplesPlayed + SoundBuffer->SampleCount); 
+                SampleIndex < (PlayingSound->SamplesPlayed + SamplesToMix); 
                 ++SampleIndex)
             {
                 real32 SampleValue = LoadedSound->Samples[0][SampleIndex];
                 *Dest0++ += Volume0*SampleValue;
                 *Dest1++ += Volume1*SampleValue;
             }
+
+            PlayingSound->SamplesPlayed += SamplesToMix;
+            if(PlayingSound->SamplesPlayed == LoadedSound->SampleCount)
+            {
+                PlayingSound->Next = GameState->FirstFreePlayingSound;
+                GameState->FirstFreePlayingSound = PlayingSound;
+            }
         }
         else
         {
             LoadedSound(TranState->Assets, PlayingSound->ID);
         }
+
+        PlayingSound = NextPlayingSound;
     }
 
+    // Convert to 16-bit.
     {
         real32 *Source0 = RealChannel0;
         real32 *Source1 = RealChannel1;
@@ -1500,4 +1527,6 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
             *SampleOut++ = (int16_t)(*Source1++ + 0.5f);
         }
     }
+
+    EndTemporaryMemory(MixerMemory);
 }
