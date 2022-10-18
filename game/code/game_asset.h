@@ -136,6 +136,7 @@ struct game_assets
 
     // TODO: These should go away once I actually load an asset pack file.
     uint32_t DEBUGUsedBitmapCount;
+    uint32_t DEBUGUsedSoundCount;
     uint32_t DEBUGUsedAssetCount;
     uint32_t DEBUGUsedTagCount;
     asset_type *DEBUGAssetType;

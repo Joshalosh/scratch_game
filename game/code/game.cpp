@@ -417,9 +417,9 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
                 for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
                 {
-                    bitmap_id Stamp = RandomAssetFrom(TranState->Assets, 
-                                                      RandomChoice(&Series, 2) ? Asset_Grass : Asset_Stone,
-                                                      &Series);
+                    bitmap_id Stamp = GetRandomBitmapFrom(TranState->Assets, 
+                                                          RandomChoice(&Series, 2) ? Asset_Grass : Asset_Stone,
+                                                          &Series);
 
                     v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
                     PushBitmap(RenderGroup, Stamp, 2.0f, V3(P, 0.0f), Color);
@@ -441,7 +441,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
                 for(uint32_t GrassIndex = 0; GrassIndex < 50; ++GrassIndex)
                 {
-                    bitmap_id Stamp = RandomAssetFrom(TranState->Assets, Asset_Tuft, &Series);
+                    bitmap_id Stamp = GetRandomBitmapFrom(TranState->Assets, Asset_Tuft, &Series);
                     v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
                     PushBitmap(RenderGroup, Stamp, 0.1f, V3(P, 0.0f));
                 }
@@ -872,6 +872,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(64), TranState);
 
+        GameState->FirstPlayingSound = PushStruct(&GameState->WorldArena, playing_sound);
+        GameState->FirstPlayingSound->Volume[0] = 0.0f;
+        GameState->FirstPlayingSound->Volume[1] = 0.0f;
+        GameState->FirstPlayingSound->ID = GetFirstSoundFrom(TranState->Assets, Asset_Music);
+        GameState->FirstPlayingSound->Next = 0;
+
+        // TODO: Pick a real number here.
         TranState->GroundBufferCount = 256;
         TranState->GroundBuffers = PushArray(&TranState->TranArena, TranState->GroundBufferCount, ground_buffer);
         for(uint32_t GroundBufferIndex = 0;
@@ -1169,9 +1176,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
             asset_vector WeightVector = {};
             WeightVector.E[Tag_FacingDirection] = 1.0f;
-            HeroBitmaps.Head = BestMatchAsset(TranState->Assets, Asset_Head, &MatchVector, &WeightVector);
-            HeroBitmaps.Cape = BestMatchAsset(TranState->Assets, Asset_Cape, &MatchVector, &WeightVector);
-            HeroBitmaps.Torso = BestMatchAsset(TranState->Assets, Asset_Torso, &MatchVector, &WeightVector);
+            HeroBitmaps.Head = GetBestMatchBitmapFrom(TranState->Assets, Asset_Head, &MatchVector, &WeightVector);
+            HeroBitmaps.Cape = GetBestMatchBitmapFrom(TranState->Assets, Asset_Cape, &MatchVector, &WeightVector);
+            HeroBitmaps.Torso = GetBestMatchBitmapFrom(TranState->Assets, Asset_Torso, &MatchVector, &WeightVector);
             switch(Entity->Type)
             {
                 case EntityType_Hero:
@@ -1271,7 +1278,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 case EntityType_Hero:
                 {
                     real32 HeroSizeC = 2.5f;
-                    PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow), 
+                    PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow), 
                                HeroSizeC*1.0f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
                     PushBitmap(RenderGroup, HeroBitmaps.Torso, HeroSizeC*1.2f, V3(0, 0, 0));
                     PushBitmap(RenderGroup, HeroBitmaps.Cape, HeroSizeC*1.2f, V3(0, 0, 0));
@@ -1281,7 +1288,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Wall:
                 {
-                    PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Tree), 2.5f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Tree), 2.5f, V3(0, 0, 0));
                 } break;
 
                 case EntityType_Stairwell:
@@ -1292,9 +1299,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Sword:
                 {
-                    PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow), 
+                    PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow), 
                                0.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Sword), 0.5f, V3(0, 0, 0));
+                    PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Sword), 0.5f, V3(0, 0, 0));
                 } break;
 
                 case EntityType_Familiar:
@@ -1305,14 +1312,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Entity->tBob -= Tau32;
                     }
                     real32 BobSin = Sin(2.0f*Entity->tBob);
-                    PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow),
+                    PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow),
                                2.5f, V3(0, 0, 0), V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin));
                     PushBitmap(RenderGroup, HeroBitmaps.Head, 2.5f, V3(0, 0, 0.25f*BobSin));
                 } break;
 
                 case EntityType_Monster:
                 {
-                    PushBitmap(RenderGroup, GetFirstBitmapID(TranState->Assets, Asset_Shadow),
+                    PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow),
                                4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
                     PushBitmap(RenderGroup, HeroBitmaps.Torso, 4.5f, V3(0, 0, 0));
 
@@ -1452,10 +1459,10 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     transient_state *TranState = (transient_state *)Memory->TransientStorage;
 //    GameOutputSound(GameState, SoundBuffer, 400);
     
-    temporary_memory MixerMemory = BeginTemporaryMemory(TranState->TranArena);
+    temporary_memory MixerMemory = BeginTemporaryMemory(&TranState->TranArena);
 
-    real32 *RealChannel0 = PushArray(TranState->TranArena, SoundBuffer->SampleCount, real32);
-    real32 *RealChannel1 = PushArray(TranState->TranArena, SoundBuffer->SampleCount, real32);
+    real32 *RealChannel0 = PushArray(&TranState->TranArena, SoundBuffer->SampleCount, real32);
+    real32 *RealChannel1 = PushArray(&TranState->TranArena, SoundBuffer->SampleCount, real32);
 
     // Clear out the mixer channels.
     {
@@ -1491,7 +1498,7 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
                 SamplesToMix = SamplesRemainingInSound;
             }
 
-            for(int SampleIndex = PlayingSound->SamplesPlayed;
+            for(uint32_t SampleIndex = PlayingSound->SamplesPlayed;
                 SampleIndex < (PlayingSound->SamplesPlayed + SamplesToMix); 
                 ++SampleIndex)
             {
@@ -1501,7 +1508,7 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
             }
 
             PlayingSound->SamplesPlayed += SamplesToMix;
-            if(PlayingSound->SamplesPlayed == LoadedSound->SampleCount)
+            if((uint32_t)PlayingSound->SamplesPlayed == LoadedSound->SampleCount)
             {
                 PlayingSound->Next = GameState->FirstFreePlayingSound;
                 GameState->FirstFreePlayingSound = PlayingSound;
@@ -1509,7 +1516,7 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
         }
         else
         {
-            LoadedSound(TranState->Assets, PlayingSound->ID);
+            LoadSound(TranState->Assets, PlayingSound->ID);
         }
 
         PlayingSound = NextPlayingSound;
