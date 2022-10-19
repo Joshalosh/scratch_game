@@ -600,7 +600,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assets->BitmapInfos = PushArray(Arena, Assets->BitmapCount, asset_bitmap_info);
     Assets->Bitmaps = PushArray(Arena, Assets->BitmapCount, asset_slot);
 
-    Assets->SoundCount = 1;
+    Assets->SoundCount = 256*Asset_Count;
     Assets->SoundInfos = PushArray(Arena, Assets->SoundCount, asset_sound_info);
     Assets->Sounds = PushArray(Arena, Assets->SoundCount, asset_slot);
 

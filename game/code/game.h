@@ -215,6 +215,7 @@ ZeroSize(memory_index Size, void *Ptr)
 #include "game_entity.h"
 #include "game_render_group.h"
 #include "game_asset.h"
+#include "game_random.h"
 
 struct low_entity
 {
@@ -301,6 +302,7 @@ struct game_state
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;
 
+    random_series GeneralEntropy;
     real32 tSine;
 
     playing_sound *FirstPlayingSound;
