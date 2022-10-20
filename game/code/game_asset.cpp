@@ -316,7 +316,7 @@ internal void
 LoadBitmap(game_assets *Assets, bitmap_id ID)
 {
     if(ID.Value &&
-       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Bitmaps[ID.Value].State, AssetState_Unloaded, AssetState_Queued) ==
+       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Bitmaps[ID.Value].State, AssetState_Queued, AssetState_Unloaded) ==
         AssetState_Unloaded))
     {
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
@@ -331,6 +331,10 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
             Work->FinalState = AssetState_Loaded;
 
             PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadBitmapWork, Work);
+        }
+        else 
+        {
+            Assets->Bitmaps[ID.Value].State = AssetState_Unloaded;
         }
     }
 }
@@ -364,7 +368,7 @@ internal void
 LoadSound(game_assets *Assets, sound_id ID)
 {
     if(ID.Value &&
-       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Sounds[ID.Value].State, AssetState_Unloaded, AssetState_Queued) ==
+       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Sounds[ID.Value].State, AssetState_Queued, AssetState_Unloaded) ==
         AssetState_Unloaded))
     {
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
@@ -379,6 +383,10 @@ LoadSound(game_assets *Assets, sound_id ID)
             Work->FinalState = AssetState_Loaded;
 
             PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadSoundWork, Work);
+        }
+        else 
+        {
+            Assets->Sounds[ID.Value].State = AssetState_Unloaded;
         }
     }
 }

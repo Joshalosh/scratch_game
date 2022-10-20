@@ -4,9 +4,17 @@
 
 #if COMPILER_MSVC
 #define CompletePreviousWritesBeforeFutureWrites _WriteBarrier();
-inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t Expected, uint32_t New)
+inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
 {
-    uint32_t Result = _InterlockedCompareExchange((long *)Value, Expected, New);
+    uint32_t Result = _InterlockedCompareExchange((long *)Value, New, Expected);
+
+    return(Result);
+}
+#elif COMPILER_LLVM
+#define CompletePreviuosWritesBeforeFutureWrites asm volatile("" ::: "memory")
+inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
+{
+    uint32_t Result = __sync_val_compare_and_swap((long *)Value, Expected, New);
 
     return(Result);
 }

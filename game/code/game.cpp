@@ -637,6 +637,7 @@ PlaySound(game_state *GameState, sound_id SoundID)
     GameState->FirstFreePlayingSound = PlayingSound->Next;
 
     PlayingSound->SamplesPlayed = 0;
+    // TODO: Should these default to 0.5f/0.5f for centred?
     PlayingSound->Volume[0] = 1.0f;
     PlayingSound->Volume[1] = 1.0f;
     PlayingSound->ID = SoundID; // GetFirstSoundFrom(TranState->Assets, Asset_Music);

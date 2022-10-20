@@ -5,6 +5,7 @@ struct loaded_sound
     uint32_t SampleCount;
     uint32_t ChannelCount;
     int16_t *Samples[2];
+    sound_id NextIDToPlay;
 };
 
 enum asset_state
