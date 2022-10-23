@@ -354,7 +354,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadSoundWork)
     load_sound_work *Work = (load_sound_work *)Data;
 
     asset_sound_info *Info = Work->Assets->SoundInfos + Work->ID.Value;
-    *Work->Sound = DEBUGLoadWAV(Info->Filename);
+    *Work->Sound = DEBUGLoadWAV(Info->Filename, Info->FirstSampleIndex, Info->SampleCount);
 
     CompletePreviousWritesBeforeFutureWrites;
 
@@ -528,6 +528,7 @@ DEBUGAddSoundInfo(game_assets *Assets, char *Filename)
 
     asset_sound_info *Info = Assets->SoundInfos + ID.Value;
     Info->Filename = Filename;
+    Info->NextIDToPlay.Value = 0;
 
     return(ID);
 }

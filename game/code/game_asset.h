@@ -1,11 +1,20 @@
 #if !defined(GAME_ASSET_H)
 
+struct bitmap_id
+{
+    uint32_t Value;
+};
+
+struct sound_id
+{
+    uint32_t Value;
+};
+
 struct loaded_sound
 {
     uint32_t SampleCount;
     uint32_t ChannelCount;
     int16_t *Samples[2];
-    sound_id NextIDToPlay;
 };
 
 enum asset_state
@@ -106,6 +115,9 @@ struct asset_bitmap_info
 struct asset_sound_info
 {
     char *Filename;
+    uint32_t FirstSampleIndex;
+    uint32_t SampleCount;
+    sound_id NextIDToPlay;
 };
 
 struct game_assets
@@ -144,32 +156,53 @@ struct game_assets
     asset *DEBUGAsset;
 };
 
-struct bitmap_id
+inline loaded_bitmap *
+GetBitmap(game_assets *Assets, bitmap_id ID)
 {
-    uint32_t Value;
-};
-
-struct sound_id
-{
-    uint32_t Value;
-};
-
-inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID)
-{
+    Assert(ID.Value <= Assets->BitmapCount);
     loaded_bitmap *Result = Assets->Bitmaps[ID.Value].Bitmap;
 
     return(Result);
 }
 
-inline loaded_sound *GetSound(game_assets *Assets, sound_id ID)
+inline loaded_sound *
+GetSound(game_assets *Assets, sound_id ID)
 {
+    Assert(ID.Value <= Assets->SoundCount);
     loaded_sound *Result = Assets->Sounds[ID.Value].Sound;
 
     return(Result);
 }
 
+inline asset_sound_info *
+GetSoundInfo(game_assets *Assets, sound_id ID)
+{
+    Assert(ID.Value <= Assets->SoundCount);
+    asset_sound_info *Result = Assets->SoundInfos + ID.Value;
+
+    return(Result);
+}
+
+inline bool32
+IsValid(bitmap_id ID)
+{
+    bool32 Result = (ID.Value != 0);
+
+    return(Result);
+}
+
+inline bool32
+IsValid(sound_id ID)
+{
+    bool32 Result = (ID.Value != 0);
+
+    return(Result);
+}
+
 internal void LoadBitmap(game_assets *Assets, bitmap_id ID);
+inline void PrefetchBitmap(game_assets *Assets, bitmap_id ID) {LoadBitmap(Assets, ID);}
 internal void LoadSound(game_assets *Assets, sound_id ID);
+inline void PrefetchSound(game_assets *Assets, sound_id ID) {LoadSound(Assets, ID);}
 
 #define GAME_ASSET_H
 #endif

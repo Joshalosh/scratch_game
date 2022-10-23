@@ -1506,6 +1506,9 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
         loaded_sound *LoadedSound = GetSound(TranState->Assets, PlayingSound->ID);
         if(LoadedSound)
         {
+            asset_sound_info *Info = GetSoundInfo(TranState->Assets, PlayingSound->ID);
+            PrefetchSound(TranState->Assets, Info->NextIDToPlay);
+
             // TODO: Handle stero.
             real32 Volume0 = PlayingSound->Volume[0];
             real32 Volume1 = PlayingSound->Volume[1];
@@ -1530,7 +1533,19 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
                 *Dest1++ += Volume1*SampleValue;
             }
 
-            SoundFinished = ((uint32_t)PlayingSound->SamplesPlayed == LoadedSound->SampleCount);
+            // TODO: Make playback seamless.
+            if((uint32_t)PlayingSound->SamplesPlayed == LoadedSound->SampleCount)
+            {
+                if(IsValid(Info->NextIDToPlay))
+                {
+                    PlayingSound->ID = Info->NextIDToPlay;
+                    PlayingSound->SamplesPlayed = 0;
+                }
+                else
+                {
+                    SoundFinished = true;
+                }
+            }
 
             PlayingSound->SamplesPlayed += SamplesToMix;
         }
