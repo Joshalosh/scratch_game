@@ -731,10 +731,16 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     EndAssetType(Assets);
 
     u32 OneMusicChunk = 10*48000;
+    u32 TotalMusicSampleCount = 7468095;
     BeginAssetType(Assets, Asset_Music);
     asset *LastMusic = 0;
-    for(u32 FirstSampleIndex = 0; FirstSampleIndex < 60*48000; FirstSampleIndex += OneMusicChunk)
+    for(u32 FirstSampleIndex = 0; FirstSampleIndex < TotalMusicSampleCount; FirstSampleIndex += OneMusicChunk)
     {
+        u32 SampleCount = TotalMusicSampleCount - FirstSampleIndex;
+        if(SampleCount > OneMusicChunk)
+        {
+            SampleCount = OneMusicChunk;
+        }
         asset *ThisMusic = AddSoundAsset(Assets, "test3/music_test.wav", FirstSampleIndex, OneMusicChunk);
         if(LastMusic)
         {

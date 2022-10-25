@@ -14,7 +14,7 @@ inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t N
 #define CompletePreviuosWritesBeforeFutureWrites asm volatile("" ::: "memory")
 inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
 {
-    uint32_t Result = __sync_val_compare_and_swap((long *)Value, Expected, New);
+    uint32_t Result = __sync_val_compare_and_swap(Value, Expected, New);
 
     return(Result);
 }

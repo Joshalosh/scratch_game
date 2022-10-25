@@ -216,6 +216,7 @@ ZeroSize(memory_index Size, void *Ptr)
 #include "game_render_group.h"
 #include "game_asset.h"
 #include "game_random.h"
+#include "game_audio.h"
 
 struct low_entity
 {
@@ -255,14 +256,6 @@ struct hero_bitmap_ids
     bitmap_id Head;
     bitmap_id Cape;
     bitmap_id Torso;
-};
-
-struct playing_sound
-{
-    real32 Volume[2];
-    sound_id ID;
-    int32_t SamplesPlayed;
-    playing_sound *Next;
 };
 
 struct game_state
@@ -305,8 +298,7 @@ struct game_state
     random_series GeneralEntropy;
     real32 tSine;
 
-    playing_sound *FirstPlayingSound;
-    playing_sound *FirstFreePlayingSound;
+    audio_state AudioState;
 };
 
 struct task_with_memory
