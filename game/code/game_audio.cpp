@@ -41,14 +41,28 @@ PlaySound(audio_state *AudioState, sound_id SoundID)
 
     PlayingSound->SamplesPlayed = 0;
     // TODO: Should these default to 0.5f/0.5f for centred?
-    PlayingSound->Volume[0] = 1.0f;
-    PlayingSound->Volume[1] = 1.0f;
-    PlayingSound->ID = SoundID; // GetFirstSoundFrom(TranState->Assets, Asset_Music);
+    PlayingSound->CurrentVolume = PlayingSound->TargetVolume = V2(1.0f, 1.0f);
+    PlayingSound->dCurrentVolume = V2(0, 0);
+    PlayingSound->ID = SoundID; 
 
     PlayingSound->Next = AudioState->FirstPlayingSound;
     AudioState->FirstPlayingSound = PlayingSound;
 
     return(PlayingSound);
+}
+
+internal void
+ChangeVolume(audio_state *AudioState, playing_sound *Sound, real32 FadeDurationInSeconds, v2 Volume)
+{
+    if(FadeDurationInSeconds <= 0.0f)
+    {
+        Sound->CurrentVolume = Sound->TargetVolume = Volume;
+    }
+    else
+    {
+        real32 OneOverFade = 1.0f / FadeDurationInSeconds;
+        Sound->dCurrentVolume = OneOverFade*(Sound->TargetVolume - Sound->CurrentVolume);
+    }
 }
 
 internal void
@@ -60,6 +74,9 @@ OutputPlayingSounds(audio_state *AudioState,
 
     real32 *RealChannel0 = PushArray(TempArena, SoundBuffer->SampleCount, real32);
     real32 *RealChannel1 = PushArray(TempArena, SoundBuffer->SampleCount, real32);
+
+    real32 SecondsPerSample = 1.0f / (real32)SoundBuffer->SamplesPerSecond;
+    u32 OutputChannelCount = 2;
 
     // Clear out the mixer channels.
     {
@@ -90,9 +107,8 @@ OutputPlayingSounds(audio_state *AudioState,
                 asset_sound_info *Info = GetSoundInfo(Assets, PlayingSound->ID);
                 PrefetchSound(Assets, Info->NextIDToPlay);
 
-                // TODO: Handle stero.
-                real32 Volume0 = PlayingSound->Volume[0];
-                real32 Volume1 = PlayingSound->Volume[1];
+                v2 Volume = PlayingSound->CurrentVolume;;
+                v2 dVolume = SecondsPerSample*PlayingSound->dCurrentVolume;
 
                 Assert(PlayingSound->SamplesPlayed >= 0);
 
@@ -103,13 +119,39 @@ OutputPlayingSounds(audio_state *AudioState,
                     SamplesToMix = SamplesRemainingInSound;
                 }
 
+                // TODO: Handle stero.
                 for(uint32_t SampleIndex = PlayingSound->SamplesPlayed;
                     SampleIndex < (PlayingSound->SamplesPlayed + SamplesToMix); 
                     ++SampleIndex)
                 {
                     real32 SampleValue = LoadedSound->Samples[0][SampleIndex];
-                    *Dest0++ += Volume0*SampleValue;
-                    *Dest1++ += Volume1*SampleValue;
+                    *Dest0++ += Volume.E[0]*SampleValue;
+                    *Dest1++ += Volume.E[1]*SampleValue;
+
+                    Volume += dVolume;
+                }
+
+                // TODO: Need to truncate loop to make this correct.
+                for(u32 ChannelIndex = 0; ChannelIndex < OutputChannelCount; ++ChannelIndex)
+                {
+                    if(dVolume.E[ChannelIndex] > 0.0f)
+                    {
+                        if(PlayingSound->CurrentVolume.E[ChannelIndex] >=
+                           PlayingSound->TargetVolume.E[ChannelIndex])
+                        {
+                            PlayingSound->CurrentVolume.E[ChannelIndex] = PlayingSound->TargetVolume.E[ChannelIndex];
+                            PlayingSound->dCurrentVolume.E[ChannelIndex] = 0.0f;
+                        }
+                    }
+                    else if(dVolume.E[ChannelIndex] < 0.0f)
+                    {
+                        if(PlayingSound->CurrentVolume.E[ChannelIndex] <=
+                           PlayingSound->TargetVolume.E[ChannelIndex])
+                        {
+                            PlayingSound->CurrentVolume.E[ChannelIndex] = PlayingSound->TargetVolume.E[ChannelIndex];
+                            PlayingSound->dCurrentVolume.E[ChannelIndex] = 0.0f;
+                        }
+                    }
                 }
 
                 Assert(TotalSamplesToMix >= SamplesToMix);

@@ -2,7 +2,10 @@
 
 struct playing_sound
 {
-    real32 Volume[2];
+    v2 CurrentVolume;
+    v2 dCurrentVolume;
+    v2 TargetVolume;
+
     sound_id ID;
     int32_t SamplesPlayed;
     playing_sound *Next;
