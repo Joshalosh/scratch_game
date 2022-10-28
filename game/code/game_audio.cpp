@@ -61,6 +61,7 @@ ChangeVolume(audio_state *AudioState, playing_sound *Sound, real32 FadeDurationI
     else
     {
         real32 OneOverFade = 1.0f / FadeDurationInSeconds;
+        Sound->TargetVolume = Volume;
         Sound->dCurrentVolume = OneOverFade*(Sound->TargetVolume - Sound->CurrentVolume);
     }
 }
@@ -76,7 +77,7 @@ OutputPlayingSounds(audio_state *AudioState,
     real32 *RealChannel1 = PushArray(TempArena, SoundBuffer->SampleCount, real32);
 
     real32 SecondsPerSample = 1.0f / (real32)SoundBuffer->SamplesPerSecond;
-    u32 OutputChannelCount = 2;
+#define AudioStateOutputChannelCount 2
 
     // Clear out the mixer channels.
     {
@@ -119,6 +120,21 @@ OutputPlayingSounds(audio_state *AudioState,
                     SamplesToMix = SamplesRemainingInSound;
                 }
 
+                b32 VolumeEnded[AudioStateOutputChannelCount] = {};
+                for(u32 ChannelIndex = 0; ChannelIndex < ArrayCount(VolumeEnded); ++ChannelIndex)
+                {
+                    if(dVolume.E[ChannelIndex] != 0.0f)
+                    {
+                        real32 DeltaVolume = (PlayingSound->TargetVolume.E[ChannelIndex] - Volume.E[ChannelIndex]);
+                        u32 VolumeSampleCount = (u32)((DeltaVolume / dVolume.E[ChannelIndex]) + 0.5f);
+                        if(SamplesToMix > VolumeSampleCount)
+                        {
+                            SamplesToMix = VolumeSampleCount;
+                            VolumeEnded[ChannelIndex] = true;
+                        }
+                    }
+                }
+
                 // TODO: Handle stero.
                 for(uint32_t SampleIndex = PlayingSound->SamplesPlayed;
                     SampleIndex < (PlayingSound->SamplesPlayed + SamplesToMix); 
@@ -131,26 +147,15 @@ OutputPlayingSounds(audio_state *AudioState,
                     Volume += dVolume;
                 }
 
+                PlayingSound->CurrentVolume = Volume;
+
                 // TODO: Need to truncate loop to make this correct.
-                for(u32 ChannelIndex = 0; ChannelIndex < OutputChannelCount; ++ChannelIndex)
+                for(u32 ChannelIndex = 0; ChannelIndex < ArrayCount(VolumeEnded); ++ChannelIndex)
                 {
-                    if(dVolume.E[ChannelIndex] > 0.0f)
+                    if(VolumeEnded[ChannelIndex])
                     {
-                        if(PlayingSound->CurrentVolume.E[ChannelIndex] >=
-                           PlayingSound->TargetVolume.E[ChannelIndex])
-                        {
-                            PlayingSound->CurrentVolume.E[ChannelIndex] = PlayingSound->TargetVolume.E[ChannelIndex];
-                            PlayingSound->dCurrentVolume.E[ChannelIndex] = 0.0f;
-                        }
-                    }
-                    else if(dVolume.E[ChannelIndex] < 0.0f)
-                    {
-                        if(PlayingSound->CurrentVolume.E[ChannelIndex] <=
-                           PlayingSound->TargetVolume.E[ChannelIndex])
-                        {
-                            PlayingSound->CurrentVolume.E[ChannelIndex] = PlayingSound->TargetVolume.E[ChannelIndex];
-                            PlayingSound->dCurrentVolume.E[ChannelIndex] = 0.0f;
-                        }
+                        PlayingSound->CurrentVolume.E[ChannelIndex] = PlayingSound->TargetVolume.E[ChannelIndex];
+                        PlayingSound->dCurrentVolume.E[ChannelIndex] = 0.0f;
                     }
                 }
 
@@ -169,10 +174,6 @@ OutputPlayingSounds(audio_state *AudioState,
                     {
                         SoundFinished = true;
                     }
-                }
-                else
-                {
-                    Assert(TotalSamplesToMix == 0);
                 }
             }
             else

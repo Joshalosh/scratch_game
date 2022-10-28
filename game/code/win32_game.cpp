@@ -1229,8 +1229,8 @@ WinMain(HINSTANCE Instance,
 #endif
     WNDCLASSA WindowClass = {};
 
-//    Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
-    Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);
+    Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
+//    Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);
 
     WindowClass.style = CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
