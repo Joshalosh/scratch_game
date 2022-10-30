@@ -7,7 +7,7 @@ struct playing_sound
     v2 TargetVolume;
 
     sound_id ID;
-    int32_t SamplesPlayed;
+    real32 SamplesPlayed;
     playing_sound *Next;
 };
 
@@ -16,6 +16,8 @@ struct audio_state
     memory_arena *PermArena;
     playing_sound *FirstPlayingSound;
     playing_sound *FirstFreePlayingSound;
+
+    v2 MasterVolume;
 };
 
 #define GAME_AUDIO_H

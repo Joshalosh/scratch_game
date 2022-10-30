@@ -113,8 +113,9 @@ OutputPlayingSounds(audio_state *AudioState,
 
                 Assert(PlayingSound->SamplesPlayed >= 0);
 
+                s32 FirstSampleIndex = RoundReal32ToInt32(PlayingSound->SamplesPlayed);
                 u32 SamplesToMix = TotalSamplesToMix;
-                u32 SamplesRemainingInSound = LoadedSound->SampleCount - PlayingSound->SamplesPlayed;
+                u32 SamplesRemainingInSound = LoadedSound->SampleCount - FirstSampleIndex;
                 if(SamplesToMix > SamplesRemainingInSound)
                 {
                     SamplesToMix = SamplesRemainingInSound;
@@ -136,13 +137,13 @@ OutputPlayingSounds(audio_state *AudioState,
                 }
 
                 // TODO: Handle stero.
-                for(uint32_t SampleIndex = PlayingSound->SamplesPlayed;
-                    SampleIndex < (PlayingSound->SamplesPlayed + SamplesToMix); 
+                for(uint32_t SampleIndex = FirstSampleIndex;
+                    SampleIndex < (FirstSampleIndex + SamplesToMix); 
                     ++SampleIndex)
                 {
                     real32 SampleValue = LoadedSound->Samples[0][SampleIndex];
-                    *Dest0++ += Volume.E[0]*SampleValue;
-                    *Dest1++ += Volume.E[1]*SampleValue;
+                    *Dest0++ += AudioState->MasterVolume.E[0]*Volume.E[0]*SampleValue;
+                    *Dest1++ += AudioState->MasterVolume.E[1]*Volume.E[1]*SampleValue;
 
                     Volume += dVolume;
                 }
@@ -203,6 +204,8 @@ OutputPlayingSounds(audio_state *AudioState,
         int16_t *SampleOut = SoundBuffer->Samples;
         for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
         {
+            // TODO: Once this is in SIMD, clamp it.
+
             *SampleOut++ = (int16_t)(*Source0++ + 0.5f);
             *SampleOut++ = (int16_t)(*Source1++ + 0.5f);
         }
@@ -217,4 +220,6 @@ InitialiseAudioState(audio_state *AudioState, memory_arena *PermArena)
     AudioState->PermArena = PermArena;
     AudioState->FirstPlayingSound = 0;
     AudioState->FirstFreePlayingSound = 0;
+
+    AudioState->MasterVolume = V2(1.0f, 1.0f);
 }
