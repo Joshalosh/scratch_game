@@ -3,6 +3,8 @@
 /*
  TODO
 
+ - Flush all thread queues before loading DLL.
+
  - Audio
    - Sound effect triggers
    - Ambient sounds

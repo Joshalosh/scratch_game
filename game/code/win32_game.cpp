@@ -325,7 +325,6 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
                 BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
 
                 // "Create" a primary buffer
-                // TODO: DSBCAPS_GLOBALFOCUS needed?
                 LPDIRECTSOUNDBUFFER PrimaryBuffer;
                 if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
                 {
@@ -350,10 +349,15 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
                 // TODO: Diagnostic
             }
 
+            // TODO: In release mode, should I specify DSBCAPS_GLOBALFOCUS?
+
             // TODO: DSBCAPS_GETCURRENTPOSTIION2?
             DSBUFFERDESC BufferDescription = {};
             BufferDescription.dwSize = sizeof(BufferDescription);
             BufferDescription.dwFlags = DSBCAPS_GETCURRENTPOSITION2;
+#if GAME_INTERNAL
+            BufferDescription.dwFlags |= DSBCAPS_GLOBALFOCUS;
+#endif
             BufferDescription.dwBufferBytes = BufferSize;
             BufferDescription.lpwfxFormat = &WaveFormat;
             HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);

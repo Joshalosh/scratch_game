@@ -44,6 +44,7 @@ PlaySound(audio_state *AudioState, sound_id SoundID)
     PlayingSound->CurrentVolume = PlayingSound->TargetVolume = V2(1.0f, 1.0f);
     PlayingSound->dCurrentVolume = V2(0, 0);
     PlayingSound->ID = SoundID; 
+    PlayingSound->dSample = 1.0f;
 
     PlayingSound->Next = AudioState->FirstPlayingSound;
     AudioState->FirstPlayingSound = PlayingSound;
@@ -64,6 +65,12 @@ ChangeVolume(audio_state *AudioState, playing_sound *Sound, real32 FadeDurationI
         Sound->TargetVolume = Volume;
         Sound->dCurrentVolume = OneOverFade*(Sound->TargetVolume - Sound->CurrentVolume);
     }
+}
+
+internal void
+ChangePitch(audio_state *AudioState, playing_sound *Sound, real32 dSample)
+{
+    Sound->dSample = dSample;
 }
 
 internal void
@@ -110,12 +117,14 @@ OutputPlayingSounds(audio_state *AudioState,
 
                 v2 Volume = PlayingSound->CurrentVolume;;
                 v2 dVolume = SecondsPerSample*PlayingSound->dCurrentVolume;
+                real32 dSample = PlayingSound->dSample;
 
                 Assert(PlayingSound->SamplesPlayed >= 0);
 
                 s32 FirstSampleIndex = RoundReal32ToInt32(PlayingSound->SamplesPlayed);
                 u32 SamplesToMix = TotalSamplesToMix;
-                u32 SamplesRemainingInSound = LoadedSound->SampleCount - FirstSampleIndex;
+                r32 RealSampleRemainingInSound = (LoadedSound->SampleCount - FirstSampleIndex) / dSample;
+                u32 SamplesRemainingInSound = RoundReal32ToInt32(RealSampleRemainingInSound);
                 if(SamplesToMix > SamplesRemainingInSound)
                 {
                     SamplesToMix = SamplesRemainingInSound;
@@ -137,15 +146,25 @@ OutputPlayingSounds(audio_state *AudioState,
                 }
 
                 // TODO: Handle stero.
-                for(uint32_t SampleIndex = FirstSampleIndex;
-                    SampleIndex < (FirstSampleIndex + SamplesToMix); 
-                    ++SampleIndex)
+                real32 SamplePosition = PlayingSound->SamplesPlayed;
+                for(u32 LoopIndex = 0; LoopIndex < SamplesToMix; ++LoopIndex)
                 {
-                    real32 SampleValue = LoadedSound->Samples[0][SampleIndex];
+#if 1
+                    u32 SampleIndex = FloorReal32ToInt32(SamplePosition);
+                    r32 Frac = SamplePosition - (r32)SampleIndex;
+                    r32 Sample0 = (r32)LoadedSound->Samples[0][SampleIndex];
+                    r32 Sample1 = (r32)LoadedSound->Samples[0][SampleIndex + 1];
+                    r32 SampleValue = Lerp(Sample0, Frac, Sample1);
+#else
+                    u32 SampleIndex = RoundReal32ToInt32(SamplePosition);
+                    r32 SampleValue = LoadedSound->Samples[0][SampleIndex];
+#endif
+
                     *Dest0++ += AudioState->MasterVolume.E[0]*Volume.E[0]*SampleValue;
                     *Dest1++ += AudioState->MasterVolume.E[1]*Volume.E[1]*SampleValue;
 
                     Volume += dVolume;
+                    SamplePosition += dSample;
                 }
 
                 PlayingSound->CurrentVolume = Volume;
@@ -161,7 +180,7 @@ OutputPlayingSounds(audio_state *AudioState,
                 }
 
                 Assert(TotalSamplesToMix >= SamplesToMix);
-                PlayingSound->SamplesPlayed += SamplesToMix;
+                PlayingSound->SamplesPlayed = SamplePosition;
                 TotalSamplesToMix -= SamplesToMix;
 
                 if((uint32_t)PlayingSound->SamplesPlayed == LoadedSound->SampleCount)
