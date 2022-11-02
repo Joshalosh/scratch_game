@@ -887,6 +887,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
 #if 0
+    // TODO: Re-enable this but make sure I don't touch ones that are in flight.
     if(Input->ExecutableReloaded)
     {
         for(uint32_t GroundBufferIndex = 0;
@@ -900,6 +901,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
 
     world *World = GameState->World;
+
+    {
+        v2 MusicVolume;
+        MusicVolume.y = SafeRatio0((r32)Input->MouseX, (r32)Buffer->Width);
+        MusicVolume.x = 1.0f - MusicVolume.y;
+        ChangeVolume(&GameState->AudioState, GameState->Music, 0.01f, MusicVolume);
+    }
 
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {

@@ -523,7 +523,7 @@ DEBUGAddBitmapInfo(game_assets *Assets, char *Filename, v2 AlignPercentage)
     bitmap_id ID = {Assets->DEBUGUsedBitmapCount++};
 
     asset_bitmap_info *Info = Assets->BitmapInfos + ID.Value;
-    Info->Filename = Filename;
+    Info->Filename = PushString(&Assets->Arena, Filename);
     Info->AlignPercentage = AlignPercentage;
 
     return(ID);
@@ -536,7 +536,7 @@ DEBUGAddSoundInfo(game_assets *Assets, char *Filename, u32 FirstSampleIndex, u32
     sound_id ID = {Assets->DEBUGUsedSoundCount++};
 
     asset_sound_info *Info = Assets->SoundInfos + ID.Value;
-    Info->Filename = Filename;
+    Info->Filename = PushString(&Assets->Arena, Filename);
     Info->FirstSampleIndex = FirstSampleIndex;
     Info->SampleCount = SampleCount;
     Info->NextIDToPlay.Value = 0;

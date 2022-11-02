@@ -1384,6 +1384,9 @@ WinMain(HINSTANCE Instance,
                     FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);
                     if(CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime) != 0)
                     {
+                        Win32CompleteAllWork(&HighPriorityQueue);
+                        Win32CompleteAllWork(&LowPriorityQueue);
+
                         Win32UnloadGameCode(&Game);
                         Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                  TempGameCodeDLLFullPath,
