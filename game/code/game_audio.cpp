@@ -80,20 +80,27 @@ OutputPlayingSounds(audio_state *AudioState,
 {
     temporary_memory MixerMemory = BeginTemporaryMemory(TempArena);
 
-    real32 *RealChannel0 = PushArray(TempArena, SoundBuffer->SampleCount, real32);
-    real32 *RealChannel1 = PushArray(TempArena, SoundBuffer->SampleCount, real32);
+    u32 SampleCountAlign4 = Align4(SoundBuffer->SampleCount);
+    u32 SampleCount4 = SampleCountAlign4 / 4;
+
+    __m128 *RealChannel0 = PushArray(TempArena, SampleCount4, __m128, 16);
+    __m128 *RealChannel1 = PushArray(TempArena, SampleCount4, __m128, 16);
 
     real32 SecondsPerSample = 1.0f / (real32)SoundBuffer->SamplesPerSecond;
 #define AudioStateOutputChannelCount 2
 
     // Clear out the mixer channels.
+    __m128 Zero = _mm_set1_ps(0.0f);
+
+    __m128 MaxS16 = _mm_set1_ps((r32)32767.0f);
+    __m128 MinS16 = _mm_set1_ps((r32)-32768.0f);
     {
-        real32 *Dest0 = RealChannel0;
-        real32 *Dest1 = RealChannel1;
-        for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
+        __m128 *Dest0 = RealChannel0;
+        __m128 *Dest1 = RealChannel1;
+        for(u32 SampleIndex = 0; SampleIndex < SampleCount4; ++SampleIndex)
         {
-            *Dest0++ = 0.0f;
-            *Dest1++ = 0.0f;
+            *Dest0++ = Zero;
+            *Dest1++ = Zero;
         }
     }
 
@@ -104,8 +111,8 @@ OutputPlayingSounds(audio_state *AudioState,
         bool32 SoundFinished = false;
 
         u32 TotalSamplesToMix = SoundBuffer->SampleCount;
-        real32 *Dest0 = RealChannel0;
-        real32 *Dest1 = RealChannel1;
+        real32 *Dest0 = (r32 *)RealChannel0;
+        real32 *Dest1 = (r32 *)RealChannel1;
 
         while(TotalSamplesToMix && !SoundFinished)
         {
@@ -217,8 +224,8 @@ OutputPlayingSounds(audio_state *AudioState,
 
     // Convert to 16-bit.
     {
-        real32 *Source0 = RealChannel0;
-        real32 *Source1 = RealChannel1;
+        real32 *Source0 = (r32 *)RealChannel0;
+        real32 *Source1 = (r32 *)RealChannel1;
 
         int16_t *SampleOut = SoundBuffer->Samples;
         for(int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)

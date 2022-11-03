@@ -88,6 +88,8 @@ typedef real64 r64;
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
+#define AlignPow2(Value, Alignment) ((Value + ((Alignment) - 1)) & ~((Alignment) -1))
+#define Align4(Value) ((Value + 3) & ~3)
 #define Align16(Value) ((Value + 15) & ~15)
 
 inline uint32_t
