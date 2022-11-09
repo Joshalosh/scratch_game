@@ -128,16 +128,9 @@ struct render_group
     uint32_t MissingResourceCount;
 };
 
-// Renderer API
-#if 0
-inline void PushBitmap(render_group *Group, loaded_bitmap *Bitmap, v2 Offset, real32 OffsetZ,
-                       v4 Color = V4(1, 1, 1, 1));
-inline void PushRect(render_group *Group, v2 Offset, real32 OffsetZ, v2 Dim, v4 Color);
-inline void PushRectOutline(render_group *Group, v2 Offset, real32 OffsetZ, v2 Dim, v4 Color);
-inline void Clear(render_group *Group, v4 Color);
-#endif
-
-
+void DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
+                          loaded_bitmap *Texture, real32 PixelsToMetres,
+                          rectangle2i ClipRect, bool32 Even);
 
 #define GAME_RENDER_GROUP_H
 #endif

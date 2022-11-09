@@ -65,7 +65,9 @@ typedef real64 r64;
 
 #define Real32Maximum FLT_MAX
 
+#if !defined(internal)
 #define internal static
+#endif
 #define local_persist static
 #define global_variable static
 
@@ -177,6 +179,8 @@ typedef struct game_sound_output_buffer
 {
     int SamplesPerSecond;
     int SampleCount;
+
+    // IMPORTANT: Samples need to be padded to a  multiple of 4 samples.
     int16_t *Samples;
 } game_sound_output_buffer;
 

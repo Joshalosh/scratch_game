@@ -1233,8 +1233,8 @@ WinMain(HINSTANCE Instance,
 #endif
     WNDCLASSA WindowClass = {};
 
-    Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
-//    Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);
+//    Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);
 
     WindowClass.style = CS_HREDRAW|CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
@@ -1302,7 +1302,8 @@ WinMain(HINSTANCE Instance,
                 OutputDebugStringA(TextBuffer);
             }
 #endif
-            int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize,
+            u32 MaxPossibleOverrun = 2*4*sizeof(u16); 
+            int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize + MaxPossibleOverrun,
                                 MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 
 #if GAME_INTERNAL
