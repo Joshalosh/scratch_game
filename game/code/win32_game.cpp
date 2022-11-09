@@ -1302,7 +1302,8 @@ WinMain(HINSTANCE Instance,
                 OutputDebugStringA(TextBuffer);
             }
 #endif
-            u32 MaxPossibleOverrun = 2*4*sizeof(u16); 
+            // TODO: Probably remove MaxPossibleOverrun.
+            u32 MaxPossibleOverrun = 2*8*sizeof(u16); 
             int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize + MaxPossibleOverrun,
                                 MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 
@@ -1650,7 +1651,8 @@ WinMain(HINSTANCE Instance,
 
                             game_sound_output_buffer SoundBuffer = {};
                             SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
-                            SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
+                            SoundBuffer.SampleCount = Align8(BytesToWrite / SoundOutput.BytesPerSample);
+                            BytesToWrite = SoundBuffer.SampleCount*SoundOutput.BytesPerSample;
                             SoundBuffer.Samples = Samples;
                             if(Game.GetSoundSamples)
                             {
