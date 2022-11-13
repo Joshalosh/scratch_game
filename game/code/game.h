@@ -237,6 +237,7 @@ ZeroSize(memory_index Size, void *Ptr)
 #include "game_sim_region.h"
 #include "game_entity.h"
 #include "game_render_group.h"
+#include "game_asset_type_id.h"
 #include "game_asset.h"
 #include "game_random.h"
 #include "game_audio.h"
