@@ -9,7 +9,7 @@ IF NOT EXIST ..\..\build mkdir ..\..\build
 pushd ..\..\build
 
 REM Asset file builder build
-REM cl %CommonCompilerFlags% ..\game\code\test_asset_builder.cpp /link %CommonLinkerFlags%
+cl %CommonCompilerFlags% -D_CRT_SECURE_NO_WARNINGS ..\game\code\test_asset_builder.cpp /link %CommonLinkerFlags%
 
 REM 32-bit build
 REM cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link -subsystem:windows,5.1 %CommonLinkerFlags%

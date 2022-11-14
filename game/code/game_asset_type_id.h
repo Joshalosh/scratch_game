@@ -1,5 +1,14 @@
 #if !defined(GAME_ASSET_TYPE_ID_H)
 
+enum asset_tag_id
+{
+    Tag_Smoothness,
+    Tag_Flatness,
+    Tag_FacingDirection, // Angle in radians off of due right.
+
+    Tag_Count,
+};
+
 enum asset_type_id
 {
     Asset_None,

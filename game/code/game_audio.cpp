@@ -157,8 +157,8 @@ OutputPlayingSounds(audio_state *AudioState,
                     InputSamplesEnded = true;
                 }
 
-                b32 VolumeEnded[AudioStateOutputChannelCount] = {};
-                for(u32 ChannelIndex = 0; ChannelIndex < ArrayCount(VolumeEnded); ++ChannelIndex)
+                u32 VolumeEndsAt[AudioStateOutputChannelCount] = {};
+                for(u32 ChannelIndex = 0; ChannelIndex < ArrayCount(VolumeEndsAt); ++ChannelIndex)
                 {
                     // TODO: Fix the "both volumes end at the same time" bug
                     if(dVolumeChunk.E[ChannelIndex] != 0.0f)
@@ -168,7 +168,7 @@ OutputPlayingSounds(audio_state *AudioState,
                         if(ChunksToMix > VolumeChunkCount)
                         {
                             ChunksToMix = VolumeChunkCount;
-                            VolumeEnded[ChannelIndex] = true;
+                            VolumeEndsAt[ChannelIndex] = VolumeChunkCount;
                         }
                     }
                 }
@@ -225,9 +225,9 @@ OutputPlayingSounds(audio_state *AudioState,
 
                 PlayingSound->CurrentVolume.E[0] = ((r32 *)&Volume0)[0];
                 PlayingSound->CurrentVolume.E[1] = ((r32 *)&Volume1)[1];
-                for(u32 ChannelIndex = 0; ChannelIndex < ArrayCount(VolumeEnded); ++ChannelIndex)
+                for(u32 ChannelIndex = 0; ChannelIndex < ArrayCount(VolumeEndsAt); ++ChannelIndex)
                 {
-                    if(VolumeEnded[ChannelIndex])
+                    if(ChunksToMix == VolumeEndsAt[ChannelIndex])
                     {
                         PlayingSound->CurrentVolume.E[ChannelIndex] = PlayingSound->TargetVolume.E[ChannelIndex];
                         PlayingSound->dCurrentVolume.E[ChannelIndex] = 0.0f;
