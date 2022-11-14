@@ -22,19 +22,19 @@ struct asset_sound_info
 
 struct asset_tag
 {
-    uint32_t ID; // Tag ID.
+    u32 ID; // Tag ID.
     real32 Value;
 };
 struct asset
 {
-    uint32_t FirstTagIndex;
-    uint32_t OnePastLastTagIndex;
-    uint32_t SlotID;
+    u64 DataOffset;
+    u32 FirstTagIndex;
+    u32 OnePastLastTagIndex;
 };
 struct asset_type
 {
-    uint32_t FirstAssetIndex;
-    uint32_t OnePastLastAssetIndex;
+    u32 FirstAssetIndex;
+    u32 OnePastLastAssetIndex;
 };
 
 struct bitmap_asset

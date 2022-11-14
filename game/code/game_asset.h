@@ -17,6 +17,35 @@ struct loaded_sound
     int16_t *Samples[2];
 };
 
+enum asset_tag_id
+{
+    Tag_Smoothness,
+    Tag_Flatness,
+    Tag_FacingDirection, // Angle in radians off of due right.
+
+    Tag_Count,
+};
+
+struct asset_bitmap_info
+{
+    char *Filename;
+    v2 AlignPercentage;
+};
+
+struct asset_sound_info
+{
+    char *Filename;
+    uint32_t FirstSampleIndex;
+    uint32_t SampleCount;
+    sound_id NextIDToPlay;
+};
+
+struct asset_tag
+{
+    uint32_t ID; // Tag ID.
+    real32 Value;
+};
+
 enum asset_state
 {
     AssetState_Unloaded,
@@ -34,25 +63,16 @@ struct asset_slot
     };
 };
 
-enum asset_tag_id
-{
-    Tag_Smoothness,
-    Tag_Flatness,
-    Tag_FacingDirection, // Angle in radians off of due right.
-
-    Tag_Count,
-};
-
-struct asset_tag
-{
-    uint32_t ID; // Tag ID.
-    real32 Value;
-};
 struct asset
 {
     uint32_t FirstTagIndex;
     uint32_t OnePastLastTagIndex;
-    uint32_t SlotID;
+
+    union
+    {
+        asset_bitmap_info Bitmap;
+        asset_sound_info Sound;
+    };
 };
 
 struct asset_vector
@@ -66,20 +86,6 @@ struct asset_type
     uint32_t OnePastLastAssetIndex;
 };
 
-struct asset_bitmap_info
-{
-    char *Filename;
-    v2 AlignPercentage;
-};
-
-struct asset_sound_info
-{
-    char *Filename;
-    uint32_t FirstSampleIndex;
-    uint32_t SampleCount;
-    sound_id NextIDToPlay;
-};
-
 struct game_assets
 {
     // TODO: This back pointer kind of sucks.
@@ -88,19 +94,12 @@ struct game_assets
 
     real32 TagRange[Tag_Count];
 
-    uint32_t BitmapCount;
-    asset_bitmap_info *BitmapInfos;
-    asset_slot *Bitmaps;
-
-    uint32_t SoundCount;
-    asset_sound_info *SoundInfos;
-    asset_slot *Sounds;
-
     uint32_t TagCount;
     asset_tag *Tags;
 
     uint32_t AssetCount;
     asset *Assets;
+    asset_slot *Slots;
 
     asset_type AssetTypes[Asset_Count];
 
@@ -119,8 +118,8 @@ struct game_assets
 inline loaded_bitmap *
 GetBitmap(game_assets *Assets, bitmap_id ID)
 {
-    Assert(ID.Value <= Assets->BitmapCount);
-    loaded_bitmap *Result = Assets->Bitmaps[ID.Value].Bitmap;
+    Assert(ID.Value <= Assets->AssetCount);
+    loaded_bitmap *Result = Assets->Slots[ID.Value].Bitmap;
 
     return(Result);
 }
@@ -128,8 +127,8 @@ GetBitmap(game_assets *Assets, bitmap_id ID)
 inline loaded_sound *
 GetSound(game_assets *Assets, sound_id ID)
 {
-    Assert(ID.Value <= Assets->SoundCount);
-    loaded_sound *Result = Assets->Sounds[ID.Value].Sound;
+    Assert(ID.Value <= Assets->AssetCount);
+    loaded_sound *Result = Assets->Slots[ID.Value].Sound;
 
     return(Result);
 }
@@ -137,8 +136,8 @@ GetSound(game_assets *Assets, sound_id ID)
 inline asset_sound_info *
 GetSoundInfo(game_assets *Assets, sound_id ID)
 {
-    Assert(ID.Value <= Assets->SoundCount);
-    asset_sound_info *Result = Assets->SoundInfos + ID.Value;
+    Assert(ID.Value <= Assets->AssetCount);
+    asset_sound_info *Result = &Assets->Assets[ID.Value].Sound;
 
     return(Result);
 }
