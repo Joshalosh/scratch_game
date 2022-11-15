@@ -5,6 +5,8 @@
 #include "game_platform.h"
 #include "game_asset_type_id.h"
 #include "game_file_formats.h"
+#include "game_intrinsics.h"
+#include "game_math.h"
 
 struct bitmap_id
 {
@@ -16,41 +18,17 @@ struct sound_id
     u32 Value;
 };
 
-struct asset_bitmap_info
+enum asset_type
 {
-    char *Filename;
-    r32 AlignPercentage[2];
+    AssetType_Sound,
+    AssetType_Bitmap,
 };
 
-struct asset_sound_info
+struct asset_source
 {
+    asset_type Type;
     char *Filename;
     u32 FirstSampleIndex;
-    u32 SampleCount;
-    sound_id NextIDToPlay;
-};
-
-struct asset
-{
-    u64 DataOffset;
-    u32 FirstTagIndex;
-    u32 OnePastLastTagIndex;
-    union
-    {
-        asset_bitmap_info Bitmap;
-        asset_sound_info Sound;
-    };
-};
-struct asset_type
-{
-    u32 FirstAssetIndex;
-    u32 OnePastLastAssetIndex;
-};
-
-struct bitmap_asset
-{
-    char *Filename;
-    r32 Alignment[2];
 };
 
 #define VERY_LARGE_NUMBER 4096
@@ -64,10 +42,11 @@ struct game_assets
     ga_asset_type AssetTypes[Asset_Count];
 
     u32 AssetCount;
-    asset Assets[VERY_LARGE_NUMBER];
+    asset_source AssetSources[VERY_LARGE_NUMBER];
+    ga_asset Assets[VERY_LARGE_NUMBER];
 
     ga_asset_type *DEBUGAssetType;
-    asset *DEBUGAsset;
+    u32 AssetIndex;
 };
 
 #define TEST_ASSET_BUILDER_H

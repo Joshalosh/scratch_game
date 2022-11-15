@@ -61,17 +61,6 @@ struct WAVE_fmt
 
 #pragma pack(pop)
 
-inline v2
-TopDownAlign(loaded_bitmap *Bitmap, v2 Align)
-{
-    Align.y = (real32)(Bitmap->Height - 1) - Align.y;
-
-    Align.x = SafeRatio0(Align.x, (real32)Bitmap->Width);
-    Align.y = SafeRatio0(Align.y, (real32)Bitmap->Height);
-
-    return(Align);
-}
-
 internal loaded_bitmap
 DEBUGLoadBMP(char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
 {
