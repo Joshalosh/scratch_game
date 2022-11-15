@@ -9,7 +9,8 @@ BeginAssetType(game_assets *Assets, asset_type_id TypeID)
     Assert(Assets->DEBUGAssetType == 0);
 
     Assets->DEBUGAssetType = Assets->AssetTypes + TypeID;
-    Assets->DEBUGAssetType->FirstAssetIndex = Assets->DEBUGUsedAssetCount;
+    Assets->DEBUGAssetType->TypeID = TypeID;
+    Assets->DEBUGAssetType->FirstAssetIndex = Assets->AssetCount;
     Assets->DEBUGAssetType->OnePastLastAssetIndex = Assets->DEBUGAssetType->FirstAssetIndex;
 }
 
@@ -17,11 +18,11 @@ internal bitmap_id
 AddBitmapAsset(game_assets *Assets, char *Filename, r32 AlignPercentageX = 0.5f, r32 AlignPercentageY = 0.5f)
 {
     Assert(Assets->DEBUGAssetType);
-    Assert(Assets->DEBUGAssetType->OnePastLastAssetIndex < Assets->AssetCount);
+    Assert(Assets->DEBUGAssetType->OnePastLastAssetIndex < ArrayCount(Assets->Assets));
 
     bitmap_id Result = {Assets->DEBUGAssetType->OnePastLastAssetIndex++};
     asset *Asset = Assets->Assets + Result.Value;
-    Asset->FirstTagIndex = Assets->DEBUGUsedTagCount;
+    Asset->FirstTagIndex = Assets->TagCount;
     Asset->OnePastLastTagIndex = Asset->FirstTagIndex;
     Asset->Bitmap.Filename = Filename;
     Asset->Bitmap.AlignPercentage[0] = AlignPercentageX;
@@ -36,11 +37,11 @@ internal sound_id
 AddSoundAsset(game_assets *Assets, char *Filename, u32 FirstSampleIndex = 0, u32 SampleCount = 0)
 {
     Assert(Assets->DEBUGAssetType);
-    Assert(Assets->DEBUGAssetType->OnePastLastAssetIndex < Assets->AssetCount);
+    Assert(Assets->DEBUGAssetType->OnePastLastAssetIndex < ArrayCount(Assets->Assets));
 
     sound_id Result = {Assets->DEBUGAssetType->OnePastLastAssetIndex++};
     asset *Asset = Assets->Assets + Result.Value;
-    Asset->FirstTagIndex = Assets->DEBUGUsedTagCount;
+    Asset->FirstTagIndex = Assets->TagCount;
     Asset->OnePastLastTagIndex = Asset->FirstTagIndex;
     Asset->Sound.Filename = Filename;
     Asset->Sound.FirstSampleIndex = FirstSampleIndex;
@@ -58,7 +59,7 @@ AddTag(game_assets *Assets, asset_tag_id ID, real32 Value)
     Assert(Assets->DEBUGAsset);
 
     ++Assets->DEBUGAsset->OnePastLastTagIndex;
-    asset_tag *Tag = Assets->Tags + Assets->DEBUGUsedTagCount++;
+    ga_tag *Tag = Assets->Tags + Assets->TagCount++;
 
     Tag->ID = ID;
     Tag->Value = Value;
@@ -68,7 +69,7 @@ internal void
 EndAssetType(game_assets *Assets)
 {
     Assert(Assets->DEBUGAssetType);
-    Assets->DEBUGUsedAssetCount = Assets->DEBUGAssetType->OnePastLastAssetIndex;
+    Assets->AssetCount = Assets->DEBUGAssetType->OnePastLastAssetIndex;
     Assets->DEBUGAssetType = 0;
     Assets->DEBUGAsset = 0;
 }
@@ -81,8 +82,6 @@ main(int ArgCount, char **Args)
 
     Assets->TagCount = 1;
     Assets->AssetCount = 1;
-    Assets->DEBUGUsedAssetCount = 1;
-    Assets->DEBUGUsedTagCount = 0;
     Assets->DEBUGAssetType = 0;
     Assets->DEBUGAsset = 0;
 
@@ -208,6 +207,30 @@ main(int ArgCount, char **Args)
     Out = fopen("test.ga", "wb");
     if(Out)
     {
+        ga_header Header = {};
+        Header.MagicValue = GA_MAGIC_VALUE;
+        Header.Version = GA_VERSION;
+        Header.TagCount = Assets->TagCount;
+        Header.AssetTypeCount = Asset_Count; // TODO: Do I really want to do this? Sparseness.
+        Header.AssetCount = Assets->AssetCount;
+
+        u32 TagArraySize = Header.TagCount*sizeof(ga_tag);
+        u32 AssetTypeArraySize = Header.AssetTypeCount*sizeof(ga_asset_type);
+        u32 AssetArraySize = Header.AssetCount*sizeof(ga_asset);
+
+        Header.Tags = sizeof(Header);
+        Header.AssetTypes = Header.Tags + TagArraySize;
+        Header.Assets = Header.AssetTypes + AssetTypeArraySize;
+
+        fwrite(&Header, sizeof(Header), 1, Out);
+        fwrite(Assets->Tags, TagArraySize, 1, Out);
+        fwrite(Assets->AssetTypes, AssetTypeArraySize, 1, Out);
+//        fwrite(AssetArray, AssetArraySize, 1, Out);
+
         fclose(Out);
+    }
+    else
+    {
+        printf("ERROR: Couldn't open file :(\n");
     }
 }

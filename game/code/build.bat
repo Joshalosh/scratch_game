@@ -8,6 +8,8 @@ set CommonLinkerFlags=  -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib
 IF NOT EXIST ..\..\build mkdir ..\..\build
 pushd ..\..\build
 
+del *.pdb > NUL 2> NUL
+
 REM Asset file builder build
 cl %CommonCompilerFlags% -D_CRT_SECURE_NO_WARNINGS ..\game\code\test_asset_builder.cpp /link %CommonLinkerFlags%
 
@@ -15,7 +17,6 @@ REM 32-bit build
 REM cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link -subsystem:windows,5.1 %CommonLinkerFlags%
 
 REM 64-bit build
-del *.pdb > NUL 2> NUL
 REM Optimisation switches /O2 
 echo WAITING FOR PDB > lock.tmp
 cl %CommonCompilerFlags% -O2 -I..\iaca-win64\ -c ..\game\code\game_optimised.cpp -Fogame_optimised.obj -LD

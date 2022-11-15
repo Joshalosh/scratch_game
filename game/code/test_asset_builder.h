@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "game_platform.h"
 #include "game_asset_type_id.h"
+#include "game_file_formats.h"
 
 struct bitmap_id
 {
@@ -29,11 +30,6 @@ struct asset_sound_info
     sound_id NextIDToPlay;
 };
 
-struct asset_tag
-{
-    u32 ID; // Tag ID.
-    real32 Value;
-};
 struct asset
 {
     u64 DataOffset;
@@ -61,15 +57,16 @@ struct bitmap_asset
 
 struct game_assets
 {
-    uint32_t TagCount;
-    uint32_t AssetCount;
-    asset_tag Tags[VERY_LARGE_NUMBER];
-    asset Assets[VERY_LARGE_NUMBER];
-    asset_type AssetTypes[Asset_Count];
+    u32 TagCount;
+    ga_tag Tags[VERY_LARGE_NUMBER];
 
-    u32 DEBUGUsedAssetCount;
-    u32 DEBUGUsedTagCount;
-    asset_type *DEBUGAssetType;
+    u32 AssetTypeCount;
+    ga_asset_type AssetTypes[Asset_Count];
+
+    u32 AssetCount;
+    asset Assets[VERY_LARGE_NUMBER];
+
+    ga_asset_type *DEBUGAssetType;
     asset *DEBUGAsset;
 };
 
