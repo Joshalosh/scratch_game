@@ -69,6 +69,8 @@ struct loaded_bitmap
     s32 Height;
     s32 Pitch;
     void *Memory;
+
+    void *Free;
 };
 
 struct entire_file
@@ -81,6 +83,22 @@ ReadEntireFile(char *Filename)
 {
     entire_file Result = {};
 
+    FILE *In = fopen(Filename, "rb");
+    if(In)
+    {
+        fseek(In, 0, SEEK_END);
+        Result.ContentsSize = ftell(In);
+        fseek(In, 0, SEEK_SET);
+
+        Result.Contents = malloc(Result.ContentsSize);
+        fread(Result.Contents, Result.ContentsSize, 1, In);
+        fclose(In);
+    }
+    else
+    {
+        printf("ERROR: Cannot open file %s. \n", Filename);
+    }
+
     return(Result);
 }
 
@@ -92,6 +110,8 @@ LoadBMP(char *Filename)
     entire_file ReadResult = ReadEntireFile(Filename);
     if(ReadResult.ContentsSize != 0)
     {
+        Result.Free = ReadResult.Contents;
+
         bitmap_header *Header = (bitmap_header *)ReadResult.Contents;
         uint32_t *Pixels = (uint32_t *)((uint8_t *)ReadResult.Contents + Header->BitmapOffset);
         Result.Memory = Pixels;
@@ -223,6 +243,8 @@ struct loaded_sound
     u32 SampleCount;
     u32 ChannelCount;
     s16 *Samples[2];
+
+    void *Free;
 };
 
 internal loaded_sound
@@ -233,6 +255,8 @@ LoadWAV(char *Filename, uint32_t SectionFirstSampleIndex, uint32_t SectionSample
     entire_file ReadResult = ReadEntireFile(Filename);
     if(ReadResult.ContentsSize != 0)
     {
+        Result.Free = ReadResult.Contents;
+
         WAVE_header *Header = (WAVE_header *)ReadResult.Contents;
         Assert(Header->RIFFID == WAVE_ChunkID_RIFF);
         Assert(Header->WAVEID == WAVE_ChunkID_WAVE);
@@ -560,17 +584,40 @@ main(int ArgCount, char **Args)
         fwrite(Assets->Tags, TagArraySize, 1, Out);
         fwrite(Assets->AssetTypes, AssetTypeArraySize, 1, Out);
         fseek(Out, AssetArraySize, SEEK_CUR);
-        for(u32 AssetIndex = 0; AssetIndex < Header.AssetCount; ++AssetIndex)
+        for(u32 AssetIndex = 1; AssetIndex < Header.AssetCount; ++AssetIndex)
         {
             asset_source *Source = Assets->AssetSources + AssetIndex;
             ga_asset *Dest = Assets->Assets + AssetIndex;
+
+            Dest->DataOffset = ftell(Out);
+
             if(Source->Type == AssetType_Sound)
             {
-                loaded_sound LoadWAV(Source->Filename, Source->FirstSampleIndex, Dest->SampleCount);
+                loaded_sound WAV = LoadWAV(Source->Filename, Source->FirstSampleIndex, Dest->Sound.SampleCount);
+
+                Dest->Sound.SampleCount = WAV.SampleCount;
+                Dest->Sound.ChannelCount = WAV.ChannelCount;
+
+                for(u32 ChannelIndex = 0; ChannelIndex < WAV.ChannelCount; ++ChannelIndex)
+                {
+                    fwrite(WAV.Samples[ChannelIndex], Dest->Sound.SampleCount*sizeof(s16), 1, Out);
+                }
+
+                free(WAV.Free);
             }
             else
             {
                 Assert(Source->Type == AssetType_Bitmap);
+
+                loaded_bitmap Bitmap = LoadBMP(Source->Filename);
+
+                Dest->Bitmap.Dim[0] = Bitmap.Width;
+                Dest->Bitmap.Dim[1] = Bitmap.Height;
+
+                Assert((Bitmap.Width*4) == Bitmap.Pitch);
+                fwrite(Bitmap.Memory, Bitmap.Width*Bitmap.Height*4, 1, Out);
+
+                free(Bitmap.Free);
             }
         }
         fseek(Out, (u32)Header.Assets, SEEK_SET);
