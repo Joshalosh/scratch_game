@@ -233,6 +233,7 @@ ZeroSize(memory_index Size, void *Ptr)
 
 #include "game_intrinsics.h"
 #include "game_math.h"
+#include "game_file_formats.h"
 #include "game_world.h"
 #include "game_sim_region.h"
 #include "game_entity.h"

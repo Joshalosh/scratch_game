@@ -94,6 +94,7 @@ struct game_assets
 
     asset_type AssetTypes[Asset_Count];
 
+#if 0
     // Structured assets.
 //    hero_bitmaps HeroBitmaps[4];
 
@@ -102,6 +103,7 @@ struct game_assets
     uint32_t DEBUGUsedTagCount;
     asset_type *DEBUGAssetType;
     asset *DEBUGAsset;
+#endif
 };
 
 inline loaded_bitmap *

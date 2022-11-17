@@ -1,4 +1,5 @@
 
+#if 0
 #pragma pack(push, 1)
 struct bitmap_header
 {
@@ -301,6 +302,24 @@ DEBUGLoadWAV(char *Filename, uint32_t SectionFirstSampleIndex, uint32_t SectionS
     return(Result);
 }
 
+#endif
+
+internal loaded_bitmap
+DEBUGLoadBMP(char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
+{
+    Assert(!"NOOOOOOOOOO");
+    loaded_bitmap Result = {};
+    return(Result);
+}
+
+internal loaded_sound
+DEBUGLoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
+{
+    Assert(!"NO NO NO NON ON ON");
+    loaded_sound Result = {};
+    return(Result);
+}
+
 struct load_bitmap_work
 {
     game_assets *Assets;
@@ -517,6 +536,8 @@ GetRandomSoundFrom(game_assets *Assets, asset_type_id TypeID, random_series *Ser
     return(Result);
 }
 
+#if 0
+
 internal void
 BeginAssetType(game_assets *Assets, asset_type_id TypeID)
 {
@@ -586,6 +607,8 @@ EndAssetType(game_assets *Assets)
     Assets->DEBUGAsset = 0;
 }
 
+#endif
+
 internal game_assets *
 AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState)
 {
@@ -599,13 +622,44 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     }
     Assets->TagRange[Tag_FacingDirection] = Tau32;
 
-    Assets->AssetCount = 2*256*Asset_Count;
-    Assets->Assets = PushArray(Arena, Assets->AssetCount, asset);
-    Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
+    debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile("test.ga");
+    if(ReadResult.ContentsSize != 0)
+    {
+        ga_header *Header = (ga_header *)ReadResult.Contents;
+        Assert(Header->MagicValue == GA_MAGIC_VALUE);
+        Assert(Header->Version == GA_VERSION);
 
-    Assets->TagCount = 1024*Asset_Count;
-    Assets->Tags = PushArray(Arena, Assets->TagCount, asset_tag);
+        Assets->AssetCount = Header->AssetCount;
+        Assets->Assets = PushArray(Arena, Assets->AssetCount, asset);
+        Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
 
+        Assets->TagCount = Header->TagCount;
+        Assets->Tags = PushArray(Arena, Assets->TagCount, asset_tag);
+
+        // TODO: Decide what will be float-loaded and what won't be.
+
+        ga_tag *GATags = (ga_tag *)((u8 *)ReadResult.Contents + Header->Tags);
+
+        for(u32 TagIndex = 0; TagIndex < Assets->TagCount; ++ TagIndex)
+        {
+            ga_tag *Source = GATags + TagIndex;
+            asset_tag *Dest = Assets->Tags + TagIndex;
+
+            Dest->ID = Source->ID;
+            Dest->Value = Source->Value;
+        }
+#if 0
+        for()
+        {
+        }
+
+        for()
+        {
+        }
+#endif
+    }
+
+#if 0
     Assets->DEBUGUsedAssetCount = 1;
 
     BeginAssetType(Assets, Asset_Shadow);
@@ -726,6 +780,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     AddSoundAsset(Assets, "test3/puhp_00.wav");
     AddSoundAsset(Assets, "test3/puhp_01.wav");
     EndAssetType(Assets);
+#endif
 
     return(Assets);
 }
