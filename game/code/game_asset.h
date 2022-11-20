@@ -17,20 +17,6 @@ struct loaded_sound
     int16_t *Samples[2];
 };
 
-struct asset_bitmap_info
-{
-    char *Filename;
-    v2 AlignPercentage;
-};
-
-struct asset_sound_info
-{
-    char *Filename;
-    uint32_t FirstSampleIndex;
-    uint32_t SampleCount;
-    sound_id NextIDToPlay;
-};
-
 struct asset_tag
 {
     uint32_t ID; // Tag ID.
@@ -56,14 +42,7 @@ struct asset_slot
 
 struct asset
 {
-    uint32_t FirstTagIndex;
-    uint32_t OnePastLastTagIndex;
-
-    union
-    {
-        asset_bitmap_info Bitmap;
-        asset_sound_info Sound;
-    };
+    ga_asset GA;
 };
 
 struct asset_vector

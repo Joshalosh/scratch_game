@@ -639,24 +639,37 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         // TODO: Decide what will be float-loaded and what won't be.
 
         ga_tag *GATags = (ga_tag *)((u8 *)ReadResult.Contents + Header->Tags);
+        ga_asset *GAAssets = (ga_asset *)((u8 *)ReadResult.Contents + Header->Assets);
+        ga_asset_type *GAAssetTypes = (ga_asset_type *)((u8 *)ReadResult.Contents + Header->AssetTypes);
 
-        for(u32 TagIndex = 0; TagIndex < Assets->TagCount; ++ TagIndex)
+        for(u32 Index = 0; Index < Header->TagCount; ++Index)
         {
-            ga_tag *Source = GATags + TagIndex;
-            asset_tag *Dest = Assets->Tags + TagIndex;
+            ga_tag *Source = GATags + Index;
+            asset_tag *Dest = Assets->Tags + Index;
 
             Dest->ID = Source->ID;
             Dest->Value = Source->Value;
         }
-#if 0
-        for()
+
+        for(u32 Index = 0; Index < Header->AssetCount; ++Index)
         {
+            ga_asset *Source = GAAssets + Index;
+            asset *Dest = Assets->Assets + Index;
+
+            Dest->FirstTagIndex = Source->FirstTagIndex;;
+            Dest->OnePastLastTagIndex = Source->OnePastLastTagIndex;
+            if(Source->TypeID == )
+            {
+            }
+            else
+            {
+            }
         }
 
-        for()
+        for(u32 Index = 0; Index < Header->AssetTypeCount; ++Index)
         {
+            ga_asset_type *Source = GAAssetTypes + Index;
         }
-#endif
     }
 
 #if 0
