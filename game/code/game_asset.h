@@ -1,26 +1,10 @@
 #if !defined(GAME_ASSET_H)
 
-struct bitmap_id
-{
-    uint32_t Value;
-};
-
-struct sound_id
-{
-    uint32_t Value;
-};
-
 struct loaded_sound
 {
     uint32_t SampleCount; // This is the sample count divided by 8.
     uint32_t ChannelCount;
     int16_t *Samples[2];
-};
-
-struct asset_tag
-{
-    uint32_t ID; // Tag ID.
-    real32 Value;
 };
 
 enum asset_state
@@ -65,7 +49,7 @@ struct game_assets
     real32 TagRange[Tag_Count];
 
     uint32_t TagCount;
-    asset_tag *Tags;
+    ga_tag *Tags;
 
     uint32_t AssetCount;
     asset *Assets;
@@ -73,6 +57,7 @@ struct game_assets
 
     asset_type AssetTypes[Asset_Count];
 
+    u8 *GAContents;
 #if 0
     // Structured assets.
 //    hero_bitmaps HeroBitmaps[4];
@@ -103,11 +88,11 @@ GetSound(game_assets *Assets, sound_id ID)
     return(Result);
 }
 
-inline asset_sound_info *
+inline ga_sound *
 GetSoundInfo(game_assets *Assets, sound_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
-    asset_sound_info *Result = &Assets->Assets[ID.Value].Sound;
+    ga_sound *Result = &Assets->Assets[ID.Value].GA.Sound;
 
     return(Result);
 }

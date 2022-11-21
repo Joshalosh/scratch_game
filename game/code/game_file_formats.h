@@ -3,6 +3,16 @@
 #define GA_CODE(a, b, c, d) (((uint32_t)(a) << 0) | ((uint32_t)(b) << 8) | ((uint32_t)(c) << 16) | ((uint32_t)(d) << 24))
 
 #pragma pack(push, 1)
+struct bitmap_id
+{
+    u32 Value;
+};
+
+struct sound_id
+{
+    u32 Value;
+};
+
 struct ga_header
 {
 #define GA_MAGIC_VALUE GA_CODE('g','a','f',' ')
@@ -42,7 +52,7 @@ struct ga_sound
 {
     u32 SampleCount;
     u32 ChannelCount;
-    u32 NextIDToPlay;
+    sound_id NextIDToPlay;
 };
 struct ga_asset
 {

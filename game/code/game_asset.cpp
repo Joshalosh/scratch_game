@@ -304,22 +304,6 @@ DEBUGLoadWAV(char *Filename, uint32_t SectionFirstSampleIndex, uint32_t SectionS
 
 #endif
 
-internal loaded_bitmap
-DEBUGLoadBMP(char *Filename, v2 AlignPercentage = V2(0.5f, 0.5f))
-{
-    Assert(!"NOOOOOOOOOO");
-    loaded_bitmap Result = {};
-    return(Result);
-}
-
-internal loaded_sound
-DEBUGLoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
-{
-    Assert(!"NO NO NO NON ON ON");
-    loaded_sound Result = {};
-    return(Result);
-}
-
 struct load_bitmap_work
 {
     game_assets *Assets;
@@ -333,8 +317,16 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadBitmapWork)
 {
     load_bitmap_work *Work = (load_bitmap_work *)Data;
     
-    asset_bitmap_info *Info = &Work->Assets->Assets[Work->ID.Value].Bitmap;
-    *Work->Bitmap = DEBUGLoadBMP(Info->Filename, Info->AlignPercentage);
+    ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value].GA;
+    ga_bitmap *Info = &GAAsset->Bitmap;
+    loaded_bitmap *Bitmap = Work->Bitmap;
+
+    Bitmap->AlignPercentage = V2(Info->AlignPercentage[0], Info->AlignPercentage[1]);
+    Bitmap->WidthOverHeight = (r32)Info->Dim[0] / (r32)Info->Dim[1];
+    Bitmap->Width = Info->Dim[0];
+    Bitmap->Height = Info->Dim[1];
+    Bitmap->Pitch = 4*Info->Dim[0];
+    Bitmap->Memory = Work->Assets->GAContents + GAAsset->DataOffset;
 
     CompletePreviousWritesBeforeFutureWrites;
 
@@ -385,9 +377,20 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadSoundWork)
 {
     load_sound_work *Work = (load_sound_work *)Data;
 
-    asset_sound_info *Info = &Work->Assets->Assets[Work->ID.Value].Sound;
-    *Work->Sound = DEBUGLoadWAV(Info->Filename, Info->FirstSampleIndex, Info->SampleCount);
-
+    ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value].GA;
+    ga_sound *Info = &GAAsset->Sound;
+    loaded_sound *Sound = Work->Sound;
+    
+    Sound->SampleCount = Info->SampleCount;
+    Sound->ChannelCount = Info->ChannelCount;
+    Assert(Sound->ChannelCount < ArrayCount(Sound->Samples));
+    u64 SampleDataOffset = GAAsset->DataOffset;
+    for(u32 ChannelIndex = 0; ChannelIndex < Sound->ChannelCount; ++ChannelIndex)
+    {
+        Sound->Samples[ChannelIndex] = (s16 *)(Work->Assets->GAContents + SampleDataOffset);
+        SampleDataOffset += Sound->SampleCount*sizeof(s16);
+    }
+    
     CompletePreviousWritesBeforeFutureWrites;
 
     Work->Assets->Slots[Work->ID.Value].Sound = Work->Sound;
@@ -438,9 +441,9 @@ GetBestMatchAssetFrom(game_assets *Assets, asset_type_id TypeID,
         asset *Asset = Assets->Assets + AssetIndex;
 
         real32 TotalWeightedDiff = 0.0f;
-        for(uint32_t TagIndex = Asset->FirstTagIndex; TagIndex < Asset->OnePastLastTagIndex; ++TagIndex)
+        for(uint32_t TagIndex = Asset->GA.FirstTagIndex; TagIndex < Asset->GA.OnePastLastTagIndex; ++TagIndex)
         {
-            asset_tag *Tag = Assets->Tags + TagIndex;
+            ga_tag *Tag = Assets->Tags + TagIndex;
 
             real32 A = MatchVector->E[Tag->ID];
             real32 B = Tag->Value;
@@ -587,12 +590,12 @@ AddSoundAsset(game_assets *Assets, char *Filename, u32 FirstSampleIndex = 0, u32
 }
 
 internal void
-AddTag(game_assets *Assets, asset_tag_id ID, real32 Value)
+AddTag(game_assets *Assets, ga_tag_id ID, real32 Value)
 {
     Assert(Assets->DEBUGAsset);
 
     ++Assets->DEBUGAsset->OnePastLastTagIndex;
-    asset_tag *Tag = Assets->Tags + Assets->DEBUGUsedTagCount++;
+    ga_tag *Tag = Assets->Tags + Assets->DEBUGUsedTagCount++;
 
     Tag->ID = ID;
     Tag->Value = Value;
@@ -634,7 +637,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
 
         Assets->TagCount = Header->TagCount;
-        Assets->Tags = PushArray(Arena, Assets->TagCount, asset_tag);
+        Assets->Tags = PushArray(Arena, Assets->TagCount, ga_tag);
 
         // TODO: Decide what will be float-loaded and what won't be.
 
@@ -645,7 +648,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         for(u32 Index = 0; Index < Header->TagCount; ++Index)
         {
             ga_tag *Source = GATags + Index;
-            asset_tag *Dest = Assets->Tags + Index;
+            ga_tag *Dest = Assets->Tags + Index;
 
             Dest->ID = Source->ID;
             Dest->Value = Source->Value;
@@ -656,20 +659,25 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
             ga_asset *Source = GAAssets + Index;
             asset *Dest = Assets->Assets + Index;
 
-            Dest->FirstTagIndex = Source->FirstTagIndex;;
-            Dest->OnePastLastTagIndex = Source->OnePastLastTagIndex;
-            if(Source->TypeID == )
-            {
-            }
-            else
-            {
-            }
+            Dest->GA = *Source;
         }
 
         for(u32 Index = 0; Index < Header->AssetTypeCount; ++Index)
         {
             ga_asset_type *Source = GAAssetTypes + Index;
+
+            if(Source->TypeID < Asset_Count)
+            {
+                asset_type *Dest = Assets->AssetTypes + Source->TypeID;
+                // TODO: Support merging.
+                Assert(Dest->FirstAssetIndex == 0);
+                Assert(Dest->OnePastLastAssetIndex == 0);
+                Dest->FirstAssetIndex = Source->FirstAssetIndex;
+                Dest->OnePastLastAssetIndex = Source->OnePastLastAssetIndex;
+            }
         }
+
+        Assets->GAContents = (u8 *)ReadResult.Contents;
     }
 
 #if 0

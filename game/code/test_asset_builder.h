@@ -8,16 +8,6 @@
 #include "game_intrinsics.h"
 #include "game_math.h"
 
-struct bitmap_id
-{
-    u32 Value;
-};
-
-struct sound_id
-{
-    u32 Value;
-};
-
 enum asset_type
 {
     AssetType_Sound,
