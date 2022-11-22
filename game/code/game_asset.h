@@ -24,11 +24,6 @@ struct asset_slot
     };
 };
 
-struct asset
-{
-    ga_asset GA;
-};
-
 struct asset_vector
 {
     real32 E[Tag_Count];
@@ -38,6 +33,12 @@ struct asset_type
 {
     uint32_t FirstAssetIndex;
     uint32_t OnePastLastAssetIndex;
+};
+
+struct asset_file
+{
+    platform_file_handle Handle;
+    ga_header Header;
 };
 
 struct game_assets
@@ -52,7 +53,7 @@ struct game_assets
     ga_tag *Tags;
 
     uint32_t AssetCount;
-    asset *Assets;
+    ga_asset *Assets;
     asset_slot *Slots;
 
     asset_type AssetTypes[Asset_Count];
@@ -92,7 +93,7 @@ inline ga_sound *
 GetSoundInfo(game_assets *Assets, sound_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
-    ga_sound *Result = &Assets->Assets[ID.Value].GA.Sound;
+    ga_sound *Result = &Assets->Assets[ID.Value].Sound;
 
     return(Result);
 }

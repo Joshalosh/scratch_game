@@ -317,7 +317,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadBitmapWork)
 {
     load_bitmap_work *Work = (load_bitmap_work *)Data;
     
-    ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value].GA;
+    ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value];
     ga_bitmap *Info = &GAAsset->Bitmap;
     loaded_bitmap *Bitmap = Work->Bitmap;
 
@@ -377,7 +377,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadSoundWork)
 {
     load_sound_work *Work = (load_sound_work *)Data;
 
-    ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value].GA;
+    ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value];
     ga_sound *Info = &GAAsset->Sound;
     loaded_sound *Sound = Work->Sound;
     
@@ -438,10 +438,10 @@ GetBestMatchAssetFrom(game_assets *Assets, asset_type_id TypeID,
         AssetIndex < Type->OnePastLastAssetIndex;
         ++AssetIndex)
     {
-        asset *Asset = Assets->Assets + AssetIndex;
+        ga_asset *Asset = Assets->Assets + AssetIndex;
 
         real32 TotalWeightedDiff = 0.0f;
-        for(uint32_t TagIndex = Asset->GA.FirstTagIndex; TagIndex < Asset->GA.OnePastLastTagIndex; ++TagIndex)
+        for(uint32_t TagIndex = Asset->FirstTagIndex; TagIndex < Asset->OnePastLastTagIndex; ++TagIndex)
         {
             ga_tag *Tag = Assets->Tags + TagIndex;
 
@@ -625,42 +625,71 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     }
     Assets->TagRange[Tag_FacingDirection] = Tau32;
 
+    {
+        platform_file_group FileGroup = PlatformGetAllFilesOfTypeBegin("ga");
+        Assets->FileCount = FileGroup.FileCount;
+        Assets->Files = PushArray(Arena, Assets->FileCount, asset_file);
+        for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
+        {
+            asset_file *File = Assets->Files + FileIndex;
+
+            File->Handle = PlatformOpenFile(FileGroup, FileIndex);
+            PlatformReadDataFromFile(File->Handle, 0, sizeof(File->Header), &File->Header);
+
+            if(Header->MagicValue != GA_MAGIC_VALUE)
+            {
+                PlatformFileError(File->Handle, "GA file has an invalid magic value.");
+            }
+
+            if(Header->Version > GA_VERSION)
+            {
+                PlatformFileError(File->Handle, "GA file is a later version.");
+            }
+
+            if(PlatformNoFileErrors(File->Handle))
+            {
+                Assets->TagCount += Header->TagCount;
+                Assets->AssetCount += Header->AssetCount;
+            }
+            else
+            {
+                // TODO: Eventually, have some way of notifying users of fucked up files.
+                InvalidCodePath;
+            }
+        }
+        PlatformGetAllFilesOfTypeEnd(FileGroup);
+    }
+
+    Assets->Assets = PushArray(Arena, Assets->AssetCount, ga_asset);
+    Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
+    Assets->Tags = PushArray(Arena, Assets->TagCount, ga_tag);
+
+    u32 AssetCount = 0;
+    u32 TagCount = 0;
+    for(u32 AssetTypeID = 0; AssetTypeID < Asset_Count; ++AssetTypeID)
+    {
+        for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
+        {
+            asset_file *File = Assets->Files + FileIndex;
+        }
+    }
+
+    Assert(AssetCount == Assets->AssetCount);
+    Assert(TagCount == Assets->TagCount);
+
     debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile("test.ga");
     if(ReadResult.ContentsSize != 0)
     {
         ga_header *Header = (ga_header *)ReadResult.Contents;
-        Assert(Header->MagicValue == GA_MAGIC_VALUE);
-        Assert(Header->Version == GA_VERSION);
 
         Assets->AssetCount = Header->AssetCount;
-        Assets->Assets = PushArray(Arena, Assets->AssetCount, asset);
+        Assets->Assets = (ga_asset *)((u8 *)ReadResult.Contents + Header->Assets);
         Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
 
         Assets->TagCount = Header->TagCount;
-        Assets->Tags = PushArray(Arena, Assets->TagCount, ga_tag);
+        Assets->Tags = (ga_tag *)((u8 *)ReadResult.Contents + Header->Tags);
 
-        // TODO: Decide what will be float-loaded and what won't be.
-
-        ga_tag *GATags = (ga_tag *)((u8 *)ReadResult.Contents + Header->Tags);
-        ga_asset *GAAssets = (ga_asset *)((u8 *)ReadResult.Contents + Header->Assets);
         ga_asset_type *GAAssetTypes = (ga_asset_type *)((u8 *)ReadResult.Contents + Header->AssetTypes);
-
-        for(u32 Index = 0; Index < Header->TagCount; ++Index)
-        {
-            ga_tag *Source = GATags + Index;
-            ga_tag *Dest = Assets->Tags + Index;
-
-            Dest->ID = Source->ID;
-            Dest->Value = Source->Value;
-        }
-
-        for(u32 Index = 0; Index < Header->AssetCount; ++Index)
-        {
-            ga_asset *Source = GAAssets + Index;
-            asset *Dest = Assets->Assets + Index;
-
-            Dest->GA = *Source;
-        }
 
         for(u32 Index = 0; Index < Header->AssetTypeCount; ++Index)
         {
