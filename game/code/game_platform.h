@@ -239,6 +239,28 @@ typedef struct game_input
     game_controller_input Controllers[5];
 } game_input;
 
+typedef struct platform_file_handle 
+{
+    b32 HasErrors;
+} platform_file_handle;
+
+typedef struct platform_file_group
+{
+    u32 FileCount;
+    void *Data;
+} platform_file_group;
+
+#define PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(name) void name(char *Type)
+typedef PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(platform_get_all_files_of_type_begin);
+
+#define PLATFORM_GET_ALL_FILE_OF_TYPE_END(name) void name(platform_file_group FileGroup)
+typedef PLATFORM_GET_ALL_FILE_OF_TYPE_END(platform_get_all_files_of_type_end);
+
+#define PLATFORM_OPEN_FILE(name) void name(platform_file_group FileGroup, u32 FileIndex)
+typedef PLATFORM_READ_DATA_FROM_FILE(platform_read_data_from_file);
+
+#define PlatformNoFileErrors(Handle) (!(Handle)->HasErrors)
+
 struct platform_work_queue;
 #define PLATFORM_WORK_QUEUE_CALLBACK(name) void name(platform_work_queue *Queue, void *Data)
 typedef PLATFORM_WORK_QUEUE_CALLBACK(platform_work_queue_callback);
@@ -276,7 +298,6 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 // more than a millisecond or so.
 // TODO: Reduce the pressure on this function's performance by measuring it
 // or asking about it, etc.
-
 #define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 

@@ -171,7 +171,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     environment_map *Top, environment_map *Middle, environment_map *Bottom,
                     real32 PixelsToMetres)
 {
-    BEGIN_TIMED_BLOCK(DrawRectangleSlowly)
+    BEGIN_TIMED_BLOCK(DrawRectangleSlowly);
 
     // Premultiply color up front
     Color.rgb *= Color.a;
@@ -347,7 +347,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
 #if 0
                     // This draws the bounce direction.
-                    Texel.rgb = V3(0.5f, 0.5f, 0.5f) + 0.5f * BounceDirection;
+                    Texel.rgb = V3(0.5f, 0.5f, 0.5f) + 0.5f*BounceDirection;
                     Texel.rgb *= Texel.a;
 #endif
                 }
@@ -375,14 +375,12 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                           ((uint32_t)(Blended255.r + 0.5f) << 16) |
                           ((uint32_t)(Blended255.g + 0.5f) << 8) |
                           ((uint32_t)(Blended255.b + 0.5f) << 0));
-
             }
 #else
             *Pixel = Color32;
 #endif
 
             ++Pixel;
-
         }
 
         Row += Buffer->Pitch;
@@ -391,28 +389,6 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
     END_TIMED_BLOCK(DrawRectangleSlowly);
 }
-
-struct counts
-{
-    int mm_add_ps;
-    int mm_sub_ps;
-    int mm_mul_ps;
-    int mm_castps_si128;
-    int mm_and_ps;
-    int mm_or_si128;
-    int mm_cmpge_ps;
-    int mm_cmple_ps;
-    int mm_min_ps;
-    int mm_max_ps;
-    int mm_cvttps_epi32;
-    int mm_cvtps_epi32;
-    int mm_cvtepi32_ps;
-    int mm_and_si128;
-    int mm_andnot_si128;
-    int mm_srli_epi32;
-    int mm_slli_epi32;
-    int mm_sqrt_ps;
-};
 
 internal void
 DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
@@ -458,7 +434,6 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
         uint32_t *Source = (uint32_t *)SourceRow;
         for(int32_t X = MinX; X < MaxX; ++X)
         {
-
             v4 Texel = {(real32)((*Source >> 16) & 0xFF),
                         (real32)((*Source >> 8) & 0xFF),
                         (real32)((*Source >> 0) & 0xFF),
@@ -793,7 +768,6 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
             Work->RenderGroup = RenderGroup;
             Work->OutputTarget = OutputTarget;
             Work->ClipRect = ClipRect;
-
 #if 1
             // This is the multi-threaded path.
             PlatformAddEntry(RenderQueue, DoTiledRenderWork, Work);
@@ -944,7 +918,7 @@ PushBitmap(render_group *Group, loaded_bitmap *Bitmap, real32 Height, v3 Offset,
     v2 Size = V2(Height*Bitmap->WidthOverHeight, Height);
     v2 Align = Hadamard(Bitmap->AlignPercentage, Size);
     v3 P = Offset - V3(Align, 0);
-            
+
     entity_basis_p_result Basis = GetRenderEntityBasisP(&Group->Transform, P);
     if(Basis.Valid)
     {
@@ -1024,6 +998,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
     entity_basis_p_result Basis = GetRenderEntityBasisP(RenderGroup, &Entry->EntityBasis, ScreenDim);
     if(Basis.Valid)
     {
+        render_entry_coordinate_system *Entry = PushRenderElement(Group, render_entry_coordinate_system);
         if(Entry)
         {
             Entry->Origin = Origin;

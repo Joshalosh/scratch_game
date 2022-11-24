@@ -350,9 +350,10 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
         Buffer->AlignPercentage = V2(0.5f, 0.5f);
         Buffer->WidthOverHeight = 1.0f;
 
-        real32 Width  = GameState->World->ChunkDimInMeters.x;
+        real32 Width = GameState->World->ChunkDimInMeters.x;
         real32 Height = GameState->World->ChunkDimInMeters.y;
-        v2 HalfDim    = 0.5f*V2(Width, Height);
+        Assert(Width == Height);
+        v2 HalfDim = 0.5f*V2(Width, Height);
 
         // TODO: Decide what the pushbuffer size is.
         render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &Task->Arena, 0);
@@ -389,7 +390,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
 
                 for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
                 {
-                    bitmap_id Stamp = GetRandomBitmapFrom(TranState->Assets, 
+                    bitmap_id Stamp = GetRandomBitmapFrom(TranState->Assets,
                                                           RandomChoice(&Series, 2) ? Asset_Grass : Asset_Stone,
                                                           &Series);
 
@@ -423,6 +424,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
         if(AllResourcesPresent(RenderGroup))
         {
             GroundBuffer->P = *ChunkP;
+
             PlatformAddEntry(TranState->LowPriorityQueue, FillGroundChunkWork, Work);
         }
         else

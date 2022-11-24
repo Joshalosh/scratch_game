@@ -41,7 +41,7 @@ struct win32_debug_time_marker
 
 struct win32_game_code
 {
-    HMODULE GameCodeDLL; 
+    HMODULE GameCodeDLL;
     FILETIME DLLLastWriteTime;
 
     // Either of the callbacks can be 0!

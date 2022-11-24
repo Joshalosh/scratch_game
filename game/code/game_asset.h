@@ -12,12 +12,12 @@ enum asset_state
     AssetState_Unloaded,
     AssetState_Queued,
     AssetState_Loaded,
-    AssetSTate_Locked,
+    AssetState_Locked,
 };
 struct asset_slot
 {
     asset_state State;
-    union 
+    union
     {
         loaded_bitmap *Bitmap;
         loaded_sound *Sound;
@@ -38,7 +38,13 @@ struct asset_type
 struct asset_file
 {
     platform_file_handle Handle;
+
+    // TODO: If we ever do thread stack, AssetTypeArray
+    // doesn't actually need to be kept here probably.
     ga_header Header;
+    ga_asset_type *AssetTypeArray;
+
+    u32 TagBase;
 };
 
 struct game_assets
@@ -49,6 +55,9 @@ struct game_assets
 
     real32 TagRange[Tag_Count];
 
+    u32 FileCount;
+    asset_file *Files;
+
     uint32_t TagCount;
     ga_tag *Tags;
 
@@ -58,8 +67,8 @@ struct game_assets
 
     asset_type AssetTypes[Asset_Count];
 
-    u8 *GAContents;
 #if 0
+    u8 *GAContents;
     // Structured assets.
 //    hero_bitmaps HeroBitmaps[4];
 
@@ -71,8 +80,7 @@ struct game_assets
 #endif
 };
 
-inline loaded_bitmap *
-GetBitmap(game_assets *Assets, bitmap_id ID)
+inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
     loaded_bitmap *Result = Assets->Slots[ID.Value].Bitmap;
@@ -80,8 +88,7 @@ GetBitmap(game_assets *Assets, bitmap_id ID)
     return(Result);
 }
 
-inline loaded_sound *
-GetSound(game_assets *Assets, sound_id ID)
+inline loaded_sound *GetSound(game_assets *Assets, sound_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
     loaded_sound *Result = Assets->Slots[ID.Value].Sound;

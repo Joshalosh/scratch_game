@@ -41,13 +41,13 @@ enum
     WAVE_ChunkID_RIFF = RIFF_CODE('R', 'I', 'F', 'F'),
     WAVE_ChunkID_WAVE = RIFF_CODE('W', 'A', 'V', 'E'),
 };
-struct WAVE_chunk 
+struct WAVE_chunk
 {
     uint32_t ID;
     uint32_t Size;
 };
 
-struct WAVE_fmt 
+struct WAVE_fmt
 {
     uint16_t wFormatTag;
     uint16_t nChannels;
@@ -65,9 +65,9 @@ struct WAVE_fmt
 
 struct loaded_bitmap
 {
-    s32 Width;
-    s32 Height;
-    s32 Pitch;
+    int32_t Width;
+    int32_t Height;
+    int32_t Pitch;
     void *Memory;
 
     void *Free;
@@ -96,7 +96,7 @@ ReadEntireFile(char *Filename)
     }
     else
     {
-        printf("ERROR: Cannot open file %s. \n", Filename);
+        printf("ERROR: Cannot open file %s.\n", Filename);
     }
 
     return(Result);
@@ -240,15 +240,15 @@ GetChunkDataSize(riff_iterator Iter)
 
 struct loaded_sound
 {
-    u32 SampleCount;
-    u32 ChannelCount;
-    s16 *Samples[2];
+    uint32_t SampleCount;
+    uint32_t ChannelCount;
+    int16_t *Samples[2];
 
     void *Free;
 };
 
 internal loaded_sound
-LoadWAV(char *Filename, uint32_t SectionFirstSampleIndex, uint32_t SectionSampleCount)
+LoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
 {
     loaded_sound Result = {};
 
@@ -547,7 +547,7 @@ main(int ArgCount, char **Args)
         {
             SampleCount = OneMusicChunk;
         }
-        sound_id ThisMusic = AddSoundAsset(Assets, "test3/music_test.wav", FirstSampleIndex, OneMusicChunk);
+        sound_id ThisMusic = AddSoundAsset(Assets, "test3/music_test.wav", FirstSampleIndex, SampleCount);
         if(LastMusic.Value)
         {
             Assets->Assets[LastMusic.Value].Sound.NextIDToPlay = ThisMusic;
@@ -555,12 +555,11 @@ main(int ArgCount, char **Args)
         LastMusic = ThisMusic;
     }
     EndAssetType(Assets);
-    
+
     BeginAssetType(Assets, Asset_Puhp);
     AddSoundAsset(Assets, "test3/puhp_00.wav");
     AddSoundAsset(Assets, "test3/puhp_01.wav");
     EndAssetType(Assets);
-
 
     FILE *Out = fopen("test.ga", "wb");
     if(Out)

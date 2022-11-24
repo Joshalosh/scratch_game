@@ -24,6 +24,7 @@
    - Final Optimisation
 
  - Debug code
+   - Fonts
    - Logging
    - Diagramming
    - A little GUI, switches / sliders / etc.
@@ -180,7 +181,6 @@ PushString(memory_arena *Arena, char *Source)
 
     return(Dest);
 }
-
 
 inline temporary_memory
 BeginTemporaryMemory(memory_arena *Arena)

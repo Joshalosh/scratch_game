@@ -1,5 +1,6 @@
 
 #if 0
+
 #pragma pack(push, 1)
 struct bitmap_header
 {
@@ -40,13 +41,13 @@ enum
     WAVE_ChunkID_RIFF = RIFF_CODE('R', 'I', 'F', 'F'),
     WAVE_ChunkID_WAVE = RIFF_CODE('W', 'A', 'V', 'E'),
 };
-struct WAVE_chunk 
+struct WAVE_chunk
 {
     uint32_t ID;
     uint32_t Size;
 };
 
-struct WAVE_fmt 
+struct WAVE_fmt
 {
     uint16_t wFormatTag;
     uint16_t nChannels;
@@ -199,7 +200,7 @@ GetChunkDataSize(riff_iterator Iter)
 }
 
 internal loaded_sound
-DEBUGLoadWAV(char *Filename, uint32_t SectionFirstSampleIndex, uint32_t SectionSampleCount)
+DEBUGLoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
 {
     loaded_sound Result = {};
 
@@ -316,7 +317,7 @@ struct load_bitmap_work
 internal PLATFORM_WORK_QUEUE_CALLBACK(LoadBitmapWork)
 {
     load_bitmap_work *Work = (load_bitmap_work *)Data;
-    
+
     ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value];
     ga_bitmap *Info = &GAAsset->Bitmap;
     loaded_bitmap *Bitmap = Work->Bitmap;
@@ -356,7 +357,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
 
             PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadBitmapWork, Work);
         }
-        else 
+        else
         {
             Assets->Slots[ID.Value].State = AssetState_Unloaded;
         }
@@ -380,7 +381,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadSoundWork)
     ga_asset *GAAsset = &Work->Assets->Assets[Work->ID.Value];
     ga_sound *Info = &GAAsset->Sound;
     loaded_sound *Sound = Work->Sound;
-    
+
     Sound->SampleCount = Info->SampleCount;
     Sound->ChannelCount = Info->ChannelCount;
     Assert(Sound->ChannelCount < ArrayCount(Sound->Samples));
@@ -419,7 +420,7 @@ LoadSound(game_assets *Assets, sound_id ID)
 
             PlatformAddEntry(Assets->TranState->LowPriorityQueue, LoadSoundWork, Work);
         }
-        else 
+        else
         {
             Assets->Slots[ID.Value].State = AssetState_Unloaded;
         }
@@ -590,12 +591,12 @@ AddSoundAsset(game_assets *Assets, char *Filename, u32 FirstSampleIndex = 0, u32
 }
 
 internal void
-AddTag(game_assets *Assets, ga_tag_id ID, real32 Value)
+AddTag(game_assets *Assets, asset_tag_id ID, real32 Value)
 {
     Assert(Assets->DEBUGAsset);
 
     ++Assets->DEBUGAsset->OnePastLastTagIndex;
-    ga_tag *Tag = Assets->Tags + Assets->DEBUGUsedTagCount++;
+    asset_tag *Tag = Assets->Tags + Assets->DEBUGUsedTagCount++;
 
     Tag->ID = ID;
     Tag->Value = Value;
@@ -625,6 +626,9 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     }
     Assets->TagRange[Tag_FacingDirection] = Tau32;
 
+    Assets->TagCount = 0;
+    Assets->AssetCount = 0;
+
     {
         platform_file_group FileGroup = PlatformGetAllFilesOfTypeBegin("ga");
         Assets->FileCount = FileGroup.FileCount;
@@ -633,8 +637,16 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         {
             asset_file *File = Assets->Files + FileIndex;
 
+            File->TagBase = Assets->TagCount;
+
+            u32 AssetTypeArraySize = File->Header.AssetTypeCount*sizeof(ga_asset_type);
+
+            ZeroStruct(File->Header);
             File->Handle = PlatformOpenFile(FileGroup, FileIndex);
             PlatformReadDataFromFile(File->Handle, 0, sizeof(File->Header), &File->Header);
+            File->AssetTypeArray = (ga_asset_type *)PushSize(Arena, AssetTypeArraySize);
+            PlatformReadDataFromFile(File->Handle, File->Header.AssetTypes,
+                                     AssetTypeArraySize, File->AssetTypeArray);
 
             if(Header->MagicValue != GA_MAGIC_VALUE)
             {
@@ -660,23 +672,66 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         PlatformGetAllFilesOfTypeEnd(FileGroup);
     }
 
+    // Allocate all metadata space.
     Assets->Assets = PushArray(Arena, Assets->AssetCount, ga_asset);
     Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
     Assets->Tags = PushArray(Arena, Assets->TagCount, ga_tag);
 
-    u32 AssetCount = 0;
-    u32 TagCount = 0;
-    for(u32 AssetTypeID = 0; AssetTypeID < Asset_Count; ++AssetTypeID)
+    // Load tags.
+    for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
     {
-        for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
+        asset_file *File = Assets->Files + FileIndex;
+        if(PlatformNoFileErrors(File->Handle))
         {
-            asset_file *File = Assets->Files + FileIndex;
+            u32 TagArraySize = sizeof(ga_tag)*File->Header.TagCount;
+            PlatformReadDataFromFile(File->Handle, File->Header.Tags, TagArraySize, Assets->Tags + File->TagBase);
         }
     }
 
-    Assert(AssetCount == Assets->AssetCount);
-    Assert(TagCount == Assets->TagCount);
+    // TODO: How would I do this in a way that could scale gracefully to 
+    // hundred of asset pack files.
+    u32 AssetCount = 0;
+    for(u32 DestTypeID = 0; DestTypeID < Asset_Count; ++DestTypeID)
+    {
+        asset_type *DestType = Assets->AssetTypes + DestTypeID;
+        DestType->FirstAssetIndex = AssetCount;
 
+        for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
+        {
+            asset_file *File = Assets->Files + FileIndex;
+            if(PlatformNoFileErrors(File->Handle))
+            {
+                for(u32 SourceIndex = 0; SourceIndex < File->Header.AssetTypeCount; ++SourceIndex)
+                {
+                    ga_asset_type *SourceType = File->AssetTypeArray + SourceIndex;
+
+                    if(SourceType->TypeID == AssetTypeID)
+                    {
+                        u32 AssetCouintForType = (SourceType->OnePastLastAssetIndex - SourceType->FirstAssetIndex);
+                        PlatformReadDataFromFile(File->Handle,
+                                                 File->Header.Assets + SourceType->FistAssetIndex*sizeof(ga_asset),
+                                                 SourceType->FistAssetIndex*sizeof(ga_asset),
+                                                 AssetCountForType*sizeof(ga_asset),
+                                                 Assets->Assets + AssetCount);
+                        for(u32 AssetIndex = AssetCount; AssetIndex < (AssetCount + AssetCountForType); ++AssetIndex)
+                        {
+                            ga_asset *Asset = Assets->Assets + AssetIndx;
+                            Asset->FirstTagIndex += File->TagBase;
+                            Asset->OnePastLastTagIndex += File->TagBase;
+                        }
+                        AssetCount += AssetCountForType;
+                        Assert(AssetCount < Assets->AssetCount);
+                    }
+                }
+            }
+        }
+
+        DestType->OnePastLastAssetIndex = AssetCount;
+    }
+
+    Assert(AssetCount == Assets->AssetCount);
+
+#if 0
     debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile("test.ga");
     if(ReadResult.ContentsSize != 0)
     {
@@ -708,6 +763,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
         Assets->GAContents = (u8 *)ReadResult.Contents;
     }
+#endif
 
 #if 0
     Assets->DEBUGUsedAssetCount = 1;
@@ -817,15 +873,15 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         {
             SampleCount = OneMusicChunk;
         }
-        sound_id ThisMusic = AddSoundAsset(Assets, "test3/music_test.wav", FirstSampleIndex, OneMusicChunk);
+        sound_id ThisMusic = AddSoundAsset(Assets, "test3/music_test.wav", FirstSampleIndex, SampleCount);
         if(IsValid(LastMusic))
         {
-            Assets->Assets[LastMusic.Value].Sound.NextIDToPlay = ThisMusic;;
+            Assets->Assets[LastMusic.Value].Sound.NextIDToPlay = ThisMusic;
         }
         LastMusic = ThisMusic;
     }
     EndAssetType(Assets);
-    
+
     BeginAssetType(Assets, Asset_Puhp);
     AddSoundAsset(Assets, "test3/puhp_00.wav");
     AddSoundAsset(Assets, "test3/puhp_01.wav");
