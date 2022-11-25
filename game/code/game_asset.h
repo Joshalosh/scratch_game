@@ -67,8 +67,9 @@ struct game_assets
 
     asset_type AssetTypes[Asset_Count];
 
-#if 0
     u8 *GAContents;
+
+#if 0
     // Structured assets.
 //    hero_bitmaps HeroBitmaps[4];
 

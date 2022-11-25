@@ -425,7 +425,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
         {
             GroundBuffer->P = *ChunkP;
 
-            PlatformAddEntry(TranState->LowPriorityQueue, FillGroundChunkWork, Work);
+            Platform.AddEntry(TranState->LowPriorityQueue, FillGroundChunkWork, Work);
         }
         else
         {
@@ -604,9 +604,7 @@ game_memory *DebugGlobalMemory;
 #endif
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
-    PlatformAddEntry = Memory->PlatformAddEntry;
-    PlatformCompleteAllWork = Memory->PlatformCompleteAllWork;
-    DEBUGPlatformReadEntireFile = Memory->DEBUGPlatformReadEntireFile;
+    Platform = Memory->PlatformAPI;
 
 #if GAME_INTERNAL
     DebugGlobalMemory = Memory;

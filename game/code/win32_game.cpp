@@ -1163,6 +1163,30 @@ Win32MakeQueue(platform_work_queue *Queue, uint32_t ThreadCount)
     }
 }
 
+internal PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(Win32GetAllFilesOfTypeBegin)
+{
+    platform_file_group FileGroup = {};
+
+    return(FileGroup);
+}
+
+internal PLATFORM_GET_ALL_FILE_OF_TYPE_END(Win32GetAllFilesOfTypeEnd)
+{
+}
+
+internal PLATFORM_OPEN_FILE(Win32OpenFile)
+{
+    return(0);
+}
+
+internal PLATFORM_READ_DATA_FROM_FILE(Win32ReadDataFromFile)
+{
+}
+
+internal PLATFORM_FILE_ERROR(Win32FileError)
+{
+}
+
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
@@ -1318,11 +1342,18 @@ WinMain(HINSTANCE Instance,
             GameMemory.TransientStorageSize = Gigabytes(1);
             GameMemory.HighPriorityQueue = &HighPriorityQueue;
             GameMemory.LowPriorityQueue = &LowPriorityQueue;
-            GameMemory.PlatformAddEntry = Win32AddEntry;
-            GameMemory.PlatformCompleteAllWork = Win32CompleteAllWork;
-            GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
-            GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
-            GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
+            GameMemory.PlatformAPI.AddEntry = Win32AddEntry;
+            GameMemory.PlatformAPI.CompleteAllWork = Win32CompleteAllWork;
+
+            GameMemory.PlatformAPI.GetAllFilesOfTypeBegin = Win32GetAllFilesOfTypeBegin;
+            GameMemory.PlatformAPI.GetAllFilesOfTypeEnd = Win32GetAllFilesOfTypeEnd;
+            GameMemory.PlatformAPI.OpenFile = Win32OpenFile;
+            GameMemory.PlatformAPI.ReadDataFromFile = Win32ReadDataFromFile;
+            GameMemory.PlatformAPI.FileError = Win32FileError;
+
+            GameMemory.PlatformAPI.DEBUGFreeFileMemory = DEBUGPlatformFreeFileMemory;
+            GameMemory.PlatformAPI.DEBUGReadEntireFile = DEBUGPlatformReadEntireFile;
+            GameMemory.PlatformAPI.DEBUGWriteEntireFile = DEBUGPlatformWriteEntireFile;
 
             Win32State.TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
             Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
