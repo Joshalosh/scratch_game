@@ -305,6 +305,41 @@ DEBUGLoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount
 
 #endif
 
+struct load_asset_work
+{
+    task_with_memory *Task;
+    asset_slot *Slot;
+
+    platform_file_handle *Handle;
+    u64 Offset;
+    u64 Size;
+    void *Destination;
+
+    asset_state FinalState;
+};
+internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
+{
+    load_asset_work *Work = (load_asset_work *)Data;
+
+#if 0
+    Platform.ReadDataFromFile(Work->Handle, Work->Offset, Work->Size, Work->Destination);
+#endif
+
+    CompletePreviousWritesBeforeFutureWrites;
+
+    // TODO: Should I actually fill in random data here and set to final state anyway,
+    // or continue trying to load?
+#if 0
+    if(PlatformNoFileErrors(Work->Handle))
+#endif
+    {
+        Work->Slot->State = Work->FinalState;
+    }
+
+    EndTaskWithMemory(Work->Task);
+}
+
+#if 0
 struct load_bitmap_work
 {
     game_assets *Assets;
@@ -329,6 +364,8 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadBitmapWork)
     Bitmap->Pitch = 4*Info->Dim[0];
     Bitmap->Memory = Work->Assets->GAContents + GAAsset->DataOffset;
 
+    Work->Assets->Slots[Work->ID.Value].Bitmap = Work->Bitmap;
+
     CompletePreviousWritesBeforeFutureWrites;
 
     Work->Assets->Slots[Work->ID.Value].Bitmap = Work->Bitmap;
@@ -336,6 +373,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadBitmapWork)
 
     EndTaskWithMemory(Work->Task);
 }
+#endif
 
 internal void
 LoadBitmap(game_assets *Assets, bitmap_id ID)
@@ -347,15 +385,31 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
         if(Task)
         {
-            load_bitmap_work *Work = PushStruct(&Task->Arena, load_bitmap_work);
+            ga_asset *GAAsset = Assets->Assets + ID.Value;
+            ga_bitmap *Info = &GAAsset->Bitmap;
+            loaded_bitmap *Bitmap = PushStruct(&Assets->Arena, loaded_bitmap);
 
-            Work->Assets = Assets;
-            Work->ID = ID;
+            Bitmap->AlignPercentage = V2(Info->AlignPercentage[0], Info->AlignPercentage[1]);
+            Bitmap->WidthOverHeight = (r32)Info->Dim[0] / (r32)Info->Dim[1];
+            Bitmap->Width = Info->Dim[0];
+            Bitmap->Height = Info->Dim[1];
+            Bitmap->Pitch = 4*Info->Dim[0];
+            u32 MemorySize = Bitmap->Pitch*Bitmap->Height;
+            Bitmap->Memory = PushSize(&Assets->Arena, MemorySize);
+
+            load_asset_work *Work = PushStruct(&Task->Arena, load_asset_work);
             Work->Task = Task;
-            Work->Bitmap = PushStruct(&Assets->Arena, loaded_bitmap);
+            Work->Slot = Assets->Slots + ID.Value;
+            Work->Handle = 0;
+            Work->Offset = GAAsset->DataOffset;
+            Work->Size = MemorySize;
+            Work->Destination = Bitmap->Memory;
             Work->FinalState = AssetState_Loaded;
+            Work->Slot->Bitmap = Bitmap;
 
-            Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadBitmapWork, Work);
+            Bitmap->Memory = Assets->GAContents + GAAsset->DataOffset;
+
+            Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
         else
         {

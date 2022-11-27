@@ -28,6 +28,18 @@ struct ga_header
     u64 Tags; // ga_tag[TagCount]
     u64 AssetTypes; // ga_asset_type[AssetTypeCount]
     u64 Assets; // ga_asset[AssetCount]
+
+    /* TODO:
+       u32 FileGUID[8];
+       u32 RemovalCount;
+      
+       struct ga_asset_removal
+       {
+           u32 FileGUID[8];
+           u32 AssetIndex;
+       };
+
+     */
 };
 
 struct ga_tag
