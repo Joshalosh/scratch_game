@@ -3,7 +3,8 @@
 #include "math.h"
 
 #if COMPILER_MSVC
-#define CompletePreviousWritesBeforeFutureWrites _WriteBarrier();
+#define CompletePreviousReadsBeforeFutureReads _ReadBarrier()
+#define CompletePreviousWritesBeforeFutureWrites _WriteBarrier()
 inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
 {
     uint32_t Result = _InterlockedCompareExchange((long *)Value, New, Expected);
@@ -11,6 +12,8 @@ inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t N
     return(Result);
 }
 #elif COMPILER_LLVM
+// TODO: Does LLVM have real read-specific barriers yet?
+#define CompletePreviousReadsBeforeFutureReads asm volatile("" ::: "memory")
 #define CompletePreviuosWritesBeforeFutureWrites asm volatile("" ::: "memory")
 inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
 {
@@ -19,7 +22,7 @@ inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t N
     return(Result);
 }
 #else
-// I need to GCC/LLVM equivalents.
+// TODO: Other compilers / platforms.
 #endif
 
 inline int32_t

@@ -241,7 +241,7 @@ typedef struct game_input
 
 typedef struct platform_file_handle 
 {
-    b32 HasErrors;
+    b32 NoErrors;
 } platform_file_handle;
 
 typedef struct platform_file_group

@@ -24,6 +24,12 @@ struct asset_slot
     };
 };
 
+struct asset
+{
+    ga_asset GA;
+    u32 FileIndex;
+};
+
 struct asset_vector
 {
     real32 E[Tag_Count];
@@ -37,7 +43,7 @@ struct asset_type
 
 struct asset_file
 {
-    platform_file_handle Handle;
+    platform_file_handle *Handle;
 
     // TODO: If we ever do thread stack, AssetTypeArray
     // doesn't actually need to be kept here probably.
@@ -62,14 +68,14 @@ struct game_assets
     ga_tag *Tags;
 
     uint32_t AssetCount;
-    ga_asset *Assets;
+    asset *Assets;
     asset_slot *Slots;
 
     asset_type AssetTypes[Asset_Count];
 
+#if 0
     u8 *GAContents;
 
-#if 0
     // Structured assets.
 //    hero_bitmaps HeroBitmaps[4];
 
@@ -85,7 +91,13 @@ inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
     asset_slot *Slot = Assets->Slots + ID.Value;
-    loaded_bitmap *Result = (Slot->State >= AssetState_Loaded) ? Slot->Bitmap : 0;
+
+    loaded_bitmap *Result = 0;
+    if(Slot->State >= AssetState_Loaded)
+    {
+        CompletePreviousReadsBeforeFutureReads;
+        Result = Slot->Bitmap;
+    }
 
     return(Result);
 }
@@ -94,7 +106,13 @@ inline loaded_sound *GetSound(game_assets *Assets, sound_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
     asset_slot *Slot = Assets->Slots + ID.Value;
-    loaded_sound *Result = (Slot->State >= AssetState_Loaded) ? Slot->Sound : 0;
+
+    loaded_sound *Result = 0;
+    if(Slot->State >= AssetState_Loaded)
+    {
+        CompletePreviousReadsBeforeFutureReads;
+        Result = Slot->Sound;
+    }
 
     return(Result);
 }
@@ -103,7 +121,7 @@ inline ga_sound *
 GetSoundInfo(game_assets *Assets, sound_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
-    ga_sound *Result = &Assets->Assets[ID.Value].Sound;
+    ga_sound *Result = &Assets->Assets[ID.Value].GA.Sound;
 
     return(Result);
 }

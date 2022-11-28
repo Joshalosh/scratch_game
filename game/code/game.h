@@ -6,6 +6,7 @@
  - Flush all thread queues before loading DLL.
 
  - Audio
+   - Fix the clicking bug at the end of samples.
    - Sound effect triggers
    - Ambient sounds
    - Music
@@ -229,6 +230,14 @@ ZeroSize(memory_index Size, void *Ptr)
     {
         *Byte++ = 0;
     }
+}
+
+inline void
+Copy(memory_index Size, void *SourceInit, void *DestInit)
+{
+    u8 *Source = (u8 *)SourceInit;
+    u8 *Dest = (u8 *)DestInit;
+    while(Size--) {*Dest++ = *Source++;}
 }
 
 #include "game_intrinsics.h"
