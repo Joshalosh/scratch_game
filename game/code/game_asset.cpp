@@ -252,8 +252,8 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     }
     Assets->TagRange[Tag_FacingDirection] = Tau32;
 
-    Assets->TagCount = 0;
-    Assets->AssetCount = 0;
+    Assets->TagCount = 1;
+    Assets->AssetCount = 1;
 
     {
         platform_file_group FileGroup = Platform.GetAllFilesOfTypeBegin("ga");
@@ -286,8 +286,10 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
             if(PlatformNoFileErrors(File->Handle))
             {
-                Assets->TagCount += File->Header.TagCount;
-                Assets->AssetCount += File->Header.AssetCount;
+                // The first asset and tag slot in every GA is a null (reserved)
+                // sow we don't count it as something we will need space for.
+                Assets->TagCount += (File->Header.TagCount - 1);
+                Assets->AssetCount += (File->Header.AssetCount - 1);
             }
             else
             {
@@ -303,20 +305,28 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
     Assets->Tags = PushArray(Arena, Assets->TagCount, ga_tag);
 
+    // Reserve one null asset at the beginning.
+    ZeroStruct(Assets->Tags[0]);
+
     // Load tags.
     for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
     {
         asset_file *File = Assets->Files + FileIndex;
         if(PlatformNoFileErrors(File->Handle))
         {
-            u32 TagArraySize = sizeof(ga_tag)*File->Header.TagCount;
-            Platform.ReadDataFromFile(File->Handle, File->Header.Tags, TagArraySize, Assets->Tags + File->TagBase);
+            u32 TagArraySize = sizeof(ga_tag)*(File->Header.TagCount - 1);
+            Platform.ReadDataFromFile(File->Handle, File->Header.Tags + sizeof(ga_tag),
+                                      TagArraySize, Assets->Tags + File->TagBase);
         }
     }
 
+    // Reserve one null asset at the beginning.
+    u32 AssetCount = 0;
+    ZeroStruct(*(Assets->Assets + AssetCount));
+    ++AssetCount;
+
     // TODO: How would I do this in a way that could scale gracefully to 
     // hundred of asset pack files.
-    u32 AssetCount = 0;
     for(u32 DestTypeID = 0; DestTypeID < Asset_Count; ++DestTypeID)
     {
         asset_type *DestType = Assets->AssetTypes + DestTypeID;
@@ -350,8 +360,15 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
                             Asset->FileIndex = FileIndex;
                             Asset->GA = *GAAsset;
-                            Asset->GA.FirstTagIndex += File->TagBase;
-                            Asset->GA.OnePastLastTagIndex += File->TagBase;
+                            if(Asset->GA.FirstTagIndex == 0)
+                            {
+                                Asset->GA.FirstTagIndex = Asset->GA.OnePastLastTagIndex = 0;
+                            }
+                            else
+                            {
+                                Asset->GA.FirstTagIndex += (File->TagBase - 1);
+                                Asset->GA.OnePastLastTagIndex += (File->TagBase - 1);
+                            }
                         }
 
                         EndTemporaryMemory(TempMem);
@@ -364,40 +381,6 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     }
 
     Assert(AssetCount == Assets->AssetCount);
-
-#if 0
-    debug_read_file_result ReadResult = Platform.DEBUGReadEntireFile("test.ga");
-    if(ReadResult.ContentsSize != 0)
-    {
-        ga_header *Header = (ga_header *)ReadResult.Contents;
-
-        Assets->AssetCount = Header->AssetCount;
-        Assets->Assets = (ga_asset *)((u8 *)ReadResult.Contents + Header->Assets);
-        Assets->Slots = PushArray(Arena, Assets->AssetCount, asset_slot);
-
-        Assets->TagCount = Header->TagCount;
-        Assets->Tags = (ga_tag *)((u8 *)ReadResult.Contents + Header->Tags);
-
-        ga_asset_type *GAAssetTypes = (ga_asset_type *)((u8 *)ReadResult.Contents + Header->AssetTypes);
-
-        for(u32 Index = 0; Index < Header->AssetTypeCount; ++Index)
-        {
-            ga_asset_type *Source = GAAssetTypes + Index;
-
-            if(Source->TypeID < Asset_Count)
-            {
-                asset_type *Dest = Assets->AssetTypes + Source->TypeID;
-                // TODO: Support merging.
-                Assert(Dest->FirstAssetIndex == 0);
-                Assert(Dest->OnePastLastAssetIndex == 0);
-                Dest->FirstAssetIndex = Source->FirstAssetIndex;
-                Dest->OnePastLastAssetIndex = Source->OnePastLastAssetIndex;
-            }
-        }
-
-        Assets->GAContents = (u8 *)ReadResult.Contents;
-    }
-#endif
 
     return(Assets);
 }

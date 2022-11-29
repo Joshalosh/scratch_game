@@ -1186,7 +1186,7 @@ internal PLATFORM_GET_ALL_FILE_OF_TYPE_END(Win32GetAllFilesOfTypeEnd)
 internal PLATFORM_OPEN_FILE(Win32OpenFile)
 {
     // TODO: Actually implement this.
-    char *Filename = "test.ga";
+    char *Filename = "test2.ga";
 
     // TODO: Maybe someday make an actual arena used by Win32
     win32_platform_file_handle *Result = (win32_platform_file_handle *)VirtualAlloc(0, sizeof(win32_platform_file_handle),
