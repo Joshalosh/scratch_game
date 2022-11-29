@@ -265,11 +265,11 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
             File->TagBase = Assets->TagCount;
 
-            u32 AssetTypeArraySize = File->Header.AssetTypeCount*sizeof(ga_asset_type);
-
             ZeroStruct(File->Header);
             File->Handle = Platform.OpenFile(FileGroup, FileIndex);
             Platform.ReadDataFromFile(File->Handle, 0, sizeof(File->Header), &File->Header);
+
+            u32 AssetTypeArraySize = File->Header.AssetTypeCount*sizeof(ga_asset_type);
             File->AssetTypeArray = (ga_asset_type *)PushSize(Arena, AssetTypeArraySize);
             Platform.ReadDataFromFile(File->Handle, File->Header.AssetTypes,
                                      AssetTypeArraySize, File->AssetTypeArray);

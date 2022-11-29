@@ -29,6 +29,8 @@ struct ga_header
     u64 AssetTypes; // ga_asset_type[AssetTypeCount]
     u64 Assets; // ga_asset[AssetCount]
 
+    // TODO: Primacy numbers for asset files.
+    
     /* TODO:
        u32 FileGUID[8];
        u32 RemovalCount;
