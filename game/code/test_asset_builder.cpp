@@ -398,7 +398,7 @@ AddSoundAsset(game_assets *Assets, char *Filename, u32 FirstSampleIndex = 0, u32
     GA->FirstTagIndex = Assets->TagCount;
     GA->OnePastLastTagIndex = GA->FirstTagIndex;
     GA->Sound.SampleCount = SampleCount;
-    GA->Sound.NextIDToPlay.Value = 0;
+    GA->Sound.Chain = GASoundChain_None;
 
     Source->Type = AssetType_Sound;
     Source->Filename = Filename;
@@ -510,6 +510,9 @@ Initialise(game_assets *Assets)
     Assets->AssetCount = 1;
     Assets->DEBUGAssetType = 0;
     Assets->AssetIndex = 0;
+
+    Assets->AssetTypeCount = Asset_Count;
+    memset(Assets->AssetTypes, 0, sizeof(Assets->AssetTypes));
 }
 
 internal void
@@ -632,7 +635,6 @@ WriteSounds(void)
     u32 OneMusicChunk = 10*48000;
     u32 TotalMusicSampleCount = 7468095;
     BeginAssetType(Assets, Asset_Music);
-    sound_id LastMusic = {0};
     for(u32 FirstSampleIndex = 0; FirstSampleIndex < TotalMusicSampleCount; FirstSampleIndex += OneMusicChunk)
     {
         u32 SampleCount = TotalMusicSampleCount - FirstSampleIndex;
@@ -641,11 +643,10 @@ WriteSounds(void)
             SampleCount = OneMusicChunk;
         }
         sound_id ThisMusic = AddSoundAsset(Assets, "test3/music_test.wav", FirstSampleIndex, SampleCount);
-        if(LastMusic.Value)
+        if((FirstSampleIndex + OneMusicChunk) < TotalMusicSampleCount)
         {
-            Assets->Assets[LastMusic.Value].Sound.NextIDToPlay = ThisMusic;
+            Assets->Assets[ThisMusic.Value].Sound.Chain = GASoundChain_Advance;
         }
-        LastMusic = ThisMusic;
     }
     EndAssetType(Assets);
 

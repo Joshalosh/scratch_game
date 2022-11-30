@@ -57,6 +57,12 @@ struct ga_asset_type
     u32 OnePastLastAssetIndex;
 };
 
+enum ga_sound_chain
+{
+    GASoundChain_None,
+    GASoundChain_Loop,
+    GASoundChain_Advance,
+};
 struct ga_bitmap
 {
     u32 Dim[2];
@@ -66,7 +72,7 @@ struct ga_sound
 {
     u32 SampleCount;
     u32 ChannelCount;
-    sound_id NextIDToPlay;
+    u32 Chain; // ga_sound_chain
 };
 struct ga_asset
 {

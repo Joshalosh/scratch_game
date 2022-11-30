@@ -147,5 +147,36 @@ inline void PrefetchBitmap(game_assets *Assets, bitmap_id ID) {LoadBitmap(Assets
 internal void LoadSound(game_assets *Assets, sound_id ID);
 inline void PrefetchSound(game_assets *Assets, sound_id ID) {LoadSound(Assets, ID);}
 
+inline sound_id GetNextSoundInChain(game_assets *Assets, sound_id ID)
+{
+    sound_id Result = {};
+
+    ga_sound *Info = GetSoundInfo(Assets, ID);
+    switch(Info->Chain)
+    {
+        case GASoundChain_None:
+        {
+            // Nothing to do.
+        } break;
+
+        case GASoundChain_Loop:
+        {
+            Result = ID;
+        } break;
+
+        case GASoundChain_Advance:
+        {
+            Result.Value = ID.Value + 1;
+        } break;
+
+        default:
+        {
+            InvalidCodePath;
+        } break;
+    }
+
+    return(Result);
+}
+
 #define GAME_ASSET_H
 #endif

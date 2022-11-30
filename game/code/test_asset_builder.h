@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
 #include "game_platform.h"
 #include "game_asset_type_id.h"
 #include "game_file_formats.h"
