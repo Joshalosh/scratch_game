@@ -272,7 +272,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
             u32 AssetTypeArraySize = File->Header.AssetTypeCount*sizeof(ga_asset_type);
             File->AssetTypeArray = (ga_asset_type *)PushSize(Arena, AssetTypeArraySize);
             Platform.ReadDataFromFile(File->Handle, File->Header.AssetTypes,
-                                     AssetTypeArraySize, File->AssetTypeArray);
+                                      AssetTypeArraySize, File->AssetTypeArray);
 
             if(File->Header.MagicValue != GA_MAGIC_VALUE)
             {

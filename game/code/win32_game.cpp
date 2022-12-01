@@ -1185,7 +1185,19 @@ internal PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(Win32GetAllFilesOfTypeBegin)
             0, sizeof(win32_platform_file_group),
             MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 
-    char *WildCard = "*.ga";
+    char *TypeAt = Type;
+    char WildCard[32] = "*.";
+    for(u32 WildCardIndex = 2; WildCardIndex < sizeof(WildCard); ++WildCardIndex)
+    {
+        WildCard[WildCardIndex] = *TypeAt;
+        if(*TypeAt == 0)
+        {
+            break;
+        }
+        
+        ++TypeAt;
+    }
+    WildCard[sizeof(WildCard) - 1] = 0;
 
     Win32FileGroup->H.FileCount = 0;
 
@@ -1200,11 +1212,7 @@ internal PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(Win32GetAllFilesOfTypeBegin)
             break;
         }
     }
-
-    if(FindHandle != INVALID_HANDLE_VALUE)
-    {
-        FindClose(FindHandle);
-    }
+    FindClose(FindHandle);
 
     Win32FileGroup->FindHandle = FindFirstFileA(WildCard, &Win32FileGroup->FindData);
 
@@ -1216,10 +1224,7 @@ internal PLATFORM_GET_ALL_FILE_OF_TYPE_END(Win32GetAllFilesOfTypeEnd)
     win32_platform_file_group *Win32FileGroup = (win32_platform_file_group *)FileGroup;
     if(Win32FileGroup)
     {
-        if(Win32FileGroup->FindHandle != INVALID_HANDLE_VALUE)
-        {
-            FindClose(Win32FileGroup->FindHandle);
-        }
+        FindClose(Win32FileGroup->FindHandle);
 
         VirtualFree(Win32FileGroup, 0, MEM_RELEASE);
     }

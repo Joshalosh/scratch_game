@@ -264,13 +264,12 @@ typedef PLATFORM_READ_DATA_FROM_FILE(platform_read_data_from_file);
 #define PLATFORM_FILE_ERROR(name) void name(platform_file_handle *Handle, char *Message)
 typedef PLATFORM_FILE_ERROR(platform_file_error);
 
-#define PlatformNoFileErrors(Handle) (!(Handle)->NoErrors)
+#define PlatformNoFileErrors(Handle) ((Handle)->NoErrors)
 
 struct platform_work_queue;
 #define PLATFORM_WORK_QUEUE_CALLBACK(name) void name(platform_work_queue *Queue, void *Data)
 typedef PLATFORM_WORK_QUEUE_CALLBACK(platform_work_queue_callback);
 
-typedef void platform_work_queue_callback(platform_work_queue *Queue, void *Data);
 typedef void platform_add_entry(platform_work_queue *Queue, platform_work_queue_callback *Callback, void *Data);
 typedef void platform_complete_all_work(platform_work_queue *Queue);
 
@@ -331,4 +330,3 @@ inline game_controller_input *GetController(game_input *Input, int unsigned Cont
 
 #define GAME_PLATFORM_H
 #endif
-
