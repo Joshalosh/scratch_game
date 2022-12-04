@@ -847,7 +847,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(64), TranState);
 
-        GameState->Music = PlaySound(&GameState->AudioState, GetFirstSoundFrom(TranState->Assets, Asset_Music));
+        GameState->Music = 0; // PlaySound(&GameState->AudioState, GetFirstSoundFrom(TranState->Assets, Asset_Music));
 
         // TODO: Pick a real number here.
         TranState->GroundBufferCount = 256;
@@ -1269,6 +1269,42 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     PushBitmap(RenderGroup, HeroBitmaps.Cape, HeroSizeC*1.2f, V3(0, 0, 0));
                     PushBitmap(RenderGroup, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
                     DrawHitPoints(Entity, RenderGroup);
+                    
+                    for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 1; ++ParticleSpawnIndex)
+                    {
+                        particle *Particle = GameState->Particles + GameState->NextParticle++;
+                        if(GameState->NextParticle >= ArrayCount(GameState->Particles))
+                        {
+                            GameState->NextParticle = 0;
+                        }
+
+                        Particle->P = V3(0, 0, 0);
+                        Particle->dP = V3(0, 1.0f, 0);
+                        Particle->Color = V4(1, 1, 1, 1);
+                        Particle->dColor = V4(0, 0, 0, -0.5f);
+                    }
+
+                    // Particle system test.
+                    for(u32 ParticleIndex = 0; ParticleIndex < ArrayCount(GameState->Particles); ++ParticleIndex)
+                    {
+                        particle *Particle = GameState->Particles + ParticleIndex;
+
+                        // Simulate the particle forward in time.
+                        Particle->P += Input->dtForFrame*Particle->dP;
+                        Particle->Color += Input->dtForFrame*Particle->dColor;
+
+                        // TODO: I should probably just clamp colours in the renderer.
+                        Particle->Color.r = Clamp01(Particle->Color.r);
+                        Particle->Color.g = Clamp01(Particle->Color.g);
+                        Particle->Color.b = Clamp01(Particle->Color.b);
+                        Particle->Color.a = Clamp01(Particle->Color.a);
+
+
+                        // Render the particle.
+                        PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow), 1.0f,
+                                   Particle->P, Particle->Color);
+                    }
+
                 } break;
 
                 case EntityType_Wall:
@@ -1420,16 +1456,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         MapP += YAxis + V2(0.0f, 6.0f);
     }
 #endif
-
-    // Particle system test.
-    for(u32 ParticleIndex = 0; ParticleIndex < ArrayCount(GameState->Particles); ++ParticleIndex)
-    {
-        particle *Particle = GameState->Particles + ParticleIndex;
-
-        // Simulate the particle forward in time.
-        // Render the particle.
-        PushBitmap(RenderGroup, GameState->TestParticle, 0.1f, Particle->P, Particle->Color);
-    }
 
     TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer);
 

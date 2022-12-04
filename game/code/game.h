@@ -294,9 +294,10 @@ struct hero_bitmap_ids
 
 struct particle
 {
-    v2 P;
-    v2 dP;
+    v3 P;
+    v3 dP;
     v4 Color;
+    v4 dColor;
 };
 
 struct game_state
