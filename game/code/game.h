@@ -292,6 +292,13 @@ struct hero_bitmap_ids
     bitmap_id Torso;
 };
 
+struct particle
+{
+    v2 P;
+    v2 dP;
+    v4 Color;
+};
+
 struct game_state
 {
     bool32 IsInitialised;
@@ -334,6 +341,9 @@ struct game_state
 
     audio_state AudioState;
     playing_sound *Music;
+
+    u32 NextParticle;
+    particle Particles[64];
 };
 
 struct task_with_memory

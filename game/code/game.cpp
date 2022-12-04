@@ -1421,6 +1421,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 #endif
 
+    // Particle system test.
+    for(u32 ParticleIndex = 0; ParticleIndex < ArrayCount(GameState->Particles); ++ParticleIndex)
+    {
+        particle *Particle = GameState->Particles + ParticleIndex;
+
+        // Simulate the particle forward in time.
+        // Render the particle.
+        PushBitmap(RenderGroup, GameState->TestParticle, 0.1f, Particle->P, Particle->Color);
+    }
+
     TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer);
 
     // TODO: Make sure we hoist the camera update out to a place where the
