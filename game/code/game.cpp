@@ -1285,8 +1285,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Particle->Color = V4(RandomBetween(&GameState->EffectsEntropy, 0.75f, 1.0f),
                                              RandomBetween(&GameState->EffectsEntropy, 0.75f, 1.0f),
                                              RandomBetween(&GameState->EffectsEntropy, 0.75f, 1.0f),
-                                             0.25f);
-                        Particle->dColor = V4(0, 0, 0, -0.1f);
+                                             1.0f);
+                        Particle->dColor = V4(0, 0, 0, -0.5f);
                     }
 
                     // Particle system test.
@@ -1305,6 +1305,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Color.b = Clamp01(Particle->Color.b);
                         Color.a = Clamp01(Particle->Color.a);
 
+                        if(Color.a > 0.9f)
+                        {
+                            Color.a = 0.9f*Clamp01MapToRange(1.0f, Color.a, 0.9f);
+                        }
 
                         // Render the particle.
                         PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Head), 1.0f,
