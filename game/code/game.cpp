@@ -627,7 +627,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32_t TilesPerWidth = 17;
         uint32_t TilesPerHeight = 9;
 
-        GameState->GeneralEntropy = RandomSeed(1234);
+        GameState->EffectsEntropy = RandomSeed(1234);
         GameState->TypicalFloorHeight = 3.0f;
 
         // TODO: Remove this.
@@ -1191,7 +1191,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                     MakeEntitySpatial(Sword, Entity->P, Entity->dP + 5.0f*V3(ConHero->dSword, 0));
                                     AddCollisionRule(GameState, Sword->StorageIndex, Entity->StorageIndex, false);
 
-                                    PlaySound(&GameState->AudioState, GetRandomSoundFrom(TranState->Assets, Asset_Bloop, &GameState->GeneralEntropy));
+                                    PlaySound(&GameState->AudioState, GetRandomSoundFrom(TranState->Assets, Asset_Bloop, &GameState->EffectsEntropy));
                                 }
                             }
                         }
@@ -1270,7 +1270,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     PushBitmap(RenderGroup, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
                     DrawHitPoints(Entity, RenderGroup);
                     
-                    for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 1; ++ParticleSpawnIndex)
+                    for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 2; ++ParticleSpawnIndex)
                     {
                         particle *Particle = GameState->Particles + GameState->NextParticle++;
                         if(GameState->NextParticle >= ArrayCount(GameState->Particles))
@@ -1278,10 +1278,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             GameState->NextParticle = 0;
                         }
 
-                        Particle->P = V3(0, 0, 0);
-                        Particle->dP = V3(0, 1.0f, 0);
-                        Particle->Color = V4(1, 1, 1, 1);
-                        Particle->dColor = V4(0, 0, 0, -0.5f);
+                        Particle->P = V3(RandomBetween(&GameState->EffectsEntropy, -0.25f, 0.25f), 0, 0);
+                        Particle->dP = V3(RandomBetween(&GameState->EffectsEntropy, -0.5f, 0.5f), 
+                                          RandomBetween(&GameState->EffectsEntropy, 0.7f, 1.0f),
+                                          0.0f);
+                        Particle->Color = V4(RandomBetween(&GameState->EffectsEntropy, 0.75f, 1.0f),
+                                             RandomBetween(&GameState->EffectsEntropy, 0.75f, 1.0f),
+                                             RandomBetween(&GameState->EffectsEntropy, 0.75f, 1.0f),
+                                             0.25f);
+                        Particle->dColor = V4(0, 0, 0, -0.1f);
                     }
 
                     // Particle system test.
@@ -1294,15 +1299,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Particle->Color += Input->dtForFrame*Particle->dColor;
 
                         // TODO: I should probably just clamp colours in the renderer.
-                        Particle->Color.r = Clamp01(Particle->Color.r);
-                        Particle->Color.g = Clamp01(Particle->Color.g);
-                        Particle->Color.b = Clamp01(Particle->Color.b);
-                        Particle->Color.a = Clamp01(Particle->Color.a);
+                        v4 Color;
+                        Color.r = Clamp01(Particle->Color.r);
+                        Color.g = Clamp01(Particle->Color.g);
+                        Color.b = Clamp01(Particle->Color.b);
+                        Color.a = Clamp01(Particle->Color.a);
 
 
                         // Render the particle.
-                        PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow), 1.0f,
-                                   Particle->P, Particle->Color);
+                        PushBitmap(RenderGroup, GetFirstBitmapFrom(TranState->Assets, Asset_Head), 1.0f,
+                                   Particle->P, Color);
                     }
 
                 } break;

@@ -337,14 +337,14 @@ struct game_state
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;
 
-    random_series GeneralEntropy;
+    random_series EffectsEntropy; // This is entropy that doesn't affect the gameplay.
     real32 tSine;
 
     audio_state AudioState;
     playing_sound *Music;
 
     u32 NextParticle;
-    particle Particles[64];
+    particle Particles[256];
 };
 
 struct task_with_memory
