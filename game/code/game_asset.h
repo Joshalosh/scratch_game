@@ -16,7 +16,7 @@ enum asset_state
 };
 struct asset_slot
 {
-    asset_state State;
+    u32 State;
     union
     {
         loaded_bitmap *Bitmap;

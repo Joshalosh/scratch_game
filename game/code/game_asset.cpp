@@ -54,9 +54,9 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
 
             Bitmap->AlignPercentage = V2(Info->AlignPercentage[0], Info->AlignPercentage[1]);
             Bitmap->WidthOverHeight = (r32)Info->Dim[0] / (r32)Info->Dim[1];
-            Bitmap->Width = Info->Dim[0];
-            Bitmap->Height = Info->Dim[1];
-            Bitmap->Pitch = 4*Info->Dim[0];
+            Bitmap->Width = SafeTruncateToUInt16(Info->Dim[0]);
+            Bitmap->Height = SafeTruncateToUInt16(Info->Dim[1]);
+            Bitmap->Pitch = 4*SafeTruncateToUInt16(Info->Dim[0]);
             u32 MemorySize = Bitmap->Pitch*Bitmap->Height;
             Bitmap->Memory = PushSize(&Assets->Arena, MemorySize);
 
