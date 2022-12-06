@@ -9,7 +9,7 @@ struct load_asset_work
     u64 Size;
     void *Destination;
 
-    asset_state FinalState;
+    u32 FinalState;
 };
 internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
 {
@@ -19,12 +19,14 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
 
     CompletePreviousWritesBeforeFutureWrites;
 
-    // TODO: Should I actually fill in random data here and set to final state anyway,
-    // or continue trying to load?
-    if(PlatformNoFileErrors(Work->Handle))
+    if(!PlatformNoFileErrors(Work->Handle))
     {
-        Work->Slot->State = Work->FinalState;
+        // TODO: Should I actually fill in random data here and set to final state anyway,
+        // or continue trying to load?
+        ZeroSize(Work->Size, Work->Destination);
     }
+
+    Work->Slot->State = Work->FinalState;
 
     EndTaskWithMemory(Work->Task);
 }
@@ -34,6 +36,62 @@ GetFileHandleFor(game_assets *Assets, u32 FileIndex)
 {
     Assert(FileIndex < Assets->FileCount);
     platform_file_handle *Result = Assets->Files[FileIndex].Handle;
+
+    return(Result);
+}
+
+inline void *
+AcquireAssetMemory(game_assets *Assets, memory_index Size)
+{
+    void *Result = Platform.AllocateMemory(Size);
+    if(Result)
+    {
+        Assets->TotalMemoryUsed += Size;
+    }
+    return(Result);
+}
+
+inline void
+ReleaseAssetMemory(game_assets *Assets, memory_index Size, void *Memory)
+{
+    if(Memory)
+    {
+        Assets->TotalMemoryUsed -= Size;
+    }
+    Platform.DeallocateMemory(Memory);
+}
+
+struct asset_memory_size
+{
+    u32 Total;
+    u32 Section;
+};
+
+asset_memory_size
+GetSizeOfAsset(game_assets *Assets, u32 Type, u32 SlotIndex)
+{
+    asset *Asset = Assets->Assets + SlotIndex;
+
+    asset_memory_size Result = {};
+
+    if(Type == AssetState_Sound)
+    {
+        ga_sound *Info = &Asset->GA.Sound;
+
+        Result.Section = Info->SampleCount*sizeof(s16);
+        Result.Total = Info->ChannelCount*Result.Section;
+    }
+    else
+    {
+        Assert(Type == AssetState_Bitmap);
+
+        ga_bitmap *Info = &Asset->GA.Bitmap;
+
+        u32 Width = SafeTruncateToUInt16(Info->Dim[0]);
+        u32 Height = SafeTruncateToUInt16(Info->Dim[1]);
+        Result.Section = 4*Width;
+        Result.Total = Height*Result.Section;
+    }
 
     return(Result);
 }
@@ -57,9 +115,11 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
             Bitmap->WidthOverHeight = (r32)Info->Dim[0] / (r32)Info->Dim[1];
             Bitmap->Width = SafeTruncateToUInt16(Info->Dim[0]);
             Bitmap->Height = SafeTruncateToUInt16(Info->Dim[1]);
-            Bitmap->Pitch = 4*SafeTruncateToUInt16(Info->Dim[0]);
-            u32 MemorySize = Bitmap->Pitch*Bitmap->Height;
-            Bitmap->Memory = PushSize(&Assets->Arena, MemorySize);
+
+            asset_memory_size Size = GetSizeOfAsset(Assets, AssetState_Bitmap, ID.Value);
+            Bitmap->Pitch = SafeTruncateToInt16(Size.Section);
+            memory_index MemorySize = Size.Total;
+            Bitmap->Memory = AcquireAssetMemory(Assets, MemorySize); // PushSize(&Assets->Arena, MemorySize);
 
             load_asset_work *Work = PushStruct(&Task->Arena, load_asset_work);
             Work->Task = Task;
@@ -68,7 +128,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
             Work->Offset = Asset->GA.DataOffset;
             Work->Size = MemorySize;
             Work->Destination = Bitmap->Memory;
-            Work->FinalState = AssetState_Loaded;
+            Work->FinalState = (AssetState_Bitmap|AssetState_Loaded);
 
             Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
@@ -96,10 +156,10 @@ LoadSound(game_assets *Assets, sound_id ID)
             loaded_sound *Sound = &Slot->Sound;
             Sound->SampleCount = Info->SampleCount;
             Sound->ChannelCount = Info->ChannelCount;
-            u32 ChannelSize = Sound->SampleCount*sizeof(s16);
-            u32 MemorySize = Sound->ChannelCount*ChannelSize;
-
-            void *Memory = PushSize(&Assets->Arena, MemorySize);
+            asset_memory_size Size = GetSizeOfAsset(Assets, AssetState_Sound, ID.Value);
+            u32 ChannelSize = Size.Section;
+            u32 MemorySize = Size.Total;
+            void *Memory = AcquireAssetMemory(Assets, MemorySize); // PushSize(&Assets->Arena, MemorySize);
 
             s16 *SoundAt = (s16 *)Memory;
             for(u32 ChannelIndex = 0; ChannelIndex < Sound->ChannelCount; ++ChannelIndex)
@@ -115,7 +175,7 @@ LoadSound(game_assets *Assets, sound_id ID)
             Work->Offset = Asset->GA.DataOffset;
             Work->Size = MemorySize;
             Work->Destination = Memory;
-            Work->FinalState = AssetState_Loaded;
+            Work->FinalState = (AssetState_Sound|AssetState_Loaded);
 
             Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
@@ -245,6 +305,8 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     game_assets *Assets = PushStruct(Arena, game_assets);
     SubArena(&Assets->Arena, Arena, Size);
     Assets->TranState = TranState;
+    Assets->TotalMemoryUsed = 0;
+    Assets->TargetMemoryUsed = Size;
 
     for(uint32_t TagType = 0; TagType < Tag_Count; ++TagType)
     {
@@ -383,4 +445,46 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assert(AssetCount == Assets->AssetCount);
 
     return(Assets);
+}
+
+internal void
+EvictAsset(game_assets *Assets, u32 SlotIndex)
+{
+    asset_slot *Slot = Assets->Slots + SlotIndex;
+    Assert(GetState(Slot) == AssetState_Loaded);
+
+    asset_memory_size Size = GetSizeOfAsset(Assets, GetType(Slot), SlotIndex);
+    void *Memory = 0;
+    if(GetType(Slot) == AssetState_Sound)
+    {
+        Memory = Slot->Sound.Samples[0];
+    }
+    else
+    {
+        Assert(GetType(Slot) == AssetState_Bitmap);
+        Memory = Slot->Bitmap.Memory;
+    }
+    ReleaseAssetMemory(Assets, Size.Total, Memory);
+
+    Slot->State = AssetState_Unloaded;
+}
+
+internal void
+EvictAssetsAsNecessary(game_assets *Assets)
+{
+#if 0
+    while(Assets->TotalMemoryUsed > Assets->TargetMemoryUsed)
+    {
+        u32 SlotIndex = GetLastRecentlyUsedAsset(Assets);
+        if(SlotIndex)
+        {
+            EvictAsset(Assets, SlotIndex);
+        }
+        else
+        {
+            InvalidCodePath;
+            break;
+        }
+    }
+#endif
 }

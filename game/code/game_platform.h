@@ -100,7 +100,7 @@ typedef real64 r64;
 inline uint32_t
 SafeTruncateUInt64(uint64_t Value)
 {
-    // TODO: Define maximum values i.e UInt32Max
+    // TODO: Defines maximum values.
     Assert(Value <= 0xFFFFFFFF);
     uint32_t Result = (uint32_t)Value;
     return(Result);
@@ -113,6 +113,16 @@ SafeTruncateToUInt16(s32 Value)
     Assert(Value <= 65535);
     Assert(Value >= 0);
     u16 Result = (u16)Value;
+    return(Result);
+}
+
+inline s16
+SafeTruncateToInt16(s32 Value)
+{
+    // TODO: Defines for maximum values.
+    Assert(Value < 32767);
+    Assert(Value >= -32768);
+    s16 Result = (s16)Value;
     return(Result);
 }
 
