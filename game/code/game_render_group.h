@@ -30,6 +30,7 @@ struct loaded_bitmap
     r32 WidthOverHeight;
     s16 Width;
     s16 Height;
+    // TODO: Get rid of the pitch.
     s16 Pitch;
 };
 

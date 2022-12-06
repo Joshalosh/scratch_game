@@ -845,9 +845,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             SubArena(&Task->Arena, &TranState->TranArena, Megabytes(1));
         }
 
-        TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(2), TranState);
+        TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(3), TranState);
 
-        GameState->Music = 0; // PlaySound(&GameState->AudioState, GetFirstSoundFrom(TranState->Assets, Asset_Music));
+        GameState->Music = PlaySound(&GameState->AudioState, GetFirstSoundFrom(TranState->Assets, Asset_Music));
 
         // TODO: Pick a real number here.
         TranState->GroundBufferCount = 256;

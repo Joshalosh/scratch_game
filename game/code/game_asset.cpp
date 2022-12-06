@@ -41,8 +41,9 @@ GetFileHandleFor(game_assets *Assets, u32 FileIndex)
 internal void
 LoadBitmap(game_assets *Assets, bitmap_id ID)
 {
+    asset_slot *Slot = Assets->Slots + ID.Value;
     if(ID.Value &&
-       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Slots[ID.Value].State, AssetState_Queued, AssetState_Unloaded) ==
+       (AtomicCompareExchangeUInt32((uint32_t *)&Slot->State, AssetState_Queued, AssetState_Unloaded) ==
         AssetState_Unloaded))
     {
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
@@ -50,7 +51,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
         {
             asset *Asset = Assets->Assets + ID.Value;
             ga_bitmap *Info = &Asset->GA.Bitmap;
-            loaded_bitmap *Bitmap = PushStruct(&Assets->Arena, loaded_bitmap);
+            loaded_bitmap *Bitmap = &Slot->Bitmap;
 
             Bitmap->AlignPercentage = V2(Info->AlignPercentage[0], Info->AlignPercentage[1]);
             Bitmap->WidthOverHeight = (r32)Info->Dim[0] / (r32)Info->Dim[1];
@@ -68,13 +69,12 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
             Work->Size = MemorySize;
             Work->Destination = Bitmap->Memory;
             Work->FinalState = AssetState_Loaded;
-            Work->Slot->Bitmap = Bitmap;
 
             Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
         else
         {
-            Assets->Slots[ID.Value].State = AssetState_Unloaded;
+            Slot->State = AssetState_Unloaded;
         }
     }
 }
@@ -82,8 +82,9 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
 internal void
 LoadSound(game_assets *Assets, sound_id ID)
 {
+    asset_slot *Slot = Assets->Slots + ID.Value; 
     if(ID.Value &&
-       (AtomicCompareExchangeUInt32((uint32_t *)&Assets->Slots[ID.Value].State, AssetState_Queued, AssetState_Unloaded) ==
+       (AtomicCompareExchangeUInt32((uint32_t *)&Slot->State, AssetState_Queued, AssetState_Unloaded) ==
         AssetState_Unloaded))
     {
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
@@ -92,7 +93,7 @@ LoadSound(game_assets *Assets, sound_id ID)
             asset *Asset = Assets->Assets + ID.Value;
             ga_sound *Info = &Asset->GA.Sound;
 
-            loaded_sound *Sound = PushStruct(&Assets->Arena, loaded_sound);
+            loaded_sound *Sound = &Slot->Sound;
             Sound->SampleCount = Info->SampleCount;
             Sound->ChannelCount = Info->ChannelCount;
             u32 ChannelSize = Sound->SampleCount*sizeof(s16);
@@ -115,7 +116,6 @@ LoadSound(game_assets *Assets, sound_id ID)
             Work->Size = MemorySize;
             Work->Destination = Memory;
             Work->FinalState = AssetState_Loaded;
-            Work->Slot->Sound = Sound;
 
             Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
