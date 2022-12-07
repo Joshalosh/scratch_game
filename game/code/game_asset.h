@@ -48,6 +48,14 @@ struct asset_type
     uint32_t OnePastLastAssetIndex;
 };
 
+struct asset_memory_header
+{
+    asset_memory_header *Next;
+    asset_memory_header *Prev;
+    u32 SlotIndex;
+    u32 SlotReserved;
+};
+
 struct asset_file
 {
     platform_file_handle *Handle;
@@ -68,6 +76,7 @@ struct game_assets
 
     u64 TargetMemoryUsed;
     u64 TotalMemoryUsed;
+    asset_memory_header LoadedAssetSentinel;
 
     real32 TagRange[Tag_Count];
 
