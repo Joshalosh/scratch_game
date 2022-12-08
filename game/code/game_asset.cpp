@@ -100,12 +100,13 @@ GetSizeOfAsset(game_assets *Assets, u32 Type, u32 SlotIndex)
 }
 
 internal void
-AddAssetHeaderToList(game_assets *Assets, void *Memory, asset_memory_size Size)
+AddAssetHeaderToList(game_assets *Assets, u32 SlotIndex, void *Memory, asset_memory_size Size)
 {
     asset_memory_header *Header = (asset_memory_header *)((u8 *)Memory + Size.Data);
 
     asset_memory_header *Sentinel = &Assets->LoadedAssetSentinel;
 
+    Header->SlotIndex = SlotIndex;
     Header->Prev = Sentinel;
     Header->Next = Sentinel->Next;
     
@@ -118,6 +119,8 @@ RemoveAssetHeaderFromList(asset_memory_header *Header)
 {
     Header->Prev->Next = Header->Next;
     Header->Next->Prev = Header->Prev;
+
+    Header->Next = Header->Prev = 0;
 }
 
 internal void
@@ -142,7 +145,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
 
             asset_memory_size Size = GetSizeOfAsset(Assets, AssetState_Bitmap, ID.Value);
             Bitmap->Pitch = SafeTruncateToInt16(Size.Section);
-            Bitmap->Memory = AcquireAssetMemory(Assets, Size.Data); // PushSize(&Assets->Arena, MemorySize);
+            Bitmap->Memory = AcquireAssetMemory(Assets, Size.Total); // PushSize(&Assets->Arena, MemorySize);
 
             load_asset_work *Work = PushStruct(&Task->Arena, load_asset_work);
             Work->Task = Task;
@@ -153,7 +156,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
             Work->Destination = Bitmap->Memory;
             Work->FinalState = (AssetState_Bitmap|AssetState_Loaded);
 
-            AddAssetHeaderToList(Assets, Bitmap->Memory, Size);
+            AddAssetHeaderToList(Assets, ID.Value, Bitmap->Memory, Size);
 
             Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
@@ -184,7 +187,7 @@ LoadSound(game_assets *Assets, sound_id ID)
             asset_memory_size Size = GetSizeOfAsset(Assets, AssetState_Sound, ID.Value);
             u32 ChannelSize = Size.Section;
             u32 MemorySize = Size.Total;
-            void *Memory = AcquireAssetMemory(Assets, MemorySize); // PushSize(&Assets->Arena, MemorySize);
+            void *Memory = AcquireAssetMemory(Assets, Size.Total); // PushSize(&Assets->Arena, MemorySize);
 
             s16 *SoundAt = (s16 *)Memory;
             for(u32 ChannelIndex = 0; ChannelIndex < Sound->ChannelCount; ++ChannelIndex)
@@ -198,11 +201,11 @@ LoadSound(game_assets *Assets, sound_id ID)
             Work->Slot = Assets->Slots + ID.Value;
             Work->Handle = GetFileHandleFor(Assets, Asset->FileIndex);
             Work->Offset = Asset->GA.DataOffset;
-            Work->Size = MemorySize;
+            Work->Size = Size.Data;
             Work->Destination = Memory;
             Work->FinalState = (AssetState_Sound|AssetState_Loaded);
 
-            AddAssetHeaderToList(Assets, Memory, Size);
+            AddAssetHeaderToList(Assets, ID.Value, Memory, Size);
 
             Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
@@ -334,6 +337,8 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assets->TranState = TranState;
     Assets->TotalMemoryUsed = 0;
     Assets->TargetMemoryUsed = Size;
+
+    Assets->LoadedAssetSentinel.Next = Assets->LoadedAssetSentinel.Prev = &Assets->LoadedAssetSentinel;
 
     for(uint32_t TagType = 0; TagType < Tag_Count; ++TagType)
     {
@@ -475,8 +480,10 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 }
 
 internal void
-EvictAsset(game_assets *Assets, u32 SlotIndex)
+EvictAsset(game_assets *Assets, asset_memory_header *Header)
 {
+    u32 SlotIndex = Header->SlotIndex;
+
     asset_slot *Slot = Assets->Slots + SlotIndex;
     Assert(GetState(Slot) == AssetState_Loaded);
 
@@ -491,6 +498,8 @@ EvictAsset(game_assets *Assets, u32 SlotIndex)
         Assert(GetType(Slot) == AssetState_Bitmap);
         Memory = Slot->Bitmap.Memory;
     }
+
+    RemoveAssetHeaderFromList(Header);
     ReleaseAssetMemory(Assets, Size.Total, Memory);
 
     Slot->State = AssetState_Unloaded;
@@ -499,13 +508,12 @@ EvictAsset(game_assets *Assets, u32 SlotIndex)
 internal void
 EvictAssetsAsNecessary(game_assets *Assets)
 {
-#if 0
     while(Assets->TotalMemoryUsed > Assets->TargetMemoryUsed)
     {
-        u32 SlotIndex = GetLastRecentlyUsedAsset(Assets);
-        if(SlotIndex)
+        asset_memory_header *Asset = Assets->LoadedAssetSentinel.Prev;
+        if(Asset != &Assets->LoadedAssetSentinel)
         {
-            EvictAsset(Assets, SlotIndex);
+            EvictAsset(Assets, Asset);
         }
         else
         {
@@ -513,5 +521,4 @@ EvictAssetsAsNecessary(game_assets *Assets)
             break;
         }
     }
-#endif
 }
