@@ -356,7 +356,7 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
         v2 HalfDim = 0.5f*V2(Width, Height);
 
         // TODO: Decide what the pushbuffer size is.
-        render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &Task->Arena, 0);
+        render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &Task->Arena, 0, true);
         Orthographic(RenderGroup, Buffer->Width, Buffer->Height, (Buffer->Width - 2) / Width);
         Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));
 
@@ -1001,7 +1001,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
 
     // TODO: Need to figure out what the pushbuffer size is.
-    render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(4));
+    render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(4), false);
     real32 WidthOfMonitor = 0.635f; // Horizontal measurement of monitor in metres
     real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
     real32 FocalLength = 0.6f;

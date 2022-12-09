@@ -99,19 +99,24 @@ GetSizeOfAsset(game_assets *Assets, u32 Type, u32 SlotIndex)
     return(Result);
 }
 
+inline void
+InsertAssetHeaderAtFront(game_assets *Assets, asset_memory_header *Header)
+{
+    asset_memory_header *Sentinel = &Assets->LoadedAssetSentinel;
+
+    Header->Prev = Sentinel;
+    Header->Next = Sentinel->Next;
+
+    Header->Next->Prev = Header;
+    Header->Prev->Next = Header;
+}
+
 internal void
 AddAssetHeaderToList(game_assets *Assets, u32 SlotIndex, void *Memory, asset_memory_size Size)
 {
     asset_memory_header *Header = (asset_memory_header *)((u8 *)Memory + Size.Data);
-
-    asset_memory_header *Sentinel = &Assets->LoadedAssetSentinel;
-
     Header->SlotIndex = SlotIndex;
-    Header->Prev = Sentinel;
-    Header->Next = Sentinel->Next;
-    
-    Header->Next->Prev = Header;
-    Header->Prev->Next = Header;
+    InsertAssetHeaderAtFront(Assets, Header);
 }
 
 internal void
@@ -124,7 +129,7 @@ RemoveAssetHeaderFromList(asset_memory_header *Header)
 }
 
 internal void
-LoadBitmap(game_assets *Assets, bitmap_id ID)
+LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Locked)
 {
     asset_slot *Slot = Assets->Slots + ID.Value;
     if(ID.Value &&
@@ -154,9 +159,14 @@ LoadBitmap(game_assets *Assets, bitmap_id ID)
             Work->Offset = Asset->GA.DataOffset;
             Work->Size = Size.Data;
             Work->Destination = Bitmap->Memory;
-            Work->FinalState = (AssetState_Bitmap|AssetState_Loaded);
+            Work->FinalState = (AssetState_Bitmap|AssetState_Loaded) | (Locked ? AssetState_Lock : 0);
 
-            AddAssetHeaderToList(Assets, ID.Value, Bitmap->Memory, Size);
+            Slot->State |= AssetState_Lock;
+
+            if(!Locked)
+            {
+                AddAssetHeaderToList(Assets, ID.Value, Bitmap->Memory, Size);
+            }
 
             Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, Work);
         }
@@ -480,11 +490,34 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 }
 
 internal void
+MoveHeaderToFront(game_assets *Assets, u32 SlotIndex, asset_slot *Slot)
+{
+    if(!IsLocked(Slot))
+    {
+        asset_memory_size Size = GetSizeOfAsset(Assets, GetType(Slot), SlotIndex);
+        void *Memory = 0;
+        if(GetType(Slot) == AssetState_Bitmap)
+        {
+            Memory = Slot->Bitmap.Memory;
+        }
+        else
+        {
+            Assert(GetType(Slot) == AssetState_Sound);
+            Memory = Slot->Sound.Samples[0];
+        }
+        asset_memory_header *Header = (asset_memory_header *)((u8 *)Memory + Size.Data);
+
+        RemoveAssetHeaderFromList(Header);
+        InsertAssetHeaderAtFront(Assets, Header);
+    }
+}
+
+internal void
 EvictAsset(game_assets *Assets, asset_memory_header *Header)
 {
     u32 SlotIndex = Header->SlotIndex;
-
     asset_slot *Slot = Assets->Slots + SlotIndex;
+
     Assert(GetState(Slot) == AssetState_Loaded);
 
     asset_memory_size Size = GetSizeOfAsset(Assets, GetType(Slot), SlotIndex);
@@ -510,10 +543,14 @@ EvictAssetsAsNecessary(game_assets *Assets)
 {
     while(Assets->TotalMemoryUsed > Assets->TargetMemoryUsed)
     {
-        asset_memory_header *Asset = Assets->LoadedAssetSentinel.Prev;
-        if(Asset != &Assets->LoadedAssetSentinel)
+        asset_memory_header *Header = Assets->LoadedAssetSentinel.Prev;
+        if(Header != &Assets->LoadedAssetSentinel)
         {
-            EvictAsset(Assets, Asset);
+            asset_slot *Slot = Assets->Slots + Header->SlotIndex;
+            if(GetState(Slot) >= AssetState_Loaded)
+            {
+                EvictAsset(Assets, Header);
+            }
         }
         else
         {

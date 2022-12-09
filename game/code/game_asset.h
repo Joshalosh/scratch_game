@@ -14,12 +14,13 @@ enum asset_state
     AssetState_Unloaded,
     AssetState_Queued,
     AssetState_Loaded,
-    AssetState_Locked,
     AssetState_StateMask = 0xFFF,
 
     AssetState_Sound = 0x1000,
     AssetState_Bitmap = 0x2000,
     AssetState_TypeMask = 0xF000,
+
+    AssetState_Lock = 0x10000,
 };
 struct asset_slot
 {
@@ -106,6 +107,13 @@ struct game_assets
 #endif
 };
 
+inline b32
+IsLocked(asset_slot *Slot)
+{
+    b32 Result = (Slot->State & AssetState_Lock);
+    return(Result);
+}
+
 inline u32
 GetType(asset_slot *Slot)
 {
@@ -120,7 +128,8 @@ GetState(asset_slot *Slot)
     return(Result);
 }
 
-inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID)
+internal void MoveHeaderToFront(game_assets *Assets, u32 SlotIndex, asset_slot *Slot);
+inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID, b32 MustBeLocked)
 {
     Assert(ID.Value <= Assets->AssetCount);
     asset_slot *Slot = Assets->Slots + ID.Value;
@@ -128,8 +137,10 @@ inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID)
     loaded_bitmap *Result = 0;
     if(GetState(Slot) >= AssetState_Loaded)
     {
+        Assert(!MustBeLocked || IsLocked(Slot));
         CompletePreviousReadsBeforeFutureReads;
         Result = &Slot->Bitmap;
+        MoveHeaderToFront(Assets, ID.Value, Slot);
     }
 
     return(Result);
@@ -145,6 +156,7 @@ inline loaded_sound *GetSound(game_assets *Assets, sound_id ID)
     {
         CompletePreviousReadsBeforeFutureReads;
         Result = &Slot->Sound;
+        MoveHeaderToFront(Assets, ID.Value, Slot);
     }
 
     return(Result);
@@ -175,8 +187,8 @@ IsValid(sound_id ID)
     return(Result);
 }
 
-internal void LoadBitmap(game_assets *Assets, bitmap_id ID);
-inline void PrefetchBitmap(game_assets *Assets, bitmap_id ID) {LoadBitmap(Assets, ID);}
+internal void LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Locked);
+inline void PrefetchBitmap(game_assets *Assets, bitmap_id ID, b32 Locked) {LoadBitmap(Assets, ID, Locked);}
 internal void LoadSound(game_assets *Assets, sound_id ID);
 inline void PrefetchSound(game_assets *Assets, sound_id ID) {LoadSound(Assets, ID);}
 
