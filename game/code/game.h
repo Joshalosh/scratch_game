@@ -5,15 +5,19 @@
 
  - Flush all thread queues before loading DLL.
 
+ - Asset streaming
+   - Memory management
+
+ - Debug code
+   - Fonts
+   - Logging
+   - Diagramming
+   - A little GUI, switches / sliders / etc.
+   - Draw tile chunks so we can verify that things are aligned /
+     in the chunks we want them to be in
+
  - Audio
    - Fix the clicking bug at the end of samples.
-   - Sound effect triggers
-   - Ambient sounds
-   - Music
-
- - Asset streaming
-   - Fileformat
-   - Memory management
 
  - Rendering
    - Straighten out all of the coordinate systems.
@@ -23,14 +27,6 @@
    - Particle systems
    - Lighting
    - Final Optimisation
-
- - Debug code
-   - Fonts
-   - Logging
-   - Diagramming
-   - A little GUI, switches / sliders / etc.
-   - Draw tile chunks so we can verify that things are aligned /
-     in the chunks we want them to be in
 
  ARCHITECTURE EXPLORATION
  - Z
