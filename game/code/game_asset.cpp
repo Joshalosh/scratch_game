@@ -68,35 +68,6 @@ struct asset_memory_size
     u32 Section;
 };
 
-asset_memory_size
-GetSizeOfAsset(game_assets *Assets, b32 IsSound, u32 AssetIndex)
-{
-    asset *Asset = Assets->Assets + AssetIndex;
-
-    asset_memory_size Result = {};
-
-    if(IsSound)
-    {
-        ga_sound *Info = &Asset->GA.Sound;
-
-        Result.Section = Info->SampleCount*sizeof(s16);
-        Result.Data = Info->ChannelCount*Result.Section;
-    }
-    else
-    {
-        ga_bitmap *Info = &Asset->GA.Bitmap;
-
-        u32 Width = SafeTruncateToUInt16(Info->Dim[0]);
-        u32 Height = SafeTruncateToUInt16(Info->Dim[1]);
-        Result.Section = 4*Width;
-        Result.Data = Height*Result.Section;
-    }
-
-    Result.Total = Result.Data + sizeof(asset_memory_header);
-
-    return(Result);
-}
-
 inline void
 InsertAssetHeaderAtFront(game_assets *Assets, asset_memory_header *Header)
 {
@@ -141,15 +112,21 @@ LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Locked)
             asset *Asset = Assets->Assets + ID.Value;
             ga_bitmap *Info = &Asset->GA.Bitmap;
 
-            asset_memory_size Size = GetSizeOfAsset(Assets, false, ID.Value);
+            asset_memory_size Size = {};
+            u32 Width = Info->Dim[0];
+            u32 Height = Info->Dim[1];
+            Size.Section = 4*Width;
+            Size.Data = Height*Size.Section;
+            Size.Total = Size.Data + sizeof(asset_memory_header);
+
             Asset->Header = (asset_memory_header *)AcquireAssetMemory(Assets, Size.Total);
 
             loaded_bitmap *Bitmap = &Asset->Header->Bitmap;
             Bitmap->AlignPercentage = V2(Info->AlignPercentage[0], Info->AlignPercentage[1]);
             Bitmap->WidthOverHeight = (r32)Info->Dim[0] / (r32)Info->Dim[1];
-            Bitmap->Width = SafeTruncateToUInt16(Info->Dim[0]);
-            Bitmap->Height = SafeTruncateToUInt16(Info->Dim[1]);
-            Bitmap->Pitch = SafeTruncateToInt16(Size.Section);
+            Bitmap->Width = Info->Dim[0];
+            Bitmap->Height = Info->Dim[1];
+            Bitmap->Pitch = Size.Section;
             Bitmap->Memory = (Asset->Header + 1);
 
             load_asset_work *Work = PushStruct(&Task->Arena, load_asset_work);
@@ -191,7 +168,11 @@ LoadSound(game_assets *Assets, sound_id ID)
             asset *Asset = Assets->Assets + ID.Value;
             ga_sound *Info = &Asset->GA.Sound;
 
-            asset_memory_size Size = GetSizeOfAsset(Assets, true, ID.Value);
+            asset_memory_size Size = {};
+            Size.Section = Info->SampleCount*sizeof(s16);
+            Size.Data = Info->ChannelCount*Size.Section;
+            Size.Total = Size.Data + sizeof(asset_memory_header);
+
             Asset->Header = (asset_memory_header *)AcquireAssetMemory(Assets, Size.Total);
             loaded_sound *Sound = &Asset->Header->Sound;
 

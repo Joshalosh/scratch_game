@@ -449,9 +449,9 @@ MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 Clear
 {
     loaded_bitmap Result = {};
 
-    Result.Width = SafeTruncateToUInt16(Width);
-    Result.Height = SafeTruncateToUInt16(Height);
-    Result.Pitch = SafeTruncateToUInt16(Result.Width*BITMAP_BYTES_PER_PIXEL);
+    Result.Width = Width;
+    Result.Height = Height;
+    Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
     int32_t TotalBitmapSize = Width*Height*BITMAP_BYTES_PER_PIXEL;
     Result.Memory = PushSize(Arena, TotalBitmapSize, 16);
     if(ClearToZero)
@@ -989,9 +989,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     loaded_bitmap DrawBuffer_ = {};
     loaded_bitmap *DrawBuffer = &DrawBuffer_;
-    DrawBuffer->Width = SafeTruncateToUInt16(Buffer->Width);
-    DrawBuffer->Height = SafeTruncateToUInt16(Buffer->Height);
-    DrawBuffer->Pitch = SafeTruncateToUInt16(Buffer->Pitch);
+    DrawBuffer->Width = Buffer->Width;
+    DrawBuffer->Height = Buffer->Height;
+    DrawBuffer->Pitch = Buffer->Pitch;
     DrawBuffer->Memory = Buffer->Memory;
 
 #if 0
