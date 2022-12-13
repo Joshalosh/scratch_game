@@ -65,11 +65,18 @@ struct asset_file
     u32 TagBase;
 };
 
+struct asset_memory_block
+{
+    u32 TotalSize;
+    u32 UsedSize;
+};
+
 struct game_assets
 {
     // TODO: This back pointer kind of sucks.
     struct transient_state *TranState;
-    memory_arena Arena;
+
+    asset_memory_block *FirstBlock;
 
     u64 TargetMemoryUsed;
     u64 TotalMemoryUsed;
