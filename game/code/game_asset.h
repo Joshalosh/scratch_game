@@ -65,10 +65,16 @@ struct asset_file
     u32 TagBase;
 };
 
+enum asset_memory_block_flags
+{
+    AssetMemory_Used = 0x1,
+};
 struct asset_memory_block
 {
-    u32 TotalSize;
-    u32 UsedSize;
+    asset_memory_block *Prev;
+    asset_memory_block *Next;
+    u64 Flags;
+    memory_index Size;
 };
 
 struct game_assets
@@ -76,7 +82,7 @@ struct game_assets
     // TODO: This back pointer kind of sucks.
     struct transient_state *TranState;
 
-    asset_memory_block *FirstBlock;
+    asset_memory_block MemorySentinel;
 
     u64 TargetMemoryUsed;
     u64 TotalMemoryUsed;
