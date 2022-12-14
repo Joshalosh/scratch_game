@@ -86,6 +86,9 @@ ReleaseAssetMemory(game_assets *Assets, memory_index Size, void *Memory)
     // This is the platform memory path.
     Platform.DeallocateMemory(Memory);
 #else
+    asset_memory_block *Block = (asset_memory_block *)Memory - 1;
+    Block->Flags &= ~AssetMemory_Used;
+    // TODO: Merge.
 #endif
 }
 
@@ -127,14 +130,14 @@ EvictAssetsAsNecessary(game_assets *Assets)
 }
 
 internal asset_memory_block *
-FindBlockForSize(game_assetse *Assets, memory_index Size)
+FindBlockForSize(game_assets *Assets, memory_index Size)
 {
     asset_memory_block *Result = 0;
 
     // TODO: Best match block.
     for(asset_memory_block *Block = Assets->MemorySentinel.Next;
         Block != &Assets->MemorySentinel;
-        Block = Block.Next)
+        Block = Block->Next)
     {
         if(!(Block->Flags & AssetMemory_Used))
         {
@@ -152,27 +155,35 @@ FindBlockForSize(game_assetse *Assets, memory_index Size)
 internal void *
 AcquireAssetMemory(game_assets *Assets, memory_index Size)
 {
+    void *Result = 0;
 #if 0
     // This is the platform memory path.
     EvictAssetsAsNecessary(Assets);
-    void *Result = Platform.AllocateMemory(Size);
+    Result = Platform.AllocateMemory(Size);
 #else
     for(;;)
     {
         asset_memory_block *Block = FindBlockForSize(Assets, Size);
         if(Block)
         {
-            Assert((Block->UsedSize + Size) < Block->TotalSize);
-            void *Result = (u8 *)(Block + 1) + Block->UsedSize;
+            Block->Flags |= AssetMemory_Used;
 
-            xxx;
+            Assert(Size <= Block->Size);
+            Result = (u8 *)(Block + 1);
+
+            memory_index RemainingSize = Block->Size - Size;
+            memory_index BlockSplitThreshold = 4096; // TODO: Set this based on the smallest asset size.
+            if(RemainingSize > BlockSplitThreshold)
+            {
+                Block->Size -= RemainingSize;
+                InsertBlock(Block, RemainingSize, (u8 *)Result + Size);
+            }
 
             break;
-
         }
         else
         {
-            for(asset_memory_header *Header = Assets->LoadesAssetSentinel.Prev;
+            for(asset_memory_header *Header = Assets->LoadedAssetSentinel.Prev;
                 Header != &Assets->LoadedAssetSentinel;
                 Header = Header->Prev)
             {
