@@ -35,7 +35,7 @@ inline platform_file_handle *
 GetFileHandleFor(game_assets *Assets, u32 FileIndex)
 {
     Assert(FileIndex < Assets->FileCount);
-    platform_file_handle *Result = Assets->Files[FileIndex].Handle;
+    platform_file_handle *Result = &Assets->Files[FileIndex].Handle;
 
     return(Result);
 }
@@ -456,7 +456,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
     {
         platform_file_group FileGroup = Platform.GetAllFilesOfTypeBegin("ga");
-        Assets->FileCount = FileGroup->FileCount;
+        Assets->FileCount = FileGroup.FileCount;
         Assets->Files = PushArray(Arena, Assets->FileCount, asset_file);
         for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
         {
@@ -465,25 +465,25 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
             File->TagBase = Assets->TagCount;
 
             ZeroStruct(File->Header);
-            File->Handle = Platform.OpenNextFile(FileGroup);
-            Platform.ReadDataFromFile(File->Handle, 0, sizeof(File->Header), &File->Header);
+            File->Handle = Platform.OpenNextFile(&FileGroup);
+            Platform.ReadDataFromFile(&File->Handle, 0, sizeof(File->Header), &File->Header);
 
             u32 AssetTypeArraySize = File->Header.AssetTypeCount*sizeof(ga_asset_type);
             File->AssetTypeArray = (ga_asset_type *)PushSize(Arena, AssetTypeArraySize);
-            Platform.ReadDataFromFile(File->Handle, File->Header.AssetTypes,
+            Platform.ReadDataFromFile(&File->Handle, File->Header.AssetTypes,
                                       AssetTypeArraySize, File->AssetTypeArray);
 
             if(File->Header.MagicValue != GA_MAGIC_VALUE)
             {
-                Platform.FileError(File->Handle, "GA file has an invalid magic value.");
+                Platform.FileError(&File->Handle, "GA file has an invalid magic value.");
             }
 
             if(File->Header.Version > GA_VERSION)
             {
-                Platform.FileError(File->Handle, "GA file is a later version.");
+                Platform.FileError(&File->Handle, "GA file is a later version.");
             }
 
-            if(PlatformNoFileErrors(File->Handle))
+            if(PlatformNoFileErrors(&File->Handle))
             {
                 // The first asset and tag slot in every GA is a null (reserved)
                 // sow we don't count it as something we will need space for.
@@ -496,7 +496,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
                 InvalidCodePath;
             }
         }
-        Platform.GetAllFilesOfTypeEnd(FileGroup);
+        Platform.GetAllFilesOfTypeEnd(&FileGroup);
     }
 
     // Allocate all metadata space.
@@ -510,10 +510,10 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
     {
         asset_file *File = Assets->Files + FileIndex;
-        if(PlatformNoFileErrors(File->Handle))
+        if(PlatformNoFileErrors(&File->Handle))
         {
             u32 TagArraySize = sizeof(ga_tag)*(File->Header.TagCount - 1);
-            Platform.ReadDataFromFile(File->Handle, File->Header.Tags + sizeof(ga_tag),
+            Platform.ReadDataFromFile(&File->Handle, File->Header.Tags + sizeof(ga_tag),
                                       TagArraySize, Assets->Tags + File->TagBase);
         }
     }
@@ -533,7 +533,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         for(u32 FileIndex = 0; FileIndex < Assets->FileCount; ++FileIndex)
         {
             asset_file *File = Assets->Files + FileIndex;
-            if(PlatformNoFileErrors(File->Handle))
+            if(PlatformNoFileErrors(&File->Handle))
             {
                 for(u32 SourceIndex = 0; SourceIndex < File->Header.AssetTypeCount; ++SourceIndex)
                 {
@@ -545,7 +545,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
                         temporary_memory TempMem = BeginTemporaryMemory(&TranState->TranArena);
                         ga_asset *GAAssetArray = PushArray(&TranState->TranArena, AssetCountForType, ga_asset);
-                        Platform.ReadDataFromFile(File->Handle,
+                        Platform.ReadDataFromFile(&File->Handle,
                                                   File->Header.Assets + SourceType->FirstAssetIndex*sizeof(ga_asset),
                                                   AssetCountForType*sizeof(ga_asset),
                                                   GAAssetArray);
