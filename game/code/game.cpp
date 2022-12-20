@@ -599,6 +599,43 @@ MakePyramidNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
     }
 }
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
+internal loaded_bitmap
+MakeNothingsTest(memory_arena *Arena)
+{
+    debug_read_file_result TTFFile = Platform.DEBUGReadEntireFile("c:/Windows/Fonts/arial.ttf");
+
+    stbtt_fontinfo Font;
+    stbtt_InitFont(&Font, (u8 *)TTFFile.Contents, stbtt_GetFontOffsetForIndex((u8 *)TTFFile.Contents, 0));
+
+    int Width, Height, XOffset, YOffset;
+    u8 *MonoBitmap = stbtt_GetCodepointBitmap(&Font, 0, stbtt_ScaleForPixelHeight(&Font, 128.0f),
+                                              'N', &Width, &Height, &XOffset, &YOffset);
+    loaded_bitmap Result = MakeEmptyBitmap(Arena, Width, Height, false);
+
+    u8 *Source = MonoBitmap;
+    u8 *DestRow = (u8 *)Result.Memory;
+    for(s32 Y = 0; Y < Height; ++Y)
+    {
+        u32 *Dest = (u32 *)DestRow;
+        for(s32 X = 0; X < Width; ++X)
+        {
+            u8 Alpha = *Source++;
+            *Dest++ = ((Alpha << 24) |
+                       (Alpha << 16) |
+                       (Alpha <<  8) |
+                       (Alpha <<  0));
+        }
+
+        DestRow += Result.Pitch;
+    }
+    stbtt_FreeBitmap(MonoBitmap, 0);
+
+    return(Result);
+}
+
 #if GAME_INTERNAL
 game_memory *DebugGlobalMemory;
 #endif
@@ -638,6 +675,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         InitialiseArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state),
                         (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
+
+        GameState->TestFont = MakeNothingsTest(&GameState->WorldArena);
 
         InitialiseAudioState(&GameState->AudioState, &GameState->WorldArena);
 

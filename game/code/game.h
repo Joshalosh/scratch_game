@@ -339,6 +339,7 @@ struct game_state
 
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;
+    loaded_bitmap TestFont;
 
     random_series EffectsEntropy; // This is entropy that doesn't affect the gameplay.
     real32 tSine;
