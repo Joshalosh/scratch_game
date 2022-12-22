@@ -1,6 +1,9 @@
 
 #include "test_asset_builder.h"
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
 #pragma pack(push, 1)
 struct bitmap_header
 {
@@ -353,6 +356,49 @@ LoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
     return(Result);
 }
 
+internal loaded_bitmap
+LoadGlyphBitmap(char *Filename, u32 Codepoint)
+{
+    loaded_bitmap Result = {};
+
+    entire_file TTFFile = ReadEntireFile(Filename);
+    if(TTFFile.ContentsSize != 0)
+    {
+        stbtt_fontinfo Font;
+        stbtt_InitFont(&Font, (u8 *)TTFFile.Contents, stbtt_GetFontOffsetForIndex((u8 *)TTFFile.Contents, 0));
+
+        int Width, Height, XOffset, YOffset;
+        u8 *MonoBitmap = stbtt_GetCodepointBitmap(&Font, 0, stbtt_ScaleForPixelHeight(&Font, 128.0f),
+                                                  Codepoint, &Width, &Height, &XOffset, &YOffset);
+        Result.Width = Width;
+        Result.Height = Height;
+        Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
+        Result.Memory = malloc(Height*Result.Pitch);
+        Result.Free = Result.Memory;
+
+        u8 *Source = MonoBitmap;
+        u8 *DestRow = (u8 *)Result.Memory + (Height - 1)*Result.Pitch;
+        for(s32 Y = 0; Y < Height; ++Y)
+        {
+            u32 *Dest = (u32 *)DestRow;
+            for(s32 X = 0; X < Width; ++X)
+            {
+                u8 Alpha = *Source++;
+                *Dest++ = ((Alpha << 24) |
+                           (Alpha << 16) |
+                           (Alpha <<  8) |
+                           (Alpha <<  0));
+            }
+
+            DestRow -= Result.Pitch;
+        }
+        stbtt_FreeBitmap(MonoBitmap, 0);
+        free(TTFFile.Contents);
+    }
+
+    return(Result);
+}
+
 internal void
 BeginAssetType(game_assets *Assets, asset_type_id TypeID)
 {
@@ -380,6 +426,29 @@ AddBitmapAsset(game_assets *Assets, char *Filename, r32 AlignPercentageX = 0.5f,
 
     Source->Type = AssetType_Bitmap;
     Source->Filename = Filename;
+
+    Assets->AssetIndex = Result.Value;
+
+    return(Result);
+}
+
+internal bitmap_id
+AddCharacterAsset(game_assets *Assets, char *FontFile, u32 Codepoint, r32 AlignPercentageX = 0.5f, r32 AlignPercentageY = 0.5f)
+{
+    Assert(Assets->DEBUGAssetType);
+    Assert(Assets->DEBUGAssetType->OnePastLastAssetIndex < ArrayCount(Assets->Assets));
+
+    bitmap_id Result = {Assets->DEBUGAssetType->OnePastLastAssetIndex++};
+    asset_source *Source = Assets->AssetSources + Result.Value;
+    ga_asset *GA = Assets->Assets + Result.Value;
+    GA->FirstTagIndex = Assets->TagCount;
+    GA->OnePastLastTagIndex = GA->FirstTagIndex;
+    GA->Bitmap.AlignPercentage[0] = AlignPercentageX;
+    GA->Bitmap.AlignPercentage[1] = AlignPercentageY;
+
+    Source->Type = AssetType_Font;
+    Source->Filename = FontFile;
+    Source->Codepoint = Codepoint;
 
     Assets->AssetIndex = Result.Value;
 
@@ -479,9 +548,16 @@ WriteGA(game_assets *Assets, char *Filename)
             }
             else
             {
-                Assert(Source->Type == AssetType_Bitmap);
-
-                loaded_bitmap Bitmap = LoadBMP(Source->Filename);
+                loaded_bitmap Bitmap;
+                if(Source->Type == AssetType_Font)
+                {
+                    Bitmap = LoadGlyphBitmap(Source->Filename, Source->Codepoint);
+                }
+                else
+                {
+                    Assert(Source->Type == AssetType_Bitmap);
+                    Bitmap = LoadBMP(Source->Filename);
+                }
 
                 Dest->Bitmap.Dim[0] = Bitmap.Width;
                 Dest->Bitmap.Dim[1] = Bitmap.Height;
@@ -600,6 +676,14 @@ WriteNonHero(void)
     AddBitmapAsset(Assets, "test2/ground01.bmp");
     AddBitmapAsset(Assets, "test2/ground02.bmp");
     AddBitmapAsset(Assets, "test2/ground03.bmp");
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_Font);
+    for(u32 Character = 'A'; Character <= 'Z'; ++Character)
+    {
+        AddCharacterAsset(Assets, "c:/Windows/Fonts/arial.ttf", Character);
+        AddTag(Assets, Tag_UnicodeCodepoint, (r32)Character);
+    }
     EndAssetType(Assets);
 
     WriteGA(Assets, "test2.ga");

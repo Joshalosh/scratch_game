@@ -243,7 +243,6 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
 #include "game_sim_region.h"
 #include "game_entity.h"
 #include "game_render_group.h"
-#include "game_asset_type_id.h"
 #include "game_asset.h"
 #include "game_random.h"
 #include "game_audio.h"
@@ -339,7 +338,6 @@ struct game_state
 
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;
-    loaded_bitmap TestFont;
 
     random_series EffectsEntropy; // This is entropy that doesn't affect the gameplay.
     real32 tSine;

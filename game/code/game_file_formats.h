@@ -1,5 +1,57 @@
 #if !defined(GAME_FILE_FORMATS_H)
 
+enum asset_tag_id
+{
+    Tag_Smoothness,
+    Tag_Flatness,
+    Tag_FacingDirection, // Angle in radians off of due right.
+    Tag_UnicodeCodepoint,
+
+    Tag_Count,
+};
+
+enum asset_type_id
+{
+    Asset_None,
+
+    //
+    // Bitmaps
+    //
+
+    Asset_Shadow,
+    Asset_Tree,
+    Asset_Sword,
+//    Asset_Stairwell,
+    Asset_Rock,
+
+    Asset_Grass,
+    Asset_Tuft,
+    Asset_Stone,
+
+    Asset_Head,
+    Asset_Cape,
+    Asset_Torso,
+
+    Asset_Font,
+
+    //
+    // Sounds
+    //
+
+    Asset_Bloop,
+    Asset_Crack,
+    Asset_Drop,
+    Asset_Glide,
+    Asset_Music,
+    Asset_Puhp,
+    
+    //
+    //
+    //
+
+    Asset_Count,
+};
+
 #define GA_CODE(a, b, c, d) (((uint32_t)(a) << 0) | ((uint32_t)(b) << 8) | ((uint32_t)(c) << 16) | ((uint32_t)(d) << 24))
 
 #pragma pack(push, 1)
