@@ -1295,7 +1295,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         asset_vector MatchVector = {};
                         asset_vector WeightVector = {};
                         char Nothings[] = "NOTHINGS";
-                        MatchVector.E[Tag_UnicodeCodepoint] = (r32)Nothings[RandomChoice(&GameState->EffectsEntropy, ArrayCount(Nothings))];
+                        MatchVector.E[Tag_UnicodeCodepoint] = (r32)Nothings[RandomChoice(&GameState->EffectsEntropy, ArrayCount(Nothings) - 1)];
                         WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
 
                         Particle->BitmapID = GetBestMatchBitmapFrom(TranState->Assets, Asset_Font, 
