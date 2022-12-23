@@ -1,8 +1,14 @@
 
 #include "test_asset_builder.h"
 
+#define USE_FONTS_FROM_WINDOWS 1 
+
+#if USE_FONTS_FROM_WINDOWS
+#include <windows.h>
+#else
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
+#endif
 
 #pragma pack(push, 1)
 struct bitmap_header
@@ -361,6 +367,19 @@ LoadGlyphBitmap(char *Filename, u32 Codepoint)
 {
     loaded_bitmap Result = {};
 
+#if USE_FONTS_FROM_WINDOWS
+    static HDC DeviceContext = 0;
+    if(!DeviceContext)
+    {
+        DeviceContext = CreateCompatibleDC(0);
+        HBITMAP Bitmap = CreateCompatibleBitmap(DeviceContext, 1024, 1024);
+        SelectObject(DeviceContext, Bitmap);
+    }
+
+    wchar_t CheesePoint = (wchar_t)Codepoint;
+    TextOutW(DeviceContext, 0, 0, &CheesePoint, 1);
+#else
+
     entire_file TTFFile = ReadEntireFile(Filename);
     if(TTFFile.ContentsSize != 0)
     {
@@ -395,6 +414,7 @@ LoadGlyphBitmap(char *Filename, u32 Codepoint)
         stbtt_FreeBitmap(MonoBitmap, 0);
         free(TTFFile.Contents);
     }
+#endif
 
     return(Result);
 }
