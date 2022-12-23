@@ -363,7 +363,7 @@ LoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
 }
 
 internal loaded_bitmap
-LoadGlyphBitmap(char *Filename, u32 Codepoint)
+LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
 {
     loaded_bitmap Result = {};
 
@@ -371,13 +371,64 @@ LoadGlyphBitmap(char *Filename, u32 Codepoint)
     static HDC DeviceContext = 0;
     if(!DeviceContext)
     {
+        AddFontResourceExA(Filename, FR_PRIVATE, 0);
+        int Height = 128; // I need to figure out how to specify pixels properly here.
+        HFONT Font = CreateFontA(Height, 0, 0, 0,
+                                 FW_NORMAL, // Weight.
+                                 FALSE, // Italic.
+                                 FALSE, // Underline.
+                                 FALSE, // Strikeout.
+                                 DEFAULT_CHARSET,
+                                 OUT_DEFAULT_PRECIS,
+                                 CLIP_DEFAULT_PRECIS,
+                                 ANTIALIASED_QUALITY,
+                                 DEFAULT_PITCH|FF_DONTCARE,
+                                 FontName);
+
         DeviceContext = CreateCompatibleDC(0);
         HBITMAP Bitmap = CreateCompatibleBitmap(DeviceContext, 1024, 1024);
         SelectObject(DeviceContext, Bitmap);
-    }
+        SelectObject(DeviceContext, Font);
+        SetBkColor(DeviceContext, RGB(0, 0, 0));
 
+        TEXTMETRIC TextMetric;
+        GetTextMetrics(DeviceContext, &TextMetric);
+    }
     wchar_t CheesePoint = (wchar_t)Codepoint;
+
+    SIZE Size;
+    GetTextExtentPoint32W(DeviceContext, &CheesePoint, 1, &Size);
+
+    int Width = Size.cx;
+    int Height = Size.cy;
+
+//    PatBlt(DeviceContext, 0, 0, Width, Height, BLACKNESS);
+    SetTextColor(DeviceContext, RGB(255, 255, 255));
     TextOutW(DeviceContext, 0, 0, &CheesePoint, 1);
+
+    Result.Width = Width;
+    Result.Height = Height;
+    Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
+    Result.Memory = malloc(Height*Result.Pitch);
+    Result.Free = Result.Memory;
+
+    u8 *DestRow = (u8 *)Result.Memory +(Height - 1)*Result.Pitch;
+    for(s32 Y = 0; Y < Height; ++Y)
+    {
+        u32 *Dest = (u32 *)DestRow;
+        for(s32 X = 0; X < Width; ++X)
+        {
+            COLORREF Pixel = GetPixel(DeviceContext, X, Y);
+            u8 Gray = (u8)(Pixel & 0xFF);
+            u8 Alpha = 0xFF;
+            *Dest++ = ((Alpha << 24) |
+                       (Gray << 16) |
+                       (Gray <<  8) |
+                       (Gray <<  0));
+        }
+
+        DestRow -= Result.Pitch;
+    }
 #else
 
     entire_file TTFFile = ReadEntireFile(Filename);
@@ -402,11 +453,12 @@ LoadGlyphBitmap(char *Filename, u32 Codepoint)
             u32 *Dest = (u32 *)DestRow;
             for(s32 X = 0; X < Width; ++X)
             {
-                u8 Alpha = *Source++;
+                u8 Gray = *Source++;
+                u8 Alpha = 0xFF;
                 *Dest++ = ((Alpha << 24) |
-                           (Alpha << 16) |
-                           (Alpha <<  8) |
-                           (Alpha <<  0));
+                           (Gray << 16) |
+                           (Gray <<  8) |
+                           (Gray <<  0));
             }
 
             DestRow -= Result.Pitch;
@@ -453,7 +505,7 @@ AddBitmapAsset(game_assets *Assets, char *Filename, r32 AlignPercentageX = 0.5f,
 }
 
 internal bitmap_id
-AddCharacterAsset(game_assets *Assets, char *FontFile, u32 Codepoint, r32 AlignPercentageX = 0.5f, r32 AlignPercentageY = 0.5f)
+AddCharacterAsset(game_assets *Assets, char *FontFile, char *FontName, u32 Codepoint, r32 AlignPercentageX = 0.5f, r32 AlignPercentageY = 0.5f)
 {
     Assert(Assets->DEBUGAssetType);
     Assert(Assets->DEBUGAssetType->OnePastLastAssetIndex < ArrayCount(Assets->Assets));
@@ -469,6 +521,7 @@ AddCharacterAsset(game_assets *Assets, char *FontFile, u32 Codepoint, r32 AlignP
     Source->Type = AssetType_Font;
     Source->Filename = FontFile;
     Source->Codepoint = Codepoint;
+    Source->FontName = FontName;
 
     Assets->AssetIndex = Result.Value;
 
@@ -571,7 +624,7 @@ WriteGA(game_assets *Assets, char *Filename)
                 loaded_bitmap Bitmap;
                 if(Source->Type == AssetType_Font)
                 {
-                    Bitmap = LoadGlyphBitmap(Source->Filename, Source->Codepoint);
+                    Bitmap = LoadGlyphBitmap(Source->Filename, Source->FontName, Source->Codepoint);
                 }
                 else
                 {
@@ -701,7 +754,8 @@ WriteNonHero(void)
     BeginAssetType(Assets, Asset_Font);
     for(u32 Character = 'A'; Character <= 'Z'; ++Character)
     {
-        AddCharacterAsset(Assets, "c:/Windows/Fonts/arial.ttf", Character);
+//        AddCharacterAsset(Assets, "c:/Windows/Fonts/arial.ttf", "Arial", Character);
+        AddCharacterAsset(Assets, "c:/Windows/Fonts/cour.ttf", "Courier New", Character);
         AddTag(Assets, Tag_UnicodeCodepoint, (r32)Character);
     }
     EndAssetType(Assets);
