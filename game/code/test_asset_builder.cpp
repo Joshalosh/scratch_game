@@ -401,33 +401,78 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
 
     int Width = Size.cx;
     int Height = Size.cy;
-
+    
 //    PatBlt(DeviceContext, 0, 0, Width, Height, BLACKNESS);
     SetTextColor(DeviceContext, RGB(255, 255, 255));
     TextOutW(DeviceContext, 0, 0, &CheesePoint, 1);
 
-    Result.Width = Width;
-    Result.Height = Height;
-    Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
-    Result.Memory = malloc(Height*Result.Pitch);
-    Result.Free = Result.Memory;
-
-    u8 *DestRow = (u8 *)Result.Memory +(Height - 1)*Result.Pitch;
+    s32 MinX = 10000;
+    s32 MinY = 10000;
+    s32 MaxX = -10000;
+    s32 MaxY = -10000;
     for(s32 Y = 0; Y < Height; ++Y)
     {
-        u32 *Dest = (u32 *)DestRow;
         for(s32 X = 0; X < Width; ++X)
         {
             COLORREF Pixel = GetPixel(DeviceContext, X, Y);
-            u8 Gray = (u8)(Pixel & 0xFF);
-            u8 Alpha = 0xFF;
-            *Dest++ = ((Alpha << 24) |
-                       (Gray << 16) |
-                       (Gray <<  8) |
-                       (Gray <<  0));
-        }
+            if(Pixel != 0)
+            {
+                if(MinX > X)
+                {
+                    MinX = X;
+                }
 
-        DestRow -= Result.Pitch;
+                if(MinY > Y)
+                {
+                    MinY = Y;
+                }
+
+                if(MaxX < X)
+                {
+                    MaxX = X;
+                }
+
+                if(MaxY < Y)
+                {
+                    MaxY = Y;
+                }
+            }
+        }
+    }
+
+    if(MinX <= MaxX)
+    {
+        --MinX;
+        --MinY;
+        ++MaxX;
+        ++MaxY;
+
+        Width = (MaxX - MinX) + 1;
+        Height = (MaxY - MinY) + 1;
+
+        Result.Width = Width;
+        Result.Height = Height;
+        Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
+        Result.Memory = malloc(Height*Result.Pitch);
+        Result.Free = Result.Memory;
+
+        u8 *DestRow = (u8 *)Result.Memory +(Height - 1)*Result.Pitch;
+        for(s32 Y = MinY; Y <= MaxY; ++Y)
+        {
+            u32 *Dest = (u32 *)DestRow;
+            for(s32 X = MinX; X <= MaxX; ++X)
+            {
+                COLORREF Pixel = GetPixel(DeviceContext, X, Y);
+                u8 Gray = (u8)(Pixel & 0xFF);
+                u8 Alpha = 0xFF;
+                *Dest++ = ((Alpha << 24) |
+                           (Gray << 16) |
+                           (Gray <<  8) |
+                           (Gray <<  0));
+            }
+
+            DestRow -= Result.Pitch;
+        }
     }
 #else
 
