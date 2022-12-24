@@ -14,9 +14,7 @@ enum asset_state
     AssetState_Unloaded,
     AssetState_Queued,
     AssetState_Loaded,
-    AssetState_StateMask = 0xFFF,
-
-    AssetState_Lock = 0x10000,
+    AssetState_Generation0,
 };
 
 struct asset_memory_header
@@ -98,19 +96,6 @@ struct game_assets
     asset *Assets;
 
     asset_type AssetTypes[Asset_Count];
-
-#if 0
-    u8 *GAContents;
-
-    // Structured assets.
-//    hero_bitmaps HeroBitmaps[4];
-
-    // TODO: These should go away once I actually load an asset pack file.
-    uint32_t DEBUGUsedAssetCount;
-    uint32_t DEBUGUsedTagCount;
-    asset_type *DEBUGAssetType;
-    asset *DEBUGAsset;
-#endif
 };
 
 inline b32
@@ -134,12 +119,23 @@ inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID, b32 MustBeLoc
     asset *Asset = Assets->Assets + ID.Value;
 
     loaded_bitmap *Result = 0;
-    if(GetState(Asset) >= AssetState_Loaded)
+    for(;;)
     {
-        Assert(!MustBeLocked || IsLocked(Asset));
-        CompletePreviousReadsBeforeFutureReads;
-        Result = &Asset->Header->Bitmap;
-        MoveHeaderToFront(Assets, Asset);
+        asset_state State = GetState(Asset);
+
+        if(State >= AssetState_Loaded);
+        {
+            Assert(Assets->GenerationID >= AssetState_Loaded);
+            if(CompareExchange(State, Assets->GenerationID));
+            {
+                Result = &Asset->Header->Bitmap;
+                MoveHeaderToFront(Assets, Asset);
+            }
+        }
+        else
+        {
+            break;
+        }
     }
 
     return(Result);

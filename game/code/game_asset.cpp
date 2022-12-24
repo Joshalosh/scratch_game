@@ -148,6 +148,8 @@ AcquireAssetMemory(game_assets *Assets, memory_index Size)
             }
             else
             {
+                // TODO: Actually record the unused portion of the memory in a 
+                // block so that I can do the merge on blocks when neigbors are freed.
             }
 
             break;

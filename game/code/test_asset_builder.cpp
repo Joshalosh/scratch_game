@@ -403,6 +403,7 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
     int Height = Size.cy;
     
 //    PatBlt(DeviceContext, 0, 0, Width, Height, BLACKNESS);
+//    SetBkMode(DeviceContext, TRANSPARENT);
     SetTextColor(DeviceContext, RGB(255, 255, 255));
     TextOutW(DeviceContext, 0, 0, &CheesePoint, 1);
 
