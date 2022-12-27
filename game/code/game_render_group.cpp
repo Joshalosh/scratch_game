@@ -782,7 +782,7 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
 }
 
 internal render_group *
-AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBufferSize, b32 AssetsShouldBeLocked)
+AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBufferSize, b32 RendersInBackground)
 {
     render_group *Result = PushStruct(Arena, render_group);
 
@@ -804,6 +804,7 @@ AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBu
     Result->Transform.Scale = 1.0f;
 
     Result->MissingResourceCount = 0;
+    Result->RendersInBackground = RendersInBackground;
 
     return(Result);
 }
@@ -937,13 +938,20 @@ inline void
 PushBitmap(render_group *Group, bitmap_id ID, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1))
 {
     loaded_bitmap *Bitmap = GetBitmap(Group->Assets, ID);
+    if(Group->RendersInBackground && !Bitmap)
+    {
+        LoadBitmap(Group->Assets, ID, true);
+        Bitmap = GetBitmap(Group->Assets, ID);
+    }
+
     if(Bitmap)
     {
         PushBitmap(Group, Bitmap, Height, Offset, Color);
     }
     else
     {
-        LoadBitmap(Group->Assets, ID);
+        Assert(!Group->RendersInBackground);
+        LoadBitmap(Group->Assets, ID, false);
         ++Group->MissingResourceCount;
     }
 }

@@ -126,6 +126,7 @@ struct render_group
     uint8_t *PushBufferBase;
 
     uint32_t MissingResourceCount;
+    b32 RendersInBackground;
 };
 
 void DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,

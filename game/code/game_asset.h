@@ -98,7 +98,49 @@ struct game_assets
     asset *Assets;
 
     asset_type AssetTypes[Asset_Count];
+
+    u32 OperationLock;
 };
+
+inline void
+BeginAssetLock(game_assets *Assets)
+{
+    for(;;)
+    {
+        if(AtomicCompareExchangeUInt32(&Assets->OperationLock, 1, 0) == 0)
+        {
+            break;
+        }
+    }
+}
+
+inline void
+EndAssetLock(game_assets *Assets)
+{
+    CompletePreviousWritesBeforeFutureWrites;
+    Assets->OperationLock = 0;
+}
+
+inline void
+InsertAssetHeaderAtFront(game_assets *Assets, asset_memory_header *Header)
+{
+    asset_memory_header *Sentinel = &Assets->LoadedAssetSentinel;
+
+    Header->Prev = Sentinel;
+    Header->Next = Sentinel->Next;
+
+    Header->Next->Prev = Header;
+    Header->Prev->Next = Header;
+}
+
+internal void
+RemoveAssetHeaderFromList(asset_memory_header *Header)
+{
+    Header->Prev->Next = Header->Next;
+    Header->Next->Prev = Header->Prev;
+
+    Header->Next = Header->Prev = 0;
+}
 
 internal void MoveHeaderToFront(game_assets *Assets, asset *Asset);
 inline asset_memory_header *GetAsset(game_assets *Assets, u32 ID)
@@ -107,35 +149,26 @@ inline asset_memory_header *GetAsset(game_assets *Assets, u32 ID)
     asset *Asset = Assets->Assets + ID;
 
     asset_memory_header *Result = 0;
-    for(;;)
+
+    BeginAssetLock(Assets);
+
+    if(Asset->State == AssetState_Loaded)
     {
-        u32 State = Asset->State;
-        if(State == AssetState_Loaded)
-        {
-            if(AtomicCompareExchangeUInt32(&Asset->State, AssetState_Operating, State) == State)
-            {
-                Result = Asset->Header;
-                MoveHeaderToFront(Assets, Asset);
+        Result = Asset->Header;
+        RemoveAssetHeaderFromList(Result);
+        InsertAssetHeaderAtFront(Assets, Result);
 
 #if 0
-                if(Asset->Header->GenerationID < GenerationID)
-                {
-                    Asset->Header->GenerationID = GenerationID;
-                }
+        if(Asset->Header->GenerationID < GenerationID)
+        {
+            Asset->Header->GenerationID = GenerationID;
+        }
 #endif
 
-                CompletePreviousWritesBeforeFutureWrites;
-
-                Asset->State = State;
-
-                break;
-            }
-        }
-        else if(State != AssetState_Operating)
-        {
-            break;
-        }
+        CompletePreviousWritesBeforeFutureWrites;
     }
+
+    EndAssetLock(Assets);
 
     return(Result);
 }
@@ -183,8 +216,8 @@ IsValid(sound_id ID)
     return(Result);
 }
 
-internal void LoadBitmap(game_assets *Assets, bitmap_id ID);
-inline void PrefetchBitmap(game_assets *Assets, bitmap_id ID) {LoadBitmap(Assets, ID);}
+internal void LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Immediate);
+inline void PrefetchBitmap(game_assets *Assets, bitmap_id ID) {LoadBitmap(Assets, ID, false);}
 internal void LoadSound(game_assets *Assets, sound_id ID);
 inline void PrefetchSound(game_assets *Assets, sound_id ID) {LoadSound(Assets, ID);}
 
