@@ -117,6 +117,8 @@ struct render_group
     struct game_assets *Assets;
     real32 GlobalAlpha;
 
+    u32 GenerationID;
+
     v2 MonitorHalfDimInMetres;
 
     render_transform Transform;

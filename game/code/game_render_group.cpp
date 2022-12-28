@@ -799,6 +799,8 @@ AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBu
     Result->Assets = Assets;
     Result->GlobalAlpha = 1.0f;
 
+    Result->GenerationID = BeginGeneration(Assets);
+
     // Default Transform.
     Result->Transform.OffsetP = V3(0.0f, 0.0f, 0.0f);
     Result->Transform.Scale = 1.0f;
@@ -807,6 +809,15 @@ AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBu
     Result->RendersInBackground = RendersInBackground;
 
     return(Result);
+}
+
+internal void
+FinishRenderGroup(render_group *Group)
+{
+    if(Group)
+    {
+        EndGeneration(Group->Assets, Group->GenerationID);
+    }
 }
 
 inline void
@@ -937,11 +948,11 @@ PushBitmap(render_group *Group, loaded_bitmap *Bitmap, real32 Height, v3 Offset,
 inline void
 PushBitmap(render_group *Group, bitmap_id ID, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1))
 {
-    loaded_bitmap *Bitmap = GetBitmap(Group->Assets, ID);
+    loaded_bitmap *Bitmap = GetBitmap(Group->Assets, ID, Group->GenerationID);
     if(Group->RendersInBackground && !Bitmap)
     {
         LoadBitmap(Group->Assets, ID, true);
-        Bitmap = GetBitmap(Group->Assets, ID);
+        Bitmap = GetBitmap(Group->Assets, ID, Group->GenerationID);
     }
 
     if(Bitmap)

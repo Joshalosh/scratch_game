@@ -15,7 +15,6 @@ enum asset_state
     AssetState_Unloaded,
     AssetState_Queued,
     AssetState_Loaded,
-    AssetState_Operating,
 };
 
 struct asset_memory_header
@@ -79,6 +78,8 @@ struct asset_memory_block
 
 struct game_assets
 {
+    u32 NextGenerationID;
+
     // TODO: This back pointer kind of sucks.
     struct transient_state *TranState;
 
@@ -100,6 +101,9 @@ struct game_assets
     asset_type AssetTypes[Asset_Count];
 
     u32 OperationLock;
+
+    u32 InFlightGenerationCount;
+    u32 InFlightGenerations[16];
 };
 
 inline void
@@ -143,7 +147,7 @@ RemoveAssetHeaderFromList(asset_memory_header *Header)
 }
 
 internal void MoveHeaderToFront(game_assets *Assets, asset *Asset);
-inline asset_memory_header *GetAsset(game_assets *Assets, u32 ID)
+inline asset_memory_header *GetAsset(game_assets *Assets, u32 ID, u32 GenerationID)
 {
     Assert(ID <= Assets->AssetCount);
     asset *Asset = Assets->Assets + ID;
@@ -158,12 +162,10 @@ inline asset_memory_header *GetAsset(game_assets *Assets, u32 ID)
         RemoveAssetHeaderFromList(Result);
         InsertAssetHeaderAtFront(Assets, Result);
 
-#if 0
         if(Asset->Header->GenerationID < GenerationID)
         {
             Asset->Header->GenerationID = GenerationID;
         }
-#endif
 
         CompletePreviousWritesBeforeFutureWrites;
     }
@@ -173,18 +175,18 @@ inline asset_memory_header *GetAsset(game_assets *Assets, u32 ID)
     return(Result);
 }
 
-inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID)
+inline loaded_bitmap *GetBitmap(game_assets *Assets, bitmap_id ID, u32 GenerationID)
 {
-    asset_memory_header *Header = GetAsset(Assets, ID.Value);
+    asset_memory_header *Header = GetAsset(Assets, ID.Value, GenerationID);
 
     loaded_bitmap *Result = Header ? &Header->Bitmap : 0;
 
     return(Result);
 }
 
-inline loaded_sound *GetSound(game_assets *Assets, sound_id ID)
+inline loaded_sound *GetSound(game_assets *Assets, sound_id ID, u32 GenerationID)
 {
-    asset_memory_header *Header = GetAsset(Assets, ID.Value);
+    asset_memory_header *Header = GetAsset(Assets, ID.Value, GenerationID);
 
     loaded_sound *Result = Header ? &Header->Sound : 0;
 
@@ -250,6 +252,37 @@ inline sound_id GetNextSoundInChain(game_assets *Assets, sound_id ID)
     }
 
     return(Result);
+}
+
+inline u32
+BeginGeneration(game_assets *Assets)
+{
+    BeginAssetLock(Assets);
+    
+    Assert(Assets->InFlightGenerationCount < ArrayCount(Assets->InFlightGenerations));
+    u32 Result = Assets->NextGenerationID++;
+    Assets->InFlightGenerations[Assets->InFlightGenerationCount++] = Result;
+
+    EndAssetLock(Assets);
+
+    return(Result);
+}
+
+inline void
+EndGeneration(game_assets *Assets, u32 GenerationID)
+{
+    BeginAssetLock(Assets);
+
+    for(u32 Index = 0; Index < Assets->InFlightGenerationCount; ++Index)
+    {
+        if(Assets->InFlightGenerations[Index] == GenerationID)
+        {
+            Assets->InFlightGenerations[Index] = Assets->InFlightGenerations[--Assets->InFlightGenerationCount];
+            break;
+        }
+    }
+
+    EndAssetLock(Assets);
 }
 
 #define GAME_ASSET_H

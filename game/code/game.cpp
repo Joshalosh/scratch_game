@@ -334,6 +334,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
     fill_ground_chunk_work *Work = (fill_ground_chunk_work *)Data;
 
     RenderGroupToOutput(Work->RenderGroup, Work->Buffer);
+    FinishRenderGroup(Work->RenderGroup);
 
     EndTaskWithMemory(Work->Task);
 }
@@ -421,16 +422,10 @@ FillGroundChunk(transient_state *TranState, game_state *GameState, ground_buffer
             }
         }
 
-        if(AllResourcesPresent(RenderGroup))
-        {
-            GroundBuffer->P = *ChunkP;
+        Assert(AllResourcesPresent(RenderGroup));
 
-            Platform.AddEntry(TranState->LowPriorityQueue, FillGroundChunkWork, Work);
-        }
-        else
-        {
-            EndTaskWithMemory(Work->Task);
-        }
+        GroundBuffer->P = *ChunkP;
+        Platform.AddEntry(TranState->LowPriorityQueue, FillGroundChunkWork, Work);
     }
 }
 
@@ -1557,6 +1552,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
 
     TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer);
+    FinishRenderGroup(RenderGroup);
 
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the

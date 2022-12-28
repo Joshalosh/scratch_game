@@ -107,6 +107,23 @@ MergeIfPossible(game_assets *Assets, asset_memory_block *First, asset_memory_blo
     return(Result);
 }
 
+internal b32
+GenerationHasCompleted(game_assets *Assets, u32 CheckID)
+{
+    b32 Result = true;
+
+    for(u32 Index = 0; Index < Assets->InFlightGenerationCount; ++Index)
+    {
+        if(Assets->InFlightGenerations[Index] == CheckID)
+        {
+            Result = false;
+            break;
+        }
+    }
+
+    return(Result);
+}
+
 internal asset_memory_header *
 AcquireAssetMemory(game_assets *Assets, u32 Size, u32 Index) // Changed from the name 'AssetIndex' to comply with warning 4457.
 {
@@ -145,7 +162,8 @@ AcquireAssetMemory(game_assets *Assets, u32 Size, u32 Index) // Changed from the
                 Header = Header->Prev)
             {
                 asset *Asset = Assets->Assets + Header->AssetIndex;
-                if(Asset->State >= AssetState_Loaded)
+                if((Asset->State >= AssetState_Loaded) &&
+                   (GenerationHasCompleted(Assets, Asset->Header->GenerationID)))
                 {
                     u32 AssetIndex = Header->AssetIndex;
                     asset *Asset = Assets->Assets + AssetIndex;
@@ -423,6 +441,9 @@ internal game_assets *
 AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState)
 {
     game_assets *Assets = PushStruct(Arena, game_assets);
+
+    Assets->NextGenerationID = 0;
+    Assets->InFlightGenerationCount = 0;
 
     Assets->MemorySentinel.Flags = 0;
     Assets->MemorySentinel.Size = 0;
