@@ -348,6 +348,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 
     // TODO: Decide what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(Work->TranState->Assets, &Work->Task->Arena, 0, true);
+    BeginRender(RenderGroup);
     Orthographic(RenderGroup, Buffer->Width, Buffer->Height, (Buffer->Width - 2) / Width);
     Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));
 
@@ -411,7 +412,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
     Assert(AllResourcesPresent(RenderGroup));
 
     RenderGroupToOutput(RenderGroup, Buffer);
-    FinishRenderGroup(RenderGroup);
+    EndRender(RenderGroup);
 
     EndTaskWithMemory(Work->Task);
 }
@@ -599,6 +600,64 @@ MakePyramidNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
 
         Row += Bitmap->Pitch;
     }
+}
+
+global_variable render_group *DEBUGRenderGroup;
+
+internal void
+DEBUGTextLine(char *String)
+{
+    if(DEBUGRenderGroup)
+    {
+        render_group *RenderGroup = DEBUGRenderGroup;
+
+        asset_vector MatchVector {};
+        asset_vector WeightVector = {};
+        WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
+
+        for(char *At = String; *At; ++At)
+        {
+            MatchVector.E[Tag_UnicodeCodepoint] = *At;
+            bitmap_id BitmapID = GetBestMatchBitmapFrom(RenderGroup->Assets, Asset_Font, &MatchVector, &WeightVector);
+            PushBitmap(RenderGroup, BitmapID, 1.2f, V3(0, 0, 0), V4(1, 1, 1, 1));
+        }
+    }
+}
+
+internal void
+OverlayCycleCounters(game_memory *Memory)
+{
+    char *NameTable[] =
+    {
+        "GameUpdateAndRender",
+        "RenderGroupToOutput",
+        "DrawRectangleSlowly",
+        "ProcessPixel",
+        "DrawRectangleQuickly",
+    };
+#if GAME_INTERNAL
+    DEBUGTextLine("DEBUG CYCLE COUNTS:");
+    for(int CounterIndex = 0; CounterIndex < ArrayCount(Memory->Counters); ++CounterIndex)
+    {
+        debug_cycle_counter *Counter = Memory->Counters + CounterIndex;
+
+        if(Counter->HitCount)
+        {
+#if 0
+            char TextBuffer[256];
+            _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                        "  %d: %I64ucy %uh %I64ucy/h\n",
+                        CounterIndex,
+                        Counter->CycleCount,
+                        Counter->HitCount,
+                        Counter->CycleCount / Counter->HitCount);
+            OutputDebugStringA(TextBuffer);
+#else
+            DEBUGTextLine(NameTable[CounterIndex]);
+#endif
+        }
+    }
+#endif
 }
 
 #if GAME_INTERNAL
@@ -849,6 +908,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(16), TranState);
 
+        DEBUGRenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(16), false);
+
         GameState->Music = PlaySound(&GameState->AudioState, GetFirstSoundFrom(TranState->Assets, Asset_Music));
 
         // TODO: Pick a real number here.
@@ -886,6 +947,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         TranState->IsInitialised = true;
+    }
+
+    if(DEBUGRenderGroup)
+    {
+        BeginRender(DEBUGRenderGroup);
+        Orthographic(DEBUGRenderGroup, Buffer->Width, Buffer->Height, 100.0f);
     }
 
 #if 0
@@ -1004,6 +1071,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // TODO: Need to figure out what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(4), false);
+    BeginRender(RenderGroup);
     real32 WidthOfMonitor = 0.635f; // Horizontal measurement of monitor in metres
     real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
     real32 FocalLength = 0.6f;
@@ -1556,7 +1624,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
 
     TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer);
-    FinishRenderGroup(RenderGroup);
+    EndRender(RenderGroup);
 
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the
@@ -1571,6 +1639,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     CheckArena(&TranState->TranArena);
 
     END_TIMED_BLOCK(GameUpdateAndRender);
+
+    OverlayCycleCounters(Memory);
+
+    if(DEBUGRenderGroup)
+    {
+        TiledRenderGroupToOutput(TranState->HighPriorityQueue, DEBUGRenderGroup, DrawBuffer);
+        EndRender(DEBUGRenderGroup);
+    }
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)

@@ -5,9 +5,6 @@
 
  - Flush all thread queues before loading DLL.
 
- - Asset streaming
-   - Memory management
-
  - Debug code
    - Fonts
    - Logging
