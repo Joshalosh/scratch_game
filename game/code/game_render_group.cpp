@@ -609,7 +609,7 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
             {
                 render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
                 Assert(Entry->Bitmap);
-                
+
 #if 0
 //                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
                 DrawRectangleSlowly(OutputTarget, Entry->P,
@@ -752,7 +752,7 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
         for(int TileX = 0; TileX < TileCountX; ++TileX)
         {
             tile_render_work *Work = WorkArray + WorkCount++;
-            
+
             rectangle2i ClipRect;
             ClipRect.MinX = TileX*TileWidth;
             ClipRect.MaxX = ClipRect.MinX + TileWidth;
@@ -802,7 +802,7 @@ AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBu
     Result->Assets = Assets;
     Result->GlobalAlpha = 1.0f;
 
-    Result->GenerationID = BeginGeneration(Assets);
+    Result->GenerationID = 0;
 
     // Default Transform.
     Result->Transform.OffsetP = V3(0.0f, 0.0f, 0.0f);
@@ -928,6 +928,7 @@ inline void *
 PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type)
 {
     Assert(Group->InsideRender);
+
     void *Result = 0;
 
     Size += sizeof(render_group_entry_header);

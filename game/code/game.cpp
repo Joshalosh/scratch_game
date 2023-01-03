@@ -336,7 +336,6 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 {
     fill_ground_chunk_work *Work = (fill_ground_chunk_work *)Data;
 
-
     loaded_bitmap *Buffer = &Work->GroundBuffer->Bitmap;
     Buffer->AlignPercentage = V2(0.5f, 0.5f);
     Buffer->WidthOverHeight = 1.0f;
@@ -602,7 +601,20 @@ MakePyramidNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
     }
 }
 
+// TODO: Fix this for looped live code editing.
 global_variable render_group *DEBUGRenderGroup;
+global_variable r32 LeftEdge;
+global_variable r32 AtY;
+global_variable r32 FontScale;
+
+internal void
+DEBUGReset(u32 Width, u32 Height)
+{
+    FontScale = 20.0f;
+    Orthographic(DEBUGRenderGroup, Width, Height, 1.0f);
+    AtY = 0.5f*Height - 0.5f*FontScale;
+    LeftEdge = -0.5f*Width + 0.5f*FontScale;
+}
 
 internal void
 DEBUGTextLine(char *String)
@@ -611,16 +623,52 @@ DEBUGTextLine(char *String)
     {
         render_group *RenderGroup = DEBUGRenderGroup;
 
-        asset_vector MatchVector {};
+        asset_vector MatchVector = {};
         asset_vector WeightVector = {};
         WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
 
-        for(char *At = String; *At; ++At)
+        r32 CharScale = FontScale;
+        v4 Color = V4(1, 1, 1, 1);
+        r32 AtX = LeftEdge;
+        for(char *At = String; *At;)
         {
-            MatchVector.E[Tag_UnicodeCodepoint] = *At;
-            bitmap_id BitmapID = GetBestMatchBitmapFrom(RenderGroup->Assets, Asset_Font, &MatchVector, &WeightVector);
-            PushBitmap(RenderGroup, BitmapID, 1.2f, V3(0, 0, 0), V4(1, 1, 1, 1));
+            if((At[0] == '\\') &&
+               (At[1] == '#') &&
+               (At[2] != 0) &&
+               (At[3] != 0) &&
+               (At[4] != 0))
+            {
+                r32 CScale = 1.0f / 9.0f;
+                Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
+                           Clamp01(CScale*(r32)(At[3] - '0')),
+                           Clamp01(CScale*(r32)(At[4] - '0')),
+                           1.0f);
+                At += 5;
+            }
+            else if((At[0] == '\\') &&
+                    (At[1] == '^') &&
+                    (At[2] != 0))
+            {
+                r32 CScale = 1.0f / 9.0f;
+                CharScale = FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
+                At += 3;
+            }
+            else
+            {
+                if(*At != ' ')
+                {
+                    MatchVector.E[Tag_UnicodeCodepoint] = *At;
+                    // TODO: This is too slow for text, at the moment.
+                    bitmap_id BitmapID = GetBestMatchBitmapFrom(RenderGroup->Assets, Asset_Font, &MatchVector, &WeightVector);
+                    PushBitmap(RenderGroup, BitmapID, CharScale, V3(AtX, AtY, 0), Color);
+                }
+                AtX += CharScale;
+
+                ++At;
+            }
         }
+
+        AtY -= 1.2f*FontScale;
     }
 }
 
@@ -636,7 +684,7 @@ OverlayCycleCounters(game_memory *Memory)
         "DrawRectangleQuickly",
     };
 #if GAME_INTERNAL
-    DEBUGTextLine("DEBUG CYCLE COUNTS:");
+    DEBUGTextLine("\\#900DEBUG \\#090CYCLE \\#990\\^5COUNTS:");
     for(int CounterIndex = 0; CounterIndex < ArrayCount(Memory->Counters); ++CounterIndex)
     {
         debug_cycle_counter *Counter = Memory->Counters + CounterIndex;
@@ -677,9 +725,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     uint32_t GroundBufferWidth = 256;
     uint32_t GroundBufferHeight = 256;
-
-    // TODO: Remove this!
-    real32 PixelsToMetres = 1.0f / 42.0f;
 
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
     game_state *GameState = (game_state *)Memory->PermanentStorage;
@@ -952,7 +997,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if(DEBUGRenderGroup)
     {
         BeginRender(DEBUGRenderGroup);
-        Orthographic(DEBUGRenderGroup, Buffer->Width, Buffer->Height, 100.0f);
+        DEBUGReset(Buffer->Width, Buffer->Height);
     }
 
 #if 0
@@ -1339,7 +1384,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     PushBitmap(RenderGroup, HeroBitmaps.Cape, HeroSizeC*1.2f, V3(0, 0, 0));
                     PushBitmap(RenderGroup, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
                     DrawHitPoints(Entity, RenderGroup);
-                    
+
                     for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 3; ++ParticleSpawnIndex)
                     {
                         particle *Particle = GameState->Particles + GameState->NextParticle++;
@@ -1365,8 +1410,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         MatchVector.E[Tag_UnicodeCodepoint] = (r32)Nothings[RandomChoice(&GameState->EffectsEntropy, ArrayCount(Nothings) - 1)];
                         WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
 
-                        Particle->BitmapID = GetBestMatchBitmapFrom(TranState->Assets, Asset_Font, 
-                                                                   &MatchVector, &WeightVector);
+                        Particle->BitmapID = GetBestMatchBitmapFrom(TranState->Assets, Asset_Font,
+                                                                    &MatchVector, &WeightVector);
 
 //                        Particle->BitmapID = GetRandomBitmapFrom(TranState->Assets, Asset_Font, &GameState->EffectsEntropy);
                     }
@@ -1440,7 +1485,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         v3 ddP = Particle->ddP + Dispersion;
 
                         // Simulate the particle forward in time.
-                        Particle->P += (0.5f*Square(Input->dtForFrame)*Input->dtForFrame*ddP + 
+                        Particle->P += (0.5f*Square(Input->dtForFrame)*Input->dtForFrame*ddP +
                                         Input->dtForFrame*Particle->dP);
                         Particle->dP += Input->dtForFrame*ddP;
                         Particle->Color += Input->dtForFrame*Particle->dColor;
@@ -1453,8 +1498,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                             Particle->dP.y = -CoefficientOfRestitution*Particle->dP.y;
                             Particle->dP.x = CoefficientOfFriction*Particle->dP.x;
                         }
-
-
 
                         // TODO: I should probably just clamp colours in the renderer.
                         v4 Color;
