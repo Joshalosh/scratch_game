@@ -363,15 +363,18 @@ LoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
 }
 
 internal loaded_bitmap
-LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
+LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint, ga_asset *Asset)
 {
     loaded_bitmap Result = {};
 
 #if USE_FONTS_FROM_WINDOWS
     int MaxWidth = 1024;
     int MaxHeight = 1024;
+    // TODO: These statics won't work for extracting multiple fonts. The font 
+    // has to be part of the spec when we call LoadGlyphBitmap.
     static VOID *Bits = 0;
     static HDC DeviceContext = 0;
+    static TEXTMETRIC TextMetric;
     if(!DeviceContext)
     {
         AddFontResourceExA(Filename, FR_PRIVATE, 0);
@@ -407,7 +410,6 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
         SelectObject(DeviceContext, Font);
         SetBkColor(DeviceContext, RGB(0, 0, 0));
 
-        TEXTMETRIC TextMetric;
         GetTextMetrics(DeviceContext, &TextMetric);
     }
 
@@ -418,15 +420,15 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
     SIZE Size;
     GetTextExtentPoint32W(DeviceContext, &CheesePoint, 1, &Size);
 
-    int Width = Size.cx;
-    if(Width > MaxWidth)
+    int BoundWidth = Size.cx;
+    if(BoundWidth > MaxWidth)
     {
-        Width = MaxWidth;
+        BoundWidth = MaxWidth;
     }
-    int Height = Size.cy;
-    if(Height > MaxHeight)
+    int BoundHeight = Size.cy;
+    if(BoundHeight > MaxHeight)
     {
-        Height = MaxHeight;
+        BoundHeight = MaxHeight;
     }
 
 //    PatBlt(DeviceContext, 0, 0, Width, Height, BLACKNESS);
@@ -440,10 +442,10 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
     s32 MaxY = -10000;
 
     u32 *Row = (u32 *)Bits + (MaxHeight - 1)*MaxWidth;
-    for(s32 Y = 0; Y < Height; ++Y)
+    for(s32 Y = 0; Y < BoundHeight; ++Y)
     {
         u32 *Pixel = Row;
-        for(s32 X = 0; X < Width; ++X)
+        for(s32 X = 0; X < BoundWidth; ++X)
         {
 #if 0
             COLORREF RefPixel = GetPixel(DeviceContext, X, Y);
@@ -479,16 +481,8 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
 
     if(MinX <= MaxX)
     {
-#if 0
-        // TODO: Apron.
-        --MinX;
-        --MinY;
-        ++MaxX;
-        ++MaxY;
-#endif
-
-        Width = (MaxX - MinX) + 1;
-        Height = (MaxY - MinY) + 1;
+        int Width = (MaxX - MinX) + 1;
+        int Height = (MaxY - MinY) + 1;
 
         Result.Width = Width + 2;
         Result.Height = Height + 2;
@@ -512,12 +506,16 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
 #else
                 u32 Pixel = *Source;
 #endif
-                u8 Gray = (u8)(Pixel & 0xFF);
-                u8 Alpha = Gray;
-                *Dest++ = ((Alpha << 24) |
-                           (Gray << 16) |
-                           (Gray <<  8) |
-                           (Gray <<  0));
+                r32 Gray = (r32)(Pixel & 0xFF);
+                v4 Texel = {255.0f, 255.0f, 255.0f, Gray};
+                Texel = SRGB255ToLinear1(Texel);
+                Texel.rgb *= Texel.a;
+                Texel = Linear1ToSRGB255(Texel);
+
+                *Dest++ = (((u32)(Texel.a + 0.5f) << 24) |
+                           ((u32)(Texel.r + 0.5f) << 16) |
+                           ((u32)(Texel.g + 0.5f) << 8) |
+                           ((u32)(Texel.b + 0.5f) << 0));
 
                 ++Source;
             }
@@ -525,6 +523,8 @@ LoadGlyphBitmap(char *Filename, char *FontName, u32 Codepoint)
             DestRow -= Result.Pitch;
             SourceRow -= MaxWidth;
         }
+        Asset->Bitmap.AlignPercentage[0] = 1.0f / (r32)Result.Width;
+        Asset->Bitmap.AlignPercentage[1] = (1.0f + (MaxY - (BoundHeight - TextMetric.tmDescent))) / (r32)Result.Height;
     }
 
 #else
@@ -722,7 +722,7 @@ WriteGA(game_assets *Assets, char *Filename)
                 loaded_bitmap Bitmap;
                 if(Source->Type == AssetType_Font)
                 {
-                    Bitmap = LoadGlyphBitmap(Source->Filename, Source->FontName, Source->Codepoint);
+                    Bitmap = LoadGlyphBitmap(Source->Filename, Source->FontName, Source->Codepoint, Dest);
                 }
                 else
                 {
