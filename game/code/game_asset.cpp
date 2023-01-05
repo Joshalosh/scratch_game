@@ -446,6 +446,13 @@ GetRandomSoundFrom(game_assets *Assets, asset_type_id TypeID, random_series *Ser
     return(Result);
 }
 
+internal font_id
+GetBestMatchFontFrom(game_assets *Assets, asset_type_id TypeID, asset_vector *MatchVector, asset_vector *WeightVector)
+{
+    font_id Result = {GetBestMatchAssetFrom(Assets, TypeID, MatchVector, WeightVector)};
+    return(Result);
+}
+
 internal game_assets *
 AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState)
 {
@@ -601,4 +608,30 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assert(AssetCount == Assets->AssetCount);
 
     return(Assets);
+}
+
+internal r32
+GetHorizontalAdvanceForPair(loaded_font *Font, u32 PrevCodepoint, u32 Codepoint)
+{
+    return(80.0f);
+}
+
+internal bitmap_id
+GetBitmapForGlyph(game_assets *Assets, loaded_font *Font, u32 Codepoint)
+{
+    asset_vector MatchVector = {};
+    asset_vector WeightVector = {};
+
+    MatchVector.E[Tag_UnicodeCodepoint] = (r32)Codepoint;
+    WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
+
+    bitmap_id Result = GetBestMatchBitmapFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
+
+    return(Result);
+}
+
+internal r32
+GetLineAdvanceFor(loaded_font *Font)
+{
+    return(1.2f*80.0f);
 }

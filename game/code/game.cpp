@@ -625,54 +625,62 @@ DEBUGTextLine(char *String)
 
         asset_vector MatchVector = {};
         asset_vector WeightVector = {};
-        WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
+        font_id FontID = GetBestMatchFontFrom(RenderGroup->Assets, Asset_Font,
+                                              &MatchVector, &WeightVector);
 
-        r32 CharScale = FontScale;
-        v4 Color = V4(1, 1, 1, 1);
-        r32 AtX = LeftEdge;
-        for(char *At = String; *At;)
+        loaded_font *Font = GetFont(RenderGroup->Assets, FontID, RenderGroup->GenerationID);
+
+        if(Font)
         {
-            if((At[0] == '\\') &&
-               (At[1] == '#') &&
-               (At[2] != 0) &&
-               (At[3] != 0) &&
-               (At[4] != 0))
+            u32 PrevCodepoint = 0;
+            r32 CharScale = FontScale;
+            v4 Color = V4(1, 1, 1, 1);
+            r32 AtX = LeftEdge;
+            for(char *At = String; *At;)
             {
-                r32 CScale = 1.0f / 9.0f;
-                Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
-                           Clamp01(CScale*(r32)(At[3] - '0')),
-                           Clamp01(CScale*(r32)(At[4] - '0')),
-                           1.0f);
-                At += 5;
-            }
-            else if((At[0] == '\\') &&
-                    (At[1] == '^') &&
-                    (At[2] != 0))
-            {
-                r32 CScale = 1.0f / 9.0f;
-                CharScale = FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
-                At += 3;
-            }
-            else
-            {
-                r32 CharDim = CharScale*10.0f;
-                if(*At != ' ')
+                if((At[0] == '\\') &&
+                   (At[1] == '#') &&
+                   (At[2] != 0) &&
+                   (At[3] != 0) &&
+                   (At[4] != 0))
                 {
-                    MatchVector.E[Tag_UnicodeCodepoint] = *At;
-                    // TODO: This is too slow for text, at the moment.
-                    bitmap_id BitmapID = GetBestMatchBitmapFrom(RenderGroup->Assets, Asset_Font, &MatchVector, &WeightVector);
-                    ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
-
-                    CharDim = CharScale*(r32)(Info->Dim[0] + 2);
-                    PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
+                    r32 CScale = 1.0f / 9.0f;
+                    Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
+                               Clamp01(CScale*(r32)(At[3] - '0')),
+                               Clamp01(CScale*(r32)(At[4] - '0')),
+                               1.0f);
+                    At += 5;
                 }
-                AtX += CharDim;
+                else if((At[0] == '\\') &&
+                        (At[1] == '^') &&
+                        (At[2] != 0))
+                {
+                    r32 CScale = 1.0f / 9.0f;
+                    CharScale = FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
+                    At += 3;
+                }
+                else
+                {
+                    u32 Codepoint = *At;
+                    r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Font, PrevCodepoint, Codepoint);
+                    AtX += AdvanceX;
 
-                ++At;
+                    if(Codepoint != ' ')
+                    {
+                        bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Font, Codepoint);
+                        ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
+
+                        PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
+                    }
+
+                    PrevCodepoint = Codepoint;
+
+                    ++At;
+                }
             }
-        }
 
-        AtY -= 1.2f*80.0f*FontScale;
+            AtY -= GetLineAdvanceFor(Font)*FontScale;
+        }
     }
 }
 

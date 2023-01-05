@@ -65,6 +65,11 @@ struct sound_id
     u32 Value;
 };
 
+struct font_id
+{
+    u32 Value;
+};
+
 struct ga_header
 {
 #define GA_MAGIC_VALUE GA_CODE('g','a','f',' ')

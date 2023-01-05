@@ -2,11 +2,13 @@
 
 struct loaded_sound
 {
-    // TODO: This could be shrunk to 12 bytes if the loaded_bitmap
-    // ever got down that small.
     int16_t *Samples[2];
     uint32_t SampleCount; // This is the sample count divided by 8.
     uint32_t ChannelCount;
+};
+
+struct loaded_font
+{
 };
 
 // TODO: I can streamline this by using header pointer as an indicator of unloaded status.
@@ -29,6 +31,7 @@ struct asset_memory_header
     {
         loaded_bitmap Bitmap;
         loaded_sound Sound;
+        loaded_font Font;
     };
 };
 
@@ -209,6 +212,16 @@ GetSoundInfo(game_assets *Assets, sound_id ID)
 {
     Assert(ID.Value <= Assets->AssetCount);
     ga_sound *Result = &Assets->Assets[ID.Value].GA.Sound;
+
+    return(Result);
+}
+
+inline loaded_font *
+GetFont(game_assets *Assets, font_id ID, u32 GenerationID)
+{
+    asset_memory_header *Header = GetAsset(Assets, ID.Value, GenerationID);
+
+    loaded_font *Result = Header ? &Header->Font : 0;
 
     return(Result);
 }
