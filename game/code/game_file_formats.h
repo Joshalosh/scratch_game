@@ -33,6 +33,7 @@ enum asset_type_id
     Asset_Torso,
 
     Asset_Font,
+    Asset_FontGlyph,
 
     //
     // Sounds
@@ -124,12 +125,30 @@ struct ga_bitmap
 {
     u32 Dim[2];
     r32 AlignPercentage[2];
+    /* Data is:
+     
+       u32 Pixels[Dim[1]][Dim[0]];
+    */
 };
 struct ga_sound
 {
     u32 SampleCount;
     u32 ChannelCount;
     u32 Chain; // ga_sound_chain
+    /* Data is:
+
+       s16 Channels[ChannelCount][SampleCount];
+    */
+};
+struct ga_font
+{
+    u32 CodepointCount;
+    r32 LineAdvance;
+    /* Data is:
+    
+       bitmap_id Codepoints[CodepointCount];
+       r32 HorizontalAdvance[CodepointCount];
+    */
 };
 struct ga_asset
 {
@@ -140,6 +159,7 @@ struct ga_asset
     {
         ga_bitmap Bitmap;
         ga_sound Sound;
+        ga_font Font;
     };
 };
 

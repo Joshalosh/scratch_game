@@ -333,6 +333,74 @@ LoadSound(game_assets *Assets, sound_id ID)
     }
 }
 
+internal void
+LoadFont(game_assets *Assets, bitmap_id ID, b32 Immediate)
+{
+    // TODO: Merge all this boilerplate because it's the same between
+    // LoadBitmap, LoadSound, and LoadFont.
+    asset *Asset = Assets->Assets + ID.Value;
+    if(ID.Value)
+    {
+        if(AtomicCompareExchangeUInt32((uint32_t *)&Asset->State, AssetState_Queued, AssetState_Unloaded) ==
+           AssetState_Unloaded)
+        {
+            task_with_memory *Task = 0;
+
+            if(!Immediate)
+            {
+                Task = BeginTaskWithMemory(Assets->TranState);
+            }
+
+            if(Immediate || Task)
+            {
+                asset *Asset = Assets->Assets + ID.Value;
+                ga_font *Info = &Asset->GA.Font;
+
+                u32 HorizontalAdvanceSize = sizeof(r32)*Info->CodepointCount*Info->CodepointCount;
+                u32 CodepointSize = Info->CodepointCount*sizeof(bitmap_id);
+                u32 SizeData = CodepointSize + HorizontalAdvanceSize;
+                u32 SizeTotal = SizeData + sizeof(asset_memory_header);
+
+                Asset->Header = AcquireAssetMemory(Assets, SizeTotal, ID.Value);
+
+                loaded_font *Font = &Asset->Header->Font;
+                Font->Codepoints = (bitmap_id *)(Asset->Header + 1);
+                Font->HorizontalAdvance = (r32 *)((u8 *)Font->Codepoints + CodepointSize);
+
+                load_asset_work Work;
+                Work.Task = Task;
+                Work.Asset = Assets->Assets + ID.Value;
+                Work.Handle = GetFileHandleFor(Assets, Asset->FileIndex);
+                Work.Offset = Asset->GA.DataOffset;
+                Work.Size = SizeData;
+                Work.Destination = Font->Codepoints;
+                Work.FinalState = AssetState_Loaded;
+                if(Task)
+                {
+                    load_asset_work *TaskWork = PushStruct(&Task->Arena, load_asset_work);
+                    *TaskWork = Work;
+                    Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, TaskWork);
+                }
+                else
+                {
+                    LoadAssetWorkDirectly(&Work);
+                }
+            }
+            else
+            {
+                Asset->State = AssetState_Unloaded;
+            }
+        }
+        else if(Immediate)
+        {
+            // TODO: Do I wasnt to have a more coherent story for what happens
+            // when two force-load people hit the storage at the same time?
+            asset_state volatile *State = (asset_state volatile *)&Asset->State;
+            while(*State == AssetState_Queued) {}
+        }
+    }
+}
+
 internal uint32_t
 GetBestMatchAssetFrom(game_assets *Assets, asset_type_id TypeID,
                       asset_vector *MatchVector, asset_vector *WeightVector)
@@ -610,28 +678,43 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     return(Assets);
 }
 
-internal r32
-GetHorizontalAdvanceForPair(loaded_font *Font, u32 PrevCodepoint, u32 Codepoint)
+inline u32
+GetClampedCodePoint(ga_font *Info, u32 Codepoint)
 {
-    return(80.0f);
+    u32 Result = 0;
+    if(Codepoint < Info->CodepointCount)
+    {
+        Result = Codepoint;
+    }
+
+    return(Result);
+}
+
+
+internal r32
+GetHorizontalAdvanceForPair(ga_font *Info, loaded_font *Font, u32 DesiredPrevCodepoint, u32 DesiredCodepoint)
+{
+    u32 PrevCodepoint = GetClampedCodePoint(Info, DesiredPrevCodepoint);
+    u32 Codepoint = GetClampedCodePoint(Info, DesiredCodepoint);
+
+    r32 Result = Font->HorizontalAdvance[PrevCodepoint*Info->CodepointCount + Codepoint];
+
+    return(Result);
 }
 
 internal bitmap_id
-GetBitmapForGlyph(game_assets *Assets, loaded_font *Font, u32 Codepoint)
+GetBitmapForGlyph(game_assets *Assets, ga_font *Info, loaded_font *Font, u32 DesiredCodepoint)
 {
-    asset_vector MatchVector = {};
-    asset_vector WeightVector = {};
-
-    MatchVector.E[Tag_UnicodeCodepoint] = (r32)Codepoint;
-    WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
-
-    bitmap_id Result = GetBestMatchBitmapFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
+    u32 Codepoint = GetClampedCodePoint(Info, DesiredCodepoint);
+    bitmap_id Result = Font->Codepoints[Codepoint];
 
     return(Result);
 }
 
 internal r32
-GetLineAdvanceFor(loaded_font *Font)
+GetLineAdvanceFor(ga_font *Info, loaded_font *Font)
 {
-    return(1.2f*80.0f);
+    r32 Result = Info->LineAdvance;
+
+    return(Result);
 }

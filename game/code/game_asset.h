@@ -9,6 +9,8 @@ struct loaded_sound
 
 struct loaded_font
 {
+    bitmap_id *Codepoints;
+    r32 *HorizontalAdvance;
 };
 
 // TODO: I can streamline this by using header pointer as an indicator of unloaded status.
@@ -222,6 +224,15 @@ GetFont(game_assets *Assets, font_id ID, u32 GenerationID)
     asset_memory_header *Header = GetAsset(Assets, ID.Value, GenerationID);
 
     loaded_font *Result = Header ? &Header->Font : 0;
+
+    return(Result);
+}
+
+inline ga_font *
+GetFontInfo(game_assets *Assets, font_id ID)
+{
+    Assert(ID.Value <= Assets->AssetCount);
+    ga_font *Result = &Assets->Assets[ID.Value].GA.Font;
 
     return(Result);
 }

@@ -632,6 +632,8 @@ DEBUGTextLine(char *String)
 
         if(Font)
         {
+            ga_font *Info = GetFontInfo(RenderGroup->Assets, FontID);
+
             u32 PrevCodepoint = 0;
             r32 CharScale = FontScale;
             v4 Color = V4(1, 1, 1, 1);
@@ -662,12 +664,12 @@ DEBUGTextLine(char *String)
                 else
                 {
                     u32 Codepoint = *At;
-                    r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Font, PrevCodepoint, Codepoint);
+                    r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Info, Font, PrevCodepoint, Codepoint);
                     AtX += AdvanceX;
 
                     if(Codepoint != ' ')
                     {
-                        bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Font, Codepoint);
+                        bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Info, Font, Codepoint);
                         ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
 
                         PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
@@ -679,7 +681,7 @@ DEBUGTextLine(char *String)
                 }
             }
 
-            AtY -= GetLineAdvanceFor(Font)*FontScale;
+            AtY -= GetLineAdvanceFor(Info, Font)*FontScale;
         }
     }
 }
