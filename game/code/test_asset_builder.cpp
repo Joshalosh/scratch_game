@@ -383,31 +383,59 @@ LoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
 internal loaded_font *
 LoadFont(char *Filename, char *FontName, u32 CodepointCount)
 {
-    loaded_font *Result = (loaded_font *)malloc(sizeof(loaded_font));
+    loaded_font *Font = (loaded_font *)malloc(sizeof(loaded_font));
 
     AddFontResourceExA(Filename, FR_PRIVATE, 0);
     int Height = 128; // I need to figure out how to specify pixels properly here.
-    Result->Win32Handle = CreateFontA(Height, 0, 0, 0,
-                                      FW_NORMAL, // Weight.
-                                      FALSE, // Italic.
-                                      FALSE, // Underline.
-                                      FALSE, // Strikeout.
-                                      DEFAULT_CHARSET,
-                                      OUT_DEFAULT_PRECIS,
-                                      CLIP_DEFAULT_PRECIS,
-                                      ANTIALIASED_QUALITY,
-                                      DEFAULT_PITCH|FF_DONTCARE,
-                                      FontName);
+    Font->Win32Handle = CreateFontA(Height, 0, 0, 0,
+                                    FW_NORMAL, // Weight.
+                                    FALSE, // Italic.
+                                    FALSE, // Underline.
+                                    FALSE, // Strikeout.
+                                    DEFAULT_CHARSET,
+                                    OUT_DEFAULT_PRECIS,
+                                    CLIP_DEFAULT_PRECIS,
+                                    ANTIALIASED_QUALITY,
+                                    DEFAULT_PITCH|FF_DONTCARE,
+                                    FontName);
 
-    SelectObject(GlobalFontDeviceContext, Result->Win32Handle);
-    GetTextMetrics(GlobalFontDeviceContext, &Result->TextMetric);
+    SelectObject(GlobalFontDeviceContext, Font->Win32Handle);
+    GetTextMetrics(GlobalFontDeviceContext, &Font->TextMetric);
 
-    Result->LineAdvance = (r32)Result->TextMetric.tmHeight + (r32)Result->TextMetric.tmExternalLeading;
-    Result->CodepointCount = CodepointCount;
-    Result->BitmapIDs = (bitmap_id *)malloc(sizeof(bitmap_id)*CodepointCount);
-    Result->HorizontalAdvance = (r32 *)malloc(sizeof(r32)*CodepointCount*CodepointCount);
+    Font->LineAdvance = (r32)Font->TextMetric.tmHeight + (r32)Font->TextMetric.tmExternalLeading;
+    Font->CodepointCount = CodepointCount;
+    Font->BitmapIDs = (bitmap_id *)malloc(sizeof(bitmap_id)*CodepointCount);
+    Font->HorizontalAdvance = (r32 *)malloc(sizeof(r32)*CodepointCount*CodepointCount);
 
-    return(Result);
+    ABC *ABCs = (ABC *)malloc(sizeof(ABC)*Font->CodepointCount);
+    GetCharABCWidthsW(GlobalFontDeviceContext, 0, (Font->CodepointCount - 1), ABCs);
+    for(u32 CodepointIndex = 0; CodepointIndex < Font->CodepointCount; ++CodepointIndex)
+    {
+        ABC *This = ABCs + CodepointIndex;
+        r32 W = (r32)This->abcA + (r32)This->abcB + (r32)This->abcC;
+        for(u32 OtherCodepointIndex = 0; 
+            OtherCodepointIndex < Font->CodepointCount; 
+            ++OtherCodepointIndex)
+        {
+            Font->HorizontalAdvance[CodepointIndex*Font->CodepointCount + OtherCodepointIndex] = (r32)W;
+        }
+    }
+    free(ABCs);
+
+    DWORD KerningPairCount = GetKerningPairsW(GlobalFontDeviceContext, 0, 0);
+    KERNINGPAIR *KerningPairs = (KERNINGPAIR *)malloc(KerningPairCount*sizeof(KERNINGPAIR));
+    GetKerningPairsW(GlobalFontDeviceContext, KerningPairCount, KerningPairs);
+    for(DWORD KerningPairIndex = 0; KerningPairIndex < KerningPairCount; ++KerningPairIndex)
+    {
+        KERNINGPAIR *Pair = KerningPairs + KerningPairIndex;
+        if((Pair->wFirst < Font->CodepointCount) &&
+           (Pair->wSecond < Font->CodepointCount))
+        {
+            Font->HorizontalAdvance[Pair->wFirst*Font->CodepointCount + Pair->wSecond] += (r32)Pair->iKernAmount;
+        }
+    }
+
+    return(Font);
 }
 
 internal void
@@ -559,13 +587,6 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
         }
         Asset->Bitmap.AlignPercentage[0] = 1.0f / (r32)Result.Width;
         Asset->Bitmap.AlignPercentage[1] = (1.0f + (MaxY - (BoundHeight - Font->TextMetric.tmDescent))) / (r32)Result.Height;
-
-        for(u32 OtherCodepointIndex = 0; 
-            OtherCodepointIndex < Font->CodepointCount; 
-            ++OtherCodepointIndex)
-        {
-            Font->HorizontalAdvance[Codepoint*Font->CodepointCount + OtherCodepointIndex] = (r32)Result.Width;
-        }
     }
 
 #else
@@ -662,12 +683,12 @@ AddBitmapAsset(game_assets *Assets, char *Filename, r32 AlignPercentageX = 0.5f,
 }
 
 internal bitmap_id
-AddCharacterAsset(game_assets *Assets, loaded_font *Font, u32 Codepoint, r32 AlignPercentageX = 0.5f, r32 AlignPercentageY = 0.5f)
+AddCharacterAsset(game_assets *Assets, loaded_font *Font, u32 Codepoint)
 {
     added_asset Asset = AddAsset(Assets);
-    Asset.GA->Bitmap.AlignPercentage[0] = AlignPercentageX;
-    Asset.GA->Bitmap.AlignPercentage[1] = AlignPercentageY;
-    Asset.Source->Type = AssetType_Font;
+    Asset.GA->Bitmap.AlignPercentage[0] = 0.0f; // Set later by extraction.
+    Asset.GA->Bitmap.AlignPercentage[1] = 0.0f; // Set later by extraction.
+    Asset.Source->Type = AssetType_FontGlyph;
     Asset.Source->Glyph.Font = Font;
     Asset.Source->Glyph.Codepoint = Codepoint;
 
@@ -827,6 +848,31 @@ Initialise(game_assets *Assets)
 }
 
 internal void
+WriteFonts(void)
+{
+    game_assets Assets_;
+    game_assets *Assets = &Assets_;
+    Initialise(Assets);
+
+    loaded_font *DebugFont = LoadFont("c:/Windows/Fonts/arial.ttf", "Arial", ('~' + 1));
+//        AddCharacterAsset(Assets, "c:/Windows/Fonts/cour.ttf", "Courier New", Character);
+
+    BeginAssetType(Assets, Asset_Font);
+    AddFontAsset(Assets, DebugFont);
+    EndAssetType(Assets);
+
+    BeginAssetType(Assets, Asset_FontGlyph);
+    for(u32 Character = '!'; Character <= '~'; ++Character)
+    {
+        AddCharacterAsset(Assets, DebugFont, Character);
+        AddTag(Assets, Tag_UnicodeCodepoint, (r32)Character);
+    }
+    EndAssetType(Assets);
+
+    WriteGA(Assets, "testfonts.ga");
+}
+
+internal void
 WriteHero(void)
 {
     game_assets Assets_;
@@ -913,21 +959,6 @@ WriteNonHero(void)
     AddBitmapAsset(Assets, "test2/ground03.bmp");
     EndAssetType(Assets);
 
-    loaded_font *DebugFont = LoadFont("c:/Windows/Fonts/arial.ttf", "Arial", ('~' + 1));
-//        AddCharacterAsset(Assets, "c:/Windows/Fonts/cour.ttf", "Courier New", Character);
-
-    BeginAssetType(Assets, Asset_Font);
-    AddFontAsset(Assets, DebugFont);
-    EndAssetType(Assets);
-
-    BeginAssetType(Assets, Asset_FontGlyph);
-    for(u32 Character = '!'; Character <= '~'; ++Character)
-    {
-        AddCharacterAsset(Assets, DebugFont, Character);
-        AddTag(Assets, Tag_UnicodeCodepoint, (r32)Character);
-    }
-    EndAssetType(Assets);
-
     WriteGA(Assets, "test2.ga");
 }
 
@@ -989,6 +1020,7 @@ main(int ArgCount, char **Args)
 {
     InitialiseFontDC();
 
+    WriteFonts();
     WriteNonHero();
     WriteHero();
     WriteSounds();
