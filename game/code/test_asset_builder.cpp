@@ -95,6 +95,9 @@ struct loaded_font
     TEXTMETRIC TextMetric;
     u32 CodepointCount;
     r32 LineAdvance;
+
+    bitmap_id *BitmapIDs;
+    r32 *HorizontalAdvance;
 };
 
 struct entire_file
@@ -401,6 +404,8 @@ LoadFont(char *Filename, char *FontName, u32 CodepointCount)
 
     Result->LineAdvance = (r32)Result->TextMetric.tmHeight + (r32)Result->TextMetric.tmExternalLeading;
     Result->CodepointCount = CodepointCount;
+    Result->BitmapIDs = (bitmap_id *)malloc(sizeof(bitmap_id)*CodepointCount);
+    Result->HorizontalAdvance = (r32 *)malloc(sizeof(r32)*CodepointCount*CodepointCount);
 
     return(Result);
 }
@@ -554,6 +559,13 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
         }
         Asset->Bitmap.AlignPercentage[0] = 1.0f / (r32)Result.Width;
         Asset->Bitmap.AlignPercentage[1] = (1.0f + (MaxY - (BoundHeight - Font->TextMetric.tmDescent))) / (r32)Result.Height;
+
+        for(u32 OtherCodepointIndex = 0; 
+            OtherCodepointIndex < Font->CodepointCount; 
+            ++OtherCodepointIndex)
+        {
+            Font->HorizontalAdvance[Codepoint*Font->CodepointCount + OtherCodepointIndex] = (r32)Result.Width;
+        }
     }
 
 #else
@@ -761,6 +773,14 @@ WriteGA(game_assets *Assets, char *Filename)
 
                 free(WAV.Free);
             }
+            else if(Source->Type == AssetType_Font)
+            {
+                loaded_font *Font = Source->Font.Font;
+                u32 HorizontalAdvanceSize = sizeof(r32)*Font->CodepointCount*Font->CodepointCount;
+                u32 CodepointSize = Font->CodepointCount*sizeof(bitmap_id);
+                fwrite(Font->BitmapIDs, CodepointSize, 1, Out);
+                fwrite(Font->HorizontalAdvance, HorizontalAdvanceSize, 1, Out);
+            }
             else
             {
                 loaded_bitmap Bitmap;
@@ -906,7 +926,6 @@ WriteNonHero(void)
         AddCharacterAsset(Assets, DebugFont, Character);
         AddTag(Assets, Tag_UnicodeCodepoint, (r32)Character);
     }
-    FreeFont(DebugFont);
     EndAssetType(Assets);
 
     WriteGA(Assets, "test2.ga");

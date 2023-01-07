@@ -34,11 +34,19 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
     EndTaskWithMemory(Work->Task);
 }
 
+inline asset_file *
+GetFile(game_assets *Assets, u32 FileIndex)
+{
+    Assert(FileIndex < Assets->FileCount);
+    asset_file *Result = Assets->Files + FileIndex;
+
+    return(Result);
+}
+
 inline platform_file_handle *
 GetFileHandleFor(game_assets *Assets, u32 FileIndex)
 {
-    Assert(FileIndex < Assets->FileCount);
-    platform_file_handle *Result = &Assets->Files[FileIndex].Handle;
+    platform_file_handle *Result = &GetFile(Assets, FileIndex)->Handle;
 
     return(Result);
 }
@@ -364,6 +372,7 @@ LoadFont(game_assets *Assets, bitmap_id ID, b32 Immediate)
                 Asset->Header = AcquireAssetMemory(Assets, SizeTotal, ID.Value);
 
                 loaded_font *Font = &Asset->Header->Font;
+                Font->BitmapIDOffset = GetFile(Assets, Asset->FileIndex)->FontBitmapIDOffset;
                 Font->Codepoints = (bitmap_id *)(Asset->Header + 1);
                 Font->HorizontalAdvance = (r32 *)((u8 *)Font->Codepoints + CodepointSize);
 
@@ -557,6 +566,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         {
             asset_file *File = Assets->Files + FileIndex;
 
+            File->FontBitmapIDOffset = 0;
             File->TagBase = Assets->TagCount;
 
             ZeroStruct(File->Header);
@@ -636,6 +646,11 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
                     if(SourceType->TypeID == DestTypeID)
                     {
+                        if(SourceType->TypeID == Asset_FontGlyph)
+                        {
+                            File->FontBitmapIDOffset = AssetCount - SourceType->FirstAssetIndex;
+                        }
+
                         u32 AssetCountForType = (SourceType->OnePastLastAssetIndex - SourceType->FirstAssetIndex);
 
                         temporary_memory TempMem = BeginTemporaryMemory(&TranState->TranArena);
@@ -707,6 +722,7 @@ GetBitmapForGlyph(game_assets *Assets, ga_font *Info, loaded_font *Font, u32 Des
 {
     u32 Codepoint = GetClampedCodePoint(Info, DesiredCodepoint);
     bitmap_id Result = Font->Codepoints[Codepoint];
+    Result.Value += Font->BitmapIDOffset;
 
     return(Result);
 }
