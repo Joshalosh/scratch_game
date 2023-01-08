@@ -143,7 +143,9 @@ struct ga_sound
 struct ga_font
 {
     u32 CodepointCount;
-    r32 LineAdvance;
+    r32 AscenderHeight;
+    r32 DescenderHeight;
+    r32 ExternalLeading;
     /* Data is:
     
        bitmap_id Codepoints[CodepointCount];

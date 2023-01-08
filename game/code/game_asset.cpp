@@ -727,9 +727,17 @@ GetBitmapForGlyph(game_assets *Assets, ga_font *Info, loaded_font *Font, u32 Des
 }
 
 internal r32
-GetLineAdvanceFor(ga_font *Info, loaded_font *Font)
+GetLineAdvanceFor(ga_font *Info)
 {
-    r32 Result = Info->LineAdvance;
+    r32 Result = Info->AscenderHeight + Info->DescenderHeight + Info->ExternalLeading;
+
+    return(Result);
+}
+
+internal r32
+GetStartingBaselineY(ga_font *Info)
+{
+    r32 Result = Info->AscenderHeight;
 
     return(Result);
 }
