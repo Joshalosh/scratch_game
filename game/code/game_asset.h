@@ -153,7 +153,6 @@ RemoveAssetHeaderFromList(asset_memory_header *Header)
     Header->Next = Header->Prev = 0;
 }
 
-internal void MoveHeaderToFront(game_assets *Assets, asset *Asset);
 inline asset_memory_header *GetAsset(game_assets *Assets, u32 ID, u32 GenerationID)
 {
     Assert(ID <= Assets->AssetCount);

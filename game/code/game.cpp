@@ -629,7 +629,6 @@ DEBUGTextLine(char *String)
                                               &MatchVector, &WeightVector);
 
         loaded_font *Font = PushFont(RenderGroup, FontID);
-
         if(Font)
         {
             ga_font *Info = GetFontInfo(RenderGroup->Assets, FontID);
@@ -720,6 +719,7 @@ OverlayCycleCounters(game_memory *Memory)
         }
     }
 #endif
+    DEBUGTextLine("AVA WA Ta");
 }
 
 #if GAME_INTERNAL

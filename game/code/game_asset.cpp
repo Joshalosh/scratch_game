@@ -142,7 +142,7 @@ AcquireAssetMemory(game_assets *Assets, u32 Size, u32 Index) // Changed from the
     asset_memory_block *Block = FindBlockForSize(Assets, Size);
     for(;;)
     {
-        if(Block && (Size <=Block->Size))
+        if(Block && (Size <= Block->Size))
         {
             Block->Flags |= AssetMemory_Used;
 
@@ -228,7 +228,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Immediate)
         {
             task_with_memory *Task = 0;
 
-            if(!Immediate || Task)
+            if(!Immediate)
             {
                 Task = BeginTaskWithMemory(Assets->TranState);
             }
@@ -294,7 +294,7 @@ LoadSound(game_assets *Assets, sound_id ID)
 {
     asset *Asset = Assets->Assets + ID.Value; 
     if(ID.Value &&
-       (AtomicCompareExchangeUInt32((uint32_t *)&Asset->State, AssetState_Queued, AssetState_Unloaded) ==
+       (AtomicCompareExchangeUInt32((u32 *)&Asset->State, AssetState_Queued, AssetState_Unloaded) ==
         AssetState_Unloaded))
     {
         task_with_memory *Task = BeginTaskWithMemory(Assets->TranState);
@@ -349,7 +349,7 @@ LoadFont(game_assets *Assets, font_id ID, b32 Immediate)
     asset *Asset = Assets->Assets + ID.Value;
     if(ID.Value)
     {
-        if(AtomicCompareExchangeUInt32((uint32_t *)&Asset->State, AssetState_Queued, AssetState_Unloaded) ==
+        if(AtomicCompareExchangeUInt32((u32 *)&Asset->State, AssetState_Queued, AssetState_Unloaded) ==
            AssetState_Unloaded)
         {
             task_with_memory *Task = 0;
@@ -410,22 +410,22 @@ LoadFont(game_assets *Assets, font_id ID, b32 Immediate)
     }
 }
 
-internal uint32_t
+internal u32
 GetBestMatchAssetFrom(game_assets *Assets, asset_type_id TypeID,
                       asset_vector *MatchVector, asset_vector *WeightVector)
 {
-    uint32_t Result = 0;
+    u32 Result = 0;
 
     real32 BestDiff = Real32Maximum;
     asset_type *Type = Assets->AssetTypes + TypeID;
-    for(uint32_t AssetIndex = Type->FirstAssetIndex;
+    for(u32 AssetIndex = Type->FirstAssetIndex;
         AssetIndex < Type->OnePastLastAssetIndex;
         ++AssetIndex)
     {
         asset *Asset = Assets->Assets + AssetIndex;
 
         real32 TotalWeightedDiff = 0.0f;
-        for(uint32_t TagIndex = Asset->GA.FirstTagIndex; TagIndex < Asset->GA.OnePastLastTagIndex; ++TagIndex)
+        for(u32 TagIndex = Asset->GA.FirstTagIndex; TagIndex < Asset->GA.OnePastLastTagIndex; ++TagIndex)
         {
             ga_tag *Tag = Assets->Tags + TagIndex;
 
@@ -449,26 +449,26 @@ GetBestMatchAssetFrom(game_assets *Assets, asset_type_id TypeID,
     return(Result);
 }
 
-internal uint32_t
+internal u32
 GetRandomAssetFrom(game_assets *Assets, asset_type_id TypeID, random_series *Series)
 {
-    uint32_t Result = 0;
+    u32 Result = 0;
 
     asset_type *Type = Assets->AssetTypes + TypeID;
     if(Type->FirstAssetIndex != Type->OnePastLastAssetIndex)
     {
-        uint32_t Count = (Type->OnePastLastAssetIndex - Type->FirstAssetIndex);
-        uint32_t Choice = RandomChoice(Series, Count);
+        u32 Count = (Type->OnePastLastAssetIndex - Type->FirstAssetIndex);
+        u32 Choice = RandomChoice(Series, Count);
         Result = Type->FirstAssetIndex + Choice;
     }
 
     return(Result);
 }
 
-internal uint32_t
+internal u32
 GetFirstAssetFrom(game_assets *Assets, asset_type_id TypeID)
 {
-    uint32_t Result = 0;
+    u32 Result = 0;
 
     asset_type *Type = Assets->AssetTypes + TypeID;
     if(Type->FirstAssetIndex != Type->OnePastLastAssetIndex)
@@ -549,7 +549,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
 
     Assets->LoadedAssetSentinel.Next = Assets->LoadedAssetSentinel.Prev = &Assets->LoadedAssetSentinel;
 
-    for(uint32_t TagType = 0; TagType < Tag_Count; ++TagType)
+    for(u32 TagType = 0; TagType < Tag_Count; ++TagType)
     {
         Assets->TagRange[TagType] = 1000000.0f;
     }
@@ -704,7 +704,6 @@ GetClampedCodePoint(ga_font *Info, u32 Codepoint)
 
     return(Result);
 }
-
 
 internal r32
 GetHorizontalAdvanceForPair(ga_font *Info, loaded_font *Font, u32 DesiredPrevCodepoint, u32 DesiredCodepoint)

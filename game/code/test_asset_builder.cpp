@@ -1,7 +1,7 @@
 
 #include "test_asset_builder.h"
 
-#define USE_FONTS_FROM_WINDOWS 1 
+#define USE_FONTS_FROM_WINDOWS 1
 
 #if USE_FONTS_FROM_WINDOWS
 #include <windows.h>
@@ -204,182 +204,6 @@ LoadBMP(char *Filename)
     return(Result);
 }
 
-struct riff_iterator
-{
-    uint8_t *At;
-    uint8_t *Stop;
-};
-
-inline riff_iterator
-ParseChunkAt(void *At, void *Stop)
-{
-    riff_iterator Iter;
-
-    Iter.At = (uint8_t *)At;
-    Iter.Stop = (uint8_t *)Stop;
-
-    return(Iter);
-}
-
-inline riff_iterator
-NextChunk(riff_iterator Iter)
-{
-    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
-    uint32_t Size = (Chunk->Size + 1) & ~1;
-    Iter.At += sizeof(WAVE_chunk) + Size;
-
-    return(Iter);
-}
-
-inline bool32
-IsValid(riff_iterator Iter)
-{
-    bool32 Result = (Iter.At < Iter.Stop);
-
-    return(Result);
-}
-
-inline void *
-GetChunkData(riff_iterator Iter)
-{
-    void *Result = (Iter.At + sizeof(WAVE_chunk));
-
-    return(Result);
-}
-
-inline uint32_t
-GetType(riff_iterator Iter)
-{
-    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
-    uint32_t Result = Chunk->ID;
-
-    return(Result);
-}
-
-inline uint32_t
-GetChunkDataSize(riff_iterator Iter)
-{
-    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
-    uint32_t Result = Chunk->Size;
-
-    return(Result);
-}
-
-struct loaded_sound
-{
-    uint32_t SampleCount;
-    uint32_t ChannelCount;
-    int16_t *Samples[2];
-
-    void *Free;
-};
-
-internal loaded_sound
-LoadWAV(char *Filename, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
-{
-    loaded_sound Result = {};
-
-    entire_file ReadResult = ReadEntireFile(Filename);
-    if(ReadResult.ContentsSize != 0)
-    {
-        Result.Free = ReadResult.Contents;
-
-        WAVE_header *Header = (WAVE_header *)ReadResult.Contents;
-        Assert(Header->RIFFID == WAVE_ChunkID_RIFF);
-        Assert(Header->WAVEID == WAVE_ChunkID_WAVE);
-
-        uint32_t ChannelCount = 0;
-        uint32_t SampleDataSize = 0;
-        int16_t *SampleData = 0;
-        for(riff_iterator Iter = ParseChunkAt(Header + 1, (uint8_t *)(Header + 1) + Header->Size - 4);
-            IsValid(Iter);
-            Iter = NextChunk(Iter))
-        {
-            switch(GetType(Iter))
-            {
-                case WAVE_ChunkID_fmt:
-                {
-                    WAVE_fmt *fmt = (WAVE_fmt *)GetChunkData(Iter);
-                    Assert(fmt->wFormatTag == 1);
-                    Assert(fmt->nSamplesPerSec == 48000);
-                    Assert(fmt->wBitsPerSample == 16);
-                    Assert(fmt->nBlockAlign == (sizeof(int16_t)*fmt->nChannels));
-                    ChannelCount = fmt->nChannels;
-                } break;
-
-                case WAVE_ChunkID_data:
-                {
-                    SampleData = (int16_t *)GetChunkData(Iter);
-                    SampleDataSize = GetChunkDataSize(Iter);
-                } break;
-            }
-        }
-
-        Assert(ChannelCount && SampleData);
-
-        Result.ChannelCount = ChannelCount;
-        u32 SampleCount = SampleDataSize / (ChannelCount*sizeof(int16_t));
-        if(ChannelCount == 1)
-        {
-            Result.Samples[0] = SampleData;
-            Result.Samples[1] = 0;
-        }
-        else if(ChannelCount == 2)
-        {
-            Result.Samples[0] = SampleData;
-            Result.Samples[1] = SampleData + SampleCount;
-
-#if 0
-            for(uint32_t SampleIndex = 0; SampleIndex < SampleCount; ++SampleIndex)
-            {
-                SampleData[2*SampleIndex + 0] = (int16_t)SampleIndex;
-                SampleData[2*SampleIndex + 1] = (int16_t)SampleIndex;
-            }
-#endif
-
-            for(uint32_t SampleIndex = 0; SampleIndex < SampleCount; ++SampleIndex)
-            {
-                int16_t Source = SampleData[2*SampleIndex];
-                SampleData[2*SampleIndex] = SampleData[SampleIndex];
-                SampleData[SampleIndex] = Source;
-            }
-        }
-        else
-        {
-            Assert(!"Invalid channel count in WAV file");
-        }
-
-        // TODO: Load right channels.
-        b32 AtEnd = true;
-        Result.ChannelCount = 1;
-        if(SectionSampleCount)
-        {
-            Assert((SectionFirstSampleIndex + SectionSampleCount) <= SampleCount);
-            AtEnd = ((SectionFirstSampleIndex + SectionSampleCount) == SampleCount);
-            SampleCount = SectionSampleCount;
-            for(uint32_t ChannelIndex = 0; ChannelIndex < Result.ChannelCount; ++ChannelIndex)
-            {
-                Result.Samples[ChannelIndex] += SectionFirstSampleIndex;
-            }
-        }
-
-        if(AtEnd)
-        {
-            for(u32 ChannelIndex = 0; ChannelIndex < Result.ChannelCount; ++ChannelIndex)
-            {
-                for(u32 SampleIndex = SampleCount; SampleIndex < (SampleCount + 8); ++SampleIndex)
-                {
-                    Result.Samples[ChannelIndex][SampleIndex] = 0;
-                }
-            }
-        }
-
-        Result.SampleCount = SampleCount;
-    }
-
-    return(Result);
-}
-
 internal loaded_font *
 LoadFont(char *Filename, char *FontName, u32 CodepointCount)
 {
@@ -392,9 +216,9 @@ LoadFont(char *Filename, char *FontName, u32 CodepointCount)
                                     FALSE, // Italic.
                                     FALSE, // Underline.
                                     FALSE, // Strikeout.
-                                    DEFAULT_CHARSET,
+                                    DEFAULT_CHARSET, 
                                     OUT_DEFAULT_PRECIS,
-                                    CLIP_DEFAULT_PRECIS,
+                                    CLIP_DEFAULT_PRECIS, 
                                     ANTIALIASED_QUALITY,
                                     DEFAULT_PITCH|FF_DONTCARE,
                                     FontName);
@@ -435,6 +259,8 @@ LoadFont(char *Filename, char *FontName, u32 CodepointCount)
         }
     }
 
+    free(KerningPairs);
+
     return(Font);
 }
 
@@ -442,6 +268,7 @@ internal void
 FreeFont(loaded_font *Font)
 {
     DeleteObject(Font->Win32Handle);
+    free(Font);
 }
 
 internal void
@@ -475,14 +302,21 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
 
     SelectObject(GlobalFontDeviceContext, Font->Win32Handle);
 
-    memset(GlobalFontBits, 0xFF, MAX_FONT_WIDTH*MAX_FONT_HEIGHT*sizeof(u32));
+#if 0
+    ABC ThisABC;
+    GetCharABCWidthsW(GlobalFontDeviceContext, Codepoint, Codepoint, &ThisABC);
+#endif
+
+    memset(GlobalFontBits, 0x00, MAX_FONT_WIDTH*MAX_FONT_HEIGHT*sizeof(u32));
 
     wchar_t CheesePoint = (wchar_t)Codepoint;
 
     SIZE Size;
     GetTextExtentPoint32W(GlobalFontDeviceContext, &CheesePoint, 1, &Size);
 
-    int BoundWidth = Size.cx;
+    int PreStepX = 128;
+
+    int BoundWidth = Size.cx + 2*PreStepX;
     if(BoundWidth > MAX_FONT_WIDTH)
     {
         BoundWidth = MAX_FONT_WIDTH;
@@ -496,7 +330,7 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
 //    PatBlt(DeviceContext, 0, 0, Width, Height, BLACKNESS);
 //    SetBkMode(DeviceContext, TRANSPARENT);
     SetTextColor(GlobalFontDeviceContext, RGB(255, 255, 255));
-    TextOutW(GlobalFontDeviceContext, 0, 0, &CheesePoint, 1);
+    TextOutW(GlobalFontDeviceContext, PreStepX, 0, &CheesePoint, 1);
 
     s32 MinX = 10000;
     s32 MinY = 10000;
@@ -585,7 +419,8 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
             DestRow -= Result.Pitch;
             SourceRow -= MAX_FONT_WIDTH;
         }
-        Asset->Bitmap.AlignPercentage[0] = 1.0f / (r32)Result.Width;
+
+        Asset->Bitmap.AlignPercentage[0] = (1.0f - (MinX - PreStepX)) / (r32)Result.Width;
         Asset->Bitmap.AlignPercentage[1] = (1.0f + (MaxY - (BoundHeight - Font->TextMetric.tmDescent))) / (r32)Result.Height;
     }
 
@@ -600,6 +435,7 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
         int Width, Height, XOffset, YOffset;
         u8 *MonoBitmap = stbtt_GetCodepointBitmap(&Font, 0, stbtt_ScaleForPixelHeight(&Font, 128.0f),
                                                   Codepoint, &Width, &Height, &XOffset, &YOffset);
+
         Result.Width = Width;
         Result.Height = Height;
         Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
@@ -623,10 +459,197 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
 
             DestRow -= Result.Pitch;
         }
+
         stbtt_FreeBitmap(MonoBitmap, 0);
         free(TTFFile.Contents);
     }
 #endif
+    
+    return(Result);
+}
+
+struct riff_iterator
+{
+    u8 *At;
+    u8 *Stop;
+};
+
+inline riff_iterator
+ParseChunkAt(void *At, void *Stop)
+{
+    riff_iterator Iter;
+
+    Iter.At = (u8 *)At;
+    Iter.Stop = (u8 *)Stop;
+
+    return(Iter);
+}
+
+inline riff_iterator
+NextChunk(riff_iterator Iter)
+{
+    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
+    u32 Size = (Chunk->Size + 1) & ~1;
+    Iter.At += sizeof(WAVE_chunk) + Size;
+
+    return(Iter);
+}
+             
+inline bool32
+IsValid(riff_iterator Iter)
+{    
+    b32 Result = (Iter.At < Iter.Stop);
+    
+    return(Result);
+}
+
+inline void *
+GetChunkData(riff_iterator Iter)
+{
+    void *Result = (Iter.At + sizeof(WAVE_chunk));
+
+    return(Result);
+}
+
+inline u32
+GetType(riff_iterator Iter)
+{
+    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
+    u32 Result = Chunk->ID;
+
+    return(Result);
+}
+
+inline u32
+GetChunkDataSize(riff_iterator Iter)
+{
+    WAVE_chunk *Chunk = (WAVE_chunk *)Iter.At;
+    u32 Result = Chunk->Size;
+
+    return(Result);
+}
+
+struct loaded_sound
+{
+    u32 SampleCount; // NOTE(casey): This is the sample count divided by 8
+    u32 ChannelCount;
+    s16 *Samples[2];
+
+    void *Free;
+};
+
+internal loaded_sound
+LoadWAV(char *FileName, u32 SectionFirstSampleIndex, u32 SectionSampleCount)
+{
+    loaded_sound Result = {};
+    
+    entire_file ReadResult = ReadEntireFile(FileName);    
+    if(ReadResult.ContentsSize != 0)
+    {
+        Result.Free = ReadResult.Contents;
+        
+        WAVE_header *Header = (WAVE_header *)ReadResult.Contents;
+        Assert(Header->RIFFID == WAVE_ChunkID_RIFF);
+        Assert(Header->WAVEID == WAVE_ChunkID_WAVE);
+
+        u32 ChannelCount = 0;
+        u32 SampleDataSize = 0;
+        s16 *SampleData = 0;
+        for(riff_iterator Iter = ParseChunkAt(Header + 1, (u8 *)(Header + 1) + Header->Size - 4);
+            IsValid(Iter);
+            Iter = NextChunk(Iter))
+        {
+            switch(GetType(Iter))
+            {
+                case WAVE_ChunkID_fmt:
+                {
+                    WAVE_fmt *fmt = (WAVE_fmt *)GetChunkData(Iter);
+                    Assert(fmt->wFormatTag == 1); // NOTE(casey): Only support PCM
+                    Assert(fmt->nSamplesPerSec == 48000);
+                    Assert(fmt->wBitsPerSample == 16);
+                    Assert(fmt->nBlockAlign == (sizeof(s16)*fmt->nChannels));
+                    ChannelCount = fmt->nChannels;
+                } break;
+
+                case WAVE_ChunkID_data:
+                {
+                    SampleData = (s16 *)GetChunkData(Iter);
+                    SampleDataSize = GetChunkDataSize(Iter);
+                } break;
+            }
+        }
+
+        Assert(ChannelCount && SampleData);
+
+        Result.ChannelCount = ChannelCount;
+        u32 SampleCount = SampleDataSize / (ChannelCount*sizeof(s16));
+        if(ChannelCount == 1)
+        {
+            Result.Samples[0] = SampleData;
+            Result.Samples[1] = 0;
+        }
+        else if(ChannelCount == 2)
+        {
+            Result.Samples[0] = SampleData;
+            Result.Samples[1] = SampleData + SampleCount;
+
+#if 0
+            for(u32 SampleIndex = 0;
+                SampleIndex < SampleCount;
+                ++SampleIndex)
+            {
+                SampleData[2*SampleIndex + 0] = (s16)SampleIndex;
+                SampleData[2*SampleIndex + 1] = (s16)SampleIndex;
+            }
+#endif
+            
+            for(u32 SampleIndex = 0;
+                SampleIndex < SampleCount;
+                ++SampleIndex)
+            {
+                s16 Source = SampleData[2*SampleIndex];
+                SampleData[2*SampleIndex] = SampleData[SampleIndex];
+                SampleData[SampleIndex] = Source;
+            }
+        }
+        else
+        {
+            Assert(!"Invalid channel count in WAV file");
+        }
+
+        // TODO(casey): Load right channels!
+        b32 AtEnd = true;
+        Result.ChannelCount = 1;
+        if(SectionSampleCount)
+        {
+            Assert((SectionFirstSampleIndex + SectionSampleCount) <= SampleCount);
+            AtEnd = ((SectionFirstSampleIndex + SectionSampleCount) == SampleCount);
+            SampleCount = SectionSampleCount;
+            for(u32 ChannelIndex = 0;
+                ChannelIndex < Result.ChannelCount;
+                ++ChannelIndex)
+            {
+                Result.Samples[ChannelIndex] += SectionFirstSampleIndex;
+            }
+        }
+
+        if(AtEnd)
+        {
+            for(u32 ChannelIndex = 0;
+                ChannelIndex < Result.ChannelCount;
+                ++ChannelIndex)
+            {
+                for(u32 SampleIndex = SampleCount;
+                    SampleIndex < (SampleCount + 8);
+                    ++SampleIndex)
+                {
+                    Result.Samples[ChannelIndex][SampleIndex] = 0;
+                }
+            }
+        }
+
+        Result.SampleCount = SampleCount;
+    }
 
     return(Result);
 }
@@ -721,7 +744,6 @@ AddFontAsset(game_assets *Assets, loaded_font *Font)
 
     font_id Result = {Asset.ID};
     return(Result);
-            
 }
 
 internal void
@@ -781,7 +803,7 @@ WriteGA(game_assets *Assets, char *Filename)
             if(Source->Type == AssetType_Sound)
             {
                 loaded_sound WAV = LoadWAV(Source->Sound.Filename, 
-                                           Source->Sound.FirstSampleIndex, 
+                                           Source->Sound.FirstSampleIndex,
                                            Dest->Sound.SampleCount);
 
                 Dest->Sound.SampleCount = WAV.SampleCount;
@@ -864,8 +886,7 @@ WriteFonts(void)
     BeginAssetType(Assets, Asset_FontGlyph);
     for(u32 Character = '!'; Character <= '~'; ++Character)
     {
-        AddCharacterAsset(Assets, DebugFont, Character);
-        AddTag(Assets, Tag_UnicodeCodepoint, (r32)Character);
+        DebugFont->BitmapIDs[Character] = AddCharacterAsset(Assets, DebugFont, Character);
     }
     EndAssetType(Assets);
 
