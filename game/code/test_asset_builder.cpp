@@ -96,7 +96,7 @@ struct loaded_font
     u32 CodepointCount;
     r32 LineAdvance;
 
-    bitmap_id *BitmapIDs;
+    ga_font_codepoint *BitmapIDs;
     r32 *HorizontalAdvance;
 };
 
@@ -227,7 +227,7 @@ LoadFont(char *Filename, char *FontName, u32 CodepointCount)
     GetTextMetrics(GlobalFontDeviceContext, &Font->TextMetric);
 
     Font->CodepointCount = CodepointCount;
-    Font->BitmapIDs = (bitmap_id *)malloc(sizeof(bitmap_id)*CodepointCount);
+    Font->BitmapIDs = (ga_font_codepoint *)malloc(sizeof(ga_font_codepoint)*CodepointCount);
     size_t HorizontalAdvanceSize = sizeof(r32)*CodepointCount*CodepointCount;
     Font->HorizontalAdvance = (r32 *)malloc(HorizontalAdvanceSize);
     memset(Font->HorizontalAdvance, 0, HorizontalAdvanceSize);
@@ -356,6 +356,7 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
         Row -= MAX_FONT_WIDTH;
     }
 
+    r32 KerningChange = 0;
     if(MinX <= MaxX)
     {
         int Width = (MaxX - MinX) + 1;
@@ -401,30 +402,31 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
             SourceRow -= MAX_FONT_WIDTH;
         }
 
-#if 0
-        ABC ThisABC;
-        GetCharABCWidthsW(GlobalFontDeviceContext, Codepoint, Codepoint, &ThisABC);
-        r32 CharAdvance = (r32)(ThisABC.abcA + ThisABC.abcB + ThisABC.abcC);
-#else
-        INT ThisWidth;
-        GetCharWidth32W(GlobalFontDeviceContext, Codepoint, Codepoint, &ThisWidth);
-        r32 CharAdvance = (r32)ThisWidth;
-#endif
-
-        r32 KerningChange = (r32)(MinX - PreStepX);
-        for(u32 OtherCodepointIndex = 0; 
-            OtherCodepointIndex < Font->CodepointCount;
-            ++OtherCodepointIndex)
-        {
-            Font->HorizontalAdvance[Codepoint*Font->CodepointCount + OtherCodepointIndex] += CharAdvance - KerningChange;
-            if(OtherCodepointIndex != 0)
-            {
-                Font->HorizontalAdvance[OtherCodepointIndex*Font->CodepointCount + Codepoint] += KerningChange;
-            }
-        }
-
         Asset->Bitmap.AlignPercentage[0] = (1.0f) / (r32)Result.Width;
         Asset->Bitmap.AlignPercentage[1] = (1.0f + (MaxY - (BoundHeight - Font->TextMetric.tmDescent))) / (r32)Result.Height;
+
+        KerningChange = (r32)(MinX - PreStepX);
+    }
+
+#if 0
+    ABC ThisABC;
+    GetCharABCWidthsW(GlobalFontDeviceContext, Codepoint, Codepoint, &ThisABC);
+    r32 CharAdvance = (r32)(ThisABC.abcA + ThisABC.abcB + ThisABC.abcC);
+#else
+    INT ThisWidth;
+    GetCharWidth32W(GlobalFontDeviceContext, Codepoint, Codepoint, &ThisWidth);
+    r32 CharAdvance = (r32)ThisWidth;
+#endif
+
+    for(u32 OtherCodepointIndex = 0; 
+        OtherCodepointIndex < Font->CodepointCount;
+        ++OtherCodepointIndex)
+    {
+        Font->HorizontalAdvance[Codepoint*Font->CodepointCount + OtherCodepointIndex] += CharAdvance - KerningChange;
+        if(OtherCodepointIndex != 0)
+        {
+            Font->HorizontalAdvance[OtherCodepointIndex*Font->CodepointCount + Codepoint] += KerningChange;
+        }
     }
 
 #else
@@ -719,6 +721,12 @@ AddCharacterAsset(game_assets *Assets, loaded_font *Font, u32 Codepoint)
     Asset.Source->Glyph.Codepoint = Codepoint;
 
     bitmap_id Result = {Asset.ID};
+
+    Assert(DebugFont->GlyphCount < DebugFont->MaxGlyphCount);
+    ga_font_glyph *Glyph = DebugFont->Glyphs + DebugFont->GlyphCount++;
+    Glyph->UnicodeCodepoint = Codepoint;
+    Glyph->BitmapID = Result;
+
     return(Result);
 }
 
@@ -885,10 +893,18 @@ WriteFonts(void)
 //        AddCharacterAsset(Assets, "c:/Windows/Fonts/cour.ttf", "Courier New", Character);
 
     BeginAssetType(Assets, Asset_FontGlyph);
+    AddCharacterAsset(Assets, DebugFont, ' ');
     for(u32 Character = '!'; Character <= '~'; ++Character)
     {
-        DebugFont->BitmapIDs[Character] = AddCharacterAsset(Assets, DebugFont, Character);
+        AddCharacterAsset(Assets, DebugFont, Character);
     }
+
+    // Kanji owl.
+    AddCharacterAsset(Assets, DebugFont, 0x5c0f);
+    AddCharacterAsset(Assets, DebugFont, 0x8033);
+    AddCharacterAsset(Assets, DebugFont, 0x6728);
+    AddCharacterAsset(Assets, DebugFont, 0x514e);
+
     EndAssetType(Assets);
 
     // TODO: This is kinda janky, because it means you have to get this

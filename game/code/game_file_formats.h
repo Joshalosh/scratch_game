@@ -140,6 +140,11 @@ struct ga_sound
        s16 Channels[ChannelCount][SampleCount];
     */
 };
+struct ga_font_glyph
+{
+    u32 UnicodeCodepoint;
+    bitmap_id BitmapID;
+};
 struct ga_font
 {
     u32 CodepointCount;
@@ -148,7 +153,7 @@ struct ga_font
     r32 ExternalLeading;
     /* Data is:
     
-       bitmap_id Codepoints[CodepointCount];
+       ga_font_codepoint Codepoints[CodepointCount];
        r32 HorizontalAdvance[CodepointCount];
     */
 };
