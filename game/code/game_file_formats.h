@@ -147,14 +147,14 @@ struct ga_font_glyph
 };
 struct ga_font
 {
-    u32 CodepointCount;
+    u32 GlyphCount;
     r32 AscenderHeight;
     r32 DescenderHeight;
     r32 ExternalLeading;
     /* Data is:
     
-       ga_font_codepoint Codepoints[CodepointCount];
-       r32 HorizontalAdvance[CodepointCount];
+       ga_font_glyph Codepoints[GlyphCount];
+       r32 HorizontalAdvance[GlyphCount][GlyphCount];
     */
 };
 struct ga_asset

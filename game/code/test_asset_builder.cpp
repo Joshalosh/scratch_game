@@ -1,22 +1,6 @@
 
 #include "test_asset_builder.h"
 
-#define USE_FONTS_FROM_WINDOWS 1
-
-#if USE_FONTS_FROM_WINDOWS
-#include <windows.h>
-
-#define MAX_FONT_WIDTH 1024
-#define MAX_FONT_HEIGHT 1024
-
-global_variable VOID *GlobalFontBits;
-global_variable HDC GlobalFontDeviceContext;
-
-#else
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
-#endif
-
 #pragma pack(push, 1)
 struct bitmap_header
 {
@@ -78,27 +62,6 @@ struct WAVE_fmt
 };
 
 #pragma pack(pop)
-
-struct loaded_bitmap
-{
-    int32_t Width;
-    int32_t Height;
-    int32_t Pitch;
-    void *Memory;
-
-    void *Free;
-};
-
-struct loaded_font
-{
-    HFONT Win32Handle;
-    TEXTMETRIC TextMetric;
-    u32 CodepointCount;
-    r32 LineAdvance;
-
-    ga_font_codepoint *BitmapIDs;
-    r32 *HorizontalAdvance;
-};
 
 struct entire_file
 {
@@ -226,35 +189,59 @@ LoadFont(char *Filename, char *FontName, u32 CodepointCount)
     SelectObject(GlobalFontDeviceContext, Font->Win32Handle);
     GetTextMetrics(GlobalFontDeviceContext, &Font->TextMetric);
 
-    Font->CodepointCount = CodepointCount;
-    Font->BitmapIDs = (ga_font_codepoint *)malloc(sizeof(ga_font_codepoint)*CodepointCount);
-    size_t HorizontalAdvanceSize = sizeof(r32)*CodepointCount*CodepointCount;
+    Font->MinCodepoint = INT_MAX;
+    Font->MaxCodepoint = 0;
+
+    // 5k characters should be more than enough for any font.
+    Font->MaxGlyphCount = 5000;
+    Font->GlyphCount = 0;
+
+    u32 GlyphIndexFromCodepointSize = MAX_FONT_CODEPOINT*sizeof(loaded_font);
+    Font->GlyphIndexFromCodepoint = (u32 *)malloc(GlyphIndexfromCodepointSize);
+    memset(Font->GlyphIndexFromCodepoint, 0, GlyphIndexFromCodepointSize);
+
+    Font->BitmapIDs = (ga_font_codepoint *)malloc(sizeof(ga_font_codepoint)*Font->MaxGlyphCount);
+    size_t HorizontalAdvanceSize = sizeof(r32)*Font->MaxGlyphCount*Font->MaxGlyphCount;
     Font->HorizontalAdvance = (r32 *)malloc(HorizontalAdvanceSize);
     memset(Font->HorizontalAdvance, 0, HorizontalAdvanceSize);
             
+    return(Font);
+}
+
+internal void
+FinaliseFontKerning(loaded_font *Font)
+{
+    SelectObject(GlobalFontDeviceContext, Font->Win32Handle);
+
     DWORD KerningPairCount = GetKerningPairsW(GlobalFontDeviceContext, 0, 0);
     KERNINGPAIR *KerningPairs = (KERNINGPAIR *)malloc(KerningPairCount*sizeof(KERNINGPAIR));
     GetKerningPairsW(GlobalFontDeviceContext, KerningPairCount, KerningPairs);
     for(DWORD KerningPairIndex = 0; KerningPairIndex < KerningPairCount; ++KerningPairIndex)
     {
         KERNINGPAIR *Pair = KerningPairs + KerningPairIndex;
-        if((Pair->wFirst < Font->CodepointCount) &&
-           (Pair->wSecond < Font->CodepointCount))
+        if((Pair->wFirst < ONE_PAST_MAX_FONT_CODEPOINT) &&
+           (Pair->wSecond < ONE_PAST_MAX_FONT_CODEPOINT))
         {
-            Font->HorizontalAdvance[Pair->wFirst*Font->CodepointCount + Pair->wSecond] += (r32)Pair->iKernAmount;
+            u32 First = Font->GlyphIndexFromCodepoint[Pair->wFirst];
+            u32 Second = Font->GlyphIndexFromCodepoint[Pair->wSecond];
+            Font->HorizontalAdvance[First*Font->MaxGlyphCount + Second] += (r32)Pair->iKernAmount;
         }
     }
 
     free(KerningPairs);
-
-    return(Font);
 }
 
 internal void
 FreeFont(loaded_font *Font)
 {
-    DeleteObject(Font->Win32Handle);
-    free(Font);
+    if(Font)
+    {
+        DeleteObject(Font->Win32Handle);
+        free(Font->Glyphs);
+        free(Font->HorizontalAdvance);
+        free(Font->GlyphIndexFromCodepoint);
+        free(Font);
+    }
 }
 
 internal void
@@ -283,6 +270,8 @@ internal loaded_bitmap
 LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
 {
     loaded_bitmap Result = {};
+
+    u32 GlyphIndex = Font->GlyphIndexFromCodepoint[GlyphIndex];
 
 #if USE_FONTS_FROM_WINDOWS
 
@@ -418,14 +407,14 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
     r32 CharAdvance = (r32)ThisWidth;
 #endif
 
-    for(u32 OtherCodepointIndex = 0; 
-        OtherCodepointIndex < Font->CodepointCount;
-        ++OtherCodepointIndex)
+    for(u32 OtherGlyphIndex = 0; 
+        OtherGlyphIndex < Font->MaxGlyphCount;
+        ++OtherGlyphIndex)
     {
-        Font->HorizontalAdvance[Codepoint*Font->CodepointCount + OtherCodepointIndex] += CharAdvance - KerningChange;
-        if(OtherCodepointIndex != 0)
+        Font->HorizontalAdvance[GlyphIndex*Font->MaxGlyphCount + OtherGlyphIndex] += CharAdvance - KerningChange;
+        if(OtherGlyphIndex != 0)
         {
-            Font->HorizontalAdvance[OtherCodepointIndex*Font->CodepointCount + Codepoint] += KerningChange;
+            Font->HorizontalAdvance[OtherGlyphIndex*Font->MaxGlyphCount + GlyphIndex] += KerningChange;
         }
     }
 
@@ -722,10 +711,12 @@ AddCharacterAsset(game_assets *Assets, loaded_font *Font, u32 Codepoint)
 
     bitmap_id Result = {Asset.ID};
 
-    Assert(DebugFont->GlyphCount < DebugFont->MaxGlyphCount);
-    ga_font_glyph *Glyph = DebugFont->Glyphs + DebugFont->GlyphCount++;
+    Assert(Font->GlyphCount < Font->MaxGlyphCount);
+    u32 GlyphIndex = Font->GlyphCount++;
+    ga_font_glyph *Glyph = Font->Glyphs + GlyphIndex;
     Glyph->UnicodeCodepoint = Codepoint;
     Glyph->BitmapID = Result;
+    Font->GlyphIndexFromCodepoint[Codepoint] = GlyphIndex;
 
     return(Result);
 }
@@ -748,7 +739,7 @@ internal font_id
 AddFontAsset(game_assets *Assets, loaded_font *Font)
 {
     added_asset Asset = AddAsset(Assets);
-    Asset.GA->Font.CodepointCount = Font->CodepointCount;
+    Asset.GA->Font.GlyphCount = Font->GlyphCount;
     Asset.GA->Font.AscenderHeight = (r32)Font->TextMetric.tmAscent;
     Asset.GA->Font.DescenderHeight = (r32)Font->TextMetric.tmDescent;
     Asset.GA->Font.ExternalLeading = (r32)Font->TextMetric.tmExternalLeading;
@@ -832,10 +823,18 @@ WriteGA(game_assets *Assets, char *Filename)
             else if(Source->Type == AssetType_Font)
             {
                 loaded_font *Font = Source->Font.Font;
-                u32 HorizontalAdvanceSize = sizeof(r32)*Font->CodepointCount*Font->CodepointCount;
-                u32 CodepointSize = Font->CodepointCount*sizeof(bitmap_id);
-                fwrite(Font->BitmapIDs, CodepointSize, 1, Out);
-                fwrite(Font->HorizontalAdvance, HorizontalAdvanceSize, 1, Out);
+
+                FinaliseFontKerning(Font);
+
+                u32 GlyphSize = Font->GlyphCount*sizeof(ga_font_glyph);
+                fwrite(Font->Glyphs, GlyphSize, 1, Out);
+                u8 *HorizontalAdvance = (u8 *)Font->HorizontalAdvance;
+                for(u32 GlyphIndex = 0; GlyphIndex < Font->GlyphCount; ++GlyphIndex)
+                {
+                    u32 HorizontalAdvanceSliceSize = sizeof(r32)*Font->GlyphCount;
+                    fwrite(HorizontalAdvance, HorizontalAdvanceSliceSize, 1, Out);
+                    HorizontalAdvance += sizeof(r32)*Font->MaxGlyphCount;
+                }
             }
             else
             {

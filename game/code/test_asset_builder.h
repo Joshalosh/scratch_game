@@ -8,6 +8,51 @@
 #include "game_intrinsics.h"
 #include "game_math.h"
 
+#define USE_FONTS_FROM_WINDOWS 1
+
+#if USE_FONTS_FROM_WINDOWS
+#include <windows.h>
+
+#define ONE_PAST_MAX_FONT_CODEPOINT (0x10FFFF + 1)
+#define MAX_FONT_WIDTH 1024
+#define MAX_FONT_HEIGHT 1024
+
+global_variable VOID *GlobalFontBits;
+global_variable HDC GlobalFontDeviceContext;
+
+#else
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+#endif
+
+struct loaded_bitmap
+{
+    int32_t Width;
+    int32_t Height;
+    int32_t Pitch;
+    void *Memory;
+
+    void *Free;
+};
+
+struct loaded_font
+{
+    HFONT Win32Handle;
+    TEXTMETRIC TextMetric;
+    r32 LineAdvance;
+
+    ga_font_glyph *Glyphs;
+    r32 *HorizontalAdvance;
+
+    u32 MinCodepoint;
+    u32 MaxCodepoint;
+
+    u32 MaxGlyphCount;
+    u32 GlyphCount;
+
+    u32 *GlyphIndexFromCodepoint;
+};
+
 enum asset_type
 {
     AssetType_Sound,
