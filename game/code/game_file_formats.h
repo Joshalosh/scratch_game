@@ -1,5 +1,7 @@
 #if !defined(GAME_FILE_FORMATS_H)
 
+#define ONE_PAST_MAX_FONT_CODEPOINT (0x10FFFF + 1)
+
 enum asset_tag_id
 {
     Tag_Smoothness,
@@ -147,6 +149,7 @@ struct ga_font_glyph
 };
 struct ga_font
 {
+    u32 OnePastHighestCodepoint;
     u32 GlyphCount;
     r32 AscenderHeight;
     r32 DescenderHeight;

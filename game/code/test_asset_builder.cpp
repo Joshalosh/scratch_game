@@ -196,14 +196,21 @@ LoadFont(char *Filename, char *FontName, u32 CodepointCount)
     Font->MaxGlyphCount = 5000;
     Font->GlyphCount = 0;
 
-    u32 GlyphIndexFromCodepointSize = MAX_FONT_CODEPOINT*sizeof(loaded_font);
-    Font->GlyphIndexFromCodepoint = (u32 *)malloc(GlyphIndexfromCodepointSize);
+    u32 GlyphIndexFromCodepointSize = ONE_PAST_MAX_FONT_CODEPOINT*sizeof(u32);
+    Font->GlyphIndexFromCodepoint = (u32 *)malloc(GlyphIndexFromCodepointSize);
     memset(Font->GlyphIndexFromCodepoint, 0, GlyphIndexFromCodepointSize);
 
-    Font->BitmapIDs = (ga_font_codepoint *)malloc(sizeof(ga_font_codepoint)*Font->MaxGlyphCount);
+    Font->Glyphs = (ga_font_glyph *)malloc(sizeof(ga_font_glyph)*Font->MaxGlyphCount);
     size_t HorizontalAdvanceSize = sizeof(r32)*Font->MaxGlyphCount*Font->MaxGlyphCount;
     Font->HorizontalAdvance = (r32 *)malloc(HorizontalAdvanceSize);
     memset(Font->HorizontalAdvance, 0, HorizontalAdvanceSize);
+
+    Font->OnePastHighestCodepoint = 0;
+
+    // Reserve space for the null glyph.
+    Font->GlyphCount = 1;
+    Font->Glyphs[0].UnicodeCodepoint = 0;
+    Font->Glyphs[0].BitmapID.Value = 0;
             
     return(Font);
 }
@@ -224,7 +231,10 @@ FinaliseFontKerning(loaded_font *Font)
         {
             u32 First = Font->GlyphIndexFromCodepoint[Pair->wFirst];
             u32 Second = Font->GlyphIndexFromCodepoint[Pair->wSecond];
-            Font->HorizontalAdvance[First*Font->MaxGlyphCount + Second] += (r32)Pair->iKernAmount;
+            if((First != 0) && (Second != 0))
+            {
+                Font->HorizontalAdvance[First*Font->MaxGlyphCount + Second] += (r32)Pair->iKernAmount;
+            }
         }
     }
 
@@ -271,7 +281,7 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
 {
     loaded_bitmap Result = {};
 
-    u32 GlyphIndex = Font->GlyphIndexFromCodepoint[GlyphIndex];
+    u32 GlyphIndex = Font->GlyphIndexFromCodepoint[Codepoint];
 
 #if USE_FONTS_FROM_WINDOWS
 
@@ -717,6 +727,11 @@ AddCharacterAsset(game_assets *Assets, loaded_font *Font, u32 Codepoint)
     Glyph->UnicodeCodepoint = Codepoint;
     Glyph->BitmapID = Result;
     Font->GlyphIndexFromCodepoint[Codepoint] = GlyphIndex;
+
+    if(Font->OnePastHighestCodepoint <= Codepoint)
+    {
+        Font->OnePastHighestCodepoint = Codepoint + 1;
+    }
 
     return(Result);
 }

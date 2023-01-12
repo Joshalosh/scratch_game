@@ -9,9 +9,10 @@ struct loaded_sound
 
 struct loaded_font
 {
-    bitmap_id *Codepoints;
+    ga_font_glyph *Glyphs;
     r32 *HorizontalAdvance;
     u32 BitmapIDOffset;
+    u16 *UnicodeMap;
 };
 
 // TODO: I can streamline this by using header pointer as an indicator of unloaded status.
