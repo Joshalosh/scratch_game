@@ -80,6 +80,9 @@
 */
 
 #include "game_platform.h"
+#include "game_intrinsics.h"
+#include "game_math.h"
+#include "game_debug.h"
 
 #define Minimum(A, B) ((A < B) ? (A) : (B))
 #define Maximum(A, B) ((A > B) ? (A) : (B))
@@ -234,8 +237,6 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
     while(Size--) {*Dest++ = *Source++;}
 }
 
-#include "game_intrinsics.h"
-#include "game_math.h"
 #include "game_file_formats.h"
 #include "game_world.h"
 #include "game_sim_region.h"
