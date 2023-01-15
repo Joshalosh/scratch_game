@@ -754,6 +754,7 @@ internal font_id
 AddFontAsset(game_assets *Assets, loaded_font *Font)
 {
     added_asset Asset = AddAsset(Assets);
+    Asset.GA->Font.OnePastHighestCodepoint = Font->OnePastHighestCodepoint;
     Asset.GA->Font.GlyphCount = Font->GlyphCount;
     Asset.GA->Font.AscenderHeight = (r32)Font->TextMetric.tmAscent;
     Asset.GA->Font.DescenderHeight = (r32)Font->TextMetric.tmDescent;
