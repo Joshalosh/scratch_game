@@ -583,8 +583,7 @@ internal void
 RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
                     rectangle2i ClipRect, bool Even)
 {
-    timed_block Block(RenderGroupToOutput);
-//    TIMED_BLOCK(RenderGroupToOutput);
+    TIMED_BLOCK(RenderGroupToOutput);
 
     real32 NullPixelsToMetres = 1.0f;
 

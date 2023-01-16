@@ -1,17 +1,21 @@
 #if !defined(GAME_DEBUG_H)
 
-#define TIMED_BLOCK()
+#define TIMED_BLOCK(ID) timed_block TimedBlock##ID(DebugCycleCounter_##ID);
 
 struct timed_block 
 {
-    timed_block(u32 ID)
+    u64 StartCycleCount;
+    u32 ID;
+
+    timed_block(u32 IDInit)
     {
-        BEGIN_TIMED_BLOCK(ID);
+        ID = IDInit;
+        BEGIN_TIMED_BLOCK_(StartCycleCount);
     }
 
     ~timed_block()
     {
-        END_TIMED_BLOCK(ID);
+        END_TIMED_BLOCK_(StartCycleCount, ID);
     }
 };
 

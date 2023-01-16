@@ -784,7 +784,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #if GAME_INTERNAL
     DebugGlobalMemory = Memory;
 #endif
-    BEGIN_TIMED_BLOCK(GameUpdateAndRender)
+    BEGIN_TIMED_BLOCK(GameUpdateAndRender);
 
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
            (ArrayCount(Input->Controllers[0].Buttons)));
