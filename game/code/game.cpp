@@ -619,6 +619,8 @@ global_variable font_id FontID;
 internal void
 DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
 {
+    TIMED_BLOCK;
+
     asset_vector MatchVector = {};
     asset_vector WeightVector = {};
     FontID = GetBestMatchFontFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
@@ -1767,3 +1769,5 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 
     OutputPlayingSounds(&GameState->AudioState, SoundBuffer, TranState->Assets, &TranState->TranArena);
 }
+
+debug_record DebugRecordArray[__COUNTER__];
