@@ -147,6 +147,8 @@ typedef struct debug_cycle_counter
 } debug_cycle_counter;
 
 extern struct game_memory *DebugGlobalMemory;
+
+#if 0
 #if (COMPILER_MSVC || COMPILER_LLVM)
 #define BEGIN_TIMED_BLOCK_(StartCycleCount) StartCycleCount = __rdtsc();
 #define BEGIN_TIMED_BLOCK(ID) u64 BEGIN_TIMED_BLOCK_(StartCycleCount##ID)
@@ -159,6 +161,7 @@ extern struct game_memory *DebugGlobalMemory;
 #define BEGIN_TIMED_BLOCK(ID)
 #define END_TIMED_BLOCK(ID)
 #define END_TIMED_BLOCK_COUNTED(ID, Count)
+#endif
 #endif
 
 #endif
@@ -323,9 +326,6 @@ typedef struct game_memory
     platform_work_queue *LowPriorityQueue;
 
     platform_api PlatformAPI;
-#if GAME_INTERNAL
-    debug_cycle_counter Counters[DebugCycleCounter_Count];
-#endif
 } game_memory;
 
 #define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)

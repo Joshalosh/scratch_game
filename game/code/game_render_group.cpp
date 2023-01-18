@@ -171,7 +171,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     environment_map *Top, environment_map *Middle, environment_map *Bottom,
                     real32 PixelsToMetres)
 {
-    BEGIN_TIMED_BLOCK(DrawRectangleSlowly);
+    TIMED_BLOCK();
 
     // Premultiply color up front
     Color.rgb *= Color.a;
@@ -233,7 +233,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
 
-    BEGIN_TIMED_BLOCK(ProcessPixel);
+    TIMED_BLOCK((XMax - XMin + 1)*(YMax - YMin + 1));
     for(int Y = YMin; Y <= YMax; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
@@ -385,9 +385,6 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
         Row += Buffer->Pitch;
     }
-    END_TIMED_BLOCK_COUNTED(ProcessPixel, (XMax - XMin + 1)*(YMax - YMin + 1));
-
-    END_TIMED_BLOCK(DrawRectangleSlowly);
 }
 
 internal void
