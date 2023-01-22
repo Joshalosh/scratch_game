@@ -6,7 +6,7 @@
 
 struct debug_record
 {
-    u64 Clocks;
+    u64 CycleCount;
 
     char *Filename;
     char *FunctionName;
@@ -28,13 +28,13 @@ struct timed_block
         Record->Filename = Filename;
         Record->LineNumber = LineNumber;
         Record->FunctionName = FunctionName;
-        Record->Clocks -= __rdtsc();
+        Record->CycleCount -= __rdtsc();
         Record->HitCount += HitCount;
     }
 
     ~timed_block()
     {
-        Record->Clocks += __rdtsc();
+        Record->CycleCount += __rdtsc();
     }
 };
 
