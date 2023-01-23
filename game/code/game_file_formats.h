@@ -1,6 +1,10 @@
 #if !defined(GAME_FILE_FORMATS_H)
 
-#define ONE_PAST_MAX_FONT_CODEPOINT (0x10FFFF + 1)
+enum asset_font_type
+{
+    FontType_Default = 0,
+    FontType_Debug = 10,
+};
 
 enum asset_tag_id
 {
@@ -8,6 +12,7 @@ enum asset_tag_id
     Tag_Flatness,
     Tag_FacingDirection, // Angle in radians off of due right.
     Tag_UnicodeCodepoint,
+    Tag_FontType, // 0 - Default Game Font, 10 - Debug font.
 
     Tag_Count,
 };

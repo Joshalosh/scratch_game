@@ -168,7 +168,7 @@ LoadBMP(char *Filename)
 }
 
 internal loaded_font *
-LoadFont(char *Filename, char *FontName, u32 CodepointCount)
+LoadFont(char *Filename, char *FontName) //u32 CodepointCount)
 {
     loaded_font *Font = (loaded_font *)malloc(sizeof(loaded_font));
 
@@ -898,34 +898,49 @@ Initialise(game_assets *Assets)
 }
 
 internal void
+AddFont(game_assets *Assets, char *FontFile, char *FontName, asset_font_type Type)
+{
+}
+
+internal void
 WriteFonts(void)
 {
     game_assets Assets_;
     game_assets *Assets = &Assets_;
     Initialise(Assets);
 
-    loaded_font *DebugFont = LoadFont("c:/Windows/Fonts/arial.ttf", "Arial", ('~' + 1));
-//        AddCharacterAsset(Assets, "c:/Windows/Fonts/cour.ttf", "Courier New", Character);
+    loaded_font *Fonts[] =
+    {
+        LoadFont("c:/Windows/Fonts/arial.ttf", "Arial"),
+        LoadFont("c:/Windows/Fonts/LiberationMono-Regular.ttf", "Liberation Mono"),
+    };
 
     BeginAssetType(Assets, Asset_FontGlyph);
-    AddCharacterAsset(Assets, DebugFont, ' ');
-    for(u32 Character = '!'; Character <= '~'; ++Character)
+    for(u32 FontIndex = 0; FontIndex < ArrayCount(Fonts); ++FontIndex)
     {
-        AddCharacterAsset(Assets, DebugFont, Character);
-    }
+        loaded_font *Font = Fonts[FontIndex];
+        AddCharacterAsset(Assets, Font, ' ');
+        for(u32 Character = '!'; Character <= '~'; ++Character)
+        {
+            AddCharacterAsset(Assets, Font, Character);
+        }
 
-    // Kanji owl.
-    AddCharacterAsset(Assets, DebugFont, 0x5c0f);
-    AddCharacterAsset(Assets, DebugFont, 0x8033);
-    AddCharacterAsset(Assets, DebugFont, 0x6728);
-    AddCharacterAsset(Assets, DebugFont, 0x514e);
+        // Kanji owl.
+        AddCharacterAsset(Assets, Font, 0x5c0f);
+        AddCharacterAsset(Assets, Font, 0x8033);
+        AddCharacterAsset(Assets, Font, 0x6728);
+        AddCharacterAsset(Assets, Font, 0x514e);
+    }
 
     EndAssetType(Assets);
 
     // TODO: This is kinda janky, because it means you have to get this
     // order right always.
     BeginAssetType(Assets, Asset_Font);
-    AddFontAsset(Assets, DebugFont);
+    AddFontAsset(Assets, Fonts[0]);
+    AddTag(Assets, Tag_FontType, FontType_Default);
+    AddFontAsset(Assets, Fonts[1]);
+    AddTag(Assets, Tag_FontType, FontType_Debug);
     EndAssetType(Assets);
 
     WriteGA(Assets, "testfonts.ga");
