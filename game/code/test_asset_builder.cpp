@@ -168,13 +168,12 @@ LoadBMP(char *Filename)
 }
 
 internal loaded_font *
-LoadFont(char *Filename, char *FontName) //u32 CodepointCount)
+LoadFont(char *Filename, char *FontName, int PixelHeight)
 {
     loaded_font *Font = (loaded_font *)malloc(sizeof(loaded_font));
 
     AddFontResourceExA(Filename, FR_PRIVATE, 0);
-    int Height = 128; // I need to figure out how to specify pixels properly here.
-    Font->Win32Handle = CreateFontA(Height, 0, 0, 0,
+    Font->Win32Handle = CreateFontA(PixelHeight, 0, 0, 0,
                                     FW_NORMAL, // Weight.
                                     FALSE, // Italic.
                                     FALSE, // Underline.
@@ -911,14 +910,15 @@ WriteFonts(void)
 
     loaded_font *Fonts[] =
     {
-        LoadFont("c:/Windows/Fonts/arial.ttf", "Arial"),
-        LoadFont("c:/Windows/Fonts/LiberationMono-Regular.ttf", "Liberation Mono"),
+        LoadFont("c:/Windows/Fonts/arial.ttf", "Arial", 128),
+        LoadFont("c:/Windows/Fonts/LiberationMono-Regular.ttf", "Liberation Mono", 20),
     };
 
     BeginAssetType(Assets, Asset_FontGlyph);
     for(u32 FontIndex = 0; FontIndex < ArrayCount(Fonts); ++FontIndex)
     {
         loaded_font *Font = Fonts[FontIndex];
+
         AddCharacterAsset(Assets, Font, ' ');
         for(u32 Character = '!'; Character <= '~'; ++Character)
         {
@@ -931,7 +931,6 @@ WriteFonts(void)
         AddCharacterAsset(Assets, Font, 0x6728);
         AddCharacterAsset(Assets, Font, 0x514e);
     }
-
     EndAssetType(Assets);
 
     // TODO: This is kinda janky, because it means you have to get this

@@ -56,6 +56,8 @@ inline world_chunk *
 GetWorldChunk(world *World, int32_t ChunkX, int32_t ChunkY, int32_t ChunkZ,
               memory_arena *Arena = 0)
 {
+    TIMED_BLOCK();
+
     Assert(ChunkX > -TILE_CHUNK_SAFE_MARGIN);
     Assert(ChunkY > -TILE_CHUNK_SAFE_MARGIN);
     Assert(ChunkZ > -TILE_CHUNK_SAFE_MARGIN);
@@ -174,6 +176,8 @@ inline void
 ChangeEntityLocationRaw(memory_arena *Arena, world *World, uint32_t LowEntityIndex,
                         world_position *OldP, world_position *NewP)
 {
+    TIMED_BLOCK();
+
     Assert(!OldP || IsValid(*OldP));
     Assert(!NewP || IsValid(*NewP));
 
@@ -251,6 +255,8 @@ ChangeEntityLocation(memory_arena *Arena, world *World,
                      uint32_t LowEntityIndex, low_entity *LowEntity,
                      world_position NewPInit)
 {
+    TIMED_BLOCK();
+
     world_position *OldP = 0;
     world_position *NewP = 0;
 

@@ -625,6 +625,8 @@ DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
 
     asset_vector MatchVector = {};
     asset_vector WeightVector = {};
+    MatchVector.E[Tag_FontType] = (r32)FontType_Debug;
+    WeightVector.E[Tag_FontType] = 1.0f;
     FontID = GetBestMatchFontFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
 
     FontScale = 1.0f;
@@ -1751,7 +1753,7 @@ OverlayCycleCounters(game_memory *Memory)
 #if 1
             char TextBuffer[256];
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "%s: %I64ucy %uh %I64ucy/h\n",
+                        "%s: %I32ucy %uh %I32ucy/h\n",
                         Counter->FunctionName,
                         Counter->CycleCount,
                         Counter->HitCount,
