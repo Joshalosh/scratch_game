@@ -1734,7 +1734,39 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 
 debug_record DebugRecordArray[__COUNTER__];
 
+// TODO: Stop using stdio
 #include<stdio.h>
+
+internal void
+OutputDebugRecords(u32 CounterCount, debug_record *Counters)
+{
+    for(u32 CounterIndex = 0; CounterIndex < CounterCount; ++CounterIndex)
+    {
+        debug_record *Counter = Counters + CounterIndex;
+
+        u64 HitCount_CycleCount = AtomicExchangeU64(&Counter->HitCount_CycleCount, 0);
+        u32 HitCount = (u32)(HitCount_CycleCount >> 32);
+        u32 CycleCount = (u32)(HitCount_CycleCount & 0xFFFFFFFF);
+
+        if(HitCount)
+        {
+#if 1
+            char TextBuffer[256];
+            _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                        "%s(%d): %ucy %uh %ucy/h\n",
+                        Counter->FunctionName,
+                        Counter->LineNumber,
+                        CycleCount,
+                        HitCount,
+                        CycleCount / HitCount);
+            DEBUGTextLine(TextBuffer);
+#endif
+        }
+    }
+}
+
+extern u32 const DebugRecords_Optimised_Count;
+debug_record DebugRecords_Optimised[];
 
 internal void
 OverlayCycleCounters(game_memory *Memory)
@@ -1744,26 +1776,8 @@ OverlayCycleCounters(game_memory *Memory)
 //    DEBUGTextLine("999999");
 #if GAME_INTERNAL
     DEBUGTextLine("\\#900DEBUG \\#090CYCLE \\#990\\^5COUNTS:");
-    for(int CounterIndex = 0; CounterIndex < ArrayCount(DebugRecords_Main); ++CounterIndex)
-    {
-        debug_record *Counter = DebugRecords_Main + CounterIndex;
-
-        if(Counter->HitCount)
-        {
-#if 1
-            char TextBuffer[256];
-            _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "%s: %I32ucy %uh %I32ucy/h\n",
-                        Counter->FunctionName,
-                        Counter->CycleCount,
-                        Counter->HitCount,
-                        Counter->CycleCount / Counter->HitCount);
-            DEBUGTextLine(TextBuffer);
-            Counter->HitCount = 0;
-            Counter->CycleCount = 0;
-#endif
-        }
-    }
+    OutputDebugRecords(DebugRecords_Optimised_Count, DebugRecords_Optimised);
+    OutputDebugRecords(ArrayCount(DebugRecords_Main), DebugRecords_Main);
 #endif
 //    DEBUGTextLine("AVA WA Ta");
 }

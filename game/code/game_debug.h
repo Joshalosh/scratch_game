@@ -9,10 +9,10 @@ struct debug_record
     char *Filename;
     char *FunctionName;
 
-    u32 CycleCount;
     int LineNumber;
-    u32 HitCount;
     u32 Reserved;
+
+    u64 HitCount_CycleCount;
 };
 
 debug_record DebugRecordArray[];
@@ -21,23 +21,23 @@ struct timed_block
 {
     debug_record *Record;
     u64 StartCycles;
+    u32 HitCount;
 
-    timed_block(int Counter, char *Filename, int LineNumber, char *FunctionName, int HitCount = 1)
+    timed_block(int Counter, char *Filename, int LineNumber, char *FunctionName, u32 HitCountInit = 1)
     {
-        //TODO: Thread safety.
+        HitCount = HitCountInit;
         Record = DebugRecordArray + Counter;
         Record->Filename = Filename;
         Record->LineNumber = LineNumber;
         Record->FunctionName = FunctionName;
-        AtomicAddU32(&Record->HitCount, HitCount);
 
         StartCycles = __rdtsc();
     }
 
     ~timed_block()
     {
-        u32 DeltaTime = (u32)(__rdtsc() - StartCycles);
-        AtomicAddU32(&Record->CycleCount, DeltaTime);
+        u32 Delta = (__rdtsc() - StartCycles) | ((u64)HitCount << 32);
+        AtomicAddU64(&Record->HitCount_CycleCount, Delta);
     }
 };
 
