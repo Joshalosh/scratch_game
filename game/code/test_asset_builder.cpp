@@ -416,7 +416,7 @@ LoadGlyphBitmap(loaded_font *Font, u32 Codepoint, ga_asset *Asset)
     r32 CharAdvance = (r32)ThisWidth;
 #endif
 
-    for(u32 OtherGlyphIndex = 0; 
+    for(u32 OtherGlyphIndex = 0;
         OtherGlyphIndex < Font->MaxGlyphCount;
         ++OtherGlyphIndex)
     {
@@ -894,11 +894,6 @@ Initialise(game_assets *Assets)
 
     Assets->AssetTypeCount = Asset_Count;
     memset(Assets->AssetTypes, 0, sizeof(Assets->AssetTypes));
-}
-
-internal void
-AddFont(game_assets *Assets, char *FontFile, char *FontName, asset_font_type Type)
-{
 }
 
 internal void

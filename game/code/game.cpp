@@ -336,6 +336,8 @@ struct fill_ground_chunk_work
 };
 internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 {
+    TIMED_BLOCK();
+
     fill_ground_chunk_work *Work = (fill_ground_chunk_work *)Data;
 
     loaded_bitmap *Buffer = &Work->GroundBuffer->Bitmap;
@@ -1178,7 +1180,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             if((Delta.z >= -1.0f) && (Delta.z < 1.0f))
             {
                 real32 GroundSideInMetres = World->ChunkDimInMeters.x;
-                PushBitmap(RenderGroup, Bitmap, GroundSideInMetres, Delta);
+                PushBitmap(RenderGroup, Bitmap, 1.0f*GroundSideInMetres, Delta);
 #if 0
                 PushRectOutline(RenderGroup, Delta, V2(GroundSideInMetres, GroundSideInMetres),
                                 V4(1.0f, 1.0f, 0.0f, 1.0f));
@@ -1735,7 +1737,7 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 debug_record DebugRecordArray[__COUNTER__];
 
 // TODO: Stop using stdio
-#include<stdio.h>
+#include <stdio.h>
 
 internal void
 OutputDebugRecords(u32 CounterCount, debug_record *Counters)
@@ -1753,7 +1755,7 @@ OutputDebugRecords(u32 CounterCount, debug_record *Counters)
 #if 1
             char TextBuffer[256];
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "%s(%d): %ucy %uh %ucy/h\n",
+                        "%32s(%4d): %10ucy %8uh %10ucy/h",
                         Counter->FunctionName,
                         Counter->LineNumber,
                         CycleCount,
@@ -1781,4 +1783,3 @@ OverlayCycleCounters(game_memory *Memory)
 #endif
 //    DEBUGTextLine("AVA WA Ta");
 }
-
