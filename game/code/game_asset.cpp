@@ -407,9 +407,9 @@ LoadFont(game_assets *Assets, font_id ID, b32 Immediate)
                 ga_font *Info = &Asset->GA.Font;
 
                 u32 HorizontalAdvanceSize = sizeof(r32)*Info->GlyphCount*Info->GlyphCount;
-                u32 GlyphSize = Info->GlyphCount*sizeof(ga_font_glyph);
+                u32 GlyphsSize = Info->GlyphCount*sizeof(ga_font_glyph);
                 u32 UnicodeMapSize = sizeof(u16)*Info->OnePastHighestCodepoint;
-                u32 SizeData = GlyphSize + HorizontalAdvanceSize;
+                u32 SizeData = GlyphsSize + HorizontalAdvanceSize;
                 u32 SizeTotal = SizeData + sizeof(asset_memory_header) + UnicodeMapSize;
 
                 Asset->Header = AcquireAssetMemory(Assets, SizeTotal, ID.Value);
@@ -417,7 +417,7 @@ LoadFont(game_assets *Assets, font_id ID, b32 Immediate)
                 loaded_font *Font = &Asset->Header->Font;
                 Font->BitmapIDOffset = GetFile(Assets, Asset->FileIndex)->FontBitmapIDOffset;
                 Font->Glyphs = (ga_font_glyph *)(Asset->Header + 1);
-                Font->HorizontalAdvance = (r32 *)((u8 *)Font->Glyphs + GlyphSize);
+                Font->HorizontalAdvance = (r32 *)((u8 *)Font->Glyphs + GlyphsSize);
                 Font->UnicodeMap = (u16 *)((u8 *)Font->HorizontalAdvance + HorizontalAdvanceSize);
 
                 ZeroSize(UnicodeMapSize, Font->UnicodeMap);
@@ -672,6 +672,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
         asset_file *File = Assets->Files + FileIndex;
         if(PlatformNoFileErrors(&File->Handle))
         {
+            // Skip the first tag, since it's null.
             u32 TagArraySize = sizeof(ga_tag)*(File->Header.TagCount - 1);
             Platform.ReadDataFromFile(&File->Handle, File->Header.Tags + sizeof(ga_tag),
                                       TagArraySize, Assets->Tags + File->TagBase);

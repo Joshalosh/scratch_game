@@ -122,6 +122,7 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
       given in meters.
     */
 
+    // Pick which LOD to sample from.
     uint32_t LODIndex = (uint32_t)(Roughness*(real32)(ArrayCount(Map->LOD) - 1) + 0.5f);
     Assert(LODIndex < ArrayCount(Map->LOD));
 
@@ -262,15 +263,18 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                 v2 ScreenSpaceUV = {InvWidthMax*(real32)X, InvHeightMax*(real32)Y};
                 real32 ZDiff = 0.0f;
 #endif
+
                 
                 real32 U = InvXAxisLengthSq*Inner(d, XAxis);
                 real32 V = InvYAxisLengthSq*Inner(d, YAxis);
 
 #if 0
+                // TODO: SSE clamping.
                 Assert((U >= 0.0f) && (U <= 1.0f));
                 Assert((V >= 0.0f) && (V <= 1.0f));
 #endif
 
+                // TODO: Formalise texture boundaries.
                 real32 tX = ((U*(real32)(Texture->Width - 2)));
                 real32 tY = ((V*(real32)(Texture->Height - 2)));
 
@@ -861,7 +865,7 @@ Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     real32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
 
     RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
-                                      0.5f*PixelHeight*PixelsToMetres};
+                                           0.5f*PixelHeight*PixelsToMetres};
 
     RenderGroup->Transform.MetresToPixels = MetresToPixels;
     RenderGroup->Transform.FocalLength = FocalLength; // Metres the person is sitting from their monitor.
@@ -940,6 +944,8 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
 inline void *
 PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type)
 {
+    TIMED_BLOCK();
+
     Assert(Group->InsideRender);
 
     void *Result = 0;
@@ -964,8 +970,6 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 inline void
 PushBitmap(render_group *Group, loaded_bitmap *Bitmap, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1))
 {
-    TIMED_BLOCK();
-
     v2 Size = V2(Height*Bitmap->WidthOverHeight, Height);
     v2 Align = Hadamard(Bitmap->AlignPercentage, Size);
     v3 P = Offset - V3(Align, 0);

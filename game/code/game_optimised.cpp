@@ -9,7 +9,7 @@
 #define IACA_VC64_END
 #endif
 
-internal void
+void
 DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
                      loaded_bitmap *Texture, real32 PixelsToMetres, 
                      rectangle2i ClipRect, bool32 Even)
@@ -46,8 +46,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
         if(FillRect.MinX > FloorX) {FillRect.MinX = FloorX;}
         if(FillRect.MinY > FloorY) {FillRect.MinY = FloorY;}
-        if(FillRect.MaxX < CeilX)  {FillRect.MaxX = CeilX;}
-        if(FillRect.MaxY < CeilY)  {FillRect.MaxY = CeilY;}
+        if(FillRect.MaxX < CeilX) {FillRect.MaxX = CeilX;}
+        if(FillRect.MaxY < CeilY) {FillRect.MaxY = CeilY;}
     }
 
 //    rectangle2i ClipRect = {0, 0, WidthMax, HeightMax};
@@ -98,9 +98,6 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         __m128 Inv255_4x = _mm_set1_ps(Inv255);
         real32 One255 = 255.0f;
 
-        real32 NormaliseC = 1.0f / 255.0f;
-        real32 NormaliseSqC = 1.0f / Square(255.0f);
-
         __m128 One = _mm_set1_ps(1.0f);
         __m128 Half = _mm_set1_ps(0.5f);
         __m128 Four_4x = _mm_set1_ps(4.0f);
@@ -135,6 +132,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         int MaxY = FillRect.MaxY;
         int MinX = FillRect.MinX;
         int MaxX = FillRect.MaxX;
+
         TIMED_BLOCK(GetClampedRectArea(FillRect) / 2);
         for(int Y = MinY; Y < MaxY; Y += 2)
         {
@@ -157,6 +155,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 #define mmSquare(a) _mm_mul_ps(a, a)
 #define M(a, i) ((float *)&(a))[i]
 #define Mi(a, i) ((uint32_t *)&(a))[i]
+
 
                 IACA_VC64_START;
                 __m128 U = _mm_add_ps(_mm_mul_ps(PixelPx, nXAxisx_4x), PynX);
@@ -216,7 +215,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                                                      *(uint32_t *)(TexelPtr1 + TexturePitch),
                                                      *(uint32_t *)(TexelPtr2 + TexturePitch),
                                                      *(uint32_t *)(TexelPtr3 + TexturePitch));
-                    
+                
                     __m128i SampleD = _mm_setr_epi32(*(uint32_t *)(TexelPtr0 + TexturePitch + sizeof(uint32_t)),
                                                      *(uint32_t *)(TexelPtr1 + TexturePitch + sizeof(uint32_t)),
                                                      *(uint32_t *)(TexelPtr2 + TexturePitch + sizeof(uint32_t)),
@@ -224,32 +223,32 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
                     // Unpack bilinear texel samples
                     __m128i TexelArb = _mm_and_si128(SampleA, MaskFF00FF);
-                    __m128i TexelAag = _mm_and_si128(_mm_srli_epi32(SampleA, 8),  MaskFF00FF);
+                    __m128i TexelAag = _mm_and_si128(_mm_srli_epi32(SampleA, 8), MaskFF00FF);
                     TexelArb = _mm_mullo_epi16(TexelArb, TexelArb);
                     __m128 TexelAa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelAag, 16));
                     TexelAag = _mm_mullo_epi16(TexelAag, TexelAag);
 
                     __m128i TexelBrb = _mm_and_si128(SampleB, MaskFF00FF);
-                    __m128i TexelBag = _mm_and_si128(_mm_srli_epi32(SampleB, 8),  MaskFF00FF);
+                    __m128i TexelBag = _mm_and_si128(_mm_srli_epi32(SampleB, 8), MaskFF00FF);
                     TexelBrb = _mm_mullo_epi16(TexelBrb, TexelBrb);
                     __m128 TexelBa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelBag, 16));
                     TexelBag = _mm_mullo_epi16(TexelBag, TexelBag);
 
                     __m128i TexelCrb = _mm_and_si128(SampleC, MaskFF00FF);
-                    __m128i TexelCag = _mm_and_si128(_mm_srli_epi32(SampleC, 8),  MaskFF00FF);
+                    __m128i TexelCag = _mm_and_si128(_mm_srli_epi32(SampleC, 8), MaskFF00FF);
                     TexelCrb = _mm_mullo_epi16(TexelCrb, TexelCrb);
                     __m128 TexelCa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelCag, 16));
                     TexelCag = _mm_mullo_epi16(TexelCag, TexelCag);
 
                     __m128i TexelDrb = _mm_and_si128(SampleD, MaskFF00FF);
-                    __m128i TexelDag = _mm_and_si128(_mm_srli_epi32(SampleD, 8),  MaskFF00FF);
+                    __m128i TexelDag = _mm_and_si128(_mm_srli_epi32(SampleD, 8), MaskFF00FF);
                     TexelDrb = _mm_mullo_epi16(TexelDrb, TexelDrb);
                     __m128 TexelDa = _mm_cvtepi32_ps(_mm_srli_epi32(TexelDag, 16));
                     TexelDag = _mm_mullo_epi16(TexelDag, TexelDag);
 
                     // This loads the destination.
                     __m128 Destb = _mm_cvtepi32_ps(_mm_and_si128(OriginalDest, MaskFF));
-                    __m128 Destg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 8),  MaskFF));
+                    __m128 Destg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 8), MaskFF));
                     __m128 Destr = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 16), MaskFF));
                     __m128 Desta = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 24), MaskFF));
 

@@ -17,7 +17,7 @@ inline u64 AtomicExchangeU64(u64 volatile *Value, u64 New)
 
     return(Result);
 }
-inline u32 AtomicAddU64(u64 volatile *Value, u64 Addend)
+inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
 {
     // Returns the original value _prior_ to adding.
     u64 Result = _InterlockedExchangeAdd64((__int64 *)Value, Addend);
@@ -27,7 +27,7 @@ inline u32 AtomicAddU64(u64 volatile *Value, u64 Addend)
 #elif COMPILER_LLVM
 // TODO: Does LLVM have real read-specific barriers yet?
 #define CompletePreviousReadsBeforeFutureReads asm volatile("" ::: "memory")
-#define CompletePreviuosWritesBeforeFutureWrites asm volatile("" ::: "memory")
+#define CompletePreviousWritesBeforeFutureWrites asm volatile("" ::: "memory")
 inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
 {
     uint32_t Result = __sync_val_compare_and_swap(Value, Expected, New);
@@ -72,9 +72,11 @@ RotateLeft(uint32_t Value, int32_t Amount)
 #if COMPILER_MSVC
     uint32_t Result = _rotl(Value, Amount);
 #else
+    // TODO: Actually port this to other compiler platforms.
     Amount &= 31;
     uint32_t Result = ((Value << Amount) | (Value >> (32 - Amount)));
 #endif
+
     return(Result);
 }
 
@@ -82,11 +84,13 @@ inline uint32_t
 RotateRight(uint32_t Value, int32_t Amount)
 {
 #if COMPILER_MSVC
-    uint32_t Result = _rotl(Value, Amount);
+    uint32_t Result = _rotr(Value, Amount);
 #else
+    // TODO: Actually port this to other compiler platforms.
     Amount &= 31;
     uint32_t Result = ((Value >> Amount) | (Value << (32 - Amount)));
 #endif
+
     return(Result);
 }
 
@@ -155,7 +159,7 @@ inline bit_scan_result
 FindLeastSignificantSetBit(uint32_t Value)
 {
     bit_scan_result Result = {};
-    
+
 #if COMPILER_MSVC
     Result.Found = _BitScanForward((unsigned long *)&Result.Index, Value);
 #else
