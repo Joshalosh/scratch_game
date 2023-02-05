@@ -1755,7 +1755,7 @@ OutputDebugRecords(u32 CounterCount, debug_record *Counters)
 #if 1
             char TextBuffer[256];
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "%32s(%4d): %10ucy %8uh %10ucy/h",
+                        "%32s(%4d): %20ucy %18uh %20ucy/h",
                         Counter->FunctionName,
                         Counter->LineNumber,
                         CycleCount,
