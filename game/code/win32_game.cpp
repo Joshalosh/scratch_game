@@ -232,6 +232,9 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName, char *LockFilename)
             Result.GetSoundSamples = (game_get_sound_samples *)
                 GetProcAddress(Result.GameCodeDLL, "GameGetSoundSamples");
 
+            Result.DEBUGFrameEnd = (debug_game_frame_end *)
+                GetProcAddress(Result.GameCodeDLL, "DEBUGGameFrameEnd");
+
             Result.IsValid = (Result.UpdateAndRender &&
                               Result.GetSoundSamples);
         }
@@ -1545,7 +1548,7 @@ WinMain(HINSTANCE Instance,
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
-                    debug_frame_end_info = FrameEndInfo = {};
+                    debug_frame_end_info FrameEndInfo = {};
 
                     NewInput->dtForFrame = TargetSecondsPerFrame;
 
@@ -1712,7 +1715,7 @@ WinMain(HINSTANCE Instance,
                             }
                         }
 
-                        FrameEndInfo.InputProcessed = Win32GetSecondsElapse(LastCounter, Win32GetWallClock());
+                        FrameEndInfo.InputProcessed = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
 
                         if(!GlobalPause)
                         {
@@ -1739,7 +1742,7 @@ WinMain(HINSTANCE Instance,
                             }
                         }
 
-                        FrameEndInfo.GameUpdated = Win32GetSecondsElapse(LastCounter, Win32GetWallClock());
+                        FrameEndInfo.GameUpdated = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
 
                         if(!GlobalPause)
                         {
@@ -1872,7 +1875,7 @@ WinMain(HINSTANCE Instance,
                             }
                         }
 
-                        FrameEndInfo.AudioUpdated = Win32GetSecondsElapse(LastCounter, Win32GetWallClock());
+                        FrameEndInfo.AudioUpdated = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
 
                         if(!GlobalPause)
                         {
@@ -1913,12 +1916,8 @@ WinMain(HINSTANCE Instance,
                             }
                         }
 
-                        FrameEndInfo.FramerateWaitComplete = Win32GetSecondsElapse(LastCounter, Win32GetWallClock());
+                        FrameEndInfo.FramerateWaitComplete = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
 
-                        LARGE_INTEGER EndCounter = Win32GetWallClock();
-                        real32 MillisecondsPerFrame = 1000.0f*Win32GetSecondsElapsed(LastCounter, EndCounter); 
-                        LastCounter = EndCounter;
-                        
                         win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                         HDC DeviceContext = GetDC(Window);
                         Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
@@ -1932,14 +1931,20 @@ WinMain(HINSTANCE Instance,
                         OldInput = Temp;
                         // TODO: Should I clear these here?
 
+                        LARGE_INTEGER EndCounter = Win32GetWallClock();
+                        LastCounter = EndCounter;
+                        
 #if GAME_INTERNAL
-                        FrameEndInfo.EndOfFrame = Win32GetSecondsElapse(LastCounter, Win32GetWallClock());
+                        FrameEndInfo.EndOfFrame = Win32GetSecondsElapsed(LastCounter, EndCounter);
 
                         uint64_t EndCycleCount = __rdtsc();
                         uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                         LastCycleCount = EndCycleCount;
                         
-                        Game.DEBUGFrameEnd(&GameMemory, &FrameEndInfo);
+                        if(Game.DEBUGFrameEnd)
+                        {
+                            Game.DEBUGFrameEnd(&GameMemory, &FrameEndInfo);
+                        }
 #endif
 
                     }
