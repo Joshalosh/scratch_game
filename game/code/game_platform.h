@@ -322,6 +322,9 @@ typedef struct game_memory
     uint64_t TransientStorageSize;
     void *TransientStorage; // Required to be cleared to zero at startup
 
+    uint64_t DebugStorageSize;
+    void *DebugStorage; // Required to be cleared to zero at startup
+
     platform_work_queue *HighPriorityQueue;
     platform_work_queue *LowPriorityQueue;
 
