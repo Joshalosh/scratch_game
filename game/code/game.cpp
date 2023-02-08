@@ -743,6 +743,54 @@ DEBUGTextLine(char *String)
 // TODO: Stop using stdio
 #include <stdio.h>
 
+struct debug_statistic
+{
+    r64 Min;
+    r64 Max;
+    r64 Avg;
+    r32 Count;
+};
+inline void
+BeginDebugStatistic(debug_statistic *Stat)
+{
+    Stat->Count = 0.0f;
+    Stat->Min = Real32Maximum;
+    Stat->Max = -Real32Maximum;
+    Stat->Avg = 0.0f;
+}
+
+inline void
+AccumulateDebugStatistic(debug_statistic *Stat, r64 Value)
+{
+    ++Stat->Count;
+
+    if(Stat->Min > Value)
+    {
+        Stat->Min = Value;
+    }
+
+    if(Stat->Max < Value)
+    {
+        Stat->Max = Value;
+    }
+
+    Stat->Avg += Value;
+}
+
+inline void
+EndDebugStatistic(debug_statistic *Stat)
+{
+    if(Stat->Count != 0)
+    {
+        Stat->Avg /= (r64)Stat->Count;
+    }
+    else
+    {
+        Stat->Min = 0.0f;
+        Stat->Max = 0.0f;
+    }
+}
+
 internal void
 OverlayCycleCounters(game_memory *Memory)
 {
@@ -753,10 +801,18 @@ OverlayCycleCounters(game_memory *Memory)
         {
             debug_counter_state *Counter = DebugState->CounterStates + CounterIndex;
 
-            u32 HitCount = Counter->Snapshots[0].HitCount;
-            u32 CycleCount = Counter->Snapshots[0].CycleCount;
+            debug_statistic HitCount, CycleCount;
+            BeginDebugStatistic(&HitCount);
+            BeginDebugStatistic(&CycleCount);
+            for(u32 SnapshotIndex = 0; SnapshotIndex < DEBUG_SNAPSHOT_COUNT; ++SnapshotIndex)
+            {
+                AccumulateDebugStatistic(&HitCount, Counter->Snapshots[SnapshotIndex].HitCount);
+                AccumulateDebugStatistic(&CycleCount, Counter->Snapshots[SnapshotIndex].CycleCount);
+            }
+            EndDebugStatistic(&HitCount);
+            EndDebugStatistic(&CycleCount);
 
-            if(HitCount)
+            if(HitCount.Max > 0.0f)
             {
 #if 1
                 char TextBuffer[256];
@@ -764,9 +820,9 @@ OverlayCycleCounters(game_memory *Memory)
                             "%32s(%4d): %20ucy %18uh %20ucy/h",
                             Counter->FunctionName,
                             Counter->LineNumber,
-                            CycleCount,
-                            HitCount,
-                            CycleCount / HitCount);
+                            (u32)CycleCount.Avg,
+                            (u32)HitCount.Avg,
+                            (u32)(CycleCount.Avg / HitCount.Avg));
                 DEBUGTextLine(TextBuffer);
 #endif
             }
