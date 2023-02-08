@@ -841,8 +841,9 @@ WriteGA(game_assets *Assets, char *Filename)
 
                 FinaliseFontKerning(Font);
 
-                u32 GlyphSize = Font->GlyphCount*sizeof(ga_font_glyph);
-                fwrite(Font->Glyphs, GlyphSize, 1, Out);
+                u32 GlyphsSize = Font->GlyphCount*sizeof(ga_font_glyph);
+                fwrite(Font->Glyphs, GlyphsSize, 1, Out);
+
                 u8 *HorizontalAdvance = (u8 *)Font->HorizontalAdvance;
                 for(u32 GlyphIndex = 0; GlyphIndex < Font->GlyphCount; ++GlyphIndex)
                 {

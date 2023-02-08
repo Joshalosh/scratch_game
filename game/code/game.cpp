@@ -801,28 +801,38 @@ OverlayCycleCounters(game_memory *Memory)
         {
             debug_counter_state *Counter = DebugState->CounterStates + CounterIndex;
 
-            debug_statistic HitCount, CycleCount;
+            debug_statistic HitCount, CycleCount, CycleOverHit;
             BeginDebugStatistic(&HitCount);
             BeginDebugStatistic(&CycleCount);
+            BeginDebugStatistic(&CycleOverHit);
             for(u32 SnapshotIndex = 0; SnapshotIndex < DEBUG_SNAPSHOT_COUNT; ++SnapshotIndex)
             {
                 AccumulateDebugStatistic(&HitCount, Counter->Snapshots[SnapshotIndex].HitCount);
                 AccumulateDebugStatistic(&CycleCount, Counter->Snapshots[SnapshotIndex].CycleCount);
+
+                r64 COH = 0.0f;
+                if(Counter->Snapshots[SnapshotIndex].HitCount)
+                {
+                    COH = ((r64)Counter->Snapshots[SnapshotIndex].CycleCount /
+                           (r64)Counter->Snapshots[SnapshotIndex].HitCount);
+                }
+                AccumulateDebugStatistic(&CycleOverHit, COH);
             }
             EndDebugStatistic(&HitCount);
             EndDebugStatistic(&CycleCount);
+            EndDebugStatistic(&CycleOverHit);
 
             if(HitCount.Max > 0.0f)
             {
 #if 1
                 char TextBuffer[256];
                 _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                            "%32s(%4d): %20ucy %18uh %20ucy/h",
+                            "%32s(%4d): %20ucy %16uh %20ucy/h",
                             Counter->FunctionName,
                             Counter->LineNumber,
                             (u32)CycleCount.Avg,
                             (u32)HitCount.Avg,
-                            (u32)(CycleCount.Avg / HitCount.Avg));
+                            (u32)CycleOverHit.Avg);
                 DEBUGTextLine(TextBuffer);
 #endif
             }
