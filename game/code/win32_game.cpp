@@ -1321,6 +1321,16 @@ PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
     }
 }
 
+inline void
+Win32RecordTimestamp(debug_frame_end_info *Info, char *Name, r32 Seconds)
+{
+    Assert(Info->TimestampCount < ArrayCount(Info->Timestamps));
+
+    debug_frame_timestamp *Timestamp = Info->Timestamps + Info->TimestampCount++;
+    Timestamp->Name = Name;
+    Timestamp->Seconds = Seconds;
+}
+
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,

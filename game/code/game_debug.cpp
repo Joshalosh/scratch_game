@@ -2,6 +2,11 @@
 // TODO: Stop using stdio
 #include <stdio.h>
 
+global_variable r32 LeftEdge;
+global_variable r32 AtY;
+global_variable r32 FontScale;
+global_variable font_id FontID;
+
 internal void
 UpdateDebugRecords(debug_state *DebugState, u32 CounterCount, debug_record *Counters)
 {
@@ -18,13 +23,6 @@ UpdateDebugRecords(debug_state *DebugState, u32 CounterCount, debug_record *Coun
         Dest->Snapshots[DebugState->SnapshotIndex].CycleCount = (u32)(HitCount_CycleCount &0xFFFFFFFF);
     }
 }
-
-// TODO: Fix this for looped live code editing.
-global_variable render_group *DEBUGRenderGroup;
-global_variable r32 LeftEdge;
-global_variable r32 AtY;
-global_variable r32 FontScale;
-global_variable font_id FontID;
 
 internal void
 DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
@@ -197,7 +195,7 @@ EndDebugStatistic(debug_statistic *Stat)
 }
 
 internal void
-OverlayCycleCounters(game_memory *Memory)
+DEBUGOverlay(game_memory *Memory)
 {
     debug_state *DebugState = (debug_state *)Memory->DebugStorage;
     if(DebugState)
@@ -234,19 +232,22 @@ OverlayCycleCounters(game_memory *Memory)
                 EndDebugStatistic(&CycleCount);
                 EndDebugStatistic(&CycleOverHit);
 
-                if(CycleCount.Max > 0.0f)
+                if(Counter->FunctionName)
                 {
-                    r32 ChartLeft = 0.0f;
-                    r32 ChartMinY = AtY;
-                    r32 ChartHeight = Info->AscenderHeight*FontScale;
-                    r32 Scale = 1.0f / (r32)CycleCount.Max;
-                    for(u32 SnapshotIndex = 0; SnapshotIndex < DEBUG_SNAPSHOT_COUNT; ++SnapshotIndex)
+                    if(CycleCount.Max > 0.0f)
                     {
-                        r32 ThisProportion = Scale*(r32)Counter->Snapshots[SnapshotIndex].CycleCount;
-                        r32 ThisHeight = ChartHeight*ThisProportion;
-                        PushRect(RenderGroup, V3(ChartLeft + (r32)SnapshotIndex, ChartMinY + 0.5f*ThisHeight, 0.0f), V2(1.0f, ThisHeight), V4(ThisProportion, 1, 0.0f, 1));
+                        r32 BarWidth = 4.0f;
+                        r32 ChartLeft = 0.0f;
+                        r32 ChartMinY = AtY;
+                        r32 ChartHeight = Info->AscenderHeight*FontScale;
+                        r32 Scale = 1.0f / (r32)CycleCount.Max;
+                        for(u32 SnapshotIndex = 0; SnapshotIndex < DEBUG_SNAPSHOT_COUNT; ++SnapshotIndex)
+                        {
+                            r32 ThisProportion = Scale*(r32)Counter->Snapshots[SnapshotIndex].CycleCount;
+                            r32 ThisHeight = ChartHeight*ThisProportion;
+                            PushRect(RenderGroup, V3(ChartLeft + BarWidth*(r32)SnapshotIndex + 0.5f*BarWidth, ChartMinY + 0.5f*ThisHeight, 0.0f), V2(BarWidth, ThisHeight), V4(ThisProportion, 1, 0.0f, 1));
+                        }
                     }
-                }
 
 #if 1
                     char TextBuffer[256];
@@ -259,6 +260,31 @@ OverlayCycleCounters(game_memory *Memory)
                                 (u32)CycleOverHit.Avg);
                     DEBUGTextLine(TextBuffer);
 #endif
+                }
+            }
+
+            r32 BarWidth = 8.0f;
+            r32 BarSpacing = 10.0f;
+            r32 ChartLeft = LeftEdge + 10.0f;
+            r32 ChartHeight = 300.0f;
+            r32 ChartMinY = AtY + ChartHeight + 10.0f;
+            r32 Scale = 1.0f / 0.3333f;
+            for(u32 SnapshotIndex = 0; SnapshotIndex < DEBUG_SNAPSHOT_COUNT; ++SnapshotIndex)
+            {
+                debug_frame_end_info *Info = DebugState->FrameEndInfos + SnapshotIndex;
+                r32 PrevTimestampSeconds = 0.0f;
+                for(u32 TimestampIndex  = 0; TimestampIndex < Info->TimestampCount; ++TimestampIndex)
+                {
+                    debug_frame_timestamp *Timestamp = Info->Timestamps + TimestampIndex;
+                    r32 ThisSecondsElapsed = Timestamp->Seconds - PrevTimestampSeconds;
+                    PrevTimestampSeconds = Timestamp->Seconds;
+
+                    r32 ThisProportion = Scale*ThisSecondsElapsed;
+                    r32 ThisHeight = ChartHeight = ChartHeight*ThisProportion;
+                    PushRect(RenderGroup, V3(ChartLeft + BarSpacing*(r32)SnapshotIndex + 0.5f*BarWidth,
+                                             ChartMinY + 0.5f*ThisHeight, 0.0f),
+                             V2(BarWidth, ThisHeight), V4(ThisProportion, 1, 0.0f, 1));
+                }
             }
         }
     //    DEBUGTextLine("\\5C0F\\8033\\6728\\514E");
@@ -268,4 +294,25 @@ OverlayCycleCounters(game_memory *Memory)
     }
 }
 
+debug_record DebugRecordArray[__COUNTER__];
 
+extern u32 const DebugRecords_Optimised_Count;
+debug_record DebugRecords_Optimised[];
+
+extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
+{
+    debug_state *DebugState = (debug_state *)Memory->DebugStorage;
+    if(DebugState)
+    {
+        DebugState->CounterCount = 0;
+        UpdateDebugRecords(DebugState, DebugRecords_Optimised_Count, DebugRecords_Optimised);
+        UpdateDebugRecords(DebugState, ArrayCount(DebugRecords_Main), DebugRecords_Main);
+
+        DebugState->FrameEndInfos[DebugState->SnapshotIndex] = *Info;
+        ++DebugState->SnapshotIndex;
+        if(DebugState->SnapshotIndex >= DEBUG_SNAPSHOT_COUNT)
+        {
+            DebugState->SnapshotIndex = 0;
+        }
+    }
+}

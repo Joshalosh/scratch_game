@@ -5,7 +5,6 @@
 #include "game_entity.cpp"
 #include "game_asset.cpp"
 #include "game_audio.cpp"
-#include "game_debug.cpp"
 
 struct add_low_entity_result
 {
@@ -1587,10 +1586,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     CheckArena(&GameState->WorldArena);
     CheckArena(&TranState->TranArena);
 
-    OverlayCycleCounters(Memory);
-
     if(DEBUGRenderGroup)
     {
+        DEBUGOverlay(Memory);
         TiledRenderGroupToOutput(TranState->HighPriorityQueue, DEBUGRenderGroup, DrawBuffer);
         EndRender(DEBUGRenderGroup);
     }
@@ -1604,24 +1602,4 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     OutputPlayingSounds(&GameState->AudioState, SoundBuffer, TranState->Assets, &TranState->TranArena);
 }
 
-debug_record DebugRecordArray[__COUNTER__];
-
-extern u32 const DebugRecords_Optimised_Count;
-debug_record DebugRecords_Optimised[];
-
-extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
-{
-    debug_state *DebugState = (debug_state *)Memory->DebugStorage;
-    if(DebugState)
-    {
-        DebugState->CounterCount = 0;
-        UpdateDebugRecords(DebugState, DebugRecords_Optimised_Count, DebugRecords_Optimised);
-        UpdateDebugRecords(DebugState, ArrayCount(DebugRecords_Main), DebugRecords_Main);
-
-        ++DebugState->SnapshotIndex;
-        if(DebugState->SnapshotIndex >= DEBUG_SNAPSHOT_COUNT)
-        {
-            DebugState->SnapshotIndex = 0;
-        }
-    }
-}
+#include "game_debug.cpp"
