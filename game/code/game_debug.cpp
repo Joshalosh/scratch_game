@@ -151,15 +151,15 @@ struct debug_statistic
     r64 Min;
     r64 Max;
     r64 Avg;
-    r32 Count;
+    u32 Count;
 };
 inline void
 BeginDebugStatistic(debug_statistic *Stat)
 {
-    Stat->Count = 0.0f;
     Stat->Min = Real32Maximum;
     Stat->Max = -Real32Maximum;
     Stat->Avg = 0.0f;
+    Stat->Count = 0;
 }
 
 inline void
@@ -183,7 +183,7 @@ AccumulateDebugStatistic(debug_statistic *Stat, r64 Value)
 inline void
 EndDebugStatistic(debug_statistic *Stat)
 {
-    if(Stat->Count != 0)
+    if(Stat->Count)
     {
         Stat->Avg /= (r64)Stat->Count;
     }
@@ -198,7 +198,7 @@ internal void
 DEBUGOverlay(game_memory *Memory)
 {
     debug_state *DebugState = (debug_state *)Memory->DebugStorage;
-    if(DebugState)
+    if(DebugState && DEBUGRenderGroup)
     {
         render_group *RenderGroup = DEBUGRenderGroup;
 
@@ -267,11 +267,30 @@ DEBUGOverlay(game_memory *Memory)
             r32 BarSpacing = 10.0f;
             r32 ChartLeft = LeftEdge + 10.0f;
             r32 ChartHeight = 300.0f;
-            r32 ChartMinY = AtY + ChartHeight + 10.0f;
-            r32 Scale = 1.0f / 0.3333f;
+            r32 ChartWidth = BarSpacing*(r32)DEBUG_SNAPSHOT_COUNT;
+            r32 ChartMinY = AtY - (ChartHeight + 80.0f);
+            r32 Scale = 1.0f / 0.03333f;
+
+            v3 Colors[] =
+            {
+                {1, 0, 0},
+                {0, 1, 0},
+                {0, 0, 1},
+                {1, 1, 0},
+                {0, 1, 1},
+                {1, 0, 1},
+                {1, 0.5f, 0},
+                {1, 0, 0.5f},
+                {0.5f, 1, 0},
+                {0, 1, 0.5f},
+                {0.5f, 0, 1},
+                {0, 0.5f, 1},
+            };
+
             for(u32 SnapshotIndex = 0; SnapshotIndex < DEBUG_SNAPSHOT_COUNT; ++SnapshotIndex)
             {
                 debug_frame_end_info *Info = DebugState->FrameEndInfos + SnapshotIndex;
+                r32 StackY = ChartMinY;
                 r32 PrevTimestampSeconds = 0.0f;
                 for(u32 TimestampIndex  = 0; TimestampIndex < Info->TimestampCount; ++TimestampIndex)
                 {
@@ -279,18 +298,23 @@ DEBUGOverlay(game_memory *Memory)
                     r32 ThisSecondsElapsed = Timestamp->Seconds - PrevTimestampSeconds;
                     PrevTimestampSeconds = Timestamp->Seconds;
 
+                    v3 Color = Colors[TimestampIndex%ArrayCount(Colors)];
                     r32 ThisProportion = Scale*ThisSecondsElapsed;
-                    r32 ThisHeight = ChartHeight = ChartHeight*ThisProportion;
+                    r32 ThisHeight = ChartHeight*ThisProportion;
                     PushRect(RenderGroup, V3(ChartLeft + BarSpacing*(r32)SnapshotIndex + 0.5f*BarWidth,
-                                             ChartMinY + 0.5f*ThisHeight, 0.0f),
-                             V2(BarWidth, ThisHeight), V4(ThisProportion, 1, 0.0f, 1));
+                                             StackY + 0.5f*ThisHeight, 0.0f),
+                             V2(BarWidth, ThisHeight), V4(Color, 1));
+                    StackY += ThisHeight;
                 }
             }
+
+            PushRect(RenderGroup, V3(ChartLeft + 0.5f*ChartWidth, ChartMinY + ChartHeight, 0.0f),
+                     V2(ChartWidth, 1.0f), V4(1, 1, 1, 1));
         }
-    //    DEBUGTextLine("\\5C0F\\8033\\6728\\514E");
-    //    DEBUGTextLine("111111");
-    //    DEBUGTextLine("999999");
-    //    DEBUGTextLine("AVA WA Ta");
+//    DEBUGTextLine("\\5C0F\\8033\\6728\\514E");
+//    DEBUGTextLine("111111");
+//    DEBUGTextLine("999999");
+//    DEBUGTextLine("AVA WA Ta");
     }
 }
 
@@ -309,6 +333,7 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
         UpdateDebugRecords(DebugState, ArrayCount(DebugRecords_Main), DebugRecords_Main);
 
         DebugState->FrameEndInfos[DebugState->SnapshotIndex] = *Info;
+
         ++DebugState->SnapshotIndex;
         if(DebugState->SnapshotIndex >= DEBUG_SNAPSHOT_COUNT)
         {

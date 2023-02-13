@@ -348,9 +348,8 @@ struct debug_frame_timestamp
 };
 struct debug_frame_end_info
 {
-    r32 TotalSeconds;
     u32 TimestampCount;
-    debug_frame_timestamp TimeStamps[64];
+    debug_frame_timestamp Timestamps[64];
 };
 #define DEBUG_GAME_FRAME_END(name) void name(game_memory *Memory, debug_frame_end_info *Info)
 typedef DEBUG_GAME_FRAME_END(debug_game_frame_end);
