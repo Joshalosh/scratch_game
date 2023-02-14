@@ -15,7 +15,37 @@ struct debug_record
     u64 HitCount_CycleCount;
 };
 
+enum debug_event_type
+{
+    DebugEvent_BeginBlock,
+    DebugEvent_EndBlock,
+};
+struct debug_event
+{
+    u64 Clock;
+    u16 ThreadIndex;
+    u16 CoreIndex;
+    u16 DebugRecordIndex;
+    u8 DebugRecordArrayIndex;;
+    u8 Type;
+};
+
 debug_record DebugRecordArray[];
+
+#define MAX_DEBUG_EVENT_COUNT 65536
+extern u32 DebugEventIndex;
+extern debug_event DebugEventArray[];
+
+#define RecordDebugEvent(Type)
+        u32 EventIndex = AtomicAddU32(&DebugEventIndex, 1);
+        Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
+        debug_event *Event = DebugEventArray + EventIndex; 
+        Event->Clock = __rdtsc();
+        Event->ThreadIndex = 0;
+        Event->CoreIndex = 0;
+        Event->DebugRecordIndex = (u16)Counter;
+        Event->DebugRecordArrayIndex = DebugRecordArrayIndex;
+        Event->Type = Type;
 
 struct timed_block
 {
@@ -32,12 +62,18 @@ struct timed_block
         Record->FunctionName = FunctionName;
 
         StartCycles = __rdtsc();
+
+        //
+
+        RecordDebugEvent(DebugEvent_BeginBlock);
     }
 
     ~timed_block()
     {
         u64 Delta = (__rdtsc() - StartCycles) | ((u64)HitCount << 32);
         AtomicAddU64(&Record->HitCount_CycleCount, Delta);
+        
+        RecordDebugEvent(DebugEvent_BeginBlock);
     }
 };
 

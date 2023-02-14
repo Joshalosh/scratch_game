@@ -7,6 +7,9 @@ global_variable r32 AtY;
 global_variable r32 FontScale;
 global_variable font_id FontID;
 
+extern debug_event DebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
+extern debug_event *DebugEventArray;
+
 internal void
 UpdateDebugRecords(debug_state *DebugState, u32 CounterCount, debug_record *Counters)
 {
