@@ -24,13 +24,6 @@ inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
 
     return(Result);
 }
-inline u32 AtomicAddU32(u64 volatile *Value, u64 Addend)
-{
-    // Returns the original value _prior_ to adding.
-    u32 Result = _InterlockedExchangeAdd64((u32 *)Value, Addend);
-
-    return(Result);
-}
 #elif COMPILER_LLVM
 // TODO: Does LLVM have real read-specific barriers yet?
 #define CompletePreviousReadsBeforeFutureReads asm volatile("" ::: "memory")

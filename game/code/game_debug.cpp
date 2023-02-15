@@ -7,8 +7,8 @@ global_variable r32 AtY;
 global_variable r32 FontScale;
 global_variable font_id FontID;
 
-extern debug_event DebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
-extern debug_event *DebugEventArray;
+u32 GlobalDebugEventArray_DebugEventIndex;
+debug_event GlobalDebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
 
 internal void
 UpdateDebugRecords(debug_state *DebugState, u32 CounterCount, debug_record *Counters)
@@ -328,6 +328,8 @@ debug_record DebugRecords_Optimised[];
 
 extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 {
+    u64 ArrayIndex_EventIndex = AtomicExchangeU64(&Global_DebugEventArrayIndex_DebugEventIndex, 0);
+
     debug_state *DebugState = (debug_state *)Memory->DebugStorage;
     if(DebugState)
     {

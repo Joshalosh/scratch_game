@@ -26,35 +26,39 @@ struct debug_event
     u16 ThreadIndex;
     u16 CoreIndex;
     u16 DebugRecordIndex;
-    u8 DebugRecordArrayIndex;;
+    u8 DebugRecordArrayIndex;
     u8 Type;
 };
 
 debug_record DebugRecordArray[];
 
 #define MAX_DEBUG_EVENT_COUNT 65536
-extern u32 DebugEventIndex;
-extern debug_event DebugEventArray[];
+extern u64 Global_DebugEventArrayIndex_DebugEventIndex;
+extern debug_event GlobalDebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
 
-#define RecordDebugEvent(Type)
-        u32 EventIndex = AtomicAddU32(&DebugEventIndex, 1);
-        Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
-        debug_event *Event = DebugEventArray + EventIndex; 
-        Event->Clock = __rdtsc();
-        Event->ThreadIndex = 0;
-        Event->CoreIndex = 0;
-        Event->DebugRecordIndex = (u16)Counter;
-        Event->DebugRecordArrayIndex = DebugRecordArrayIndex;
-        Event->Type = Type;
+#define RecordDebugEvent(RecordIndex, EventType)                                  \
+    u64 ArrayIndex_EventIndex = AtomicAddU64(&Global_DebugEventArrayIndex_DebugEventIndex, 1);   \
+    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;        \
+    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                 \
+    debug_event *Event = GlobalDebugEventArray[ArrayIndex_EventIndex >> 32] + EventIndex; \
+    Event->Clock = __rdtsc();                                   \
+    Event->ThreadIndex = 0;                                     \
+    Event->CoreIndex = 0;                                       \
+    Event->DebugRecordIndex = (u16)RecordIndex;                     \
+    Event->DebugRecordArrayIndex = DebugRecordArrayIndexConstant; \
+    Event->Type = EventType;
 
 struct timed_block
 {
     debug_record *Record;
     u64 StartCycles;
     u32 HitCount;
+    int Counter;
 
-    timed_block(int Counter, char *Filename, int LineNumber, char *FunctionName, u32 HitCountInit = 1)
+    timed_block(int CounterInit, char *Filename, int LineNumber, char *FunctionName, u32 HitCountInit = 1)
     {
+        Counter = CounterInit;
+
         HitCount = HitCountInit;
         Record = DebugRecordArray + Counter;
         Record->Filename = Filename;
@@ -65,7 +69,7 @@ struct timed_block
 
         //
 
-        RecordDebugEvent(DebugEvent_BeginBlock);
+        RecordDebugEvent(Counter, DebugEvent_BeginBlock);
     }
 
     ~timed_block()
@@ -73,7 +77,7 @@ struct timed_block
         u64 Delta = (__rdtsc() - StartCycles) | ((u64)HitCount << 32);
         AtomicAddU64(&Record->HitCount_CycleCount, Delta);
         
-        RecordDebugEvent(DebugEvent_BeginBlock);
+        RecordDebugEvent(Counter, DebugEvent_BeginBlock);
     }
 };
 
