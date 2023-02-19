@@ -32,21 +32,24 @@ struct debug_event
 
 debug_record DebugRecordArray[];
 
-#define MAX_DEBUG_EVENT_COUNT 65536
-extern u64 Global_DebugEventArrayIndex_DebugEventIndex;
+#define MAX_DEBUG_EVENT_COUNT (16*65536)
+extern u64 Global_DebugEventArrayIndex_DebugEventIndex = 0;
 extern debug_event GlobalDebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
 
-#define RecordDebugEvent(RecordIndex, EventType)                                  \
-    u64 ArrayIndex_EventIndex = AtomicAddU64(&Global_DebugEventArrayIndex_DebugEventIndex, 1);   \
-    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;        \
-    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                 \
-    debug_event *Event = GlobalDebugEventArray[ArrayIndex_EventIndex >> 32] + EventIndex; \
-    Event->Clock = __rdtsc();                                   \
-    Event->ThreadIndex = 0;                                     \
-    Event->CoreIndex = 0;                                       \
-    Event->DebugRecordIndex = (u16)RecordIndex;                     \
-    Event->DebugRecordArrayIndex = DebugRecordArrayIndexConstant; \
-    Event->Type = EventType;
+inline void
+RecordDebugEvent(int RecordIndex, debug_event_type EventType)
+{
+    u64 ArrayIndex_EventIndex = AtomicAddU64(&Global_DebugEventArrayIndex_DebugEventIndex, 1);
+    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;
+    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
+    debug_event *Event = GlobalDebugEventArray[ArrayIndex_EventIndex >> 32] + EventIndex;
+    Event->Clock = __rdtsc(); 
+    Event->ThreadIndex = 0;                                  
+    Event->CoreIndex = 0;                                      
+    Event->DebugRecordIndex = (u16)RecordIndex;
+    Event->DebugRecordArrayIndex = DebugRecordArrayIndexConstant;
+    Event->Type = (u8)EventType;
+}
 
 struct timed_block
 {
@@ -84,7 +87,7 @@ struct timed_block
 struct debug_counter_snapshot
 {
     u32 HitCount;
-    u32 CycleCount;
+    u64 CycleCount;
 };
 
 #define DEBUG_SNAPSHOT_COUNT 120
