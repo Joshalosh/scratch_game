@@ -33,7 +33,7 @@ struct debug_event
 debug_record DebugRecordArray[];
 
 #define MAX_DEBUG_EVENT_COUNT (16*65536)
-extern u64 Global_DebugEventArrayIndex_DebugEventIndex = 0;
+extern u64 Global_DebugEventArrayIndex_DebugEventIndex;
 extern debug_event GlobalDebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
 
 inline void
@@ -80,7 +80,7 @@ struct timed_block
         u64 Delta = (__rdtsc() - StartCycles) | ((u64)HitCount << 32);
         AtomicAddU64(&Record->HitCount_CycleCount, Delta);
         
-        RecordDebugEvent(Counter, DebugEvent_BeginBlock);
+        RecordDebugEvent(Counter, DebugEvent_EndBlock);
     }
 };
 
@@ -101,7 +101,7 @@ struct debug_counter_state
     debug_counter_snapshot Snapshots[DEBUG_SNAPSHOT_COUNT];
 };
 
-struct debug_state 
+struct debug_state
 {
     u32 SnapshotIndex;
     u32 CounterCount;

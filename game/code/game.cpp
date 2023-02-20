@@ -37,7 +37,6 @@ AddGroundedEntity(game_state *GameState, entity_type Type, world_position P, sim
 {
     add_low_entity_result Entity = AddLowEntity(GameState, Type, P);
     Entity.Low->Sim.Collision = Collision;
-    
     return(Entity);
 }
 
@@ -602,14 +601,6 @@ MakePyramidNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
         Row += Bitmap->Pitch;
     }
 }
-
-/*
-   Kanji owl codepoints.
-   0x5c0f
-   0x8033
-   0x6728
-   0x514e
-*/
 
 #if GAME_INTERNAL
 game_memory *DebugGlobalMemory;

@@ -7,7 +7,7 @@ global_variable r32 AtY;
 global_variable r32 FontScale;
 global_variable font_id FontID;
 
-u32 Global_DebugEventArrayIndex_DebugEventIndex = 0;
+u64 Global_DebugEventArrayIndex_DebugEventIndex = 0;
 debug_event GlobalDebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
 
 internal void
@@ -193,6 +193,7 @@ DEBUGOverlay(game_memory *Memory)
         if(Font)
         {
             ga_font *Info = GetFontInfo(RenderGroup->Assets, FontID);
+
             for(u32 CounterIndex = 0; CounterIndex < DebugState->CounterCount; ++CounterIndex)
             {
                 debug_counter_state *Counter = DebugState->CounterStates + CounterIndex;
@@ -306,7 +307,7 @@ DEBUGOverlay(game_memory *Memory)
 
 debug_record DebugRecordArray[__COUNTER__];
 
-extern u32 GlobalCurrentEventArrayIndex;
+extern u32 GlobalCurrentEventArrayIndex = 0;
 extern u32 const DebugRecords_Optimised_Count;
 debug_record DebugRecords_Optimised[];
 
@@ -323,7 +324,7 @@ UpdateDebugRecords(debug_state *DebugState, u32 CounterCount, debug_record *Coun
         Dest->FunctionName = Source->FunctionName;
         Dest->LineNumber = Source->LineNumber;
         Dest->Snapshots[DebugState->SnapshotIndex].HitCount = (u32)(HitCount_CycleCount >> 32);
-        Dest->Snapshots[DebugState->SnapshotIndex].CycleCount = (u32)(HitCount_CycleCount &0xFFFFFFFF);
+        Dest->Snapshots[DebugState->SnapshotIndex].CycleCount = (u32)(HitCount_CycleCount & 0xFFFFFFFF);
     }
 }
 
@@ -361,7 +362,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *Events
 
         if(Event->Type == DebugEvent_BeginBlock)
         {
-            ++Dest->Snapshots[DebugState->SnapshotIndex].HitCount = 1;
+            ++Dest->Snapshots[DebugState->SnapshotIndex].HitCount;
             Dest->Snapshots[DebugState->SnapshotIndex].CycleCount -= Event->Clock;
         }
         else
@@ -375,7 +376,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *Events
 extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 {
     GlobalCurrentEventArrayIndex = !GlobalCurrentEventArrayIndex;
-    u64 ArrayIndex_EventIndex = AtomicExchangeU64(&Global_DebugEventArrayIndex_DebugEventIndex, 
+    u64 ArrayIndex_EventIndex = AtomicExchangeU64(&Global_DebugEventArrayIndex_DebugEventIndex,
                                                   (u64)GlobalCurrentEventArrayIndex << 32);
 
     u32 EventArrayIndex = ArrayIndex_EventIndex >> 32;
