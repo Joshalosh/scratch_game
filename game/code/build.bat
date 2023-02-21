@@ -19,8 +19,8 @@ REM cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link -subsystem:window
 REM 64-bit build
 REM Optimisation switches /wO2 
 echo WAITING FOR PDB > lock.tmp
-cl %CommonCompilerFlags% -DDebugRecordArrayIndex=1 -DDebugRecordArray=DebugRecords_Optimised -O2 -I..\iaca-win64\ -c ..\game\code\game_optimised.cpp -Fogame_optimised.obj -LD
-cl %CommonCompilerFlags% -DDebugRecordArrayIndex=0 -DDebugRecordArray=DebugRecords_Main -I..\iaca-win64\ ..\game\code\game.cpp game_optimised.obj -Fmgame.map -LD /link -incremental:no -PDB:game_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender -EXPORT:DEBUGGameFrameEnd
+cl %CommonCompilerFlags% -DDebugRecordArrayIndexConstant=1 -DDebugRecordArray=DebugRecords_Optimised -O2 -I..\iaca-win64\ -c ..\game\code\game_optimised.cpp -Fogame_optimised.obj -LD
+cl %CommonCompilerFlags% -DDebugRecordArrayIndexConstant=0 -DDebugRecordArray=DebugRecords_Main -I..\iaca-win64\ ..\game\code\game.cpp game_optimised.obj -Fmgame.map -LD /link -incremental:no -PDB:game_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender -EXPORT:DEBUGGameFrameEnd
 del lock.tmp
 cl %CommonCompilerFlags% ..\game\code\win32_game.cpp -Fmwin32_game.map /link %CommonLinkerFlags%
 popd

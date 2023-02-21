@@ -32,6 +32,9 @@ struct debug_event
 
 debug_record DebugRecordArray[];
 
+// TODO: No attempt is being made at the moment to ensure that
+// the final debug records being written to the event array 
+// actually complete their output to the swap of the event array index.
 #define MAX_DEBUG_EVENT_COUNT (16*65536)
 extern u64 Global_DebugEventArrayIndex_DebugEventIndex;
 extern debug_event GlobalDebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
@@ -39,12 +42,15 @@ extern debug_event GlobalDebugEventArray[2][MAX_DEBUG_EVENT_COUNT];
 inline void
 RecordDebugEvent(int RecordIndex, debug_event_type EventType)
 {
+    u8 *ThreadLocalStorage = (u8 *)__readgsqword(0x30);
+    u32 ThreadID = *(u32 *)(ThreadLocalStorage + 0x48);
+
     u64 ArrayIndex_EventIndex = AtomicAddU64(&Global_DebugEventArrayIndex_DebugEventIndex, 1);
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;
     Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
     debug_event *Event = GlobalDebugEventArray[ArrayIndex_EventIndex >> 32] + EventIndex;
     Event->Clock = __rdtsc(); 
-    Event->ThreadIndex = 0;                                  
+    Event->ThreadIndex = (u16)ThreadID;                                  
     Event->CoreIndex = 0;                                      
     Event->DebugRecordIndex = (u16)RecordIndex;
     Event->DebugRecordArrayIndex = DebugRecordArrayIndexConstant;

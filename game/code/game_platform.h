@@ -92,7 +92,7 @@ typedef real64 r64;
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
-#define AlignPow2(Value, Alignment) ((Value + ((Alignment) - 1)) & ~((Alignment) -1))
+#define AlignPow2(Value, Alignment) ((Value + ((Alignment) - 1)) & ~((Alignment) - 1))
 #define Align4(Value) ((Value + 3) & ~3)
 #define Align8(Value) ((Value + 7) & ~7)
 #define Align16(Value) ((Value + 15) & ~15)
@@ -129,22 +129,6 @@ typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 
 #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(char *Filename, uint32_t MemorySize, void *Memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
-
-// TODO: Give these things names soon.
-enum
-{
-    /* 0 */ DebugCycleCounter_GameUpdateAndRender,
-    /* 1 */ DebugCycleCounter_RenderGroupToOutput,
-    /* 2 */ DebugCycleCounter_DrawRectangleSlowly,
-    /* 3 */ DebugCycleCounter_ProcessPixel,
-    /* 4 */ DebugCycleCounter_DrawRectangleQuickly,
-    DebugCycleCounter_Count,
-};
-typedef struct debug_cycle_counter
-{
-    uint64_t CycleCount;
-    uint32_t HitCount;
-} debug_cycle_counter;
 
 extern struct game_memory *DebugGlobalMemory;
 
@@ -245,7 +229,7 @@ typedef struct game_input
     game_controller_input Controllers[5];
 } game_input;
 
-typedef struct platform_file_handle 
+typedef struct platform_file_handle
 {
     b32 NoErrors;
     void *Platform;
@@ -257,7 +241,7 @@ typedef struct platform_file_group
     void *Platform;
 } platform_file_group;
 
-typedef enum platform_get_all_file_type 
+typedef enum platform_file_type
 {
     PlatformFileType_AssetFile,
     PlatformFileType_SavedGameFile,
