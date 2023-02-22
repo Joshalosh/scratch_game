@@ -358,5 +358,4 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
     }
 }
 
-extern u32 const DebugRecords_Optimised_Count = __COUNTER__;
-debug_record DebugRecords_Optimised[DebugRecords_Optimised_Count];
+u32 DebugRecords_Optimised_Count = __COUNTER__;

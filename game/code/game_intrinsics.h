@@ -24,6 +24,14 @@ inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
 
     return(Result);
 }
+inline u32 GetThreadID(void)
+{
+    u8 *ThreadLocalStorage = (u8 *)__readgsqword(0x30);
+    u32 ThreadID = *(u32 *)(ThreadLocalStorage + 0x48);
+
+    return(ThreadID);
+}
+
 #elif COMPILER_LLVM
 // TODO: Does LLVM have real read-specific barriers yet?
 #define CompletePreviousReadsBeforeFutureReads asm volatile("" ::: "memory")

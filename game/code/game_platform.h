@@ -346,6 +346,87 @@ inline game_controller_input *GetController(game_input *Input, int unsigned Cont
     return(Result);
 }
 
+struct debug_record
+{
+    char *Filename;
+    char *FunctionName;
+
+    u32 LineNumber;
+    u32 Reserved;
+
+    u64 HitCount_CycleCount;
+};
+
+enum debug_event_type
+{
+    DebugEvent_BeginBlock,
+    DebugEvent_EndBlock,
+};
+struct debug_event
+{
+    u64 Clock;
+    u16 ThreadIndex;
+    u16 CoreIndex;
+    u16 DebugRecordIndex;
+    u8 TranslationUnit;
+    u8 Type;
+};
+
+#define MAX_DEBUG_TRANSLATION_UNITS 3 
+#define MAX_DEBUG_EVENT_COUNT (16*65536)
+#define MAX_DEBUG_RECORD_COUNT (65536)
+struct debug_table
+{
+// TODO: No attempt is being made at the moment to ensure that
+// the final debug records being written to the event array 
+// actually complete their output to the swap of the event array index.
+    u32 CurrentEventArrayIndex;
+    u64 volatile EventArrayIndex_EventIndex;
+    debug_event Events[2][MAX_DEBUG_EVENT_COUNT];
+    debug_event Records[MAX_DEBUG_TRANSLATION_UNITS][MAX_DEBUG_RECORD_COUNT];
+};
+
+extern debug_table GlobalDebugTable;
+
+inline void
+RecordDebugEvent(int RecordIndex, debug_event_type EventType)
+{
+    u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable.EventArrayIndex_EventIndex, 1);
+    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;
+    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
+    debug_event *Event = GlobalDebugTable.Events[ArrayIndex_EventIndex >> 32] + EventIndex;
+    Event->Clock = __rdtsc(); 
+    Event->ThreadIndex = (u16)GetThreadID();                                  
+    Event->CoreIndex = 0;                                      
+    Event->DebugRecordIndex = (u16)RecordIndex;
+    Event->TranslationUnit = TRANSLATION_UNIT_INDEX;
+    Event->Type = (u8)EventType;
+}
+
+#define TIMED_BLOCK__(Number, ...) timed_block TimedBlock_##Number(__COUNTER__, __FILE__, __LINE__, __FUNCTION__, ## __VA_ARGS__)
+#define TIMED_BLOCK_(Number, ...) TIMED_BLOCK__(Number, ## __VA_ARGS__)
+#define TIMED_BLOCK(...) TIMED_BLOCK_(__LINE__, ## __VA_ARGS__)
+struct timed_block
+{
+    int Counter;
+
+    timed_block(int CounterInit, char *Filename, int LineNumber, char *FunctionName, u32 HitCountInit = 1)
+    {
+        Counter = CounterInit;
+        debug_record *Record = DebugRecordArray + Counter;
+        Record->Filename = Filename;
+        Record->LineNumber = LineNumber;
+        Record->FunctionName = FunctionName;
+
+        RecordDebugEvent(Counter, DebugEvent_BeginBlock);
+    }
+
+    ~timed_block()
+    {
+        RecordDebugEvent(Counter, DebugEvent_EndBlock);
+    }
+};
+
 #ifdef __cplusplus
 }
 #endif

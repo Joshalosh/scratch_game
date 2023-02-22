@@ -305,11 +305,10 @@ DEBUGOverlay(game_memory *Memory)
     }
 }
 
-debug_record DebugRecordArray[__COUNTER__];
+#define DebugRecords_Main_Count __COUNTER__
+extern u32 DebugRecords_Optimised_Count;
 
-extern u32 GlobalCurrentEventArrayIndex = 0;
-extern u32 const DebugRecords_Optimised_Count;
-debug_record DebugRecords_Optimised[];
+debug_table GlobalDebugTable;
 
 internal void
 UpdateDebugRecords(debug_state *DebugState, u32 CounterCount, debug_record *Counters)
