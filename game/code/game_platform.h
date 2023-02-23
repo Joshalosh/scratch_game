@@ -325,6 +325,50 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 #define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
+#if COMPILER_MSVC
+#define CompletePreviousReadsBeforeFutureReads _ReadBarrier()
+#define CompletePreviousWritesBeforeFutureWrites _WriteBarrier()
+inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
+{
+    uint32_t Result = _InterlockedCompareExchange((long *)Value, New, Expected);
+
+    return(Result);
+}
+inline u64 AtomicExchangeU64(u64 volatile *Value, u64 New)
+{
+    u64 Result = _InterlockedExchange64((__int64 *)Value, New);
+
+    return(Result);
+}
+inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
+{
+    // Returns the original value _prior_ to adding.
+    u64 Result = _InterlockedExchangeAdd64((__int64 *)Value, Addend);
+
+    return(Result);
+}
+inline u32 GetThreadID(void)
+{
+    u8 *ThreadLocalStorage = (u8 *)__readgsqword(0x30);
+    u32 ThreadID = *(u32 *)(ThreadLocalStorage + 0x48);
+
+    return(ThreadID);
+}
+
+#elif COMPILER_LLVM
+// TODO: Does LLVM have real read-specific barriers yet?
+#define CompletePreviousReadsBeforeFutureReads asm volatile("" ::: "memory")
+#define CompletePreviousWritesBeforeFutureWrites asm volatile("" ::: "memory")
+inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
+{
+    uint32_t Result = __sync_val_compare_and_swap(Value, Expected, New);
+
+    return(Result);
+}
+#else
+// TODO: Other compilers / platforms.
+#endif
+
 struct debug_frame_timestamp
 {
     char *Name;
@@ -383,7 +427,7 @@ struct debug_table
     u32 CurrentEventArrayIndex;
     u64 volatile EventArrayIndex_EventIndex;
     debug_event Events[2][MAX_DEBUG_EVENT_COUNT];
-    debug_event Records[MAX_DEBUG_TRANSLATION_UNITS][MAX_DEBUG_RECORD_COUNT];
+    debug_record Records[MAX_DEBUG_TRANSLATION_UNITS][MAX_DEBUG_RECORD_COUNT];
 };
 
 extern debug_table GlobalDebugTable;
@@ -413,7 +457,7 @@ struct timed_block
     timed_block(int CounterInit, char *Filename, int LineNumber, char *FunctionName, u32 HitCountInit = 1)
     {
         Counter = CounterInit;
-        debug_record *Record = DebugRecordArray + Counter;
+        debug_record *Record = GlobalDebugTable.Records[TRANSLATION_UNIT_INDEX] + Counter;
         Record->Filename = Filename;
         Record->LineNumber = LineNumber;
         Record->FunctionName = FunctionName;
