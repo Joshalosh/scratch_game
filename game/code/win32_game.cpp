@@ -1318,16 +1318,6 @@ PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
     }
 }
 
-inline void
-Win32RecordTimestamp(debug_frame_end_info *Info, char *Name, r32 Seconds)
-{
-    Assert(Info->TimestampCount < ArrayCount(Info->Timestamps));
-
-    debug_frame_timestamp *Timestamp = Info->Timestamps + Info->TimestampCount++;
-    Timestamp->Name = Name;
-    Timestamp->Seconds = Seconds;
-}
-
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
@@ -1559,8 +1549,13 @@ WinMain(HINSTANCE Instance,
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
-                    debug_frame_end_info FrameEndInfo = {};
+                    TIMED_BLOCK();
 
+                    //
+                    //
+                    //
+
+                    BEGIN_BLOCK(ExecutableRefresh);
                     NewInput->dtForFrame = TargetSecondsPerFrame;
 
                     NewInput->ExecutableReloaded = false;
@@ -1576,9 +1571,13 @@ WinMain(HINSTANCE Instance,
                                                  GameCodeLockFullPath);
                         NewInput->ExecutableReloaded = true;
                     }
-
-                    Win32RecordTimestamp(&FrameEndInfo, "ExecutableReady",
-                                         Win32GetSecondsElapsed(LastCounter, Win32GetWallClock()));
+                    END_BLOCK(ExecutableRefresh);
+                    
+                    //
+                    //
+                    //
+                    
+                    BEGIN_BLOCK(InputProcessing);
 
                     // TODO: Zeroing macro
                     // TODO: We can't zero everything because the up/down state will be
@@ -1730,9 +1729,13 @@ WinMain(HINSTANCE Instance,
                             }
                         }
                     }
+                    END_BLOCK(InputProcessing);
 
-                    Win32RecordTimestamp(&FrameEndInfo, "InputProcessed", 
-                                         Win32GetSecondsElapsed(LastCounter, Win32GetWallClock()));
+                    //
+                    //
+                    //
+
+                    BEGIN_BLOCK(GameUpdate);
 
                     if(!GlobalPause)
                     {
@@ -1758,8 +1761,13 @@ WinMain(HINSTANCE Instance,
                         }
                     }
 
-                    Win32RecordTimestamp(&FrameEndInfo, "GameUpdated",
-                                         Win32GetSecondsElapsed(LastCounter, Win32GetWallClock()));
+                    END_BLOCK(GameUpdate);
+
+                    //
+                    //
+                    //
+
+                    BEGIN_BLOCK(AudioUpdate);
 
                     if(!GlobalPause)
                     {
@@ -1891,8 +1899,13 @@ WinMain(HINSTANCE Instance,
                         }
                     }
 
-                    Win32RecordTimestamp(&FrameEndInfo, "AudioUpdated",
-                                         Win32GetSecondsElapsed(LastCounter, Win32GetWallClock()));
+                    END_BLOCK(AudioUpdate);
+
+                    //
+                    //
+                    //
+
+                    BEGIN_BLOCK(FramerateWait);
 
                     if(!GlobalPause)
                     {
@@ -1933,8 +1946,13 @@ WinMain(HINSTANCE Instance,
                         }
                     }
 
-                    Win32RecordTimestamp(&FrameEndInfo, "FramerateWaitComplete",
-                                         Win32GetSecondsElapsed(LastCounter, Win32GetWallClock()));
+                    END_BLOCK(FramerateWait);
+
+                    //
+                    //
+                    //
+
+                    BEGIN_BLOCK(FrameDisplay);
 
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     HDC DeviceContext = GetDC(Window);
@@ -1952,10 +1970,9 @@ WinMain(HINSTANCE Instance,
                     LARGE_INTEGER EndCounter = Win32GetWallClock();
                     LastCounter = EndCounter;
 
-#if GAME_INTERNAL
-                    Win32RecordTimestamp(&FrameEndInfo, "EndOfFrame",
-                                         Win32GetSecondsElapsed(LastCounter, EndCounter));
+                    END_BLOCK(FrameDisplay);
 
+#if GAME_INTERNAL
                     uint64_t EndCycleCount = __rdtsc();
                     uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                     LastCycleCount = EndCycleCount;

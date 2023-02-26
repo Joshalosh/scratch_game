@@ -130,23 +130,8 @@ typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(char *Filename, uint32_t MemorySize, void *Memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
+// TODO: I should prabably actually start using this.
 extern struct game_memory *DebugGlobalMemory;
-
-#if 0
-#if (COMPILER_MSVC || COMPILER_LLVM)
-#define BEGIN_TIMED_BLOCK_(StartCycleCount) StartCycleCount = __rdtsc();
-#define BEGIN_TIMED_BLOCK(ID) u64 BEGIN_TIMED_BLOCK_(StartCycleCount##ID)
-#define END_TIMED_BLOCK_(StartCycleCount, ID) DebugGlobalMemory->Counters[ID].CycleCount += __rdtsc() - StartCycleCount; ++DebugGlobalMemory->Counters[ID].HitCount;
-#define END_TIMED_BLOCK(ID) END_TIMED_BLOCK_(StartCycleCount##ID, DebugCycleCounter_##ID)
-// TODO: Clamp END_TIMED_BLOCK_COUNTED so that if the calculation 
-// is wrong it won't overflow.
-#define END_TIMED_BLOCK_COUNTED(ID, Count) DebugGlobalMemory->Counters[DebugCycleCounter_##ID].CycleCount += __rdtsc() - StartCycleCount##ID; DebugGlobalMemory->Counters[DebugCycleCounter_##ID].HitCount += (Count);
-#else
-#define BEGIN_TIMED_BLOCK(ID)
-#define END_TIMED_BLOCK(ID)
-#define END_TIMED_BLOCK_COUNTED(ID, Count)
-#endif
-#endif
 
 #endif
 
@@ -369,16 +354,6 @@ inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t N
 // TODO: Other compilers / platforms.
 #endif
 
-struct debug_frame_timestamp
-{
-    char *Name;
-    r32 Seconds;
-};
-struct debug_frame_end_info
-{
-    u32 TimestampCount;
-    debug_frame_timestamp Timestamps[64];
-};
 #define DEBUG_GAME_FRAME_END(name) void name(game_memory *Memory, debug_frame_end_info *Info)
 typedef DEBUG_GAME_FRAME_END(debug_game_frame_end);
 
@@ -447,27 +422,44 @@ RecordDebugEvent(int RecordIndex, debug_event_type EventType)
     Event->Type = (u8)EventType;
 }
 
-#define TIMED_BLOCK__(Number, ...) timed_block TimedBlock_##Number(__COUNTER__, __FILE__, __LINE__, __FUNCTION__, ## __VA_ARGS__)
-#define TIMED_BLOCK_(Number, ...) TIMED_BLOCK__(Number, ## __VA_ARGS__)
-#define TIMED_BLOCK(...) TIMED_BLOCK_(__LINE__, ## __VA_ARGS__)
+#define TIMED_FUNCTION__(Number, ...) timed_block TimedBlock_##Number(__COUNTER__, __FILE__, __LINE__, __FUNCTION__, ## __VA_ARGS__)
+#define TIMED_FUNCTION_(Number, ...) TIMED_BLOCK__(Number, ## __VA_ARGS__)
+#define TIMED_FUNCTION(...) TIMED_BLOCK_(__LINE__, ## __VA_ARGS__)
+
+#define BEGIN_BLOCK_(Counter, Filename, LineNumber, BlockName) \
+    debug_record *Record = GlobalDebutTable.Records[TRANSLATION_UNIT_INDEX] + Counter; \
+    Record->Filename = Filename; \
+    Record->LineNumber = LineNumber; \
+    Record->BlockName = BlockName; \
+    RecordDebugEvent(Counter, DebugEvent_BeginBlock); 
+#define END_BLOCK_(Counter) \
+    RecordDebugEvent(Counter, DebugEvent_EndBlock);
+
+#define BEGIN_BLOCK(Name) \
+int Counter_##Name = __Counter__; \
+BEGIN_BLOCK_(Counter_##Name, __FILE__, __LINE__, #Name);
+
+#define END_BLOCK(Name)
+    RecordDebugEvent(Counter, DebugEvent_EndBlock);
+
+struct manual_timed_block
+{
+    int Counter;
+};
+
 struct timed_block
 {
     int Counter;
 
-    timed_block(int CounterInit, char *Filename, int LineNumber, char *FunctionName, u32 HitCountInit = 1)
+    timed_block(int CounterInit, char *Filename, int LineNumber, char *BlockName, u32 HitCountInit = 1)
     {
-        Counter = CounterInit;
-        debug_record *Record = GlobalDebugTable.Records[TRANSLATION_UNIT_INDEX] + Counter;
-        Record->Filename = Filename;
-        Record->LineNumber = LineNumber;
-        Record->FunctionName = FunctionName;
-
-        RecordDebugEvent(Counter, DebugEvent_BeginBlock);
+        // TODO: Should I record the hit count value here?
+        BEGIN_BLOCK_(Counter, Filename, LineNumber, BlockName);
     }
 
     ~timed_block()
     {
-        RecordDebugEvent(Counter, DebugEvent_EndBlock);
+        END_BLOCK_(Counter);
     }
 };
 

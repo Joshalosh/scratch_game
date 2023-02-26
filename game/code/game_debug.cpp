@@ -271,6 +271,7 @@ DEBUGOverlay(game_memory *Memory)
                 {0, 0.5f, 1},
             };
 
+#if 0
             for(u32 SnapshotIndex = 0; SnapshotIndex < DEBUG_SNAPSHOT_COUNT; ++SnapshotIndex)
             {
                 debug_frame_end_info *Info = DebugState->FrameEndInfos + SnapshotIndex;
@@ -291,6 +292,7 @@ DEBUGOverlay(game_memory *Memory)
                     StackY += ThisHeight;
                 }
             }
+#endif
 
             PushRect(RenderGroup, V3(ChartLeft + 0.5f*ChartWidth, ChartMinY + ChartHeight, 0.0f),
                      V2(ChartWidth, 1.0f), V4(1, 1, 1, 1));
@@ -383,8 +385,6 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
     {
         DebugState->CounterCount = 0;
         CollateDebugRecords(DebugState, EventCount, GlobalDebugTable.Events[EventArrayIndex]);
-
-        DebugState->FrameEndInfos[DebugState->SnapshotIndex] = *Info;
 
         ++DebugState->SnapshotIndex;
         if(DebugState->SnapshotIndex >= DEBUG_SNAPSHOT_COUNT)
