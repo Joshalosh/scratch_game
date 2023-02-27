@@ -1318,6 +1318,9 @@ PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
     }
 }
 
+global_variable debug_table GlobalDebugTable_;
+debug_table *GlobalDebugTable = &GlobalDebugTable_;
+
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
@@ -1549,7 +1552,7 @@ WinMain(HINSTANCE Instance,
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
-                    TIMED_BLOCK();
+                    TIMED_BLOCK(Win32Loop);
 
                     //
                     //
@@ -1979,7 +1982,7 @@ WinMain(HINSTANCE Instance,
 
                     if(Game.DEBUGFrameEnd)
                     {
-                        Game.DEBUGFrameEnd(&GameMemory, &FrameEndInfo);
+                        Game.DEBUGFrameEnd(&GameMemory);
                     }
 #endif
                 }

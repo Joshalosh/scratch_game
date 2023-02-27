@@ -29,7 +29,7 @@ UnscaleAndBiasNormal(v4 Normal)
 internal void
 DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i ClipRect, bool32 Even)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     real32 R = Color.r;
     real32 G = Color.g;
@@ -174,7 +174,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
                     environment_map *Top, environment_map *Middle, environment_map *Bottom,
                     real32 PixelsToMetres)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     // Premultiply color up front
     Color.rgb *= Color.a;
@@ -236,7 +236,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
 
-    TIMED_BLOCK((XMax - XMin + 1)*(YMax - YMin + 1));
+    TIMED_BLOCK(PixelFill, (XMax - XMin + 1)*(YMax - YMin + 1));
     for(int Y = YMin; Y <= YMax; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
@@ -397,7 +397,7 @@ internal void
 DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
            real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     int32_t MinX = RoundReal32ToInt32(RealX);
     int32_t MinY = RoundReal32ToInt32(RealY);
@@ -476,7 +476,7 @@ DrawBitmap(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
 internal void
 ChangeSaturation(loaded_bitmap *Buffer, real32 Level)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     uint8_t *DestRow = (uint8_t *)Buffer->Memory;
     for(int Y = 0; Y < Buffer->Height; ++Y)
@@ -514,7 +514,7 @@ internal void
 DrawMatte(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
           real32 RealX, real32 RealY, real32 CAlpha = 1.0f)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     int32_t MinX = RoundReal32ToInt32(RealX);
     int32_t MinY = RoundReal32ToInt32(RealY);
@@ -592,7 +592,7 @@ internal void
 RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
                     rectangle2i ClipRect, bool Even)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     real32 NullPixelsToMetres = 1.0f;
 
@@ -710,7 +710,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 internal void
 RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     Assert(RenderGroup->InsideRender);
 
@@ -734,7 +734,7 @@ internal void
 TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
                          render_group *RenderGroup, loaded_bitmap *OutputTarget)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     Assert(RenderGroup->InsideRender);
     /*
@@ -830,7 +830,7 @@ AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBu
 internal void
 BeginRender(render_group *Group)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     if(Group)
     {
@@ -844,7 +844,7 @@ BeginRender(render_group *Group)
 internal void
 EndRender(render_group *Group)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     if(Group)
     {
@@ -898,7 +898,7 @@ struct entity_basis_p_result
 };
 inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, v3 OriginalP)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     entity_basis_p_result Result = {};
 
@@ -944,7 +944,7 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
 inline void *
 PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     Assert(Group->InsideRender);
 

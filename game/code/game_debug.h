@@ -10,7 +10,7 @@ struct debug_counter_snapshot
 struct debug_counter_state
 {
     char *Filename;
-    char *FunctionName;
+    char *BlockName;
 
     u32 LineNumber;
 
