@@ -330,10 +330,17 @@ UpdateDebugRecords(debug_state *DebugState, u32 CounterCount, debug_record *Coun
 internal void
 CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *Events)
 {
-#define DebugRecords_Platform_Count 0
-    DebugState->CounterCount = (DebugRecords_Main_Count +
-                                DebugRecords_Optimised_Count +
-                                DebugRecords_Platform_Count);
+    debug_counter_state *CounterArray[MAX_DEBUG_TRANSLATION_UNITS];
+    debug_counter_state *CurrentCounter = DebugState->CounterStates;
+    u32 TotalRecordCount = 0;
+    for(u32 UnitIndex = 0; UnitIndex < MAX_DEBUG_TRANSLATION_UNITS; ++UnitIndex)
+    {
+        CounterArray[UnitIndex] = CurrentCounter;
+        TotalRecordCount += GlobalDebugTable->RecordCount[UnitIndex];
+
+        CurrentCounter += GlobalDebugTable->RecordCount[UnitIndex];
+    }
+    DebugState->CounterCount = TotalRecordCount;
 
     for(u32 CounterIndex = 0; CounterIndex < DebugState->CounterCount; ++CounterIndex)
     {
@@ -342,12 +349,6 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *Events
         Dest->Snapshots[DebugState->SnapshotIndex].CycleCount = 0;
     }
 
-    debug_counter_state *CounterArray[3] =
-    {
-        DebugState->CounterStates,
-        DebugState->CounterStates + DebugRecords_Main_Count,
-        DebugState->CounterStates + DebugRecords_Main_Count + DebugRecords_Optimised_Count,
-    };
     for(u32 EventIndex = 0; EventIndex < EventCount; ++EventIndex)
     {
         debug_event *Event = Events + EventIndex;
@@ -374,6 +375,9 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *Events
 
 extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 {
+    GlobalDebugTable->RecordCount[0] = DebugRecords_Main_Count;
+    GlobalDebugTable->RecordCount[1] = DebugRecords_Optimised_Count;
+
     GlobalDebugTable->CurrentEventArrayIndex = !GlobalDebugTable->CurrentEventArrayIndex;
     u64 ArrayIndex_EventIndex = AtomicExchangeU64(&GlobalDebugTable->EventArrayIndex_EventIndex,
                                                   (u64)GlobalDebugTable->CurrentEventArrayIndex << 32);
@@ -393,4 +397,6 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
             DebugState->SnapshotIndex = 0;
         }
     }
+
+    return(GlobalDebugTable);
 }

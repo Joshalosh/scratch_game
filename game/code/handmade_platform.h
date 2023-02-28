@@ -1,17 +1,36 @@
-#if !defined(GAME_PLATFORM_H)
+#if !defined(HANDMADE_PLATFORM_H)
+/* ========================================================================
+   $File: $
+   $Date: $
+   $Revision: $
+   $Creator: Casey Muratori $
+   $Notice: (C) Copyright 2014 by Molly Rocket, Inc. All Rights Reserved. $
+   ======================================================================== */
+
+/*
+  NOTE(casey):
+
+  HANDMADE_INTERNAL:
+    0 - Build for public release
+    1 - Build for developer only
+
+  HANDMADE_SLOW:
+    0 - Not slow code allowed!
+    1 - Slow code welcome.
+*/
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //
-// NOTE: Compilers
+// NOTE(casey): Compilers
 //
-
+    
 #if !defined(COMPILER_MSVC)
 #define COMPILER_MSVC 0
 #endif
-
+    
 #if !defined(COMPILER_LLVM)
 #define COMPILER_LLVM 0
 #endif
@@ -21,7 +40,7 @@ extern "C" {
 #undef COMPILER_MSVC
 #define COMPILER_MSVC 1
 #else
-// TODO: Add more compilers
+// TODO(casey): Moar compilerz!!!
 #undef COMPILER_LLVM
 #define COMPILER_LLVM 1
 #endif
@@ -32,35 +51,48 @@ extern "C" {
 #elif COMPILER_LLVM
 #include <x86intrin.h>
 #else
-#error SSE/NEON optimisations are not available for this compiler yet
+#error SEE/NEON optimizations are not available for this compiler yet!!!!
 #endif
-
+    
 //
-// NOTE: Types
+// NOTE(casey): Types
 //
 #include <stdint.h>
 #include <stddef.h>
 #include <limits.h>
 #include <float.h>
+    
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef int32 bool32;
+
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+
+typedef intptr_t intptr;
+typedef uintptr_t uintptr;
 
 typedef size_t memory_index;
-
-typedef int32_t bool32;
+    
 typedef float real32;
 typedef double real64;
-
-typedef int8_t s8;
-typedef int8_t s08;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef int64_t s64;
+    
+typedef int8 s8;
+typedef int8 s08;
+typedef int16 s16;
+typedef int32 s32;
+typedef int64 s64;
 typedef bool32 b32;
 
-typedef uint8_t u8;
-typedef uint8_t u08;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
+typedef uint8 u8;
+typedef uint8 u08;
+typedef uint16 u16;
+typedef uint32 u32;
+typedef uint64 u64;
 
 typedef real32 r32;
 typedef real64 r64;
@@ -75,9 +107,10 @@ typedef real64 r64;
 
 #define Pi32 3.14159265359f
 #define Tau32 6.28318530717958647692f
-
-#if GAME_SLOW
-#define Assert(Expression) if(!(Expression)) {*(int *) 0 = 0;}
+    
+#if HANDMADE_SLOW
+// TODO(casey): Complete assertion macro - don't worry everyone!
+#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
 #else
 #define Assert(Expression)
 #endif
@@ -91,33 +124,34 @@ typedef real64 r64;
 #define Terabytes(Value) (Gigabytes(Value)*1024LL)
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+// TODO(casey): swap, min, max ... macros???
 
 #define AlignPow2(Value, Alignment) ((Value + ((Alignment) - 1)) & ~((Alignment) - 1))
 #define Align4(Value) ((Value + 3) & ~3)
 #define Align8(Value) ((Value + 7) & ~7)
 #define Align16(Value) ((Value + 15) & ~15)
-
-inline uint32_t
-SafeTruncateUInt64(uint64_t Value)
+    
+inline uint32
+SafeTruncateUInt64(uint64 Value)
 {
-    // TODO: Defines maximum values.
+    // TODO(casey): Defines for maximum values
     Assert(Value <= 0xFFFFFFFF);
-    uint32_t Result = (uint32_t)Value;
+    uint32 Result = (uint32)Value;
     return(Result);
 }
 
 /*
-  Services that the platform layer provides to the game
+  NOTE(casey): Services that the platform layer provides to the game
 */
-#if GAME_INTERNAL
-/* IMPORTANT
+#if HANDMADE_INTERNAL
+/* IMPORTANT(casey):
 
-   These are not for doing anything in the shipping game - they are
+   These are NOT for doing anything in the shipping game - they are
    blocking and the write doesn't protect against lost data!
 */
 typedef struct debug_read_file_result
 {
-    uint32_t ContentsSize;
+    uint32 ContentsSize;
     void *Contents;
 } debug_read_file_result;
 
@@ -127,26 +161,26 @@ typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 #define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name(char *Filename)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 
-#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(char *Filename, uint32_t MemorySize, void *Memory)
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(char *Filename, uint32 MemorySize, void *Memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
-// TODO: I should prabably actually start using this.
+// TODO(casey): Actually start using this???
 extern struct game_memory *DebugGlobalMemory;
-
+    
 #endif
 
 /*
-  Services that the game provides to the platform layer
-  (this may expand in the future - sound on seperate thread, etc)
+  NOTE(casey): Services that the game provides to the platform layer.
+  (this may expand in the future - sound on separate thread, etc.)
 */
 
 // FOUR THINGS - timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
 
-// TODO: In the future, rendering _specifically_ will become a three-tiered abstraction
+// TODO(casey): In the future, rendering _specifically_ will become a three-tiered abstraction!!!
 #define BITMAP_BYTES_PER_PIXEL 4
 typedef struct game_offscreen_buffer
 {
-    // Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
+    // NOTE(casey): Pixels are always 32-bits wide, Memory Order BB GG RR XX
     void *Memory;
     int Width;
     int Height;
@@ -158,8 +192,8 @@ typedef struct game_sound_output_buffer
     int SamplesPerSecond;
     int SampleCount;
 
-    // IMPORTANT: Samples need to be padded to a  multiple of 4 samples.
-    int16_t *Samples;
+    // IMPORTANT(casey): Samples must be padded to a multiple of 4 samples!
+    int16 *Samples;
 } game_sound_output_buffer;
 
 typedef struct game_button_state
@@ -171,10 +205,10 @@ typedef struct game_button_state
 typedef struct game_controller_input
 {
     bool32 IsConnected;
-    bool32 IsAnalogue;
+    bool32 IsAnalog;    
     real32 StickAverageX;
     real32 StickAverageY;
-
+    
     union
     {
         game_button_state Buttons[12];
@@ -184,20 +218,20 @@ typedef struct game_controller_input
             game_button_state MoveDown;
             game_button_state MoveLeft;
             game_button_state MoveRight;
-
+            
             game_button_state ActionUp;
             game_button_state ActionDown;
             game_button_state ActionLeft;
             game_button_state ActionRight;
-
+            
             game_button_state LeftShoulder;
             game_button_state RightShoulder;
 
             game_button_state Back;
             game_button_state Start;
 
-            // All Buttons must be added above this line
-
+            // NOTE(casey): All buttons must be added above this line
+            
             game_button_state Terminator;
         };
     };
@@ -206,7 +240,7 @@ typedef struct game_controller_input
 typedef struct game_input
 {
     game_button_state MouseButtons[5];
-    int32_t MouseX, MouseY, MouseZ;
+    int32 MouseX, MouseY, MouseZ;
 
     bool32 ExecutableReloaded;
     real32 dtForFrame;
@@ -219,7 +253,7 @@ typedef struct platform_file_handle
     b32 NoErrors;
     void *Platform;
 } platform_file_handle;
-
+    
 typedef struct platform_file_group
 {
     u32 FileCount;
@@ -230,10 +264,10 @@ typedef enum platform_file_type
 {
     PlatformFileType_AssetFile,
     PlatformFileType_SavedGameFile,
-
+    
     PlatformFileType_Count,
 } platform_file_type;
-
+    
 #define PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(name) platform_file_group name(platform_file_type Type)
 typedef PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(platform_get_all_files_of_type_begin);
 
@@ -260,7 +294,7 @@ typedef PLATFORM_ALLOCATE_MEMORY(platform_allocate_memory);
 
 #define PLATFORM_DEALLOCATE_MEMORY(name) void name(void *Memory)
 typedef PLATFORM_DEALLOCATE_MEMORY(platform_deallocate_memory);
-
+    
 typedef void platform_add_entry(platform_work_queue *Queue, platform_work_queue_callback *Callback, void *Data);
 typedef void platform_complete_all_work(platform_work_queue *Queue);
 
@@ -277,22 +311,22 @@ typedef struct platform_api
 
     platform_allocate_memory *AllocateMemory;
     platform_deallocate_memory *DeallocateMemory;
-
-    debug_platform_free_file_memory *DEBUGFreeFileMemory;
+    
+    debug_platform_free_file_memory *DEBUGFreeFileMemory;    
     debug_platform_read_entire_file *DEBUGReadEntireFile;
     debug_platform_write_entire_file *DEBUGWriteEntireFile;
 } platform_api;
 
 typedef struct game_memory
 {
-    uint64_t PermanentStorageSize;
-    void *PermanentStorage; // Required to be cleared to zero at startup
+    uint64 PermanentStorageSize;
+    void *PermanentStorage; // NOTE(casey): REQUIRED to be cleared to zero at startup
 
-    uint64_t TransientStorageSize;
-    void *TransientStorage; // Required to be cleared to zero at startup
+    uint64 TransientStorageSize;
+    void *TransientStorage; // NOTE(casey): REQUIRED to be cleared to zero at startup
 
-    uint64_t DebugStorageSize;
-    void *DebugStorage; // Required to be cleared to zero at startup
+    uint64 DebugStorageSize;
+    void *DebugStorage; // NOTE(casey): REQUIRED to be cleared to zero at startup
 
     platform_work_queue *HighPriorityQueue;
     platform_work_queue *LowPriorityQueue;
@@ -303,9 +337,9 @@ typedef struct game_memory
 #define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 
-// At the moment, this has to be a very fast function, it cannot be
+// NOTE(casey): At the moment, this has to be a very fast function, it cannot be
 // more than a millisecond or so.
-// TODO: Reduce the pressure on this function's performance by measuring it
+// TODO(casey): Reduce the pressure on this function's performance by measuring it
 // or asking about it, etc.
 #define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
@@ -313,9 +347,9 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 #if COMPILER_MSVC
 #define CompletePreviousReadsBeforeFutureReads _ReadBarrier()
 #define CompletePreviousWritesBeforeFutureWrites _WriteBarrier()
-inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
+inline uint32 AtomicCompareExchangeUInt32(uint32 volatile *Value, uint32 New, uint32 Expected)
 {
-    uint32_t Result = _InterlockedCompareExchange((long *)Value, New, Expected);
+    uint32 Result = _InterlockedCompareExchange((long *)Value, New, Expected);
 
     return(Result);
 }
@@ -327,7 +361,7 @@ inline u64 AtomicExchangeU64(u64 volatile *Value, u64 New)
 }
 inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
 {
-    // Returns the original value _prior_ to adding.
+    // NOTE(casey): Returns the original value _prior_ to adding
     u64 Result = _InterlockedExchangeAdd64((__int64 *)Value, Addend);
 
     return(Result);
@@ -341,17 +375,17 @@ inline u32 GetThreadID(void)
 }
 
 #elif COMPILER_LLVM
-// TODO: Does LLVM have real read-specific barriers yet?
+// TODO(casey): Does LLVM have real read-specific barriers yet?
 #define CompletePreviousReadsBeforeFutureReads asm volatile("" ::: "memory")
 #define CompletePreviousWritesBeforeFutureWrites asm volatile("" ::: "memory")
-inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
+inline uint32 AtomicCompareExchangeUInt32(uint32 volatile *Value, uint32 New, uint32 Expected)
 {
-    uint32_t Result = __sync_val_compare_and_swap(Value, Expected, New);
+    uint32 Result = __sync_val_compare_and_swap(Value, Expected, New);
 
     return(Result);
 }
 #else
-// TODO: Other compilers / platforms.
+// TODO(casey): Other compilers/platforms??
 #endif
 
 struct debug_table;
@@ -368,9 +402,9 @@ inline game_controller_input *GetController(game_input *Input, int unsigned Cont
 
 struct debug_record
 {
-    char *Filename;
+    char *FileName;
     char *BlockName;
-
+    
     u32 LineNumber;
     u32 Reserved;
 
@@ -398,9 +432,9 @@ struct debug_event
 #define MAX_DEBUG_RECORD_COUNT (65536)
 struct debug_table
 {
-    // TODO: No attempt is being made at the moment to ensure that
-    // the final debug records being written to the event array 
-    // actually complete their output to the swap of the event array index.
+    // TODO(casey): No attempt is currently made to ensure that the final
+    // debug records being written to the event array actually complete
+    // their output prior to the swap of the event array index.
     
     u32 CurrentEventArrayIndex;
     u64 volatile EventArrayIndex_EventIndex;
@@ -416,69 +450,69 @@ inline void
 RecordDebugEvent(int RecordIndex, debug_event_type EventType)
 {
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1);
-    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;
-    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
-    debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;
-    Event->Clock = __rdtsc(); 
-    Event->ThreadIndex = (u16)GetThreadID();                                  
-    Event->CoreIndex = 0;                                      
-    Event->DebugRecordIndex = (u16)RecordIndex;
-    Event->TranslationUnit = TRANSLATION_UNIT_INDEX;
+    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                
+    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                         
+    debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex; 
+    Event->Clock = __rdtsc();                                           
+    Event->ThreadIndex = (u16)GetThreadID();
+    Event->CoreIndex = 0;                                               
+    Event->DebugRecordIndex = (u16)RecordIndex;                         
+    Event->TranslationUnit = TRANSLATION_UNIT_INDEX;       
     Event->Type = (u8)EventType;
 }
 
 #define FRAME_MARKER() \
-    { \
-    int Counter = __COUNTER__; \
-    RecordDebugEvent(Counter, DebugEvent_FrameMarker); \
-    debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
-    Record->Filename = __FILE__; \
-    Record->LineNumber = __LINE__; \
-    Record->BlockName = "Frame Marker";
-    }
-
+     { \
+     int Counter = __COUNTER__; \
+     RecordDebugEvent(Counter, DebugEvent_FrameMarker); \
+     debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
+     Record->FileName = __FILE__;                                        \
+     Record->LineNumber = __LINE__;                                    \
+     Record->BlockName = "Frame Marker";                                   \
+} 
+    
 
 #define TIMED_BLOCK__(BlockName, Number, ...) timed_block TimedBlock_##Number(__COUNTER__, __FILE__, __LINE__, BlockName, ## __VA_ARGS__)
 #define TIMED_BLOCK_(BlockName, Number, ...) TIMED_BLOCK__(BlockName, Number, ## __VA_ARGS__)
 #define TIMED_BLOCK(BlockName, ...) TIMED_BLOCK_(#BlockName, __LINE__, ## __VA_ARGS__)
 #define TIMED_FUNCTION(...) TIMED_BLOCK_(__FUNCTION__, __LINE__, ## __VA_ARGS__)
 
-#define BEGIN_BLOCK_(Counter, FilenameInit, LineNumberInit, BlockNameInit) \
+#define BEGIN_BLOCK_(Counter, FileNameInit, LineNumberInit, BlockNameInit)          \
     {debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
-    Record->Filename = FilenameInit; \
-    Record->LineNumber = LineNumberInit; \
-    Record->BlockName = BlockNameInit; \
+    Record->FileName = FileNameInit;                                        \
+    Record->LineNumber = LineNumberInit;                                    \
+    Record->BlockName = BlockNameInit;                                   \
     RecordDebugEvent(Counter, DebugEvent_BeginBlock);}
 #define END_BLOCK_(Counter) \
     RecordDebugEvent(Counter, DebugEvent_EndBlock);
-
+    
 #define BEGIN_BLOCK(Name) \
-    int Counter_##Name = __COUNTER__; \
+    int Counter_##Name = __COUNTER__;                       \
     BEGIN_BLOCK_(Counter_##Name, __FILE__, __LINE__, #Name);
 
 #define END_BLOCK(Name) \
     END_BLOCK_(Counter_##Name);
-
+    
 struct timed_block
 {
     int Counter;
-
-    timed_block(int CounterInit, char *Filename, int LineNumber, char *BlockName, u32 HitCountInit = 1)
+    
+    timed_block(int CounterInit, char *FileName, int LineNumber, char *BlockName, u32 HitCountInit = 1)
     {
-        // TODO: Should I record the hit count value here?
+        // TODO(casey): Record the hit count value here?
         Counter = CounterInit;
-        BEGIN_BLOCK_(Counter, Filename, LineNumber, BlockName);
+        BEGIN_BLOCK_(Counter, FileName, LineNumber, BlockName);
     }
-
+    
     ~timed_block()
     {
         END_BLOCK_(Counter);
     }
 };
-
+    
 #ifdef __cplusplus
 }
 #endif
 
-#define GAME_PLATFORM_H
+#define HANDMADE_PLATFORM_H
 #endif

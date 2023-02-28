@@ -30,7 +30,7 @@ OutputTestSineWave(game_state *GameState, game_sound_output_buffer *SoundBuffer,
 internal playing_sound *
 PlaySound(audio_state *AudioState, sound_id SoundID)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     if(!AudioState->FirstFreePlayingSound)
     {
@@ -86,7 +86,7 @@ OutputPlayingSounds(audio_state *AudioState,
                     game_sound_output_buffer *SoundBuffer, game_assets *Assets,
                     memory_arena *TempArena)
 {
-    TIMED_BLOCK();
+    TIMED_FUNCTION();
 
     temporary_memory MixerMemory = BeginTemporaryMemory(TempArena);
 
