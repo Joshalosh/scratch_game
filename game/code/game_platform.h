@@ -420,7 +420,7 @@ RecordDebugEvent(int RecordIndex, debug_event_type EventType)
     Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
     debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;
     Event->Clock = __rdtsc(); 
-    Event->ThreadIndex = (u16)GetThreadID();                                  
+    Event->ThreadIndex = (u16)GetThreadID();
     Event->CoreIndex = 0;                                      
     Event->DebugRecordIndex = (u16)RecordIndex;
     Event->TranslationUnit = TRANSLATION_UNIT_INDEX;
@@ -434,7 +434,7 @@ RecordDebugEvent(int RecordIndex, debug_event_type EventType)
     debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
     Record->Filename = __FILE__; \
     Record->LineNumber = __LINE__; \
-    Record->BlockName = "Frame Marker";
+    Record->BlockName = "Frame Marker"; \
     }
 
 

@@ -1511,7 +1511,7 @@ WinMain(HINSTANCE Instance,
                 Win32GetInputFileLocation(&Win32State, false, ReplayIndex,
                                           sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
 
-                ReplayBuffer->FileHandle = 
+                ReplayBuffer->FileHandle =
                     CreateFileA(ReplayBuffer->Filename, GENERIC_WRITE|GENERIC_READ, 0, 0, CREATE_ALWAYS, 0, 0);
 
                 LARGE_INTEGER MaxSize;

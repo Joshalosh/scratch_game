@@ -365,9 +365,8 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *Events
             ++Dest->Snapshots[DebugState->SnapshotIndex].HitCount;
             Dest->Snapshots[DebugState->SnapshotIndex].CycleCount -= Event->Clock;
         }
-        else
+        else if(Event->Type == DebugEvent_EndBlock)
         {
-            Assert(Event->Type == DebugEvent_EndBlock);
             Dest->Snapshots[DebugState->SnapshotIndex].CycleCount += Event->Clock;
         }
     }
@@ -378,7 +377,12 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
     GlobalDebugTable->RecordCount[0] = DebugRecords_Main_Count;
     GlobalDebugTable->RecordCount[1] = DebugRecords_Optimised_Count;
 
-    GlobalDebugTable->CurrentEventArrayIndex = !GlobalDebugTable->CurrentEventArrayIndex;
+    ++GlobalDebugTable->CurrentEventArrayIndex;
+    if(GlobalDebugTable->CurrentEventArrayIndex >= ArrayCount(GlobalDebugTable->Events))
+    {
+        GlobalDebugTable->CurrentEventArrayIndex = 0;
+    }
+
     u64 ArrayIndex_EventIndex = AtomicExchangeU64(&GlobalDebugTable->EventArrayIndex_EventIndex,
                                                   (u64)GlobalDebugTable->CurrentEventArrayIndex << 32);
 
