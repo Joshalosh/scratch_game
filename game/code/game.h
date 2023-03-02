@@ -82,14 +82,6 @@
 #include "game_platform.h"
 #include "game_intrinsics.h"
 #include "game_math.h"
-#include "game_debug.h"
-
-#define Minimum(A, B) ((A < B) ? (A) : (B))
-#define Maximum(A, B) ((A > B) ? (A) : (B))
-
-//
-//
-//
 
 struct memory_arena
 {
@@ -105,6 +97,15 @@ struct temporary_memory
     memory_arena *Arena;
     memory_index Used;
 };
+
+#include "game_debug.h"
+
+#define Minimum(A, B) ((A < B) ? (A) : (B))
+#define Maximum(A, B) ((A > B) ? (A) : (B))
+
+//
+//
+//
 
 inline void
 InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
