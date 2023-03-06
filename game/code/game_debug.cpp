@@ -309,13 +309,72 @@ extern u32 DebugRecords_Optimised_Count;
 global_variable debug_table GlobalDebugTable_;
 debug_table *GlobalDebugTable = &GlobalDebugTable_;
 
+inline u32
+GetLaneFromThreadIndex(debug_state *DebugState, u32 ThreadIndex)
+{
+    u32 Result = 0;
+
+    // TODO: Implement thread ID lookup.
+
+    return(Result);
+}
+
 internal void
-CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *Events)
+CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 {
     DebugState->FrameBarLaneCount = 0;
     DebugState->FrameCount = 0;
     DebugState->FrameBarScale = 0.0f;
 
+    debug_frame *CurrentFrame = 0;
+    for(u32 EventArrayIndex = InvalidEventArrayIndex + 1; ; ++EventArrayIndex)
+    {
+        if(EventArrayIndex == MAX_DEBUG_FRAME_COUNT)
+        {
+            EventArrayIndex = 0;
+        }
+
+        if(EventArrayIndex == InvalidEventArrayIndex)
+        {
+            break;
+        }
+
+        for(u32 EventIndex = 0; EventIndex < MAX_DEBUG_EVENT_COUNT; ++EventIndex)
+        {
+            debug_event *Event = GlobalDebugTable->Events[EventArrayIndex] + EventIndex;
+            debug_record *Source = (GlobalDebugTable->Records[Event->TranslationUnit] +
+                                    Event->DebugRecordIndex);
+            
+            if(Event->Type == DebugEvent_FrameMarker)
+            {
+                if(CurrentFrame)
+                {
+                    CurrentFrame->EndClock = Event->Clock;
+                }
+
+                CurrentFrame = DebugState->Frames + DebugState->FrameCount++;
+                CurrentFrame->BeginClock = Event->Clock;
+                CurrentFrame->EndClock = 0;
+                CurrentFrame->RegionCount = 0;
+            }
+            else if(CurrentFrame) 
+            {
+                u64 RelativeClock = Event->Clock - CurrentFrame->BeginClock;
+                u32 LaneIndex = GetLaneFromThreadIndex(DebugState, Event->ThreadIndex);
+                if(Event->Type == DebugEvent_BeginBlock)
+                {
+                }
+                else if(Event->Type == DebugEvent_EndBlock)
+                {
+                    
+                }
+                else 
+                {
+                    Assert(!"Invalid event type");
+                }
+            }
+        }
+    }
 #if 0
     debug_counter_state *CounterArray[MAX_DEBUG_TRANSLATION_UNITS];
     debug_counter_state *CurrentCounter = DebugState->CounterStates;
@@ -391,7 +450,7 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
         EndTemporaryMemory(DebugState->CollateTemp);
         DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
 
-        CollateDebugRecords(DebugState, EventCount, GlobalDebugTable->Events[EventArrayIndex]);
+        CollateDebugRecords(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
     }
 
     return(GlobalDebugTable);
