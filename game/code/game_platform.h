@@ -384,14 +384,15 @@ enum debug_event_type
 struct debug_event
 {
     u64 Clock;
-    u16 ThreadIndex;
+    u16 ThreadID;
     u16 CoreIndex;
     u16 DebugRecordIndex;
     u8 TranslationUnit;
     u8 Type;
 };
 
-#define MAX_DEBUG_FRAME_COUNT 64
+#define MAX_DEBUG_THREAD_COUNT 256
+#define MAX_DEBUG_EVENT_ARRAY_COUNT 64
 #define MAX_DEBUG_TRANSLATION_UNITS 3
 #define MAX_DEBUG_EVENT_COUNT (16*65536)
 #define MAX_DEBUG_RECORD_COUNT (65536)
@@ -403,8 +404,8 @@ struct debug_table
     
     u32 CurrentEventArrayIndex;
     u64 volatile EventArrayIndex_EventIndex;
-    u32 EventCount[MAX_DEBUG_FRAME_COUNT];
-    debug_event Events[MAX_DEBUG_FRAME_COUNT][MAX_DEBUG_EVENT_COUNT];
+    u32 EventCount[MAX_DEBUG_EVENT_ARRAY_COUNT];
+    debug_event Events[MAX_DEBUG_EVENT_ARRAY_COUNT][MAX_DEBUG_EVENT_COUNT];
 
     u32 RecordCount[MAX_DEBUG_TRANSLATION_UNITS];
     debug_record Records[MAX_DEBUG_TRANSLATION_UNITS][MAX_DEBUG_RECORD_COUNT];

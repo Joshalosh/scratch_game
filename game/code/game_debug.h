@@ -31,6 +31,22 @@ struct debug_frame
     debug_frame_region *Regions;
 };
 
+struct open_debug_block
+{
+    debug_event *OpeningEvent;
+    open_debug_block *Parent;
+
+    open_debug_block *NextFree;
+}:
+
+struct debug_thread
+{
+    u32 ThreadID;
+    u32 LaneIndex;
+    open_debug_block *FirstOpenBlock;
+    debug_thread *Next;
+};
+
 struct debug_state
 {
     b32 Initialised;
@@ -44,6 +60,8 @@ struct debug_state
     r32 FrameBarScale;
 
     debug_frame *Frames;
+    debug_thread *FirstThread;
+    open_debug_block *FirstFreeBlock;
 };
 
 // TODO: Fix this for looped live code editing.

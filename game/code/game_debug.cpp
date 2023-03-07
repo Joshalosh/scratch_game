@@ -322,6 +322,7 @@ GetLaneFromThreadIndex(debug_state *DebugState, u32 ThreadIndex)
 internal void
 CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 {
+    DebugState->Frames = PushArray(&DebugState->CollateArena, MAX_DEBUG_EVENT_ARRAY_COUNT*4, debug_frame);
     DebugState->FrameBarLaneCount = 0;
     DebugState->FrameCount = 0;
     DebugState->FrameBarScale = 0.0f;
@@ -329,7 +330,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
     debug_frame *CurrentFrame = 0;
     for(u32 EventArrayIndex = InvalidEventArrayIndex + 1; ; ++EventArrayIndex)
     {
-        if(EventArrayIndex == MAX_DEBUG_FRAME_COUNT)
+        if(EventArrayIndex == MAX_DEBUG_EVENT_ARRAY_COUNT)
         {
             EventArrayIndex = 0;
         }
@@ -339,7 +340,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
             break;
         }
 
-        for(u32 EventIndex = 0; EventIndex < MAX_DEBUG_EVENT_COUNT; ++EventIndex)
+        for(u32 EventIndex = 0; EventIndex < GlobalDebugTable->EventCount[EventArrayIndex]; ++EventIndex)
         {
             debug_event *Event = GlobalDebugTable->Events[EventArrayIndex] + EventIndex;
             debug_record *Source = (GlobalDebugTable->Records[Event->TranslationUnit] +
@@ -356,13 +357,26 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 CurrentFrame->BeginClock = Event->Clock;
                 CurrentFrame->EndClock = 0;
                 CurrentFrame->RegionCount = 0;
+                CurrentFrame->Regions = 0; // PushArray(&DebugState->CollateArena, 256, debug_frame_region);
             }
             else if(CurrentFrame) 
             {
+                debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadIndex);
                 u64 RelativeClock = Event->Clock - CurrentFrame->BeginClock;
-                u32 LaneIndex = GetLaneFromThreadIndex(DebugState, Event->ThreadIndex);
                 if(Event->Type == DebugEvent_BeginBlock)
                 {
+                    open_debug_block *DebugBlock = DebugState->FirstFreeBlock;
+                    if(DebugBlock)
+                    {
+                        DebugBlock->FirstFreeBlock = DebugBlock->NextFree;
+                    }
+                    else 
+                    {
+                        DebugBlock->OpeningEvent = Event;
+                        DebugBlock->Parent = Thread->FirstOpenBlock;
+                        Thread->FirstOpenBlock = DebugBlock;
+                        DebugBlock->NextFree = 0;
+                    }
                 }
                 else if(Event->Type == DebugEvent_EndBlock)
                 {
@@ -449,6 +463,9 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 
         EndTemporaryMemory(DebugState->CollateTemp);
         DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
+
+        DebugState->FirstThread = 0;
+        DebugState->FirstFreeBlock = 0;
 
         CollateDebugRecords(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
     }
