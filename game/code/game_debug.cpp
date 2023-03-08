@@ -319,6 +319,39 @@ GetLaneFromThreadIndex(debug_state *DebugState, u32 ThreadIndex)
     return(Result);
 }
 
+internal debug_thread *
+GetDebugThread(debug_state *DebugState, u32 ThreadID)
+{
+    debug_thread *Result = 0;
+    for(debug_thread *Thread = DebugState->FirstThread; Thread; Thread = Thread->Next)
+    {
+        if(Thread->ID == ThreadID)
+        {
+            Result = Thread;
+            break;
+        }
+    }
+
+    if(!Result)
+    {
+        Result = PushStruct(&DebugState->CollateArena, debug_thread);
+        Result->Next = DebugState->FirstThread;
+        DebugState->FirstThread = Result;
+    }
+
+    return(Result);
+}
+
+debug_frame_region *
+AddRegion(debug_state *DebugState, debug_frame *CurrentFrame)
+{
+    Assert(CurrentFrame->RegionCount < MAX_REGIONS_PER_FRAME);
+    debug_frame_region *Result = CurrentFrame->Regions + CurrentFrame->RegionCount++;
+
+    return(Result);
+}
+
+
 internal void
 CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 {
@@ -357,30 +390,64 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 CurrentFrame->BeginClock = Event->Clock;
                 CurrentFrame->EndClock = 0;
                 CurrentFrame->RegionCount = 0;
-                CurrentFrame->Regions = 0; // PushArray(&DebugState->CollateArena, 256, debug_frame_region);
+                CurrentFrame->Regions = PushArray(&DebugState->CollateArena, MAX_REGIONS_PER_FRAME, debug_frame_region);
             }
             else if(CurrentFrame) 
             {
-                debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadIndex);
+                u32 FrameIndex = DebugState->FrameCount - 1;
+                debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
                 u64 RelativeClock = Event->Clock - CurrentFrame->BeginClock;
                 if(Event->Type == DebugEvent_BeginBlock)
                 {
                     open_debug_block *DebugBlock = DebugState->FirstFreeBlock;
                     if(DebugBlock)
                     {
-                        DebugBlock->FirstFreeBlock = DebugBlock->NextFree;
+                        DebugState->FirstFreeBlock = DebugBlock->NextFree;
                     }
                     else 
                     {
-                        DebugBlock->OpeningEvent = Event;
-                        DebugBlock->Parent = Thread->FirstOpenBlock;
-                        Thread->FirstOpenBlock = DebugBlock;
-                        DebugBlock->NextFree = 0;
+                        DebugBlock = PushStruct(&DebugState->CollateArena, open_debug_block);
                     }
+
+                    DebugBlock->OpeningEvent = Event;
+                    DebugBlock->Parent = Thread->FirstOpenBlock;
+                    Thread->FirstOpenBlock = DebugBlock;
+                    DebugBlock->NextFree = 0;
                 }
                 else if(Event->Type == DebugEvent_EndBlock)
                 {
-                    
+                    if(Thread->FirstOpenBlock)
+                    {
+                        open_debug_block *MatchingBlock = Thread->FirstOpenBlock;
+                        debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
+                        if((OpeningEvent->ThreadID == Event->ThreadID) &&
+                           (OpeningEvent->DebugRecordIndex == Event->DebugRecordIndex) &&
+                           (OpeningEvent->TranslationUnit == Event->TranslationUnit))
+                        {
+                            if(MatchingBlock->StartingFrameIndex == FrameIndex)
+                            {
+                                if(Thread->FirstOpenBlock->Parent == 0)
+                                {
+                                    debug_frame_region *Region = AddRegion(DebugState, CurrentFrame);
+                                    Region->LaneIndex = Thread->LaneIndex;
+                                    Region->MinT = (r32)(OpeningEvent->Clock - CurrentFrame->BeginClock);
+                                    Region->MaxT = (r32)(Event->Clock - CurrentFrame->BeginClock);
+                                }
+                            }
+                            else 
+                            {
+                                // TODO: Record all frames in between and begin/end spans.
+                            }
+
+                            Thread->FirstOpenBlock->NextFree = DebugState->FirstFreeBlock;
+                            DebugState->FirstFreeBlock = Thread->FirstOpenBlock;
+                            Thread->FirstOpenBlock = MatchingBlock->Parent;
+                        }
+                        else 
+                        {
+                            // TODO: Record span that goes to the beginning of the frame series.
+                        }
+                    }
                 }
                 else 
                 {

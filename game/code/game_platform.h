@@ -421,7 +421,7 @@ RecordDebugEvent(int RecordIndex, debug_event_type EventType)
     Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
     debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;
     Event->Clock = __rdtsc(); 
-    Event->ThreadIndex = (u16)GetThreadID();
+    Event->ThreadID = (u16)GetThreadID();
     Event->CoreIndex = 0;                                      
     Event->DebugRecordIndex = (u16)RecordIndex;
     Event->TranslationUnit = TRANSLATION_UNIT_INDEX;

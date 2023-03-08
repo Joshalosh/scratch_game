@@ -22,6 +22,7 @@ struct debug_frame_region
     r32 MaxT;
 };
 
+#define MAX_REGIONS_PER_FRAME 64
 struct debug_frame
 {
     u64 BeginClock;
@@ -33,15 +34,16 @@ struct debug_frame
 
 struct open_debug_block
 {
+    u32 StartingFrameIndex;
     debug_event *OpeningEvent;
     open_debug_block *Parent;
 
     open_debug_block *NextFree;
-}:
+};
 
 struct debug_thread
 {
-    u32 ThreadID;
+    u32 ID;
     u32 LaneIndex;
     open_debug_block *FirstOpenBlock;
     debug_thread *Next;
