@@ -257,7 +257,7 @@ DEBUGOverlay(game_memory *Memory)
             r32 ChartHeight = 300.0f;
             r32 ChartWidth = BarSpacing*(r32)DebugState->FrameCount;
             r32 ChartMinY = AtY - (ChartHeight + 80.0f);
-            r32 Scale = DebugState->FrameBarScale;
+            r32 Scale = ChartHeight*DebugState->FrameBarScale;
 
             v3 Colors[] =
             {
@@ -335,6 +335,9 @@ GetDebugThread(debug_state *DebugState, u32 ThreadID)
     if(!Result)
     {
         Result = PushStruct(&DebugState->CollateArena, debug_thread);
+        Result->ID = ThreadID;
+        Result->LaneIndex = DebugState->FrameBarLaneCount++;
+        Result->FirstOpenBlock = 0;
         Result->Next = DebugState->FirstThread;
         DebugState->FirstThread = Result;
     }
@@ -358,7 +361,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
     DebugState->Frames = PushArray(&DebugState->CollateArena, MAX_DEBUG_EVENT_ARRAY_COUNT*4, debug_frame);
     DebugState->FrameBarLaneCount = 0;
     DebugState->FrameCount = 0;
-    DebugState->FrameBarScale = 0.0f;
+    DebugState->FrameBarScale = 1.0f / 60000000.0f;
 
     debug_frame *CurrentFrame = 0;
     for(u32 EventArrayIndex = InvalidEventArrayIndex + 1; ; ++EventArrayIndex)
@@ -384,6 +387,18 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 if(CurrentFrame)
                 {
                     CurrentFrame->EndClock = Event->Clock;
+
+                    r32 ClockRange = (r32)(CurrentFrame->EndClock - CurrentFrame->BeginClock);
+#if 0
+                    if(ClockRange > 0.0f)
+                    {
+                        r32 FrameBarScale = 1.0f / ClockRange;
+                        if(DebugState->FrameBarScale > FrameBarScale)
+                        {
+                            DebugState->FrameBarScale = FrameBarScale;
+                        }
+                    }
+#endif
                 }
 
                 CurrentFrame = DebugState->Frames + DebugState->FrameCount++;

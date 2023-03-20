@@ -22,7 +22,7 @@ struct debug_frame_region
     r32 MaxT;
 };
 
-#define MAX_REGIONS_PER_FRAME 64
+#define MAX_REGIONS_PER_FRAME 256
 struct debug_frame
 {
     u64 BeginClock;
