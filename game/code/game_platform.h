@@ -32,7 +32,7 @@ extern "C" {
 #elif COMPILER_LLVM
 #include <x86intrin.h>
 #else
-#error SSE/NEON optimisations are not available for this compiler yet
+#error SEE/NEON optimisations are not available for this compiler yet
 #endif
 
 //
@@ -429,13 +429,13 @@ RecordDebugEvent(int RecordIndex, debug_event_type EventType)
 }
 
 #define FRAME_MARKER() \
-    { \
-    int Counter = __COUNTER__; \
-    RecordDebugEvent(Counter, DebugEvent_FrameMarker); \
-    debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
-    Record->Filename = __FILE__; \
-    Record->LineNumber = __LINE__; \
-    Record->BlockName = "Frame Marker"; \
+     { \
+     int Counter = __COUNTER__; \
+     RecordDebugEvent(Counter, DebugEvent_FrameMarker); \
+     debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
+     Record->Filename = __FILE__; \
+     Record->LineNumber = __LINE__; \
+     Record->BlockName = "Frame Marker"; \
     }
 
 

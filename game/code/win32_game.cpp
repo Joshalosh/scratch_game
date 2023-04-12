@@ -787,6 +787,7 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
             case WM_KEYUP:
             {
                 uint32_t VKCode = (uint32_t)Message.wParam;
+
                 // Comparing WasDown to IsDown needs to use
                 // == and != to convert these but tests to 
                 // actual 0 or 1 values.
@@ -1182,8 +1183,8 @@ internal PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(Win32GetAllFilesOfTypeBegin)
 
     // TODO: Someday make an actual arena used by Win32.
     win32_platform_file_group *Win32FileGroup = (win32_platform_file_group *)VirtualAlloc(
-            0, sizeof(win32_platform_file_group),
-            MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+        0, sizeof(win32_platform_file_group),
+        MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Result.Platform = Win32FileGroup;
 
     wchar_t *WildCard = L"*.*";

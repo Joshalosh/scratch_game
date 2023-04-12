@@ -6,7 +6,6 @@ struct debug_counter_snapshot
     u64 CycleCount;
 };
 
-#define DEBUG_SNAPSHOT_COUNT 120
 struct debug_counter_state
 {
     char *Filename;
@@ -22,7 +21,7 @@ struct debug_frame_region
     r32 MaxT;
 };
 
-#define MAX_REGIONS_PER_FRAME 256
+#define MAX_REGIONS_PER_FRAME 512
 struct debug_frame
 {
     u64 BeginClock;

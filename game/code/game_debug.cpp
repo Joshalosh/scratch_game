@@ -250,7 +250,7 @@ DEBUGOverlay(game_memory *Memory)
 #endif
 
             r32 LaneWidth = 8.0f;
-            r32 LaneCount = DebugState->FrameBarLaneCount;
+            u32 LaneCount = DebugState->FrameBarLaneCount;
             r32 BarWidth = LaneWidth*LaneCount;
             r32 BarSpacing = BarWidth + 4.0f;
             r32 ChartLeft = LeftEdge + 10.0f;
@@ -354,7 +354,6 @@ AddRegion(debug_state *DebugState, debug_frame *CurrentFrame)
     return(Result);
 }
 
-
 internal void
 CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 {
@@ -407,7 +406,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 CurrentFrame->RegionCount = 0;
                 CurrentFrame->Regions = PushArray(&DebugState->CollateArena, MAX_REGIONS_PER_FRAME, debug_frame_region);
             }
-            else if(CurrentFrame) 
+            else if(CurrentFrame)
             {
                 u32 FrameIndex = DebugState->FrameCount - 1;
                 debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
@@ -419,11 +418,12 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                     {
                         DebugState->FirstFreeBlock = DebugBlock->NextFree;
                     }
-                    else 
+                    else
                     {
                         DebugBlock = PushStruct(&DebugState->CollateArena, open_debug_block);
                     }
 
+                    DebugBlock->StartingFrameIndex = FrameIndex;
                     DebugBlock->OpeningEvent = Event;
                     DebugBlock->Parent = Thread->FirstOpenBlock;
                     Thread->FirstOpenBlock = DebugBlock;
@@ -431,6 +431,11 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 }
                 else if(Event->Type == DebugEvent_EndBlock)
                 {
+                    if(StringsAreEqual(Source->BlockName, "GameUpdate"))
+                    {
+                        int x = 5;
+                    }
+
                     if(Thread->FirstOpenBlock)
                     {
                         open_debug_block *MatchingBlock = Thread->FirstOpenBlock;
@@ -449,7 +454,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                                     Region->MaxT = (r32)(Event->Clock - CurrentFrame->BeginClock);
                                 }
                             }
-                            else 
+                            else
                             {
                                 // TODO: Record all frames in between and begin/end spans.
                             }
@@ -458,13 +463,13 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                             DebugState->FirstFreeBlock = Thread->FirstOpenBlock;
                             Thread->FirstOpenBlock = MatchingBlock->Parent;
                         }
-                        else 
+                        else
                         {
                             // TODO: Record span that goes to the beginning of the frame series.
                         }
                     }
                 }
-                else 
+                else
                 {
                     Assert(!"Invalid event type");
                 }
