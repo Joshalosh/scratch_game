@@ -1128,6 +1128,9 @@ ThreadProc(LPVOID lpParameter)
 {
     platform_work_queue *Queue = (platform_work_queue *)lpParameter;
 
+    u32 TestThreadID = GetThreadID();
+    Assert(TestThreadID == GetCurrentThreadId());
+
     for(;;)
     {
         if(Win32DoNextWorkQueueEntry(Queue))

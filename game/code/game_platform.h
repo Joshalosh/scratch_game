@@ -315,20 +315,20 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 #define CompletePreviousWritesBeforeFutureWrites _WriteBarrier()
 inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
 {
-    uint32_t Result = _InterlockedCompareExchange((long *)Value, New, Expected);
+    uint32_t Result = _InterlockedCompareExchange((long volatile *)Value, New, Expected);
 
     return(Result);
 }
 inline u64 AtomicExchangeU64(u64 volatile *Value, u64 New)
 {
-    u64 Result = _InterlockedExchange64((__int64 *)Value, New);
+    u64 Result = _InterlockedExchange64((__int64 volatile *)Value, New);
 
     return(Result);
 }
 inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
 {
     // Returns the original value _prior_ to adding.
-    u64 Result = _InterlockedExchangeAdd64((__int64 *)Value, Addend);
+    u64 Result = _InterlockedExchangeAdd64((__int64 volatile *)Value, Addend);
 
     return(Result);
 }

@@ -411,6 +411,12 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 u32 FrameIndex = DebugState->FrameCount - 1;
                 debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
                 u64 RelativeClock = Event->Clock - CurrentFrame->BeginClock;
+
+                if(StringsAreEqual(Source->BlockName, "DrawRectangle"))
+                {
+                    int x = 5;
+                }
+
                 if(Event->Type == DebugEvent_BeginBlock)
                 {
                     open_debug_block *DebugBlock = DebugState->FirstFreeBlock;
@@ -431,11 +437,6 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 }
                 else if(Event->Type == DebugEvent_EndBlock)
                 {
-                    if(StringsAreEqual(Source->BlockName, "GameUpdate"))
-                    {
-                        int x = 5;
-                    }
-
                     if(Thread->FirstOpenBlock)
                     {
                         open_debug_block *MatchingBlock = Thread->FirstOpenBlock;

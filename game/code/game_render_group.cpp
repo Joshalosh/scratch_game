@@ -29,7 +29,8 @@ UnscaleAndBiasNormal(v4 Normal)
 internal void
 DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i ClipRect, bool32 Even)
 {
-    TIMED_FUNCTION();
+//    TIMED_FUNCTION();
+    BEGIN_BLOCK(DrawRectangle);
 
     real32 R = Color.r;
     real32 G = Color.g;
@@ -66,6 +67,8 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i Cli
 
         Row += 2*Buffer->Pitch;
     }
+
+    END_BLOCK(DrawRectangle);
 }
 
 struct bilinear_sample
