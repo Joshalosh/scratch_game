@@ -106,13 +106,18 @@ struct temporary_memory
 inline b32 
 StringsAreEqual(char *A, char *B)
 {
-    while(*A && *B && (*A == *B))
+    b32 Result = (A == B);
+
+    if(A && B)
     {
-        ++A;
-        ++B;
+        while(*A && *B && (*A == *B))
+        {
+            ++A;
+            ++B;
+        }
+        
+        b32 Result = ((*A == 0) && (*B == 0));
     }
-    
-    b32 Result = ((*A == 0) && (*B == 0));
     return Result;
 }
 

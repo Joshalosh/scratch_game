@@ -1,4 +1,7 @@
 
+#define IGNORED_TIMED_FUNCTION()
+#define IGNORED_TIMED_BLOCK(...)
+
 #define internal
 #include "game.h"
 
@@ -14,7 +17,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
                      loaded_bitmap *Texture, real32 PixelsToMetres, 
                      rectangle2i ClipRect, bool32 Even)
 {
-    TIMED_FUNCTION();
+    IGNORED_TIMED_FUNCTION();
 
     // Premultiply color up front
     Color.rgb *= Color.a;
@@ -133,7 +136,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         int MinX = FillRect.MinX;
         int MaxX = FillRect.MaxX;
 
-        TIMED_BLOCK(PixelFill, GetClampedRectArea(FillRect) / 2);
+        IGNORED_TIMED_BLOCK(PixelFill, GetClampedRectArea(FillRect) / 2);
         for(int Y = MinY; Y < MaxY; Y += 2)
         {
             __m128 PixelPy = _mm_set1_ps((real32)Y);
