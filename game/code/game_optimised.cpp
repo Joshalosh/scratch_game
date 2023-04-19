@@ -1,6 +1,6 @@
 
-#define IGNORED_TIMED_FUNCTION()
-#define IGNORED_TIMED_BLOCK(...)
+#define IGNORED_TIMED_FUNCTION TIMED_FUNCTION
+#define IGNORED_TIMED_BLOCK TIMED_BLOCK
 
 #define internal
 #include "game.h"

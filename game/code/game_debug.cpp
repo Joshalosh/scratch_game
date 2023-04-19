@@ -249,6 +249,8 @@ DEBUGOverlay(game_memory *Memory)
             }
 #endif
 
+            AtY -= 300.0f;
+
             r32 LaneWidth = 8.0f;
             u32 LaneCount = DebugState->FrameBarLaneCount;
             r32 BarWidth = LaneWidth*LaneCount;
@@ -275,9 +277,14 @@ DEBUGOverlay(game_memory *Memory)
                 {0, 0.5f, 1},
             };
 
-            for(u32 FrameIndex = 0; FrameIndex < DebugState->FrameCount; ++FrameIndex)
+            u32 MaxFrame = DebugState->FrameCount;
+            if(MaxFrame > 10)
             {
-                debug_frame *Frame = DebugState->Frames + FrameIndex;
+                MaxFrame = 10;
+            }
+            for(u32 FrameIndex = 0; FrameIndex < MaxFrame; ++FrameIndex)
+            {
+                debug_frame *Frame = DebugState->Frames + DebugState->FrameCount - (FrameIndex + 1);
                 r32 StackX = ChartLeft + BarSpacing*(r32)FrameIndex;
                 r32 StackY = ChartMinY;
                 for(u32 RegionIndex = 0; RegionIndex < Frame->RegionCount; ++RegionIndex)

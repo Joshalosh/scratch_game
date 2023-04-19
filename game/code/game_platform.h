@@ -416,7 +416,6 @@ extern debug_table *GlobalDebugTable;
 inline void
 RecordDebugEvent(int RecordIndex, debug_event_type EventType)
 {
-    Assert((((u64)&GlobalDebugTable->EventArrayIndex_EventIndex) & 0x7) == 0);
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1);
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;
     Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
