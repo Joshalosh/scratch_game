@@ -413,20 +413,22 @@ struct debug_table
 
 extern debug_table *GlobalDebugTable;
 
-inline void
-RecordDebugEvent(int RecordIndex, debug_event_type EventType)
-{
-    u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1);
-    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;
-    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);
-    debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;
-    Event->Clock = __rdtsc(); 
-    u32 ThreadID = GetThreadID();
-    Event->ThreadID = (u16)ThreadID;
-    Event->CoreIndex = 0;                                      
-    Event->DebugRecordIndex = (u16)RecordIndex;
-    Event->TranslationUnit = TRANSLATION_UNIT_INDEX;
-    Event->Type = (u8)EventType;
+// TODO: I think i'll probably swicth away from the translation unity indexing
+// and just go to a more standard one-time hash table because the complexity
+// seems to be causing problems.
+#define RecordDebugEvent(RecordIndex, EventType)                                                \
+{                                                                                               \
+    u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1); \
+    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
+    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                                                 \
+    debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;    \
+    Event->Clock = __rdtsc();                                                                   \
+    u32 ThreadID = GetThreadID();                                                               \
+    Event->ThreadID = (u16)ThreadID;                                                            \
+    Event->CoreIndex = 0;                                                                       \
+    Event->DebugRecordIndex = (u16)RecordIndex;                                                 \
+    Event->TranslationUnit = TRANSLATION_UNIT_INDEX;                                            \
+    Event->Type = (u8)EventType;                                                                \
 }
 
 #define FRAME_MARKER() \

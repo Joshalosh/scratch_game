@@ -456,10 +456,16 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                             {
                                 if(Thread->FirstOpenBlock->Parent == 0)
                                 {
-                                    debug_frame_region *Region = AddRegion(DebugState, CurrentFrame);
-                                    Region->LaneIndex = Thread->LaneIndex;
-                                    Region->MinT = (r32)(OpeningEvent->Clock - CurrentFrame->BeginClock);
-                                    Region->MaxT = (r32)(Event->Clock - CurrentFrame->BeginClock);
+                                    r32 MinT = (r32)(OpeningEvent->Clock - CurrentFrame->BeginClock);
+                                    r32 MaxT = (r32)(Event->Clock - CurrentFrame->BeginClock);
+                                    r32 ThresholdT = 0.01f;
+                                    if((MaxT - MinT) > ThresholdT)
+                                    {
+                                        debug_frame_region *Region = AddRegion(DebugState, CurrentFrame);
+                                        Region->LaneIndex = Thread->LaneIndex;
+                                        Region->MinT = MinT;
+                                        Region->MaxT = MaxT;
+                                    }
                                 }
                             }
                             else
