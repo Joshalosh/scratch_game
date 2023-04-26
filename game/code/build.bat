@@ -3,6 +3,7 @@
 ctime -begin game.ctm
 
 set CommonCompilerFlags= -Od -MTd -nologo -fp:fast -fp:except- -Gm- -GR- -EHa- -Zo -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4459 -wd4456 -wd4505 -wd4244 -wd4127 -wd4838 -DGAME_INTERNAL=1 -DGAME_SLOW=1 -DGAME_WIN32=1 -FC -Z7 
+set CommonCompilerFlags= -DGAME_PROFILE=1 -DGAME_INTERNAL=1 -DGAME_SLOW=1 -DGAME_WIN32=1 %CommonCompilerFlags%
 set CommonLinkerFlags=  -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib 
 
 IF NOT EXIST ..\..\build mkdir ..\..\build

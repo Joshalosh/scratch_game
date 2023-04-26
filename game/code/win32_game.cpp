@@ -1556,8 +1556,6 @@ WinMain(HINSTANCE Instance,
                 uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
-                    FRAME_MARKER();
-
                     //
                     //
                     //
@@ -1975,9 +1973,6 @@ WinMain(HINSTANCE Instance,
                     OldInput = Temp;
                     // TODO: Should I clear these here?
 
-                    LARGE_INTEGER EndCounter = Win32GetWallClock();
-                    LastCounter = EndCounter;
-
                     END_BLOCK(FrameDisplay);
 
 #if GAME_INTERNAL
@@ -1994,6 +1989,10 @@ WinMain(HINSTANCE Instance,
                     }
                     GlobalDebugTable_.EventArrayIndex_EventIndex = 0;
 #endif
+
+                    LARGE_INTEGER EndCounter = Win32GetWallClock();
+                    FRAME_MARKER(Win32GetSecondsElapsed(LastCounter, EndCounter));
+                    LastCounter = EndCounter;
                 }
             }
             else

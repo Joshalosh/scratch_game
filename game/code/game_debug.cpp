@@ -412,11 +412,12 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 CurrentFrame->EndClock = 0;
                 CurrentFrame->RegionCount = 0;
                 CurrentFrame->Regions = PushArray(&DebugState->CollateArena, MAX_REGIONS_PER_FRAME, debug_frame_region);
+                CurrentFrame->WallSecondsElapsed = Event->SecondsElapsed;
             }
             else if(CurrentFrame)
             {
                 u32 FrameIndex = DebugState->FrameCount - 1;
-                debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
+                debug_thread *Thread = GetDebugThread(DebugState, Event->TC.ThreadID);
                 u64 RelativeClock = Event->Clock - CurrentFrame->BeginClock;
 
                 if(StringsAreEqual(Source->BlockName, "DrawRectangle"))
@@ -448,7 +449,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                     {
                         open_debug_block *MatchingBlock = Thread->FirstOpenBlock;
                         debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
-                        if((OpeningEvent->ThreadID == Event->ThreadID) &&
+                        if((OpeningEvent->TC.ThreadID == Event->TC.ThreadID) &&
                            (OpeningEvent->DebugRecordIndex == Event->DebugRecordIndex) &&
                            (OpeningEvent->TranslationUnit == Event->TranslationUnit))
                         {

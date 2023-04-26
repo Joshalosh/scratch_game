@@ -26,6 +26,7 @@ struct debug_frame
 {
     u64 BeginClock;
     u64 EndClock;
+    r32 WallSecondsElapsed;
 
     u32 RegionCount;
     debug_frame_region *Regions;
