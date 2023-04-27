@@ -389,12 +389,11 @@ struct threadid_coreindex
 struct debug_event
 {
     u64 Clock;
-    union 
+    union
     {
         threadid_coreindex TC;
         r32 SecondsElapsed;
     };
-    u16 CoreIndex;
     u16 DebugRecordIndex;
     u8 TranslationUnit;
     u8 Type;
@@ -426,7 +425,6 @@ extern debug_table *GlobalDebugTable;
 // and just go to a more standard one-time hash table because the complexity
 // seems to be causing problems.
 #define RecordDebugEventCommon(RecordIndex, EventType)                                          \
-{                                                                                               \
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1); \
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
     Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                                                 \
@@ -435,7 +433,6 @@ extern debug_table *GlobalDebugTable;
     Event->DebugRecordIndex = (u16)RecordIndex;                                                 \
     Event->TranslationUnit = TRANSLATION_UNIT_INDEX;                                            \
     Event->Type = (u8)EventType;                                                                \
-}
 
 #define RecordDebugEvent(RecordIndex, EventType)    \
 {                                                   \

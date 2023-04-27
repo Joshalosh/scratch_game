@@ -1553,7 +1553,6 @@ WinMain(HINSTANCE Instance,
                 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                          TempGameCodeDLLFullPath,
                                                          GameCodeLockFullPath);
-                uint64_t LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
                     //
@@ -1976,23 +1975,27 @@ WinMain(HINSTANCE Instance,
                     END_BLOCK(FrameDisplay);
 
 #if GAME_INTERNAL
-                    uint64_t EndCycleCount = __rdtsc();
-                    uint64_t CyclesElapsed = EndCycleCount - LastCycleCount;
-                    LastCycleCount = EndCycleCount;
+                    BEGIN_BLOCK(DebugCollation);
 
                     if(Game.DEBUGFrameEnd)
                     {
                         GlobalDebugTable = Game.DEBUGFrameEnd(&GameMemory);
-                        // TODO: Perhaps I should move this to a global variable so 
-                        // there can be timers below this one.
-                        GlobalDebugTable->RecordCount[TRANSLATION_UNIT_INDEX] = __COUNTER__;
                     }
                     GlobalDebugTable_.EventArrayIndex_EventIndex = 0;
+
+                    END_BLOCK(DebugCollation);
 #endif
 
                     LARGE_INTEGER EndCounter = Win32GetWallClock();
                     FRAME_MARKER(Win32GetSecondsElapsed(LastCounter, EndCounter));
                     LastCounter = EndCounter;
+
+                    if(GlobalDebugTable)
+                    {
+                        // TODO: Perhaps I should move this to a global variable so 
+                        // there can be timers below this one.
+                        GlobalDebugTable->RecordCount[TRANSLATION_UNIT_INDEX] = __COUNTER__;
+                    }
                 }
             }
             else

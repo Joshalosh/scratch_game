@@ -249,6 +249,15 @@ DEBUGOverlay(game_memory *Memory)
             }
 #endif
 
+            if(DebugState->FrameCount)
+            {
+                char TextBuffer[256];
+                _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                            "Last frame time: %.02fms",
+                            DebugState->Frames[DebugState->FrameCount - 1].WallSecondsElapsed * 1000.0f);
+                DEBUGTextLine(TextBuffer);
+            }
+
             AtY -= 300.0f;
 
             r32 LaneWidth = 8.0f;
@@ -393,6 +402,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 if(CurrentFrame)
                 {
                     CurrentFrame->EndClock = Event->Clock;
+                    CurrentFrame->WallSecondsElapsed = Event->SecondsElapsed;
 
                     r32 ClockRange = (r32)(CurrentFrame->EndClock - CurrentFrame->BeginClock);
 #if 0
@@ -412,7 +422,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 CurrentFrame->EndClock = 0;
                 CurrentFrame->RegionCount = 0;
                 CurrentFrame->Regions = PushArray(&DebugState->CollateArena, MAX_REGIONS_PER_FRAME, debug_frame_region);
-                CurrentFrame->WallSecondsElapsed = Event->SecondsElapsed;
+                CurrentFrame->WallSecondsElapsed = 0.0f;
             }
             else if(CurrentFrame)
             {
