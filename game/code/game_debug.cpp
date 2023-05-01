@@ -6,11 +6,16 @@ global_variable r32 LeftEdge;
 global_variable r32 AtY;
 global_variable r32 FontScale;
 global_variable font_id FontID;
+global_variable r32 GlobalWidth;
+global_variable r32 GlobalHeight;
 
 internal void
 DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
 {
     TIMED_FUNCTION();
+
+    GlobalWidth = Width;
+    GlobalHeight = Height;
 
     asset_vector MatchVector = {};
     asset_vector WeightVector = {};
@@ -178,12 +183,14 @@ EndDebugStatistic(debug_statistic *Stat)
 }
 
 internal void
-DEBUGOverlay(game_memory *Memory)
+DEBUGOverlay(game_memory *Memory, game_input *Input)
 {
     debug_state *DebugState = (debug_state *)Memory->DebugStorage;
     if(DebugState && DEBUGRenderGroup)
     {
         render_group *RenderGroup = DEBUGRenderGroup;
+
+        v2 MouseP = V2((r32)Input->MouseX - 0.5f*Width, Input->MouseY);
 
         // TODO: Layout / cached font info / etc. for real debug display
         loaded_font *Font = PushFont(RenderGroup, FontID);
@@ -303,9 +310,26 @@ DEBUGOverlay(game_memory *Memory)
                     v3 Color = Colors[RegionIndex%ArrayCount(Colors)];
                     r32 ThisMinY = StackY + Scale*Region->MinT;
                     r32 ThisMaxY = StackY + Scale*Region->MaxT;
-                    PushRect(RenderGroup, V3(StackX + 0.5f*LaneWidth + LaneWidth*Region->LaneIndex,
-                                             0.5f*(ThisMinY + ThisMaxY), 0.0f),
-                             V2(LaneWidth, ThisMaxY - ThisMinY), V4(Color, 1));
+
+                    rectangle2 RegionRect = RectMinMax(V2(StackX + LaneWidth*Region->LaneIndex, ThisMinY),
+                                                       V2(StackX + LaneWidth*(Region->LaneIndex + 1), ThisMaxY));
+
+                    // TODO: I still need to make a PushRect call that handles this in 
+                    // game_render_group.cpp
+                    PushRect(RenderGroup, RegionRect, 0.0f, V4(Color, 1));
+
+                    if(IsInRectangle(RegionRect, MouseP))
+                    {
+                        debug_record *Record = Region->Record;
+                        char TextBuffer[256];
+                        _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                                    "%32: %10ucy [%s(%d)]",
+                                    Record->BlockName,
+                                    Region->CycleCount,
+                                    Record->FileName,
+                                    Record->LineNumber);
+                        DEBUGTextLine(TextBuffer);
+                    }
                 }
             }
 
@@ -473,6 +497,8 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                                     if((MaxT - MinT) > ThresholdT)
                                     {
                                         debug_frame_region *Region = AddRegion(DebugState, CurrentFrame);
+                                        Region->Record = Source;
+                                        Region->CycleCount = (Event->Clock - OpeningEvent->Clock);
                                         Region->LaneIndex = Thread->LaneIndex;
                                         Region->MinT = MinT;
                                         Region->MaxT = MaxT;
