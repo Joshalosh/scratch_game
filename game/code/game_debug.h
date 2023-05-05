@@ -54,6 +54,7 @@ struct debug_thread
 struct debug_state
 {
     b32 Initialised;
+    b32 Paused;
 
     // Collation.
     memory_arena CollateArena;

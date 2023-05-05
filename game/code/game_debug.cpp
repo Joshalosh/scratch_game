@@ -14,8 +14,8 @@ DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
 {
     TIMED_FUNCTION();
 
-    GlobalWidth = Width;
-    GlobalHeight = Height;
+    GlobalWidth = (r32)Width;
+    GlobalHeight = (r32)Height;
 
     asset_vector MatchVector = {};
     asset_vector WeightVector = {};
@@ -190,7 +190,11 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
     {
         render_group *RenderGroup = DEBUGRenderGroup;
 
-        v2 MouseP = V2((r32)Input->MouseX - 0.5f*Width, Input->MouseY);
+        v2 MouseP = V2(Input->MouseX, Input->MouseY);
+        if(WasPressed(Input->MouseButtons[PlatformMouseButton_Right]))
+        {
+            DebugState->Paused = !DebugState->Paused;
+        }
 
         // TODO: Layout / cached font info / etc. for real debug display
         loaded_font *Font = PushFont(RenderGroup, FontID);
@@ -265,8 +269,6 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
                 DEBUGTextLine(TextBuffer);
             }
 
-            AtY -= 300.0f;
-
             r32 LaneWidth = 8.0f;
             u32 LaneCount = DebugState->FrameBarLaneCount;
             r32 BarWidth = LaneWidth*LaneCount;
@@ -274,7 +276,7 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
             r32 ChartLeft = LeftEdge + 10.0f;
             r32 ChartHeight = 300.0f;
             r32 ChartWidth = BarSpacing*(r32)DebugState->FrameCount;
-            r32 ChartMinY = AtY - (ChartHeight + 80.0f);
+            r32 ChartMinY = -0.5f*GlobalHeight + 10.0f;
             r32 Scale = ChartHeight*DebugState->FrameBarScale;
 
             v3 Colors[] =
@@ -314,8 +316,6 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
                     rectangle2 RegionRect = RectMinMax(V2(StackX + LaneWidth*Region->LaneIndex, ThisMinY),
                                                        V2(StackX + LaneWidth*(Region->LaneIndex + 1), ThisMaxY));
 
-                    // TODO: I still need to make a PushRect call that handles this in 
-                    // game_render_group.cpp
                     PushRect(RenderGroup, RegionRect, 0.0f, V4(Color, 1));
 
                     if(IsInRectangle(RegionRect, MouseP))
@@ -323,10 +323,10 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
                         debug_record *Record = Region->Record;
                         char TextBuffer[256];
                         _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                                    "%32: %10ucy [%s(%d)]",
+                                    "%32s: %10ucy [%s(%d)]",
                                     Record->BlockName,
-                                    Region->CycleCount,
-                                    Record->FileName,
+                                    (u32)Region->CycleCount,
+                                    Record->Filename,
                                     Record->LineNumber);
                         DEBUGTextLine(TextBuffer);
                     }
@@ -427,6 +427,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 {
                     CurrentFrame->EndClock = Event->Clock;
                     CurrentFrame->WallSecondsElapsed = Event->SecondsElapsed;
+                    ++DebugState->FrameCount;
 
                     r32 ClockRange = (r32)(CurrentFrame->EndClock - CurrentFrame->BeginClock);
 #if 0
@@ -441,7 +442,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 #endif
                 }
 
-                CurrentFrame = DebugState->Frames + DebugState->FrameCount++;
+                CurrentFrame = DebugState->Frames + DebugState->FrameCount;
                 CurrentFrame->BeginClock = Event->Clock;
                 CurrentFrame->EndClock = 0;
                 CurrentFrame->RegionCount = 0;
@@ -599,13 +600,16 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
             DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
         }
 
-        EndTemporaryMemory(DebugState->CollateTemp);
-        DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
+        if(!DebugState->Paused)
+        {
+            EndTemporaryMemory(DebugState->CollateTemp);
+            DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
 
-        DebugState->FirstThread = 0;
-        DebugState->FirstFreeBlock = 0;
+            DebugState->FirstThread = 0;
+            DebugState->FirstFreeBlock = 0;
 
-        CollateDebugRecords(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
+            CollateDebugRecords(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
+        }
     }
 
     return(GlobalDebugTable);

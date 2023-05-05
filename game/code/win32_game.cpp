@@ -1606,19 +1606,25 @@ WinMain(HINSTANCE Instance,
                         POINT MouseP;
                         GetCursorPos(&MouseP);
                         ScreenToClient(Window, &MouseP);
-                        NewInput->MouseX = MouseP.x;
-                        NewInput->MouseY = MouseP.y;
+                        NewInput->MouseX = (-0.5f*(r32)GlobalBackbuffer.Width + 0.5f) + (r32)MouseP.x;
+                        NewInput->MouseY = (0.5f*(r32)GlobalBackbuffer.Height - 0.5f) - (r32)MouseP.y;
                         NewInput->MouseZ = 0; //TODO: Support mousewheel.
-                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[0],
-                                                    GetKeyState(VK_LBUTTON) & (1 << 15));
-                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[1],
-                                                    GetKeyState(VK_MBUTTON) & (1 << 15));
-                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[2],
-                                                    GetKeyState(VK_RBUTTON) & (1 << 15));
-                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[3],
-                                                    GetKeyState(VK_XBUTTON1) & (1 << 15));
-                        Win32ProcessKeyboardMessage(&NewInput->MouseButtons[4],
-                                                    GetKeyState(VK_XBUTTON2) & (1 << 15));
+
+                        DWORD WinButtonID[PlatformMouseButton_Count] =
+                        {
+                            VK_LBUTTON,
+                            VK_MBUTTON,
+                            VK_RBUTTON,
+                            VK_XBUTTON1,
+                            VK_XBUTTON2,
+                        };
+                        for(u32 ButtonIndex = 0; ButtonIndex < PlatformMouseButton_Count; ++ButtonIndex)
+                        {
+                            NewInput->MouseButtons[ButtonIndex] = OldInput->MouseButtons[ButtonIndex];
+                            NewInput->MouseButtons[ButtonIndex].HalfTransitionCount = 0;
+                            Win32ProcessKeyboardMessage(&NewInput->MouseButtons[ButtonIndex],
+                                                        GetKeyState(WinButtonID[ButtonIndex]) & (1 << 15));
+                        }
 
                         // TODO: Need to not poll disconnected controllers to avoid
                         // xinput frame rate hit on older libraries

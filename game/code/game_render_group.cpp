@@ -742,6 +742,7 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
     TIMED_FUNCTION();
 
     Assert(RenderGroup->InsideRender);
+
     /*
       TODO:
 
@@ -1048,6 +1049,12 @@ PushRect(render_group *Group, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
             Rect->Dim = Basis.Scale*Dim;
         }
     }
+}
+
+inline void
+PushRect(render_group *Group, rectangle2 Rectangle, r32 Z, v4 Color = V4(1, 1, 1, 1))
+{
+    PushRect(Group, V3(GetCenter(Rectangle), Z), GetDim(Rectangle), Color);
 }
 
 inline void
