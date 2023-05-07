@@ -23,7 +23,7 @@ struct debug_frame_region
     r32 MaxT;
 };
 
-#define MAX_REGIONS_PER_FRAME 2048
+#define MAX_REGIONS_PER_FRAME 2*4096
 struct debug_frame
 {
     u64 BeginClock;
@@ -60,6 +60,8 @@ struct debug_state
     memory_arena CollateArena;
     temporary_memory CollateTemp;
 
+    u32 CollationArrayIndex;
+    debug_frame *CollationFrame;
     u32 FrameBarLaneCount;
     u32 FrameCount;
     r32 FrameBarScale;
