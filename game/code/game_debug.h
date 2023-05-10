@@ -37,6 +37,7 @@ struct debug_frame
 struct open_debug_block
 {
     u32 StartingFrameIndex;
+    debug_record *Source;
     debug_event *OpeningEvent;
     open_debug_block *Parent;
 
@@ -55,6 +56,8 @@ struct debug_state
 {
     b32 Initialised;
     b32 Paused;
+
+    debug_record *ScopeToRecord;
 
     // Collation.
     memory_arena CollateArena;
@@ -78,6 +81,7 @@ global_variable render_group *DEBUGRenderGroup;
 
 internal void DEBUGReset(game_assets *Assets, u32 Width, u32 Height);
 internal void DEBUGOverlay(game_memory *Memory, game_input *Input);
+internal void RefreshCollation(debug_state *DebugState);
 
 #define GAME_DEBUG_H
 #endif

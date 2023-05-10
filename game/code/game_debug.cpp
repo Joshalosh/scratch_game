@@ -190,6 +190,8 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
     {
         render_group *RenderGroup = DEBUGRenderGroup;
 
+        debug_record *HotRecord = 0;
+
         v2 MouseP = V2(Input->MouseX, Input->MouseY);
         if(WasPressed(Input->MouseButtons[PlatformMouseButton_Right]))
         {
@@ -329,19 +331,29 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
                                     Record->Filename,
                                     Record->LineNumber);
                         DEBUGTextLine(TextBuffer);
+
+                        HotRecord = Record;
                     }
                 }
             }
-
 #if 0
             PushRect(RenderGroup, V3(ChartLeft + 0.5f*ChartWidth, ChartMinY + ChartHeight, 0.0f),
                      V2(ChartWidth, 1.0f), V4(1, 1, 1, 1));
 #endif
         }
-//    DEBUGTextLine("\\5C0F\\8033\\6728\\514E");
-//    DEBUGTextLine("111111");
-//    DEBUGTextLine("999999");
-//    DEBUGTextLine("AVA WA Ta");
+
+        if(WasPressed(Input->MouseButtons[PlatformMouseButton_Left]))
+        {
+            if(HotRecord)
+            {
+                DebugState->ScopeToRecord = HotRecord;
+            }
+            else 
+            {
+                DebugState->ScopeToRecord = 0;
+            }
+            RefreshCollation(DebugState);
+        }
     }
 }
 
@@ -392,6 +404,13 @@ AddRegion(debug_state *DebugState, debug_frame *CurrentFrame)
 {
     Assert(CurrentFrame->RegionCount < MAX_REGIONS_PER_FRAME);
     debug_frame_region *Result = CurrentFrame->Regions + CurrentFrame->RegionCount++;
+
+    return(Result);
+}
+ inline debug_record *
+ GetRecordFrom(open_debug_block *Block)
+{
+    debug_record *Result = Block ? Block->Source : 0;
 
     return(Result);
 }
@@ -487,7 +506,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         {
                             if(MatchingBlock->StartingFrameIndex == FrameIndex)
                             {
-                                if(Thread->FirstOpenBlock->Parent == 0)
+                                if(GetRecordFrom(MatchingBlock->Parent) == DebugState->ScopeToRecord)
                                 {
                                     r32 MinT = (r32)(OpeningEvent->Clock - DebugState->CollationFrame->BeginClock);
                                     r32 MaxT = (r32)(Event->Clock - DebugState->CollationFrame->BeginClock);
@@ -587,6 +606,13 @@ RestartCollation(debug_state *DebugState, u32 InvalidEventArrayIndex)
     DebugState->CollationFrame = 0;
 }
 
+internal void
+RefreshCollation(debug_state *DebugState)
+{
+    RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
+    CollateDebugRecords(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
+}
+
 extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 {
     GlobalDebugTable->RecordCount[0] = DebugRecords_Main_Count;
@@ -613,12 +639,18 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
             InitialiseArena(&DebugState->CollateArena, Memory->DebugStorageSize - sizeof(debug_state),
                             DebugState + 1);
             DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
+
+            DebugState->Paused = false;
+            DebugState->ScopeToRecord = 0;
+
+            DebugState->Initialised = true;
+
             RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
         }
 
         if(!DebugState->Paused)
         {
-            if(DebugState->FrameCount >= MAX_DEBUG_EVENT_ARRAY_COUNT)
+            if(DebugState->FrameCount >= MAX_DEBUG_EVENT_ARRAY_COUNT*4)
             {
                 RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
             }
