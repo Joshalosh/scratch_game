@@ -18,7 +18,8 @@ struct debug_frame_region
 {
     debug_record *Record;
     u64 CycleCount;
-    u32 LaneIndex;
+    u16 LaneIndex;
+    u16 ColorIndex;
     r32 MinT;
     r32 MaxT;
 };
