@@ -1,5 +1,8 @@
 #if !defined(GAME_DEBUG_H)
 
+struct render_group;
+struct game_assets;
+
 struct debug_counter_snapshot
 {
     u32 HitCount;
@@ -58,6 +61,16 @@ struct debug_state
     b32 Initialised;
     b32 Paused;
 
+    memory_arena DebugArena;
+    render_group *RenderGroup
+
+    r32 LeftEdge;
+    r32 AtY;
+    r32 FontScale;
+    font_id FontID;
+    r32 GlobalWidth;
+    r32 GlobalHeight;
+
     debug_record *ScopeToRecord;
 
     // Collation.
@@ -75,13 +88,8 @@ struct debug_state
     open_debug_block *FirstFreeBlock;
 };
 
-// TODO: Fix this for looped live code editing.
-struct render_group;
-struct game_assets;
-global_variable render_group *DEBUGRenderGroup;
-
 internal void DEBUGReset(game_assets *Assets, u32 Width, u32 Height);
-internal void DEBUGOverlay(game_memory *Memory, game_input *Input);
+internal void DEBUGOverlay(game_input *Input);
 internal void RefreshCollation(debug_state *DebugState);
 
 #define GAME_DEBUG_H

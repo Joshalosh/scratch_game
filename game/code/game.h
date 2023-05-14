@@ -82,6 +82,7 @@
 #include "game_platform.h"
 #include "game_intrinsics.h"
 #include "game_math.h"
+#include "game_file_formats.h"
 
 struct memory_arena
 {
@@ -256,7 +257,6 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
     while(Size--) {*Dest++ = *Source++;}
 }
 
-#include "game_file_formats.h"
 #include "game_world.h"
 #include "game_sim_region.h"
 #include "game_entity.h"

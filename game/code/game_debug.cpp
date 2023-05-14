@@ -2,33 +2,63 @@
 // TODO: Stop using stdio
 #include <stdio.h>
 
-global_variable r32 LeftEdge;
-global_variable r32 AtY;
-global_variable r32 FontScale;
-global_variable font_id FontID;
-global_variable r32 GlobalWidth;
-global_variable r32 GlobalHeight;
+inline debug_state *
+DEBUGGetState(game_memory *Memory)
+{
+    debug_state * = (debug_state *)Memory->DebugStorage;
+    if(!DebugState->Initialised)
+    {
+        InitialiseArena(&DebugState->DebugArena, Memory->DebugStorageSize - sizeof(debug_state),
+                        DebugState + 1);
+        DebugState->RenderGroup = AllocateRenderGroup(Assets, &DebugState->DebugArena, 
+                                                      Megabytes(16), false);
+
+        DebugState->Paused = false;
+        DebugState->ScopeToRecord = 0;
+
+        DebugState->Initialised = true;
+
+        SubArena(&DebugState->CollateArena, &DebugState->DebugArena, Megabytes(32), 4);
+        DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
+        RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
+    }
+
+    return(DebugState);
+}
+
+inline debug_state *
+DEBUGGetState(void)
+{
+    debug_state *Result = DEBUGGetState(DebugGlobalMemory);
+
+    return(Result);
+}
 
 internal void
 DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
 {
     TIMED_FUNCTION();
 
-    GlobalWidth = (r32)Width;
-    GlobalHeight = (r32)Height;
+    debug_state *DebugState = DEBUGGetState();
+    if(DebugState)
+    {
 
-    asset_vector MatchVector = {};
-    asset_vector WeightVector = {};
-    MatchVector.E[Tag_FontType] = (r32)FontType_Debug;
-    WeightVector.E[Tag_FontType] = 1.0f;
-    FontID = GetBestMatchFontFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
+        DebugState->GlobalWidth = (r32)Width;
+        DebugState->GlobalHeight = (r32)Height;
 
-    FontScale = 1.0f;
-    Orthographic(DEBUGRenderGroup, Width, Height, 1.0f);
-    LeftEdge = -0.5f*Width;
+        asset_vector MatchVector = {};
+        asset_vector WeightVector = {};
+        MatchVector.E[Tag_FontType] = (r32)FontType_Debug;
+        WeightVector.E[Tag_FontType] = 1.0f;
+        DebugState->FontID = GetBestMatchFontFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
 
-    ga_font *Info = GetFontInfo(Assets, FontID);
-    AtY = 0.5f*Height - FontScale*GetStartingBaselineY(Info);
+        DebugState->FontScale = 1.0f;
+        Orthographic(DEBUGRenderGroup, Width, Height, 1.0f);
+        DebugState->LeftEdge = -0.5f*Width;
+
+        ga_font *Info = GetFontInfo(Assets, DebugState->FontID);
+        DebugState->AtY = 0.5f*Height - DebugState->FontScale*GetStartingBaselineY(Info);
+    }
 }
 
 inline b32
@@ -60,73 +90,77 @@ GetHex(char Char)
 internal void
 DEBUGTextOutAt(v2 P, char *String)
 {
-    if(DEBUGRenderGroup)
+    debug_state *DebugState = DEBUGGetState();
+    if(DebugState)
     {
-        render_group *RenderGroup = DEBUGRenderGroup;
-
-        loaded_font *Font = PushFont(RenderGroup, FontID);
-        if(Font)
+        if(DEBUGRenderGroup)
         {
-            ga_font *Info = GetFontInfo(RenderGroup->Assets, FontID);
+            render_group *RenderGroup = DEBUGRenderGroup;
 
-            u32 PrevCodepoint = 0;
-            r32 CharScale = FontScale;
-            v4 Color = V4(1, 1, 1, 1);
-            r32 AtY = P.y;
-            r32 AtX = P.x;
-            for(char *At = String; *At;)
+            loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
+            if(Font)
             {
-                if((At[0] == '\\') &&
-                   (At[1] == '#') &&
-                   (At[2] != 0) &&
-                   (At[3] != 0) &&
-                   (At[4] != 0))
+                ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
+
+                u32 PrevCodepoint = 0;
+                r32 CharScale = DebugState->FontScale;
+                v4 Color = V4(1, 1, 1, 1);
+                r32 AtY = P.y;
+                r32 AtX = P.x;
+                for(char *At = String; *At;)
                 {
-                    r32 CScale = 1.0f / 9.0f;
-                    Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
-                               Clamp01(CScale*(r32)(At[3] - '0')),
-                               Clamp01(CScale*(r32)(At[4] - '0')),
-                               1.0f);
-                    At += 5;
-                }
-                else if((At[0] == '\\') &&
-                        (At[1] == '^') &&
-                        (At[2] != 0))
-                {
-                    r32 CScale = 1.0f / 9.0f;
-                    CharScale = FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
-                    At += 3;
-                }
-                else
-                {
-                    u32 Codepoint = *At;
                     if((At[0] == '\\') &&
-                       (IsHex(At[1])) &&
-                       (IsHex(At[2])) &&
-                       (IsHex(At[3])) &&
-                       (IsHex(At[4])))
+                       (At[1] == '#') &&
+                       (At[2] != 0) &&
+                       (At[3] != 0) &&
+                       (At[4] != 0))
                     {
-                        Codepoint = ((GetHex(At[1]) << 12) |
-                                     (GetHex(At[2]) << 8) |
-                                     (GetHex(At[3]) << 4) |
-                                     (GetHex(At[4]) << 0));
-                        At += 4;
+                        r32 CScale = 1.0f / 9.0f;
+                        Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
+                                   Clamp01(CScale*(r32)(At[3] - '0')),
+                                   Clamp01(CScale*(r32)(At[4] - '0')),
+                                   1.0f);
+                        At += 5;
                     }
-
-                    r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Info, Font, PrevCodepoint, Codepoint);
-                    AtX += AdvanceX;
-
-                    if(Codepoint != ' ')
+                    else if((At[0] == '\\') &&
+                            (At[1] == '^') &&
+                            (At[2] != 0))
                     {
-                        bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Info, Font, Codepoint);
-                        ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
-
-                        PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
+                        r32 CScale = 1.0f / 9.0f;
+                        CharScale = DebugState->FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
+                        At += 3;
                     }
+                    else
+                    {
+                        u32 Codepoint = *At;
+                        if((At[0] == '\\') &&
+                           (IsHex(At[1])) &&
+                           (IsHex(At[2])) &&
+                           (IsHex(At[3])) &&
+                           (IsHex(At[4])))
+                        {
+                            Codepoint = ((GetHex(At[1]) << 12) |
+                                         (GetHex(At[2]) << 8) |
+                                         (GetHex(At[3]) << 4) |
+                                         (GetHex(At[4]) << 0));
+                            At += 4;
+                        }
 
-                    PrevCodepoint = Codepoint;
+                        r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Info, Font, PrevCodepoint, Codepoint);
+                        AtX += AdvanceX;
 
-                    ++At;
+                        if(Codepoint != ' ')
+                        {
+                            bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Info, Font, Codepoint);
+                            ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
+
+                            PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
+                        }
+
+                        PrevCodepoint = Codepoint;
+
+                        ++At;
+                    }
                 }
             }
         }
@@ -136,18 +170,22 @@ DEBUGTextOutAt(v2 P, char *String)
 internal void
 DEBUGTextLine(char *String)
 {
-    if(DEBUGRenderGroup)
+    debug_state *DebugState = DEBUGGetState();
+    if(DebugState)
     {
-        render_group *RenderGroup = DEBUGRenderGroup;
-
-        loaded_font *Font = PushFont(RenderGroup, FontID);
-        if(Font)
+        if(DEBUGRenderGroup)
         {
-            ga_font *Info = GetFontInfo(RenderGroup->Assets, FontID);
+            render_group *RenderGroup = DEBUGRenderGroup;
 
-            DEBUGTextOutAt(V2(LeftEdge, AtY), String);
+            loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
+            if(Font)
+            {
+                ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
 
-            AtY -= GetLineAdvanceFor(Info)*FontScale;
+                DEBUGTextOutAt(V2(DebugState->LeftEdge, DebugState->AtY), String);
+
+                DebugState->AtY -= GetLineAdvanceFor(Info)*DebugState->FontScale;
+            }
         }
     }
 }
@@ -201,9 +239,9 @@ EndDebugStatistic(debug_statistic *Stat)
 }
 
 internal void
-DEBUGOverlay(game_memory *Memory, game_input *Input)
+DEBUGOverlay(game_input *Input)
 {
-    debug_state *DebugState = (debug_state *)Memory->DebugStorage;
+    debug_state *DebugState = DEBUGGetState();
     if(DebugState && DEBUGRenderGroup)
     {
         render_group *RenderGroup = DEBUGRenderGroup;
@@ -217,10 +255,10 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
         }
 
         // TODO: Layout / cached font info / etc. for real debug display
-        loaded_font *Font = PushFont(RenderGroup, FontID);
+        loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
         if(Font)
         {
-            ga_font *Info = GetFontInfo(RenderGroup->Assets, FontID);
+            ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
 
 #if 0
             for(u32 CounterIndex = 0; CounterIndex < DebugState->CounterCount; ++CounterIndex)
@@ -293,10 +331,10 @@ DEBUGOverlay(game_memory *Memory, game_input *Input)
             u32 LaneCount = DebugState->FrameBarLaneCount;
             r32 BarHeight = LaneHeight*LaneCount;
             r32 BarSpacing = BarHeight + 4.0f;
-            r32 ChartLeft = LeftEdge + 10.0f;
+            r32 ChartLeft = DebugState->LeftEdge + 10.0f;
             r32 ChartHeight = BarSpacing*(r32)DebugState->FrameCount;
             r32 ChartWidth = 1000.0f;
-            r32 ChartTop = 0.5f*GlobalHeight - 10.0f;
+            r32 ChartTop = 0.5f*DebugState->GlobalHeight - 10.0f;
             r32 Scale = ChartWidth*DebugState->FrameBarScale;
 
             v3 Colors[] =
@@ -611,23 +649,9 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
     u32 EventCount = ArrayIndex_EventIndex & 0xFFFFFFFF;
     GlobalDebugTable->EventCount[EventArrayIndex] = EventCount;
 
-    debug_state *DebugState = (debug_state *)Memory->DebugStorage;
+    debug_state *DebugState = DEBUGGetState(Memory);
     if(DebugState)
     {
-        if(!DebugState->Initialised)
-        {
-            InitialiseArena(&DebugState->CollateArena, Memory->DebugStorageSize - sizeof(debug_state),
-                            DebugState + 1);
-            DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
-
-            DebugState->Paused = false;
-            DebugState->ScopeToRecord = 0;
-
-            DebugState->Initialised = true;
-
-            RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
-        }
-
         if(!DebugState->Paused)
         {
             if(DebugState->FrameCount >= MAX_DEBUG_EVENT_ARRAY_COUNT*4)

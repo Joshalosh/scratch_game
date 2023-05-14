@@ -847,8 +847,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(16), TranState);
 
-        DEBUGRenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(16), false);
-
 //        GameState->Music = PlaySound(&GameState->AudioState, GetFirstSoundFrom(TranState->Assets, Asset_Music));
 
         // TODO: Pick a real number here.
@@ -1580,7 +1578,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if(DEBUGRenderGroup)
     {
         TIMED_BLOCK(DEBUGRenderGroup);
-        DEBUGOverlay(Memory, Input);
+        DEBUGOverlay(Input);
         TiledRenderGroupToOutput(TranState->HighPriorityQueue, DEBUGRenderGroup, DrawBuffer);
         EndRender(DEBUGRenderGroup);
     }
