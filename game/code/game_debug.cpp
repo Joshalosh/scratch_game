@@ -2,26 +2,13 @@
 // TODO: Stop using stdio
 #include <stdio.h>
 
+internal void RestartCollation(debug_state *DebugState, u32 InvalidEventArrayIndex);
+
 inline debug_state *
 DEBUGGetState(game_memory *Memory)
 {
-    debug_state * = (debug_state *)Memory->DebugStorage;
-    if(!DebugState->Initialised)
-    {
-        InitialiseArena(&DebugState->DebugArena, Memory->DebugStorageSize - sizeof(debug_state),
-                        DebugState + 1);
-        DebugState->RenderGroup = AllocateRenderGroup(Assets, &DebugState->DebugArena, 
-                                                      Megabytes(16), false);
-
-        DebugState->Paused = false;
-        DebugState->ScopeToRecord = 0;
-
-        DebugState->Initialised = true;
-
-        SubArena(&DebugState->CollateArena, &DebugState->DebugArena, Megabytes(32), 4);
-        DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
-        RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
-    }
+    debug_state *DebugState = (debug_state *)Memory->DebugStorage;
+    Assert(DebugState->Initialised);
 
     return(DebugState);
 }
@@ -35,13 +22,34 @@ DEBUGGetState(void)
 }
 
 internal void
-DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
+DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
 {
     TIMED_FUNCTION();
 
-    debug_state *DebugState = DEBUGGetState();
+    debug_state *DebugState = (debug_state *)DebugGlobalMemory->DebugStorage;
     if(DebugState)
     {
+        if(!DebugState->Initialised)
+        {
+            DebugState->HighPriorityQueue = DebugGlobalMemory->HighPriorityQueue;
+
+            InitialiseArena(&DebugState->DebugArena, DebugGlobalMemory->DebugStorageSize - sizeof(debug_state),
+                            DebugState + 1);
+            DebugState->RenderGroup = AllocateRenderGroup(Assets, &DebugState->DebugArena, 
+                                                          Megabytes(16), false);
+
+            DebugState->Paused = false;
+            DebugState->ScopeToRecord = 0;
+
+            DebugState->Initialised = true;
+
+            SubArena(&DebugState->CollateArena, &DebugState->DebugArena, Megabytes(32), 4);
+            DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
+
+            RestartCollation(DebugState, 0);
+        }
+
+        BeginRender(DebugState->RenderGroup);
 
         DebugState->GlobalWidth = (r32)Width;
         DebugState->GlobalHeight = (r32)Height;
@@ -53,7 +61,7 @@ DEBUGReset(game_assets *Assets, u32 Width, u32 Height)
         DebugState->FontID = GetBestMatchFontFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
 
         DebugState->FontScale = 1.0f;
-        Orthographic(DEBUGRenderGroup, Width, Height, 1.0f);
+        Orthographic(DebugState->RenderGroup, Width, Height, 1.0f);
         DebugState->LeftEdge = -0.5f*Width;
 
         ga_font *Info = GetFontInfo(Assets, DebugState->FontID);
@@ -93,74 +101,71 @@ DEBUGTextOutAt(v2 P, char *String)
     debug_state *DebugState = DEBUGGetState();
     if(DebugState)
     {
-        if(DEBUGRenderGroup)
+        render_group *RenderGroup = DebugState->RenderGroup;
+
+        loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
+        if(Font)
         {
-            render_group *RenderGroup = DEBUGRenderGroup;
+            ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
 
-            loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
-            if(Font)
+            u32 PrevCodepoint = 0;
+            r32 CharScale = DebugState->FontScale;
+            v4 Color = V4(1, 1, 1, 1);
+            r32 AtY = P.y;
+            r32 AtX = P.x;
+            for(char *At = String; *At;)
             {
-                ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
-
-                u32 PrevCodepoint = 0;
-                r32 CharScale = DebugState->FontScale;
-                v4 Color = V4(1, 1, 1, 1);
-                r32 AtY = P.y;
-                r32 AtX = P.x;
-                for(char *At = String; *At;)
+                if((At[0] == '\\') &&
+                   (At[1] == '#') &&
+                   (At[2] != 0) &&
+                   (At[3] != 0) &&
+                   (At[4] != 0))
                 {
+                    r32 CScale = 1.0f / 9.0f;
+                    Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
+                               Clamp01(CScale*(r32)(At[3] - '0')),
+                               Clamp01(CScale*(r32)(At[4] - '0')),
+                               1.0f);
+                    At += 5;
+                }
+                else if((At[0] == '\\') &&
+                        (At[1] == '^') &&
+                        (At[2] != 0))
+                {
+                    r32 CScale = 1.0f / 9.0f;
+                    CharScale = DebugState->FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
+                    At += 3;
+                }
+                else
+                {
+                    u32 Codepoint = *At;
                     if((At[0] == '\\') &&
-                       (At[1] == '#') &&
-                       (At[2] != 0) &&
-                       (At[3] != 0) &&
-                       (At[4] != 0))
+                       (IsHex(At[1])) &&
+                       (IsHex(At[2])) &&
+                       (IsHex(At[3])) &&
+                       (IsHex(At[4])))
                     {
-                        r32 CScale = 1.0f / 9.0f;
-                        Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
-                                   Clamp01(CScale*(r32)(At[3] - '0')),
-                                   Clamp01(CScale*(r32)(At[4] - '0')),
-                                   1.0f);
-                        At += 5;
+                        Codepoint = ((GetHex(At[1]) << 12) |
+                                     (GetHex(At[2]) << 8) |
+                                     (GetHex(At[3]) << 4) |
+                                     (GetHex(At[4]) << 0));
+                        At += 4;
                     }
-                    else if((At[0] == '\\') &&
-                            (At[1] == '^') &&
-                            (At[2] != 0))
+
+                    r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Info, Font, PrevCodepoint, Codepoint);
+                    AtX += AdvanceX;
+
+                    if(Codepoint != ' ')
                     {
-                        r32 CScale = 1.0f / 9.0f;
-                        CharScale = DebugState->FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
-                        At += 3;
+                        bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Info, Font, Codepoint);
+                        ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
+
+                        PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
                     }
-                    else
-                    {
-                        u32 Codepoint = *At;
-                        if((At[0] == '\\') &&
-                           (IsHex(At[1])) &&
-                           (IsHex(At[2])) &&
-                           (IsHex(At[3])) &&
-                           (IsHex(At[4])))
-                        {
-                            Codepoint = ((GetHex(At[1]) << 12) |
-                                         (GetHex(At[2]) << 8) |
-                                         (GetHex(At[3]) << 4) |
-                                         (GetHex(At[4]) << 0));
-                            At += 4;
-                        }
 
-                        r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Info, Font, PrevCodepoint, Codepoint);
-                        AtX += AdvanceX;
+                    PrevCodepoint = Codepoint;
 
-                        if(Codepoint != ' ')
-                        {
-                            bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Info, Font, Codepoint);
-                            ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
-
-                            PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
-                        }
-
-                        PrevCodepoint = Codepoint;
-
-                        ++At;
-                    }
+                    ++At;
                 }
             }
         }
@@ -173,19 +178,16 @@ DEBUGTextLine(char *String)
     debug_state *DebugState = DEBUGGetState();
     if(DebugState)
     {
-        if(DEBUGRenderGroup)
+        render_group *RenderGroup = DebugState->RenderGroup;
+
+        loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
+        if(Font)
         {
-            render_group *RenderGroup = DEBUGRenderGroup;
+            ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
 
-            loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
-            if(Font)
-            {
-                ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
+            DEBUGTextOutAt(V2(DebugState->LeftEdge, DebugState->AtY), String);
 
-                DEBUGTextOutAt(V2(DebugState->LeftEdge, DebugState->AtY), String);
-
-                DebugState->AtY -= GetLineAdvanceFor(Info)*DebugState->FontScale;
-            }
+            DebugState->AtY -= GetLineAdvanceFor(Info)*DebugState->FontScale;
         }
     }
 }
@@ -239,12 +241,14 @@ EndDebugStatistic(debug_statistic *Stat)
 }
 
 internal void
-DEBUGOverlay(game_input *Input)
+DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
 {
+    TIMED_FUNCTION();
+
     debug_state *DebugState = DEBUGGetState();
-    if(DebugState && DEBUGRenderGroup)
+    if(DebugState)
     {
-        render_group *RenderGroup = DEBUGRenderGroup;
+        render_group *RenderGroup = DebugState->RenderGroup;
 
         debug_record *HotRecord = 0;
 
@@ -326,6 +330,10 @@ DEBUGOverlay(game_input *Input)
                             DebugState->Frames[DebugState->FrameCount - 1].WallSecondsElapsed * 1000.0f);
                 DEBUGTextLine(TextBuffer);
             }
+
+            Orthographic(DebugState->RenderGroup, 
+                         (s32)DebugState->GlobalWidth, 
+                         (s32)DebugState->GlobalHeight, 0.25f);
 
             r32 LaneHeight = 20.0f;
             u32 LaneCount = DebugState->FrameBarLaneCount;
@@ -411,6 +419,9 @@ DEBUGOverlay(game_input *Input)
             }
             RefreshCollation(DebugState);
         }
+
+        TiledRenderGroupToOutput(DebugState->HighPriorityQueue, DebugState->RenderGroup, DrawBuffer);
+        EndRender(DebugState->RenderGroup);
     }
 }
 

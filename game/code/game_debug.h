@@ -2,6 +2,7 @@
 
 struct render_group;
 struct game_assets;
+struct loaded_bitmap;
 
 struct debug_counter_snapshot
 {
@@ -59,10 +60,11 @@ struct debug_thread
 struct debug_state
 {
     b32 Initialised;
-    b32 Paused;
+
+    platform_work_queue *HighPriorityQueue;
 
     memory_arena DebugArena;
-    render_group *RenderGroup
+    render_group *RenderGroup;
 
     r32 LeftEdge;
     r32 AtY;
@@ -82,14 +84,18 @@ struct debug_state
     u32 FrameBarLaneCount;
     u32 FrameCount;
     r32 FrameBarScale;
+    b32 Paused;
+
+    rectangle2 ProfileRect;
 
     debug_frame *Frames;
     debug_thread *FirstThread;
     open_debug_block *FirstFreeBlock;
 };
 
-internal void DEBUGReset(game_assets *Assets, u32 Width, u32 Height);
-internal void DEBUGOverlay(game_input *Input);
+internal void DEBUGStart(game_assets *Assets, u32 Width, u32 Height);
+internal void DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer);
+
 internal void RefreshCollation(debug_state *DebugState);
 
 #define GAME_DEBUG_H
