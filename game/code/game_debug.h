@@ -86,6 +86,7 @@ struct debug_state
     r32 FrameBarScale;
     b32 Paused;
 
+    b32 ProfileOn;
     rectangle2 ProfileRect;
 
     debug_frame *Frames;
