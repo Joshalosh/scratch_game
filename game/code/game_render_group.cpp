@@ -973,23 +973,40 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
     return(Result);
 }
 
+struct used_bitmap_dim
+{
+    entity_basis_p_result Basis;
+    v2 Size;
+    v2 Align;
+    v3 P;
+};
+
+inline used_bitmap_dim
+GetBitmapDim(render_group *Group, loaded_bitmap *Bitmap, r32 Height, v3 Offset)
+{
+    used_bitmap_dim Dim;
+
+    Dim.Size = V2(Height*Bitmap->WidthOverHeight, Height);
+    Dim.Align = Hadamard(Bitmap->AlignPercentage, Dim.Size);
+    Dim.P = Offset - V3(Dim.Align, 0);
+    Dim.Basis = GetRenderEntityBasisP(&Group->Transform, Dim.P);
+
+    return(Dim);
+}
+
 inline void
 PushBitmap(render_group *Group, loaded_bitmap *Bitmap, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1))
 {
-    v2 Size = V2(Height*Bitmap->WidthOverHeight, Height);
-    v2 Align = Hadamard(Bitmap->AlignPercentage, Size);
-    v3 P = Offset - V3(Align, 0);
-
-    entity_basis_p_result Basis = GetRenderEntityBasisP(&Group->Transform, P);
-    if(Basis.Valid)
+    used_bitmap_dim Dim = GetBitmapDim(Group, Bitmap, Height, Offset);
+    if(Dim.Basis.Valid)
     {
         render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap);
         if(Entry)
         {
             Entry->Bitmap = Bitmap;
-            Entry->P = Basis.P;
+            Entry->P = Dim.Basis.P;
             Entry->Color = Group->GlobalAlpha*Color;
-            Entry->Size = Basis.Scale*Size;
+            Entry->Size = Dim.Basis.Scale*Dim.Size;
         }
     }
 }

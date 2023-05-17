@@ -396,8 +396,16 @@ Clamp01(v2 Value)
     return(Result);
 }
 
+inline v2 
+Arm2(r32 Angle)
+{
+    v2 Result = {Cos(Angle), Sin(Angle)};
+
+    return(Result);
+}
+
 //
-// NOTE(casey): v3 operations
+// v3 operations
 //
 
 inline v3

@@ -3,6 +3,14 @@
 struct render_group;
 struct game_assets;
 struct loaded_bitmap;
+struct loaded_font;
+struct ga_font;
+
+enum debug_text_op
+{
+    DEBUGTextOp_DrawText,
+    DEBUGTextOp_SizeText,
+};
 
 struct debug_counter_snapshot
 {
@@ -65,6 +73,8 @@ struct debug_state
 
     memory_arena DebugArena;
     render_group *RenderGroup;
+    loaded_font *DebugFont;
+    ga_font *DebugFontInfo;
 
     r32 LeftEdge;
     r32 AtY;

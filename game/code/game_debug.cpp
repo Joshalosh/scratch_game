@@ -50,6 +50,8 @@ DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
         }
 
         BeginRender(DebugState->RenderGroup);
+        DebugState->DebugFont = PushFont(DebugState->RenderGroup, DebugState->FontID);
+        DebugState->DebugFontInfo = GetFontInfo(DebugState->RenderGroup->Assets, DebugState->FontID);
 
         DebugState->GlobalWidth = (r32)Width;
         DebugState->GlobalHeight = (r32)Height;
@@ -96,79 +98,100 @@ GetHex(char Char)
 }
 
 internal void
+DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
+{
+    if(DebugState && DebugState->DebugFont)
+    {
+        render_group *RenderGroup = DebugState->RenderGroup;
+        loaded_font *Font = DebugState->DebugFont;
+        ga_font *Info = DebugState->DebugFontInfo;
+
+        u32 PrevCodepoint = 0;
+        r32 CharScale = DebugState->FontScale;
+        v4 Color = V4(1, 1, 1, 1);
+        r32 AtY = P.y;
+        r32 AtX = P.x;
+        for(char *At = String; *At;)
+        {
+            if((At[0] == '\\') &&
+               (At[1] == '#') &&
+               (At[2] != 0) &&
+               (At[3] != 0) &&
+               (At[4] != 0))
+            {
+                r32 CScale = 1.0f / 9.0f;
+                Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
+                           Clamp01(CScale*(r32)(At[3] - '0')),
+                           Clamp01(CScale*(r32)(At[4] - '0')),
+                           1.0f);
+                At += 5;
+            }
+            else if((At[0] == '\\') &&
+                    (At[1] == '^') &&
+                    (At[2] != 0))
+            {
+                r32 CScale = 1.0f / 9.0f;
+                CharScale = DebugState->FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
+                At += 3;
+            }
+            else
+            {
+                u32 Codepoint = *At;
+                if((At[0] == '\\') &&
+                   (IsHex(At[1])) &&
+                   (IsHex(At[2])) &&
+                   (IsHex(At[3])) &&
+                   (IsHex(At[4])))
+                {
+                    Codepoint = ((GetHex(At[1]) << 12) |
+                                 (GetHex(At[2]) << 8) |
+                                 (GetHex(At[3]) << 4) |
+                                 (GetHex(At[4]) << 0));
+                    At += 4;
+                }
+
+                r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Info, Font, PrevCodepoint, Codepoint);
+                AtX += AdvanceX;
+
+                if(Codepoint != ' ')
+                {
+                    bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Info, Font, Codepoint);
+                    ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
+
+                    r32 BitmapScale = CharScale*(r32)Info->Dim[1];
+                    v3 BitmapOffset = V3(AtX, AtY, 0);
+                    if(Op == DEBUGTextOp_DrawText)
+                    {
+                        PushBitmap(RenderGroup, BitmapID, BitmapScale, BitmapOffset, Color);
+                    }
+                    else 
+                    {
+                        Assert(Op == DEBUGTextOp_SizeText);
+
+                        loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, BitmapID, RenderGroup->GenerationID);
+                        if(Bitmap)
+                        {
+                            used_bitmap_dim Dim = GetBitmapDim(RenderGroup, Bitmap, BitmapScale, BitmapOffset);
+                        }
+                    }
+                }
+
+                PrevCodepoint = Codepoint;
+
+                ++At;
+            }
+        }
+    }
+}
+
+internal void
 DEBUGTextOutAt(v2 P, char *String)
 {
     debug_state *DebugState = DEBUGGetState();
     if(DebugState)
     {
         render_group *RenderGroup = DebugState->RenderGroup;
-
-        loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
-        if(Font)
-        {
-            ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
-
-            u32 PrevCodepoint = 0;
-            r32 CharScale = DebugState->FontScale;
-            v4 Color = V4(1, 1, 1, 1);
-            r32 AtY = P.y;
-            r32 AtX = P.x;
-            for(char *At = String; *At;)
-            {
-                if((At[0] == '\\') &&
-                   (At[1] == '#') &&
-                   (At[2] != 0) &&
-                   (At[3] != 0) &&
-                   (At[4] != 0))
-                {
-                    r32 CScale = 1.0f / 9.0f;
-                    Color = V4(Clamp01(CScale*(r32)(At[2] - '0')),
-                               Clamp01(CScale*(r32)(At[3] - '0')),
-                               Clamp01(CScale*(r32)(At[4] - '0')),
-                               1.0f);
-                    At += 5;
-                }
-                else if((At[0] == '\\') &&
-                        (At[1] == '^') &&
-                        (At[2] != 0))
-                {
-                    r32 CScale = 1.0f / 9.0f;
-                    CharScale = DebugState->FontScale*Clamp01(CScale*(r32)(At[2] - '0'));
-                    At += 3;
-                }
-                else
-                {
-                    u32 Codepoint = *At;
-                    if((At[0] == '\\') &&
-                       (IsHex(At[1])) &&
-                       (IsHex(At[2])) &&
-                       (IsHex(At[3])) &&
-                       (IsHex(At[4])))
-                    {
-                        Codepoint = ((GetHex(At[1]) << 12) |
-                                     (GetHex(At[2]) << 8) |
-                                     (GetHex(At[3]) << 4) |
-                                     (GetHex(At[4]) << 0));
-                        At += 4;
-                    }
-
-                    r32 AdvanceX = CharScale*GetHorizontalAdvanceForPair(Info, Font, PrevCodepoint, Codepoint);
-                    AtX += AdvanceX;
-
-                    if(Codepoint != ' ')
-                    {
-                        bitmap_id BitmapID = GetBitmapForGlyph(RenderGroup->Assets, Info, Font, Codepoint);
-                        ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
-
-                        PushBitmap(RenderGroup, BitmapID, CharScale*(r32)Info->Dim[1], V3(AtX, AtY, 0), Color);
-                    }
-
-                    PrevCodepoint = Codepoint;
-
-                    ++At;
-                }
-            }
-        }
+        DEBUGTextOp(DebugState, DEBUGTextOp_DrawText, P, String);
     }
 }
 
@@ -243,6 +266,29 @@ EndDebugStatistic(debug_statistic *Stat)
 internal void
 DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup)
 {
+    // SHOWCASE: How to initialise an array of strings.
+    char *MenuItems[] =
+    {
+        "Toggle Profile Graph",
+        "Toggle Framerate Counter",
+        "Mark Loop Point",
+        "Toggle Entity Bounds",
+        "Toggle World Chunk Bounds",
+    };
+
+    r32 MenuRadius = 200.0f;
+    r32 AngleStep = Tau32 / (r32)ArrayCount(MenuItems);
+    for(u32 MenuItemIndex = 0; MenuItemIndex < ArrayCount(MenuItems); ++MenuItemIndex)
+    {
+        char *Text = MenuItems[MenuItemIndex];
+
+        r32 Angle = (r32)MenuItemIndex*AngleStep;
+        v2 TextP = MenuRadius*Arm2(Angle);
+
+        PushRect(RenderGroup, RectCenterHalfDim(TextP, V2(1.5f, 1.5f)), 0.0f, V4(1, 1, 1, 1));
+
+        DEBUGTextOutAt(TextP, Text);
+    }
 }
 
 internal void
