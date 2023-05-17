@@ -97,9 +97,10 @@ GetHex(char Char)
     return(Result);
 }
 
-internal void
+internal rectangle2
 DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
 {
+    rectangle2 Result = InvertedInfinityRectangle2();
     if(DebugState && DebugState->DebugFont)
     {
         render_group *RenderGroup = DebugState->RenderGroup;
@@ -172,6 +173,8 @@ DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
                         if(Bitmap)
                         {
                             used_bitmap_dim Dim = GetBitmapDim(RenderGroup, Bitmap, BitmapScale, BitmapOffset);
+                            rectangle2 GlyphDim = RectMinDim(V2(Dim.P), Dim.Size);
+                            Result = Union(Result, GlyphDim);
                         }
                     }
                 }
@@ -182,6 +185,8 @@ DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
             }
         }
     }
+
+    return(Result);
 }
 
 internal void
@@ -193,6 +198,14 @@ DEBUGTextOutAt(v2 P, char *String)
         render_group *RenderGroup = DebugState->RenderGroup;
         DEBUGTextOp(DebugState, DEBUGTextOp_DrawText, P, String);
     }
+}
+
+internal rectangle2
+DEBUGGetTextSize(debug_state *DebugState, char *String)
+{
+    rectangle2 Result = DEBUGTextOp(DebugState, DEBUGTextOp_SizeText, V2(0, 0), String);
+
+    return(Result);
 }
 
 internal void
@@ -284,6 +297,9 @@ DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup)
 
         r32 Angle = (r32)MenuItemIndex*AngleStep;
         v2 TextP = MenuRadius*Arm2(Angle);
+
+        rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
+        PushRect(RenderGroup, Offset(TextBounds, TextP), 0.0f, V4(0, 0, 0.5f, 1));
 
         PushRect(RenderGroup, RectCenterHalfDim(TextP, V2(1.5f, 1.5f)), 0.0f, V4(1, 1, 1, 1));
 

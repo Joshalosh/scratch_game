@@ -896,12 +896,6 @@ Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->Transform.Orthographic = true;
 }
 
-struct entity_basis_p_result
-{
-    v2 P;
-    real32 Scale;
-    bool32 Valid;
-};
 inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, v3 OriginalP)
 {
     TIMED_FUNCTION();
@@ -972,14 +966,6 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 
     return(Result);
 }
-
-struct used_bitmap_dim
-{
-    entity_basis_p_result Basis;
-    v2 Size;
-    v2 Align;
-    v3 P;
-};
 
 inline used_bitmap_dim
 GetBitmapDim(render_group *Group, loaded_bitmap *Bitmap, r32 Height, v3 Offset)

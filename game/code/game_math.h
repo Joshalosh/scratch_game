@@ -138,6 +138,17 @@ V2(real32 X, real32 Y)
     return(Result);
 }
 
+inline v2 
+V2(v3 A)
+{
+    v2 Result;
+
+    Result.x = A.x;
+    Result.y = A.y;
+
+    return(Result);
+}
+
 inline v3
 V3(real32 X, real32 Y, real32 Z)
 {
@@ -676,6 +687,30 @@ Lerp(v4 A, real32 t, v4 B)
 // NOTE: Rectangle2
 //
 
+inline rectangle2
+InvertedInfinityRectangle2(void)
+{
+    rectangle2 Result;
+
+    Result.Min.x = Result.Min.y = Real32Maximum;
+    Result.Max.x = Result.Max.y = -Real32Maximum;
+
+    return(Result);
+}
+
+inline rectangle2
+Union(rectangle2 A, rectangle2 B)
+{
+    rectangle2 Result;
+
+    Result.Min.x = (A.Min.x < B.Min.x) ? A.Min.x : B.Min.x;
+    Result.Min.y = (A.Min.y < B.Min.y) ? A.Min.y : B.Min.y;
+    Result.Max.x = (A.Max.x < B.Max.x) ? A.Max.x : B.Max.x;
+    Result.Max.y = (A.Max.y < B.Max.y) ? A.Max.y : B.Max.y;
+
+    return(Result);
+}
+
 inline v2
 GetMinCorner(rectangle2 Rect)
 {
@@ -743,6 +778,17 @@ AddRadiusTo(rectangle2 A, v2 Radius)
     rectangle2 Result;
     Result.Min = A.Min - Radius;
     Result.Max = A.Max + Radius;
+
+    return(Result);
+}
+
+inline rectangle2
+Offset(rectangle2 A, v2 Offset)
+{
+    rectangle2 Result;
+
+    Result.Min = A.Min + Offset;
+    Result.Max = A.Max + Offset;
 
     return(Result);
 }
@@ -979,7 +1025,7 @@ HasArea(rectangle2i A)
 }
 
 inline rectangle2i
-InvertedInfinityRectangle(void)
+InvertedInfinityRectangle2i(void)
 {
     rectangle2i Result;
 
