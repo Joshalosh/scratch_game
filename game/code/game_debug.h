@@ -76,6 +76,10 @@ struct debug_state
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
 
+    v2 MenuP;
+    b32 MenuActive;
+    u32 HotMenuIndex;
+
     r32 LeftEdge;
     r32 AtY;
     r32 FontScale;

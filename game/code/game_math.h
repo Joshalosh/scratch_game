@@ -138,17 +138,6 @@ V2(real32 X, real32 Y)
     return(Result);
 }
 
-inline v2 
-V2(v3 A)
-{
-    v2 Result;
-
-    Result.x = A.x;
-    Result.y = A.y;
-
-    return(Result);
-}
-
 inline v3
 V3(real32 X, real32 Y, real32 Z)
 {

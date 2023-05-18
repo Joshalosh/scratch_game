@@ -98,7 +98,7 @@ GetHex(char Char)
 }
 
 internal rectangle2
-DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
+DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String, v4 Color = V4(1, 1, 1, 1))
 {
     rectangle2 Result = InvertedInfinityRectangle2();
     if(DebugState && DebugState->DebugFont)
@@ -109,7 +109,6 @@ DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
 
         u32 PrevCodepoint = 0;
         r32 CharScale = DebugState->FontScale;
-        v4 Color = V4(1, 1, 1, 1);
         r32 AtY = P.y;
         r32 AtX = P.x;
         for(char *At = String; *At;)
@@ -173,7 +172,7 @@ DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
                         if(Bitmap)
                         {
                             used_bitmap_dim Dim = GetBitmapDim(RenderGroup, Bitmap, BitmapScale, BitmapOffset);
-                            rectangle2 GlyphDim = RectMinDim(V2(Dim.P), Dim.Size);
+                            rectangle2 GlyphDim = RectMinDim(Dim.P.xy, Dim.Size);
                             Result = Union(Result, GlyphDim);
                         }
                     }
@@ -190,13 +189,13 @@ DEBUGTextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String)
 }
 
 internal void
-DEBUGTextOutAt(v2 P, char *String)
+DEBUGTextOutAt(v2 P, char *String, v4 Color = V4(1, 1, 1, 1))
 {
     debug_state *DebugState = DEBUGGetState();
     if(DebugState)
     {
         render_group *RenderGroup = DebugState->RenderGroup;
-        DEBUGTextOp(DebugState, DEBUGTextOp_DrawText, P, String);
+        DEBUGTextOp(DebugState, DEBUGTextOp_DrawText, P, String, Color);
     }
 }
 
@@ -277,17 +276,21 @@ EndDebugStatistic(debug_statistic *Stat)
 }
 
 internal void
-DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup)
+DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
     // SHOWCASE: How to initialise an array of strings.
     char *MenuItems[] =
     {
         "Toggle Profile Graph",
+        "Toggle Debug Collation",
         "Toggle Framerate Counter",
         "Mark Loop Point",
         "Toggle Entity Bounds",
         "Toggle World Chunk Bounds",
     };
+
+    u32 NewHotMenuIndex = ArrayCount(MenuItems);
+    r32 BestDistanceSq = Real32Maximum;
 
     r32 MenuRadius = 200.0f;
     r32 AngleStep = Tau32 / (r32)ArrayCount(MenuItems);
@@ -295,16 +298,27 @@ DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup)
     {
         char *Text = MenuItems[MenuItemIndex];
 
+        v4 ItemColor = V4(1, 1, 1, 1);
+        if(MenuItemIndex == DebugState->HotMenuIndex)
+        {
+            ItemColor = V4(1, 1, 0, 1);
+        }
+
         r32 Angle = (r32)MenuItemIndex*AngleStep;
-        v2 TextP = MenuRadius*Arm2(Angle);
+        v2 TextP = DebugState->MenuP + MenuRadius*Arm2(Angle);
+
+        r32 ThisDistanceSq = LengthSq(TextP - MouseP);
+        if(BestDistanceSq > ThisDistanceSq)
+        {
+            NewHotMenuIndex = MenuItemIndex;
+            BestDistanceSq = ThisDistanceSq;
+        }
 
         rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
-        PushRect(RenderGroup, Offset(TextBounds, TextP), 0.0f, V4(0, 0, 0.5f, 1));
-
-        PushRect(RenderGroup, RectCenterHalfDim(TextP, V2(1.5f, 1.5f)), 0.0f, V4(1, 1, 1, 1));
-
-        DEBUGTextOutAt(TextP, Text);
+        DEBUGTextOutAt(TextP - 0.5f*GetDim(TextBounds), Text, ItemColor);
     }
+
+    DebugState->HotMenuIndex = NewHotMenuIndex;
 }
 
 internal void
@@ -320,19 +334,36 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
         debug_record *HotRecord = 0;
 
         v2 MouseP = V2(Input->MouseX, Input->MouseY);
-        if(WasPressed(Input->MouseButtons[PlatformMouseButton_Right]))
+
+        if(Input->MouseButtons[PlatformMouseButton_Right].EndedDown)
         {
-            DebugState->Paused = !DebugState->Paused;
+            if(Input->MouseButtons[PlatformMouseButton_Right].HalfTransitionCount > 0)
+            {
+                DebugState->MenuP = MouseP;
+            }
+            DrawDebugMainMenu(DebugState, RenderGroup, MouseP);
+        }
+        else if(Input->MouseButtons[PlatformMouseButton_Right].HalfTransitionCount > 0)
+        {
+            DrawDebugMainMenu(DebugState, RenderGroup, MouseP);
+            switch(DebugState->HotMenuIndex)
+            {
+                case 0:
+                {
+                    DebugState->ProfileOn = !DebugState->ProfileOn;
+                } break;
+
+                case 1:
+                {
+                    DebugState->Paused = !DebugState->Paused;
+                } break;
+            }
         }
 
-        DrawDebugMainMenu(DebugState, RenderGroup);
-
-        // TODO: Layout / cached font info / etc. for real debug display
-        loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
+        loaded_font *Font = DebugState->DebugFont;
+        ga_font *Info = DebugState->DebugFontInfo;
         if(Font)
         {
-            ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
-
 #if 0
             for(u32 CounterIndex = 0; CounterIndex < DebugState->CounterCount; ++CounterIndex)
             {
