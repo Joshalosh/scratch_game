@@ -1,5 +1,17 @@
 #if !defined(GAME_PLATFORM_H)
 
+#include "game_config.h"
+
+/*
+  GAME_INTERNAL:
+    0 - Build for public release.
+    1 - Build for developer only.
+
+  GAME_SLOW:
+    0 - Slow code not allowed.
+    1 - Slow code welcome.
+*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -218,7 +230,6 @@ typedef struct game_input
     game_button_state MouseButtons[PlatformMouseButton_Count];
     r32 MouseX, MouseY, MouseZ;
 
-    b32 ExecutableReloaded;
     r32 dtForFrame;
 
     game_controller_input Controllers[5];
@@ -315,6 +326,7 @@ typedef struct game_memory
     platform_work_queue *HighPriorityQueue;
     platform_work_queue *LowPriorityQueue;
 
+    b32 ExecutableReloaded;
     platform_api PlatformAPI;
 } game_memory;
 

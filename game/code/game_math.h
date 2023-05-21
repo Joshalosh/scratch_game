@@ -237,7 +237,7 @@ Clamp01MapToRange(real32 Min, real32 t, real32 Max)
     real32 Result = 0.0f;
 
     real32 Range = Max - Min;
-    if(Range != 0)
+    if(Range != 0.0f)
     {
         Result = Clamp01((t - Min) / Range);
     }
@@ -396,7 +396,7 @@ Clamp01(v2 Value)
     return(Result);
 }
 
-inline v2 
+inline v2
 Arm2(r32 Angle)
 {
     v2 Result = {Cos(Angle), Sin(Angle)};
@@ -694,8 +694,8 @@ Union(rectangle2 A, rectangle2 B)
 
     Result.Min.x = (A.Min.x < B.Min.x) ? A.Min.x : B.Min.x;
     Result.Min.y = (A.Min.y < B.Min.y) ? A.Min.y : B.Min.y;
-    Result.Max.x = (A.Max.x < B.Max.x) ? A.Max.x : B.Max.x;
-    Result.Max.y = (A.Max.y < B.Max.y) ? A.Max.y : B.Max.y;
+    Result.Max.x = (A.Max.x > B.Max.x) ? A.Max.x : B.Max.x;
+    Result.Max.y = (A.Max.y > B.Max.y) ? A.Max.y : B.Max.y;
 
     return(Result);
 }
@@ -892,7 +892,7 @@ inline rectangle3
 Offset(rectangle3 A, v3 Offset)
 {
     rectangle3 Result;
-    
+
     Result.Min = A.Min + Offset;
     Result.Max = A.Max + Offset;
 
@@ -945,7 +945,7 @@ GetBarycentric(rectangle3 A, v3 P)
 }
 
 inline rectangle2
-ToRectangle2(rectangle3 A)
+ToRectangleXY(rectangle3 A)
 {
     rectangle2 Result;
 

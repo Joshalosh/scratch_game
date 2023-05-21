@@ -779,6 +779,11 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
     debug_state *DebugState = DEBUGGetState(Memory);
     if(DebugState)
     {
+        if(Memory->ExecutableReloaded)
+        {
+            RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
+        }
+
         if(!DebugState->Paused)
         {
             if(DebugState->FrameCount >= MAX_DEBUG_EVENT_ARRAY_COUNT*4)

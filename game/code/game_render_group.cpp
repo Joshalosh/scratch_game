@@ -68,7 +68,6 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i Cli
 
         Row += 2*Buffer->Pitch;
     }
-
 }
 
 struct bilinear_sample
@@ -135,7 +134,6 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
     // scaling factor for meters-to-UVs.
     real32 UVsPerMetre = 0.1f;
     real32 C = (UVsPerMetre*DistanceFromMapInZ) / SampleDirection.y;
-    // Make sure to know what direction Z should go in Y.
     v2 Offset = C * V2(SampleDirection.x, SampleDirection.z);
 
     // Find the intersection point.
@@ -898,7 +896,7 @@ Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
 
 inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, v3 OriginalP)
 {
-    TIMED_FUNCTION();
+    IGNORED_TIMED_FUNCTION();
 
     entity_basis_p_result Result = {};
 
@@ -915,7 +913,7 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
         real32 OffsetZ = 0.0f;
 
         real32 DistanceAboveTarget = Transform->DistanceAboveTarget;
-#if 0
+#if DEBUGUI_UseDebugCamera
         // TODO: Figure out how I want to control the debug camera.
         if(1)
         {

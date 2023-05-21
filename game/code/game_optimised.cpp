@@ -125,7 +125,9 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         __m128 WidthM2 = _mm_set1_ps((real32)(Texture->Width - 2));
         __m128 HeightM2 = _mm_set1_ps((real32)(Texture->Height - 2));
 
-        uint8_t *Row = ((uint8_t *)Buffer->Memory + FillRect.MinX*BITMAP_BYTES_PER_PIXEL + FillRect.MinY*Buffer->Pitch);
+        uint8_t *Row = ((uint8_t *)Buffer->Memory + 
+                        FillRect.MinX*BITMAP_BYTES_PER_PIXEL + 
+                        FillRect.MinY*Buffer->Pitch);
         int32_t RowAdvance = 2*Buffer->Pitch;
 
         void *TextureMemory = Texture->Memory;

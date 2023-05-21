@@ -1562,7 +1562,7 @@ WinMain(HINSTANCE Instance,
                     BEGIN_BLOCK(ExecutableRefresh);
                     NewInput->dtForFrame = TargetSecondsPerFrame;
 
-                    NewInput->ExecutableReloaded = false;
+                    GameMemory.ExecutableReloaded = false;
                     FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);
                     if(CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime) != 0)
                     {
@@ -1574,7 +1574,7 @@ WinMain(HINSTANCE Instance,
                         Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                  TempGameCodeDLLFullPath,
                                                  GameCodeLockFullPath);
-                        NewInput->ExecutableReloaded = true;
+                        GameMemory.ExecutableReloaded = true;
                     }
                     END_BLOCK(ExecutableRefresh);
                     
