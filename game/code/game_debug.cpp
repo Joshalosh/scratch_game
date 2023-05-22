@@ -282,6 +282,12 @@ WriteGameConfig(debug_state *DebugState, b32 UseDebugCamera)
     int TempSize = _snprintf_s(Temp, sizeof(Temp), "#define DEBUGUI_UseDebugCamera %d // b32\n", 
                                UseDebugCamera);
     Platform.DEBUGWriteEntireFile("../code/game_config.h", TempSize, Temp);
+    
+    if(!DebugState->Compiling)
+    {
+        DebugState->Compiling = true;
+        DebugState->Compiler = Platform.DEBUGExecuteSystemCommand("..\\code", "c:\\windows\\system32\\cmd.exe", "/C build.bat");
+    }
 }
 
 internal void
@@ -367,7 +373,7 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
                     DebugState->Paused = !DebugState->Paused;
                 } break;
             }
-            WriteGameConfig(DebugState, true);
+            WriteGameConfig(DebugState, !DEBUGUI_UseDebugCamera);
         }
 
         loaded_font *Font = DebugState->DebugFont;

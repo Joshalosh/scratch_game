@@ -76,6 +76,9 @@ struct debug_state
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
 
+    b32 Compiling;
+    debug_executing_process Compiler;
+
     v2 MenuP;
     b32 MenuActive;
     u32 HotMenuIndex;

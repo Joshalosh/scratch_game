@@ -195,6 +195,64 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
     return(Result);
 }
 
+DEBUG_PLATFORM_EXECUTE_SYSTEM_COMMAND(DEBUGExecuteSystemCommand)
+{
+    debug_executing_process Result = {};
+
+    STARTUPINFO StartupInfo = {};
+    StartupInfo.cb = sizeof(StartupInfo);
+    StartupInfo.dwFlags = STARTF_USESHOWWINDOW;
+    StartupInfo.wShowWindow = SW_HIDE;
+
+    PROCESS_INFORMATION ProcessInfo = {};
+    if(CreateProcess(Command,
+                     CommandLine,
+                     0,
+                     0,
+                     FALSE,
+                     0,
+                     0,
+                     Path,
+                     &StartupInfo,
+                     &ProcessInfo))
+    {
+        Assert(sizeof(Result.OSHandle) >= sizeof(ProcessInfo.hProcess));
+        *(HANDLE *)&Result.OSHandle = ProcessInfo.hProcess;
+    }
+    else 
+    {
+        DWORD ErrorCode = GetLastError();
+        *(HANDLE *)&Result.OSHandle = INVALID_HANDLE_VALUE;
+    }
+
+    return(Result);
+}
+
+DEBUG_PLATFORM_GET_PROCESS_STATE(DEBUGProcessState)
+{
+    debug_process_state Result = {};
+    
+    HANDLE hProcess = *(HANDLE *)&Process.OSHandle;
+    if(hProcess != INVALID_HANDLE_VALUE)
+    {
+        Result.StartedSuccessfully = true;
+
+        if(WaitForSingleObject(hProcess, 0) == WAIT_OBJECT_0)
+        {
+            DWORD ReturnCode = 0;
+            GetExitCodeProcess(hProcess, &ReturnCode);
+            Result.ReturnCode = ReturnCode;
+            CloseHandle(hProcess);
+        }
+        else 
+        {
+            Result.IsRunning = true;
+        }
+    }
+
+    return(Result);
+}
+
 inline FILETIME
 Win32GetLastWriteTime(char *Filename)
 {
@@ -1497,6 +1555,7 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.DEBUGFreeFileMemory = DEBUGPlatformFreeFileMemory;
             GameMemory.PlatformAPI.DEBUGReadEntireFile = DEBUGPlatformReadEntireFile;
             GameMemory.PlatformAPI.DEBUGWriteEntireFile = DEBUGPlatformWriteEntireFile;
+            GameMemory.PlatformAPI.DEBUGExecuteSystemCommand = DEBUGExecuteSystemCommand;
 
             Win32State.TotalSize = (GameMemory.PermanentStorageSize + 
                                     GameMemory.TransientStorageSize + 
