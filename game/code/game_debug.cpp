@@ -276,6 +276,15 @@ EndDebugStatistic(debug_statistic *Stat)
 }
 
 internal void
+WriteGameConfig(debug_state *DebugState, b32 UseDebugCamera)
+{
+    char Temp[4096];
+    int TempSize = _snprintf_s(Temp, sizeof(Temp), "#define DEBUGUI_UseDebugCamera %d // b32\n", 
+                               UseDebugCamera);
+    Platform.DEBUGWriteEntireFile("../code/game_config.h", TempSize, Temp);
+}
+
+internal void
 DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
     // SHOWCASE: How to initialise an array of strings.
@@ -358,6 +367,7 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
                     DebugState->Paused = !DebugState->Paused;
                 } break;
             }
+            WriteGameConfig(DebugState, true);
         }
 
         loaded_font *Font = DebugState->DebugFont;
