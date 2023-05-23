@@ -364,7 +364,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
             // Looks into wang hashing or some other spatial seed generation thing.
             random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
 
-#if 0
+#if DEBUGUI_GroundChunkCheckerboards
             v4 Color = V4(1, 0, 0, 1);
             if((ChunkX % 2) == (ChunkY % 2))
             {
@@ -888,9 +888,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     DEBUGStart(TranState->Assets, Buffer->Width, Buffer->Height);
 
-#if 0
+#if DEBUGUI_RecomputeGroundChunkOnEXEChange
     // TODO: Re-enable this but make sure I don't touch ones that are in flight.
-    if(Input->ExecutableReloaded)
+    if(Memory->ExecutableReloaded)
     {
         for(uint32_t GroundBufferIndex = 0;
             GroundBufferIndex < TranState->GroundBufferCount;
@@ -996,7 +996,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBuffer->Pitch = Buffer->Pitch;
     DrawBuffer->Memory = Buffer->Memory;
 
-#if 0
+#if DEBUGUI_TestWeirdDrawBufferSize
     // Enable this to test weird buffer sizes in the renderer.
     DrawBuffer->Width = 1279;
     DrawBuffer->Height = 719;
@@ -1219,7 +1219,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     sim_entity *ClosestHero = 0;
                     real32 ClosestHeroDSq = Square(10.0f);
 
-#if 0
+#if DEBUGUI_FamiliarFollowsHero
                     sim_entity *TestEntity = SimRegion->Entities;
                     for(uint32_t TestEntityIndex = 0;
                         TestEntityIndex < SimRegion->EntityCount;
@@ -1331,7 +1331,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Cel->VelocityTimesDensity += Density*Particle->dP;
                     }
 
-#if 1
+#if DEBUGUI_ParticleGrid
                     for(u32 Y = 0; Y < PARTICLE_CEL_DIM; ++Y)
                     {
                         for(u32 X = 0; X < PARTICLE_CEL_DIM; ++X)
@@ -1448,7 +1448,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
                 case EntityType_Space:
                 {
-#if 0
+#if DEBUGUI_UseSpaceOutlines
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
@@ -1484,6 +1484,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         bool32 RowCheckerOn = false;
         int32_t CheckerWidth = 16;
         int32_t CheckerHeight = 16;
+        rectangle2i ClipRect = {0, 0, LOD->Width, LOD->Height};
         for(int32_t Y = 0; Y < LOD->Height; Y += CheckerHeight)
         {
             bool32 CheckerOn = RowCheckerOn;
@@ -1492,7 +1493,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 v4 Color = CheckerOn ? V4(MapColor[MapIndex], 1.0f) : V4(0, 0, 0, 1);
                 v2 MinP = V2i(X, Y);
                 v2 MaxP = MinP + V2i(CheckerWidth, CheckerHeight);
-                DrawRectangle(LOD, MinP, MaxP, Color);
+                DrawRectangle(LOD, MinP, MaxP, Color, ClipRect, true);
+                DrawRectangle(LOD, MinP, MaxP, Color, ClipRect, false);
                 CheckerOn = !CheckerOn;
             }
             RowCheckerOn = !RowCheckerOn;

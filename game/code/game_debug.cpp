@@ -281,7 +281,7 @@ WriteGameConfig(debug_state *DebugState, b32 UseDebugCamera)
     char Temp[4096];
     int TempSize = _snprintf_s(Temp, sizeof(Temp), "#define DEBUGUI_UseDebugCamera %d // b32\n",
                                UseDebugCamera);
-    Platform.DEBUGWriteEntireFile("../code/game_config.h", TempSize, Temp);
+//    Platform.DEBUGWriteEntireFile("../code/game_config.h", TempSize, Temp);
 
     if(!DebugState->Compiling)
     {

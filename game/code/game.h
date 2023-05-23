@@ -17,6 +17,7 @@
    - Fix the clicking bug at the end of samples.
 
  - Rendering
+   - Get rid of "even" scan line notion.
    - Straighten out all of the coordinate systems.
      - Screen
      - World
