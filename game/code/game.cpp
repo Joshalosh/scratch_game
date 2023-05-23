@@ -9,7 +9,7 @@
 struct add_low_entity_result
 {
     low_entity *Low;
-    uint32_t LowIndex;
+    u32 LowIndex;
 };
 internal add_low_entity_result
 AddLowEntity(game_state *GameState, entity_type Type, world_position P)
@@ -33,7 +33,8 @@ AddLowEntity(game_state *GameState, entity_type Type, world_position P)
 }
 
 internal add_low_entity_result
-AddGroundedEntity(game_state *GameState, entity_type Type, world_position P, sim_entity_collision_volume_group *Collision)
+AddGroundedEntity(game_state *GameState, entity_type Type, world_position P,
+                  sim_entity_collision_volume_group *Collision)
 {
     add_low_entity_result Entity = AddLowEntity(GameState, Type, P);
     Entity.Low->Sim.Collision = Collision;
@@ -62,7 +63,8 @@ internal add_low_entity_result
 AddStandardRoom(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Space, P, GameState->StandardRoomCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Space, P,
+                                                     GameState->StandardRoomCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Traversable);
 
     return(Entity);
@@ -72,7 +74,8 @@ internal add_low_entity_result
 AddWall(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Wall, P, GameState->WallCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Wall, P,
+                                                     GameState->WallCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides);
 
     return(Entity);
@@ -82,7 +85,8 @@ internal add_low_entity_result
 AddStair(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Stairwell, P, GameState->StairCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Stairwell, P,
+                                                     GameState->StairCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides);
     Entity.Low->Sim.WalkableDim = Entity.Low->Sim.Collision->TotalVolume.Dim.xy;
     Entity.Low->Sim.WalkableHeight = GameState->TypicalFloorHeight;
@@ -118,7 +122,8 @@ internal add_low_entity_result
 AddPlayer(game_state *GameState)
 {
     world_position P = GameState->CameraP;
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Hero, P, GameState->PlayerCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Hero, P,
+                                                     GameState->PlayerCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
     InitHitPoints(Entity.Low, 3);
@@ -138,7 +143,8 @@ internal add_low_entity_result
 AddMonster(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Monster, P, GameState->MonsterCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Monster, P,
+                                                     GameState->MonsterCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
     InitHitPoints(Entity.Low, 3);
@@ -150,7 +156,8 @@ internal add_low_entity_result
 AddFamiliar(game_state *GameState, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(GameState->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Familiar, P, GameState->FamiliarCollision);
+    add_low_entity_result Entity = AddGroundedEntity(GameState, EntityType_Familiar, P,
+                                                     GameState->FamiliarCollision);
     AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
     return(Entity);
@@ -820,7 +827,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             if((FamiliarOffsetX != 0) ||
                (FamiliarOffsetY != 0))
             {
-                AddFamiliar(GameState, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY, CameraTileZ);
+                AddFamiliar(GameState, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY,
+                            CameraTileZ);
             }
         }
 

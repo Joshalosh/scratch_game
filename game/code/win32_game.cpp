@@ -1823,7 +1823,17 @@ WinMain(HINSTANCE Instance,
 
                         if(Win32State.InputPlayingIndex)
                         {
+                            game_input Temp = *NewInput;
                             Win32PlaybackInput(&Win32State, NewInput);
+                            for(u32 MouseButtonIndex = 0;
+                                MouseButtonIndex < PlatformMouseButton_Count;
+                                ++MouseButtonIndex)
+                            {
+                                NewInput->MouseButtons[MouseButtonIndex] = Temp.MouseButtons[MouseButtonIndex];
+                            }
+                            NewInput->MouseX = Temp.MouseX;
+                            NewInput->MouseY = Temp.MouseY;
+                            NewInput->MouseZ = Temp.MouseZ;
                         }
                         if(Game.UpdateAndRender)
                         {

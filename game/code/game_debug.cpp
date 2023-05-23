@@ -2,6 +2,8 @@
 // TODO: Stop using stdio
 #include <stdio.h>
 
+#include "game_debug_variables.h"
+
 internal void RestartCollation(debug_state *DebugState, u32 InvalidEventArrayIndex);
 
 inline debug_state *
@@ -276,12 +278,20 @@ EndDebugStatistic(debug_statistic *Stat)
 }
 
 internal void
-WriteGameConfig(debug_state *DebugState, b32 UseDebugCamera)
+WriteGameConfig(debug_state *DebugState)
 {
     char Temp[4096];
-    int TempSize = _snprintf_s(Temp, sizeof(Temp), "#define DEBUGUI_UseDebugCamera %d // b32\n",
-                               UseDebugCamera);
-//    Platform.DEBUGWriteEntireFile("../code/game_config.h", TempSize, Temp);
+    char *At = Temp;
+    char *End = Temp + sizeof(Temp);
+    for(u32 DebugVariableIndex = 0;
+        DebugVariableIndex < ArrayCount(DebugVariableList);
+        ++DebugVariableIndex)
+    {
+        debug_variable *Var = DebugVariableList + DebugVariableIndex;
+        At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                          "#define %s %d\n", Var->Name, Var->Value);
+    }
+    Platform.DEBUGWriteEntireFile("../code/game_config.h", (u32)(At - Temp), Temp);
 
     if(!DebugState->Compiling)
     {
@@ -293,27 +303,17 @@ WriteGameConfig(debug_state *DebugState, b32 UseDebugCamera)
 internal void
 DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
-    // SHOWCASE: How to initialise an array of strings.
-    char *MenuItems[] =
-    {
-        "Toggle Profile Graph",
-        "Toggle Debug Collation",
-        "Toggle Framerate Counter",
-        "Mark Loop Point",
-        "Toggle Entity Bounds",
-        "Toggle World Chunk Bounds",
-    };
-
-    u32 NewHotMenuIndex = ArrayCount(MenuItems);
+    u32 NewHotMenuIndex = ArrayCount(DebugVariableList);
     r32 BestDistanceSq = Real32Maximum;
 
-    r32 MenuRadius = 200.0f;
-    r32 AngleStep = Tau32 / (r32)ArrayCount(MenuItems);
-    for(u32 MenuItemIndex = 0; MenuItemIndex < ArrayCount(MenuItems); ++MenuItemIndex)
+    r32 MenuRadius = 400.0f;
+    r32 AngleStep = Tau32 / (r32)ArrayCount(DebugVariableList);
+    for(u32 MenuItemIndex = 0; MenuItemIndex < ArrayCount(DebugVariableList); ++MenuItemIndex)
     {
-        char *Text = MenuItems[MenuItemIndex];
+        debug_variable *Var = DebugVariableList + MenuItemIndex;
+        char *Text = Var->Name;
 
-        v4 ItemColor = V4(1, 1, 1, 1);
+        v4 ItemColor = Var->Value ? V4(1, 1, 1, 1) : V4(0.5f, 0.5f, 0.5f, 1);
         if(MenuItemIndex == DebugState->HotMenuIndex)
         {
             ItemColor = V4(1, 1, 0, 1);
@@ -333,7 +333,14 @@ DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         DEBUGTextOutAt(TextP - 0.5f*GetDim(TextBounds), Text, ItemColor);
     }
 
-    DebugState->HotMenuIndex = NewHotMenuIndex;
+    if(LengthSq(MouseP - DebugState->MenuP) > Square(MenuRadius))
+    {
+        DebugState->HotMenuIndex = NewHotMenuIndex;
+    }
+    else
+    {
+        DebugState->HotMenuIndex = ArrayCount(DebugVariableList);
+    }
 }
 
 internal void
@@ -361,20 +368,13 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
         else if(Input->MouseButtons[PlatformMouseButton_Right].HalfTransitionCount > 0)
         {
             DrawDebugMainMenu(DebugState, RenderGroup, MouseP);
-            switch(DebugState->HotMenuIndex)
+            if(DebugState->HotMenuIndex < ArrayCount(DebugVariableList))
             {
-                case 0:
-                {
-                    DebugState->ProfileOn = !DebugState->ProfileOn;
-                } break;
-
-                case 1:
-                {
-                    DebugState->Paused = !DebugState->Paused;
-                } break;
+                DebugVariableList[DebugState->HotMenuIndex].Value =
+                    !DebugVariableList[DebugState->HotMenuIndex].Value;
             }
 
-            WriteGameConfig(DebugState, !DEBUGUI_UseDebugCamera);
+            WriteGameConfig(DebugState);
         }
 
         if(DebugState->Compiling)
