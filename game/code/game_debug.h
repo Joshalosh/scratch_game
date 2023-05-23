@@ -1,14 +1,32 @@
 #if !defined(GAME_DEBUG_H)
 
+struct debug_variable;
+
 enum debug_variable_type
 {
     DebugVariableType_Boolean,
+
+    DebugVariableType_Group,
 };
-struct debug_variable 
+
+struct debug_group 
+{
+    b32 Expanded;
+    debug_variable *FirstChild;
+    debug_variable *LastChild;
+};
+
+struct debug_variable
 {
     debug_variable_type Type;
     char *Name;
-    b32 Value;
+    debug_variable *Next;
+
+    union
+    {
+        b32 Value;
+        debug_group Group;
+    };
 };
 
 struct render_group;

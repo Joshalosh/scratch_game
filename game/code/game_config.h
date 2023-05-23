@@ -4,8 +4,8 @@
 #define DEBUGUI_ParticleGrid 0
 #define DEBUGUI_UseSpaceOutlines 0
 #define DEBUGUI_GroundChunkCheckerboards 0
-#define DEBUGUI_RecomputeGroundChunksOnEXEChange 0
+#define DEBUGUI_RecomputeGroundChunksOnEXEChange 1
 #define DEBUGUI_TestWeirdDrawBufferSize 0
-#define DEBUGUI_FamiliarFollowsHero 1
+#define DEBUGUI_FamiliarFollowsHero 0
 #define DEBUGUI_ShowLightingSamples 0
 #define DEBUGUI_UseRoomBasedCamera 0
