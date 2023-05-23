@@ -279,10 +279,10 @@ internal void
 WriteGameConfig(debug_state *DebugState, b32 UseDebugCamera)
 {
     char Temp[4096];
-    int TempSize = _snprintf_s(Temp, sizeof(Temp), "#define DEBUGUI_UseDebugCamera %d // b32\n", 
+    int TempSize = _snprintf_s(Temp, sizeof(Temp), "#define DEBUGUI_UseDebugCamera %d // b32\n",
                                UseDebugCamera);
     Platform.DEBUGWriteEntireFile("../code/game_config.h", TempSize, Temp);
-    
+
     if(!DebugState->Compiling)
     {
         DebugState->Compiling = true;
@@ -373,7 +373,21 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
                     DebugState->Paused = !DebugState->Paused;
                 } break;
             }
+
             WriteGameConfig(DebugState, !DEBUGUI_UseDebugCamera);
+        }
+
+        if(DebugState->Compiling)
+        {
+            debug_process_state State = Platform.DEBUGGetProcessState(DebugState->Compiler);
+            if(State.IsRunning)
+            {
+                DEBUGTextLine("COMPILING");
+            }
+            else
+            {
+                DebugState->Compiling = false;
+            }
         }
 
         loaded_font *Font = DebugState->DebugFont;
@@ -450,8 +464,8 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
             if(DebugState->ProfileOn)
             {
                 Orthographic(DebugState->RenderGroup,
-                             (s32)DebugState->GlobalWidth, 
-                             (s32)DebugState->GlobalHeight, 1.0f);
+                             (s32)(DebugState->GlobalWidth),
+                             (s32)(DebugState->GlobalHeight), 1.0f);
 
                 DebugState->ProfileRect = RectMinMax(V2(50.0f, 50.0f), V2(200.0f, 200.0f));
                 PushRect(DebugState->RenderGroup, DebugState->ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));

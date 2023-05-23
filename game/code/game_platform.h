@@ -89,7 +89,8 @@ typedef real64 r64;
 #define Tau32 6.28318530717958647692f
 
 #if GAME_SLOW
-#define Assert(Expression) if(!(Expression)) {*(int *) 0 = 0;}
+// TODO: Need to complete the assertion macro.
+#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
 #else
 #define Assert(Expression)
 #endif
@@ -330,6 +331,7 @@ typedef struct platform_api
     debug_platform_read_entire_file *DEBUGReadEntireFile;
     debug_platform_write_entire_file *DEBUGWriteEntireFile;
     debug_platform_execute_system_command *DEBUGExecuteSystemCommand;
+    debug_platform_get_process_state *DEBUGGetProcessState;
 } platform_api;
 
 typedef struct game_memory

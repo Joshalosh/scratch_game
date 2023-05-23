@@ -219,7 +219,7 @@ DEBUG_PLATFORM_EXECUTE_SYSTEM_COMMAND(DEBUGExecuteSystemCommand)
         Assert(sizeof(Result.OSHandle) >= sizeof(ProcessInfo.hProcess));
         *(HANDLE *)&Result.OSHandle = ProcessInfo.hProcess;
     }
-    else 
+    else
     {
         DWORD ErrorCode = GetLastError();
         *(HANDLE *)&Result.OSHandle = INVALID_HANDLE_VALUE;
@@ -228,10 +228,10 @@ DEBUG_PLATFORM_EXECUTE_SYSTEM_COMMAND(DEBUGExecuteSystemCommand)
     return(Result);
 }
 
-DEBUG_PLATFORM_GET_PROCESS_STATE(DEBUGProcessState)
+DEBUG_PLATFORM_GET_PROCESS_STATE(DEBUGGetProcessState)
 {
     debug_process_state Result = {};
-    
+
     HANDLE hProcess = *(HANDLE *)&Process.OSHandle;
     if(hProcess != INVALID_HANDLE_VALUE)
     {
@@ -244,7 +244,7 @@ DEBUG_PLATFORM_GET_PROCESS_STATE(DEBUGProcessState)
             Result.ReturnCode = ReturnCode;
             CloseHandle(hProcess);
         }
-        else 
+        else
         {
             Result.IsRunning = true;
         }
@@ -1556,6 +1556,7 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.DEBUGReadEntireFile = DEBUGPlatformReadEntireFile;
             GameMemory.PlatformAPI.DEBUGWriteEntireFile = DEBUGPlatformWriteEntireFile;
             GameMemory.PlatformAPI.DEBUGExecuteSystemCommand = DEBUGExecuteSystemCommand;
+            GameMemory.PlatformAPI.DEBUGGetProcessState = DEBUGGetProcessState;
 
             Win32State.TotalSize = (GameMemory.PermanentStorageSize + 
                                     GameMemory.TransientStorageSize + 

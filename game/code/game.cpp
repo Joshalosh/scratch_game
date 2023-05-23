@@ -1035,7 +1035,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 real32 GroundSideInMetres = World->ChunkDimInMeters.x;
                 PushBitmap(RenderGroup, Bitmap, 1.0f*GroundSideInMetres, Delta);
-#if 0
+#if DEBUGUI_GroundChunkOutlines
                 PushRectOutline(RenderGroup, Delta, V2(GroundSideInMetres, GroundSideInMetres),
                                 V4(1.0f, 1.0f, 0.0f, 1.0f));
 #endif
@@ -1273,7 +1273,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     PushBitmap(RenderGroup, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
                     DrawHitPoints(Entity, RenderGroup);
 
-#if 0
+#if DEBUGUI_ParticleTest
                     for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 3; ++ParticleSpawnIndex)
                     {
                         particle *Particle = GameState->Particles + GameState->NextParticle++;
@@ -1299,8 +1299,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         MatchVector.E[Tag_UnicodeCodepoint] = (r32)Nothings[RandomChoice(&GameState->EffectsEntropy, ArrayCount(Nothings) - 1)];
                         WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
 
-                        Particle->BitmapID = GetBestMatchBitmapFrom(TranState->Assets, Asset_Font,
-                                                                    &MatchVector, &WeightVector);
+                        Particle->BitmapID = HeroBitmaps.Head; //GetBestMatchBitmapFrom(TranState->Assets, Asset_Font,
+                                                               //     &MatchVector, &WeightVector);
 
 //                        Particle->BitmapID = GetRandomBitmapFrom(TranState->Assets, Asset_Font, &GameState->EffectsEntropy);
                     }
@@ -1331,7 +1331,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         Cel->VelocityTimesDensity += Density*Particle->dP;
                     }
 
-#if 0
+#if 1
                     for(u32 Y = 0; Y < PARTICLE_CEL_DIM; ++Y)
                     {
                         for(u32 X = 0; X < PARTICLE_CEL_DIM; ++X)
