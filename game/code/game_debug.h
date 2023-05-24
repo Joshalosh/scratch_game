@@ -9,7 +9,7 @@ enum debug_variable_type
     DebugVariableType_Group,
 };
 
-struct debug_group 
+struct debug_variable_group
 {
     b32 Expanded;
     debug_variable *FirstChild;
@@ -21,11 +21,12 @@ struct debug_variable
     debug_variable_type Type;
     char *Name;
     debug_variable *Next;
+    debug_variable *Parent;
 
     union
     {
-        b32 Value;
-        debug_group Group;
+        b32 Bool32;
+        debug_variable_group Group;
     };
 };
 
@@ -101,6 +102,9 @@ struct debug_state
     platform_work_queue *HighPriorityQueue;
 
     memory_arena DebugArena;
+
+    debug_variable *RootGroup;
+
     render_group *RenderGroup;
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
