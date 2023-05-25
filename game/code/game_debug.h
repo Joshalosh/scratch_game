@@ -4,7 +4,13 @@ struct debug_variable;
 
 enum debug_variable_type
 {
-    DebugVariableType_Boolean,
+    DebugVariableType_Bool32,
+    DebugVariableType_Int32,
+    DebugVariableType_UInt32,
+    DebugVariableType_Real32,
+    DebugVariableType_V2,
+    DebugVariableType_V3,
+    DebugVariableType_V4,
 
     DebugVariableType_Group,
 };
@@ -26,6 +32,9 @@ struct debug_variable
     union
     {
         b32 Bool32;
+        s32 Int32;
+        u32 UInt32;
+        r32 Real32;
         debug_variable_group Group;
     };
 };
@@ -114,7 +123,8 @@ struct debug_state
 
     v2 MenuP;
     b32 MenuActive;
-    u32 HotMenuIndex;
+
+    debug_variable *HotVariable;
 
     r32 LeftEdge;
     r32 AtY;

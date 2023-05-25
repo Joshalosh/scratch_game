@@ -92,17 +92,6 @@ Win32GetEXEFilename(win32_state *State)
     }
 }
 
-internal int
-StringLength(char *String)
-{
-    int Count = 0;
-    while(*String++)
-    {
-        ++Count;
-    }
-    return(Count);
-}
-
 internal void
 Win32BuildEXEPathFilename(win32_state *State, char *Filename,
                           int DestCount, char *Dest)
