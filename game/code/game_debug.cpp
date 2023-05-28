@@ -277,12 +277,14 @@ EndDebugStatistic(debug_statistic *Stat)
     }
 }
 
-internal int
+internal memory_index
 DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
 {
+    // This is a really good example of how to add flag parameters to a function.
+    // the corresponding enums are in game_debug.h.
     char *At = Buffer;
 
-    if(Flags & DEBBUGVarToText_AddDebugUI)
+    if(Flags & DEBUGVarToText_AddDebugUI)
     {
         At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At), 
                           "#define DEBUGUI_");
@@ -291,15 +293,23 @@ DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
     if(Flags & DEBUGVarToText_AddName)
     {
         At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At), 
-                          "%s ", Var->Name);
+                          "%s%s ", Var->Name, (Flags & DEBUGVarToText_Colon) ? ":" : "");
     }
 
     switch(Var->Type)
     {
         case DebugVariableType_Bool32:
         {
-            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%s", Var->Bool32 ? "true" : "false");
+            if(Flags & DEBUGVarToText_PrettyBools)
+            {
+                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                                  "%s", Var->Bool32 ? "true" : "false");
+            }
+            else 
+            {
+                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                                  "%d", Var->Bool32);
+            }
         } break;
 
         case DebugVariableType_Int32:
@@ -314,11 +324,29 @@ DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
                               "%u", Var->UInt32);
         } break;
 
+        case DebugVariableType_V2:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "V2(%f, %f)", Var->Vector2.x, Var->Vector2.y);
+        } break;
+
+        case DebugVariableType_V3:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "V3(%f, %f, %f)", Var->Vector3.x, Var->Vector3.y, Var->Vector3.z);
+        } break;
+
+        case DebugVariableType_V4:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "V4(%f, %f, %f, %f)", Var->Vector4.x, Var->Vector4.y, Var->Vector4.z, Var->Vector4.w);
+        } break;
+
         case DebugVariableType_Real32:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
                               "%f", Var->Real32);
-            if(Flags & DEBGUGVarToText_FloatSuffix)
+            if(Flags & DEBUGVarToText_FloatSuffix)
             {
                 *At++ = 'f';
             }
@@ -326,11 +354,19 @@ DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
 
         case DebugVariableType_Group:
         {
-            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%s");
         } break;
 
         InvalidDefaultCase;
+    }
+
+    if(Flags & DEBUGVarToText_LineFeedEnd)
+    {
+        *At++ = '\n';
+    }
+
+    if(Flags & DEBUGVarToText_NullTerminator)
+    {
+        *At++ = 0;
     }
 
     return(At - Buffer);
@@ -355,33 +391,17 @@ WriteGameConfig(debug_state *DebugState)
             *At++ = ' ';
             *At++ = ' ';
         }
-        switch(Var->Type)
+
+        if(Var->Type == DebugVariableType_Group)
         {
-            case DebugVariableType_Bool32:
-            case DebugVariableType_Int32:
-            {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "#define DEBUGUI_%s %d\n", Var->Name, Var->Bool32);
-            } break;
-
-            case DebugVariableType_UInt32:
-            {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "#define DEBUGUI_%s %u\n", Var->Name, Var->UInt32);
-            } break;
-
-            case DebugVariableType_Real32:
-            {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "#define DEBUGUI_%s %ff\n", Var->Name, Var->Real32);
-            } break;
-
-            case DebugVariableType_Group:
-            {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "// %s\n", Var->Name);
-            } break;
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "// ");
         }
+        At += DEBUGVariableToText(At, End, Var,
+                                  DEBUGVarToText_AddDebugUI|
+                                  DEBUGVarToText_AddName|
+                                  DEBUGVarToText_LineFeedEnd|
+                                  DEBUGVarToText_FloatSuffix);
 
         if(Var->Type == DebugVariableType_Group)
         {
@@ -429,40 +449,11 @@ DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
     {
         v4 ItemColor = {1, 1, 1, 1};
         char Text[256];
-        switch(Var->Type)
-        {
-            case DebugVariableType_Bool32:
-            {
-                _snprintf_s(Text, sizeof(Text), sizeof(Text),
-                            "%s: %s", Var->Name, Var->Bool32 ? "true" : "false");
-            } break;
-
-            case DebugVariableType_Int32:
-            {
-                _snprintf_s(Text, sizeof(Text), sizeof(Text),
-                            "%s: %d", Var->Name, Var->Int32);
-            } break;
-
-            case DebugVariableType_UInt32:
-            {
-                _snprintf_s(Text, sizeof(Text), sizeof(Text),
-                            "%s: %u", Var->Name, Var->UInt32);
-            } break;
-
-            case DebugVariableType_Real32:
-            {
-                _snprintf_s(Text, sizeof(Text), sizeof(Text),
-                            "%s: %ff", Var->Name, Var->Real32);
-            } break;
-
-            case DebugVariableType_Group:
-            {
-                _snprintf_s(Text, sizeof(Text), sizeof(Text),
-                            "%s %s", Var->Group.Expanded ? "-" : "+", Var->Name);
-            } break;
-
-            InvalidDefaultCase;
-        }
+        DEBUGVariableToText(Text, Text + sizeof(Text), Var,
+                            DEBUGVarToText_AddName|
+                            DEBUGVarToText_NullTerminator|
+                            DEBUGVarToText_Colon|
+                            DEBUGVarToText_PrettyBools);
 
         v2 TextP = {AtX + Depth*2.0f*LineAdvance, AtY};
 

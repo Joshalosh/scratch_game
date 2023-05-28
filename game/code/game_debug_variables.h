@@ -64,6 +64,15 @@ DEBUGAddVariable(debug_variable_definition_context *Context, char *Name, r32 Val
     return(Var);
 }
 
+internal debug_variable *
+DEBUGAddVariable(debug_variable_definition_context *Context, char *Name, v4 Value)
+{
+    debug_variable *Var = DEBUGAddVariable(Context, DebugVariableType_V4, Name);
+    Var->Vector4 = Value;
+
+    return(Var);
+}
+
 internal void
 DEBUGEndVariableGroup(debug_variable_definition_context *Context)
 {
@@ -114,6 +123,7 @@ DEBUGCreateVariables(debug_state *State)
 
     DEBUG_VARIABLE_LISTING(FamiliarFollowsHero);
     DEBUG_VARIABLE_LISTING(UseSpaceOutlines);
+    DEBUG_VARIABLE_LISTING(FauxV4);
 
 #undef DEBUG_VARIABLE_LISTING
 

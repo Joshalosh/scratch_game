@@ -2,6 +2,17 @@
 
 struct debug_variable;
 
+enum debug_variable_to_text_flag
+{
+    DEBUGVarToText_AddDebugUI = 0x1,
+    DEBUGVarToText_AddName = 0x2,
+    DEBUGVarToText_FloatSuffix = 0x4,
+    DEBUGVarToText_LineFeedEnd = 0x8,
+    DEBUGVarToText_NullTerminator = 0x10,
+    DEBUGVarToText_Colon = 0x20, 
+    DEBUGVarToText_PrettyBools = 0x40,
+};
+
 enum debug_variable_type
 {
     DebugVariableType_Bool32,
@@ -35,6 +46,9 @@ struct debug_variable
         s32 Int32;
         u32 UInt32;
         r32 Real32;
+        v2 Vector2;
+        v3 Vector3;
+        v4 Vector4;
         debug_variable_group Group;
     };
 };
