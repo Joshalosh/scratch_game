@@ -277,6 +277,65 @@ EndDebugStatistic(debug_statistic *Stat)
     }
 }
 
+internal int
+DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
+{
+    char *At = Buffer;
+
+    if(Flags & DEBBUGVarToText_AddDebugUI)
+    {
+        At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At), 
+                          "#define DEBUGUI_");
+    }
+
+    if(Flags & DEBUGVarToText_AddName)
+    {
+        At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At), 
+                          "%s ", Var->Name);
+    }
+
+    switch(Var->Type)
+    {
+        case DebugVariableType_Bool32:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "%s", Var->Bool32 ? "true" : "false");
+        } break;
+
+        case DebugVariableType_Int32:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "%d", Var->Int32);
+        } break;
+
+        case DebugVariableType_UInt32:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "%u", Var->UInt32);
+        } break;
+
+        case DebugVariableType_Real32:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "%f", Var->Real32);
+            if(Flags & DEBGUGVarToText_FloatSuffix)
+            {
+                *At++ = 'f';
+            }
+        } break;
+
+        case DebugVariableType_Group:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "%s");
+        } break;
+
+        InvalidDefaultCase;
+    }
+
+    return(At - Buffer);
+}
+
 internal void
 WriteGameConfig(debug_state *DebugState)
 {
