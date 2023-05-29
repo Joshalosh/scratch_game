@@ -138,7 +138,10 @@ struct debug_state
     v2 MenuP;
     b32 MenuActive;
 
-    debug_variable *HotVariable;
+    v2 LastMouseP;
+    debug_variable *Hot;
+    debug_variable *InteractingWith;
+    debug_variable *NextHot;
 
     r32 LeftEdge;
     r32 AtY;
