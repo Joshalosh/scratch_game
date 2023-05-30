@@ -70,6 +70,9 @@ DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
         DebugState->LeftEdge = -0.5f*Width;
 
         DebugState->AtY = 0.5f*Height - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo);
+
+        DebugState->Hierarchy.Group = DebugState->RootGroup;
+        DebugState->Hierarchy.UIP = V2(DebugState->LeftEdge, DebugState->AtY);
     }
 }
 
@@ -437,14 +440,14 @@ WriteGameConfig(debug_state *DebugState)
 internal void
 DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
-    r32 AtX = DebugState->LeftEdge;
-    r32 AtY = DebugState->AtY;
+    r32 AtX = DebugState->Hierarchy.UIP.x;
+    r32 AtY = DebugState->Hierarchy.UIP.y;
     r32 LineAdvance = GetLineAdvanceFor(DebugState->DebugFontInfo);
 
     DebugState->NextHot = 0;
 
     int Depth = 0;
-    debug_variable *Var = DebugState->RootGroup->Group.FirstChild;
+    debug_variable *Var = DebugState->Hierarchy.Group->Group.FirstChild;
     while(Var)
     {
         v4 ItemColor = {1, 1, 1, 1};
@@ -539,33 +542,71 @@ DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 internal void
 DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 {
-    DebugState->InteractingWith = DebugState->Hot;
+    if(DebugState->Hot)
+    {
+        switch(DebugState->Hot->Type)
+        {
+            case DebugVariableType_Bool32:
+            {
+                DebugState->Interaction = DebugInteraction_ToggleValue;
+            } break;
+
+            case DebugVariableType_Real32:
+            {
+                DebugState->Interaction = DebugInteraction_DragValue;
+            } break;
+
+            case DebugVariableType_Group:
+            {
+                DebugState->Interaction = DebugInteraction_ToggleValue;
+            } break;
+        }
+
+        if(DebugState->Interaction)
+        {
+            DebugState->InteractingWith = DebugState->Hot;
+        }
+    }
+    else 
+    {
+        DebugState->Interaction = DebugInteraction_NOP;
+    }
 }
 
 internal void
 DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 {
-    if(DebugState->InteractingWith)
+    if(DebugState->Interaction != DebugInteraction_NOP)
     {
         debug_variable *Var = DebugState->InteractingWith;
-        switch(Var->Type)
+        Assert(Var);
+        switch(DebugState->Interaction)
         {
-            case DebugVariableType_Bool32:
+            case DebugInteraction_ToggleValue:
             {
-                Var->Bool32 = !Var->Bool32;
+                switch(Var->Type)
+                {
+                    case DebugVariableType_Bool32:
+                    {
+                        Var->Bool32 = !Var->Bool32;
+                    } break;
+
+                    case DebugVariableType_Group:
+                    {
+                        Var->Group.Expanded = !Var->Group.Expanded;
+                    } break;
+                }
             } break;
 
-            case DebugVariableType_Group:
+            case DebugInteraction_TearValue:
             {
-                Var->Group.Expanded = !Var->Group.Expanded;
             } break;
-
-            InvalidDefaultCase;
         }
 
         WriteGameConfig(DebugState);
     }
 
+    DebugState->Interaction = DebugInteraction_None;
     DebugState->InteractingWith = 0;
 }
 
@@ -584,18 +625,25 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     }
     else if(Input->MouseButtons[PlatformMouseButton_Right].HalfTransitionCount > 0)
 */
-    if(DebugState->InteractingWith)
+    if(DebugState->Interaction)
     {
         debug_variable *Var = DebugState->InteractingWith;
         
         // Mouse move interaction.
-        switch(Var->Type)
+        switch(DebugState->Interaction)
         {
-            case DebugVariableType_Real32:
+            case DebugInteraction_DragValue:
             {
-                Var->Real32 += 0.1f*dMouseP.y;
+                switch(Var->Type)
+                {
+                    case DebugVariableType_Real32:
+                    {
+                        Var->Real32 += 0.1f*dMouseP.y;
+                    } break;
+                }
             } break;
         }
+
         for(u32 TransitionIndex = Input->MouseButtons[PlatformMouseButton_Left].HalfTransitionCount;
             TransitionIndex > 1;
             --TransitionIndex)
@@ -608,8 +656,6 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         {
             DEBUGEndInteract(DebugState, Input, MouseP);
         }
-
-        DEBUGTextLine("INTERACTING");
     }
     else 
     {
@@ -627,8 +673,6 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         {
             DEBUGBeginInteract(DebugState, Input, MouseP);
         }
-
-        DEBUGTextLine("Not");
     }
 
     DebugState->LastMouseP = MouseP;

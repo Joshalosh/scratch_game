@@ -49,35 +49,32 @@
    - What's the plan for robustness / shape definition?
    - Implement reprojection to handle interpenetration
    - Things pushing other things
+ - Animtaion
+   - Skeletal animation
+   - Particle systems
  - Implement multiple sim regions per fram
    - Per-entity clocking
    - Sim region merging? For multiple players?
    - Simple zoomed-out view for testing
-
- - Metagame / save game
-   - How do you enter a 'save slot'?
-   - Persistent unlocks/etc
-   - Do we allow saved games? Probably yes, just for 'pausing',
-   * Continuous save for crash recovery?
- - Rudimentary world gen (no quality, just 'what sorts of things' we do)
-   - Placement of background things
-   - Connectivity?
-   - Non-overlapping?
-   - Map display
-     - Magnets - how do they work?
  - AI
    - Rudimentary monster example
    * Pathfinding
    - AI 'storage'
 
- * Animtaion, should probably lead into rendering
-   - Skeletal animation
-   - Particle systems
-
  PRODUCTION
  -> GAME
    - Entity system
-   - World generation
+   - Rudimentary world gen (no quality, just 'what sorts of things' we do)
+     - Placement of background things
+     - Connectivity?
+     - Non-overlapping?
+     - Map display
+       - Magnets - how do they work?
+ - Metagame / save game
+   - How do you enter a 'save slot'?
+   - Persistent unlocks/etc
+   - Do we allow saved games? Probably yes, just for 'pausing',
+   * Continuous save for crash recovery?
 */
 
 #include "game_platform.h"
