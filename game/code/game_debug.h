@@ -149,6 +149,8 @@ enum debug_interaction
     DebugInteraction_ToggleValue,
     DebugInteraction_DragValue,
     DebugInteraction_TearValue,
+
+    DebugInteraction_ResizeProfile,
 };
 struct debug_state
 {
@@ -173,8 +175,10 @@ struct debug_state
 
     debug_interaction Interaction;
     v2 LastMouseP;
+    debug_interaction HotInteraction;
     debug_variable *Hot;
     debug_variable *InteractingWith;
+    debug_interaction NextHotInteraction;
     debug_variable *NextHot;
 
     r32 LeftEdge;
