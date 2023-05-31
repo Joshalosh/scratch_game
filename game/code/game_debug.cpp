@@ -37,7 +37,28 @@ DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
 
             InitialiseArena(&DebugState->DebugArena, DebugGlobalMemory->DebugStorageSize - sizeof(debug_state),
                             DebugState + 1);
-            DEBUGCreateVariables(DebugState);
+
+            debug_variable_definition_context Context = {};
+            Context.State = DebugState;
+            Context.Arena = &DebugState->DebugArena;
+            Context.Group = DEBUGBeginVariableGroup(&Context, "Root");
+
+            DEBUGCreateVariables(&Context);
+            DEBUGBeginVariableGroup(&Context, "Profile");
+            DEBUGBeginVariableGroup(&Context, "By Thread");
+            debug_variable *ThreadList = 
+                DEBUGAddVariable(&Context, DebugVariableType_CounterThreadList, "");
+            ThreadList->Profile.Dimension = V2(1024.0f, 100.0f);
+            DEBUGEndVariableGroup(&Context);
+            DEBUGBeginVariableGroup(&Context, "By Function");
+            debug_variable *FunctionList =
+                DEBUGAddVariable(&Context, DebugVariableType_CounterThreadList, "");
+            FunctionList->Profile.Dimension = V2(1024.0f, 200.0f);
+            DEBUGEndVariableGroup(&Context);
+            DEBUGEndVariableGroup(&Context);
+
+            DebugState->RootGroup = Context.Group;
+
             DebugState->RenderGroup = AllocateRenderGroup(Assets, &DebugState->DebugArena, 
                                                           Megabytes(16), false);
 
@@ -68,8 +89,9 @@ DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
         DebugState->FontScale = 1.0f;
         Orthographic(DebugState->RenderGroup, Width, Height, 1.0f);
         DebugState->LeftEdge = -0.5f*Width;
+        DebugState->RightEdge = 0.5f*Width; 
 
-        DebugState->AtY = 0.5f*Height - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo);
+        DebugState->AtY = 0.5f*Height;
 
         DebugState->Hierarchy.Group = DebugState->RootGroup;
         DebugState->Hierarchy.UIP = V2(DebugState->LeftEdge, DebugState->AtY);
@@ -225,7 +247,8 @@ DEBUGTextLine(char *String)
         {
             ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
 
-            DEBUGTextOutAt(V2(DebugState->LeftEdge, DebugState->AtY), String);
+            DEBUGTextOutAt(V2(DebugState->LeftEdge, 
+                              DebugState->AtY - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)), String);
 
             DebugState->AtY -= GetLineAdvanceFor(Info)*DebugState->FontScale;
         }
@@ -386,25 +409,28 @@ WriteGameConfig(debug_state *DebugState)
     debug_variable *Var = DebugState->RootGroup->Group.FirstChild;
     while(Var)
     {
-        // TODO: Other variable types.
-        for(int Indent = 0; Indent < Depth; ++Indent)
+        if(DEBUGShouldBeWritten(Var->Type))
         {
-            *At++ = ' ';
-            *At++ = ' ';
-            *At++ = ' ';
-            *At++ = ' ';
-        }
+            // TODO: Other variable types.
+            for(int Indent = 0; Indent < Depth; ++Indent)
+            {
+                *At++ = ' ';
+                *At++ = ' ';
+                *At++ = ' ';
+                *At++ = ' ';
+            }
 
-        if(Var->Type == DebugVariableType_Group)
-        {
-            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "// ");
+            if(Var->Type == DebugVariableType_Group)
+            {
+                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                                  "// ");
+            }
+            At += DEBUGVariableToText(At, End, Var,
+                                      DEBUGVarToText_AddDebugUI|
+                                      DEBUGVarToText_AddName|
+                                      DEBUGVarToText_LineFeedEnd|
+                                      DEBUGVarToText_FloatSuffix);
         }
-        At += DEBUGVariableToText(At, End, Var,
-                                  DEBUGVarToText_AddDebugUI|
-                                  DEBUGVarToText_AddName|
-                                  DEBUGVarToText_LineFeedEnd|
-                                  DEBUGVarToText_FloatSuffix);
 
         if(Var->Type == DebugVariableType_Group)
         {
@@ -438,6 +464,93 @@ WriteGameConfig(debug_state *DebugState)
 }
 
 internal void
+DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP)
+{
+    PushRect(DebugState->RenderGroup, ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
+
+    r32 BarSpacing = 4.0f;
+    r32 LaneHeight = 0.0f;
+    u32 LaneCount = DebugState->FrameBarLaneCount;
+
+    u32 MaxFrame = DebugState->FrameCount;
+    if(MaxFrame > 10)
+    {
+        MaxFrame = 10;
+    }
+
+    if((LaneCount > 0) && (MaxFrame > 0))
+    {
+        r32 PixelsPerFramePlusSpacing = GetDim(ProfileRect).y / (r32)MaxFrame;
+        r32 PixelsPerFrame = PixelsPerFramePlusSpacing - BarSpacing;
+        LaneHeight = PixelsPerFrame / (r32)LaneCount;
+    }
+
+    r32 BarHeight = LaneHeight*LaneCount;
+    r32 BarsPlusSpacing = BarHeight + BarSpacing;
+    r32 ChartLeft = ProfileRect.Min.x;
+    r32 ChartHeight = BarsPlusSpacing*(r32)MaxFrame;
+    r32 ChartWidth = GetDim(ProfileRect).x;
+    r32 ChartTop = ProfileRect.Max.y;
+    r32 Scale = ChartWidth*DebugState->FrameBarScale;
+
+    v3 Colors[] =
+    {
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1},
+        {1, 1, 0},
+        {0, 1, 1},
+        {1, 0, 1},
+        {1, 0.5f, 0},
+        {1, 0, 0.5f},
+        {0.5f, 1, 0},
+        {0, 1, 0.5f},
+        {0.5f, 0, 1},
+        {0, 0.5f, 1},
+    };
+
+    for(u32 FrameIndex = 0; FrameIndex < MaxFrame; ++FrameIndex)
+    {
+        debug_frame *Frame = DebugState->Frames + DebugState->FrameCount - (FrameIndex + 1);
+        r32 StackX = ChartLeft;
+        r32 StackY = ChartTop - BarsPlusSpacing*(r32)FrameIndex;
+        for(u32 RegionIndex = 0; RegionIndex < Frame->RegionCount; ++RegionIndex)
+        {
+            debug_frame_region *Region = Frame->Regions + RegionIndex;
+
+//                    v3 Color = Colors[RegionIndex%ArrayCount(Colors)];
+            v3 Color = Colors[Region->ColorIndex%ArrayCount(Colors)];
+            r32 ThisMinX = StackX + Scale*Region->MinT;
+            r32 ThisMaxX = StackX + Scale*Region->MaxT;
+
+            rectangle2 RegionRect = RectMinMax(V2(ThisMinX, StackY - LaneHeight*(Region->LaneIndex + 1)),
+                                               V2(ThisMaxX, StackY - LaneHeight*Region->LaneIndex));
+
+            PushRect(DebugState->RenderGroup, RegionRect, 0.0f, V4(Color, 1));
+
+            if(IsInRectangle(RegionRect, MouseP))
+            {
+                debug_record *Record = Region->Record;
+                char TextBuffer[256];
+                _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                            "%s: %10ucy [%s(%d)]",
+                            Record->BlockName,
+                            (u32)Region->CycleCount,
+                            Record->Filename,
+                            Record->LineNumber);
+                DEBUGTextOutAt(MouseP + V2(0.0f, 10.0f), TextBuffer);
+
+//                HotRecord = Record;
+            }
+        }
+    }
+#if 0
+    PushRect(RenderGroup, V3(ChartLeft + 0.5f*ChartWidth, ChartMinY + ChartHeight, 0.0f),
+             V2(ChartWidth, 1.0f), V4(1, 1, 1, 1));
+#endif
+}
+
+internal void
 DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
     r32 AtX = DebugState->Hierarchy.UIP.x;
@@ -446,33 +559,52 @@ DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 
     DebugState->NextHot = 0;
 
+    r32 SpacingY = 4.0f;
     int Depth = 0;
     debug_variable *Var = DebugState->Hierarchy.Group->Group.FirstChild;
     while(Var)
     {
         v4 ItemColor = {1, 1, 1, 1};
-        char Text[256];
-        DEBUGVariableToText(Text, Text + sizeof(Text), Var,
-                            DEBUGVarToText_AddName|
-                            DEBUGVarToText_NullTerminator|
-                            DEBUGVarToText_Colon|
-                            DEBUGVarToText_PrettyBools);
-
-        v2 TextP = {AtX + Depth*2.0f*LineAdvance, AtY};
-
-        rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
-        if(IsInRectangle(Offset(TextBounds, TextP), MouseP))
-        {
-            DebugState->NextHot = Var;
-        }
-
         if(DebugState->Hot == Var)
         {
             ItemColor = V4(1, 1, 0, 1);
         }
 
-        DEBUGTextOutAt(TextP, Text, ItemColor);
-        AtY -= LineAdvance*DebugState->FontScale;
+        rectangle2 Bounds = {};
+        switch(Var->Type)
+        {
+            case DebugVariableType_CounterThreadList:
+            {
+                v2 MinCorner = V2(AtX + Depth*2.0f*LineAdvance, AtY - Var->Profile.Dimension.y);
+                v2 MaxCorner = V2(MinCorner.x + Var->Profile.Dimension.x, AtY);
+                Bounds = RectMinMax(MinCorner, MaxCorner);
+                DrawProfileIn(DebugState, Bounds, MouseP);
+            } break;
+
+            default:
+            {
+                char Text[256];
+                DEBUGVariableToText(Text, Text + sizeof(Text), Var,
+                                    DEBUGVarToText_AddName|
+                                    DEBUGVarToText_NullTerminator|
+                                    DEBUGVarToText_Colon|
+                                    DEBUGVarToText_PrettyBools);
+
+                r32 LeftPx = AtX + Depth*2.0f*LineAdvance;
+                r32 TopPy = AtY;
+                Bounds = DEBUGGetTextSize(DebugState, Text);
+                Bounds = Offset(Bounds, V2(LeftPx, TopPy - GetDim(Bounds).y));
+                DEBUGTextOutAt(V2(LeftPx, TopPy - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)), 
+                               Text, ItemColor);
+            } break;
+        }
+
+        if(IsInRectangle(Bounds, MouseP))
+        {
+            DebugState->NextHot = Var;
+        }
+
+        AtY = GetMinCorner(Bounds).y - SpacingY;
 
         if((Var->Type == DebugVariableType_Group) && Var->Group.Expanded)
         {
@@ -780,113 +912,23 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
                 DEBUGTextLine(TextBuffer);
             }
 
-            if(DebugState->ProfileOn)
+
+            if(WasPressed(Input->MouseButtons[PlatformMouseButton_Left]))
             {
-                Orthographic(DebugState->RenderGroup,
-                             (s32)(DebugState->GlobalWidth),
-                             (s32)(DebugState->GlobalHeight), 1.0f);
-
-                DebugState->ProfileRect = RectMinMax(V2(50.0f, 50.0f), V2(200.0f, 200.0f));
-                PushRect(DebugState->RenderGroup, DebugState->ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
-
-                r32 BarSpacing = 4.0f;
-                r32 LaneHeight = 0.0f;
-                u32 LaneCount = DebugState->FrameBarLaneCount;
-
-                u32 MaxFrame = DebugState->FrameCount;
-                if(MaxFrame > 10)
+                if(HotRecord)
                 {
-                    MaxFrame = 10;
+                    DebugState->ScopeToRecord = HotRecord;
                 }
-
-                if((LaneCount > 0) && (MaxFrame > 0))
+                else
                 {
-                    r32 PixelsPerFramePlusSpacing = GetDim(DebugState->ProfileRect).y / (r32)MaxFrame;
-                    r32 PixelsPerFrame = PixelsPerFramePlusSpacing - BarSpacing;
-                    LaneHeight = PixelsPerFrame / (r32)LaneCount;
+                    DebugState->ScopeToRecord = 0;
                 }
-
-                r32 BarHeight = LaneHeight*LaneCount;
-                r32 BarsPlusSpacing = BarHeight + BarSpacing;
-                r32 ChartLeft = DebugState->ProfileRect.Min.x;
-                r32 ChartHeight = BarsPlusSpacing*(r32)MaxFrame;
-                r32 ChartWidth = GetDim(DebugState->ProfileRect).x;
-                r32 ChartTop = DebugState->ProfileRect.Max.y;
-                r32 Scale = ChartWidth*DebugState->FrameBarScale;
-
-                v3 Colors[] =
-                {
-                    {1, 0, 0},
-                    {0, 1, 0},
-                    {0, 0, 1},
-                    {1, 1, 0},
-                    {0, 1, 1},
-                    {1, 0, 1},
-                    {1, 0.5f, 0},
-                    {1, 0, 0.5f},
-                    {0.5f, 1, 0},
-                    {0, 1, 0.5f},
-                    {0.5f, 0, 1},
-                    {0, 0.5f, 1},
-                };
-
-                for(u32 FrameIndex = 0; FrameIndex < MaxFrame; ++FrameIndex)
-                {
-                    debug_frame *Frame = DebugState->Frames + DebugState->FrameCount - (FrameIndex + 1);
-                    r32 StackX = ChartLeft;
-                    r32 StackY = ChartTop - BarsPlusSpacing*(r32)FrameIndex;
-                    for(u32 RegionIndex = 0; RegionIndex < Frame->RegionCount; ++RegionIndex)
-                    {
-                        debug_frame_region *Region = Frame->Regions + RegionIndex;
-
-    //                    v3 Color = Colors[RegionIndex%ArrayCount(Colors)];
-                        v3 Color = Colors[Region->ColorIndex%ArrayCount(Colors)];
-                        r32 ThisMinX = StackX + Scale*Region->MinT;
-                        r32 ThisMaxX = StackX + Scale*Region->MaxT;
-
-                        rectangle2 RegionRect = RectMinMax(V2(ThisMinX, StackY - LaneHeight*(Region->LaneIndex + 1)),
-                                                           V2(ThisMaxX, StackY - LaneHeight*Region->LaneIndex));
-
-                        PushRect(RenderGroup, RegionRect, 0.0f, V4(Color, 1));
-
-                        if(IsInRectangle(RegionRect, MouseP))
-                        {
-                            debug_record *Record = Region->Record;
-                            char TextBuffer[256];
-                            _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                                        "%s: %10ucy [%s(%d)]",
-                                        Record->BlockName,
-                                        (u32)Region->CycleCount,
-                                        Record->Filename,
-                                        Record->LineNumber);
-                            DEBUGTextOutAt(MouseP + V2(0.0f, 10.0f), TextBuffer);
-
-                            HotRecord = Record;
-                        }
-                    }
-                }
-#if 0
-                PushRect(RenderGroup, V3(ChartLeft + 0.5f*ChartWidth, ChartMinY + ChartHeight, 0.0f),
-                         V2(ChartWidth, 1.0f), V4(1, 1, 1, 1));
-#endif
+                RefreshCollation(DebugState);
             }
+
+            TiledRenderGroupToOutput(DebugState->HighPriorityQueue, DebugState->RenderGroup, DrawBuffer);
+            EndRender(DebugState->RenderGroup);
         }
-
-        if(WasPressed(Input->MouseButtons[PlatformMouseButton_Left]))
-        {
-            if(HotRecord)
-            {
-                DebugState->ScopeToRecord = HotRecord;
-            }
-            else
-            {
-                DebugState->ScopeToRecord = 0;
-            }
-            RefreshCollation(DebugState);
-        }
-
-        TiledRenderGroupToOutput(DebugState->HighPriorityQueue, DebugState->RenderGroup, DrawBuffer);
-        EndRender(DebugState->RenderGroup);
     }
 }
 

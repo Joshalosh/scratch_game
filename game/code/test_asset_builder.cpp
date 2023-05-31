@@ -821,7 +821,7 @@ WriteGA(game_assets *Assets, char *Filename)
 
             if(Source->Type == AssetType_Sound)
             {
-                loaded_sound WAV = LoadWAV(Source->Sound.Filename, 
+                loaded_sound WAV = LoadWAV(Source->Sound.Filename,
                                            Source->Sound.FirstSampleIndex,
                                            Dest->Sound.SampleCount);
 
