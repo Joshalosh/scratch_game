@@ -189,6 +189,8 @@ struct debug_state
     debug_interaction NextHotInteraction;
     debug_variable *NextHot;
 
+    debug_variable_hierarchy *DraggingHierarchy;
+
     r32 LeftEdge;
     r32 RightEdge;
     r32 AtY;

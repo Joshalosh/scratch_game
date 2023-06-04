@@ -23,6 +23,22 @@ DEBUGGetState(void)
     return(Result);
 }
 
+internal debug_variable_hierarchy *
+AddHierarchy(debug_state *DebugState, debug_variable_reference *Group, v2 AtP)
+{
+    debug_variable_hierarchy *Hierarchy = PushStruct(&DebugState->DebugArena, debug_variable_hierarchy);
+
+    Hierarchy->UIP = AtP;
+    Hierarchy->Group = Group;
+    Hierarchy->Next = DebugState->HierarchySentinel.Next;
+    Hierarchy->Prev = &DebugState->HierarchySentinel;
+
+    Hierarchy->Next->Prev = Hierarchy;
+    Hierarchy->Prev->Next = Hierarchy;
+
+    return(Hierarchy);
+}
+
 internal void
 DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
 {
@@ -34,6 +50,9 @@ DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
         if(!DebugState->Initialised)
         {
             DebugState->HighPriorityQueue = DebugGlobalMemory->HighPriorityQueue;
+            DebugState->HierarchySentinel.Next = &DebugState->HierarchySentinel;
+            DebugState->HierarchySentinel.Prev = &DebugState->HierarchySentinel;
+            DebugState->HierarchySentinel.Group = 0;
 
             InitialiseArena(&DebugState->DebugArena, DebugGlobalMemory->DebugStorageSize - sizeof(debug_state),
                             DebugState + 1);
@@ -75,6 +94,8 @@ DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
             DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);
 
             RestartCollation(DebugState, 0);
+
+            AddHierarchy(DebugState, DebugState->RootGroup, V2(-0.5*Width, 0.5f*Height));
         }
 
         BeginRender(DebugState->RenderGroup);
@@ -96,8 +117,6 @@ DEBUGStart(game_assets *Assets, u32 Width, u32 Height)
         DebugState->RightEdge = 0.5f*Width;
 
         DebugState->AtY = 0.5f*Height;
-
-        AddHierarchy(DebugState->RootGroup, V2(DebugState->LeftEdge, DebugState->AtY));
     }
 }
 
@@ -555,19 +574,19 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP)
 }
 
 internal void
-DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
+DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
-    for(debug_variable_hierarchy *Hierarchy = &DebugState->HierarchySentinel.Next;
+    for(debug_variable_hierarchy *Hierarchy = DebugState->HierarchySentinel.Next;
         Hierarchy != &DebugState->HierarchySentinel;
-        Hierarchy = Hierarchy.Next)
+        Hierarchy = Hierarchy->Next)
     {
-        r32 AtX = DebugState->Hierarchy.UIP.x;
-        r32 AtY = DebugState->Hierarchy.UIP.y;
+        r32 AtX = Hierarchy->UIP.x;
+        r32 AtY = Hierarchy->UIP.y;
         r32 LineAdvance = GetLineAdvanceFor(DebugState->DebugFontInfo);
 
         r32 SpacingY = 4.0f;
         int Depth = 0;
-        debug_variable_reference *Ref = DebugState->Hierarchy.Group->Var->Group.FirstChild;
+        debug_variable_reference *Ref = Hierarchy->Group->Var->Group.FirstChild;
         while(Ref)
         {
             debug_variable *Var = Ref->Var;
@@ -696,7 +715,7 @@ DrawDebugMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 }
 
 internal void
-DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
+DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 AltUI)
 {
     if(DebugState->Hot)
     {
@@ -706,22 +725,29 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         }
         else
         {
-            switch(DebugState->Hot->Type)
+            if(AltUI)
             {
-                case DebugVariableType_Bool32:
+                DebugState->Interaction = DebugInteraction_TearValue;
+            }
+            else 
+            {
+                switch(DebugState->Hot->Type)
                 {
-                    DebugState->Interaction = DebugInteraction_ToggleValue;
-                } break;
+                    case DebugVariableType_Bool32:
+                    {
+                        DebugState->Interaction = DebugInteraction_ToggleValue;
+                    } break;
 
-                case DebugVariableType_Real32:
-                {
-                    DebugState->Interaction = DebugInteraction_DragValue;
-                } break;
+                    case DebugVariableType_Real32:
+                    {
+                        DebugState->Interaction = DebugInteraction_DragValue;
+                    } break;
 
-                case DebugVariableType_Group:
-                {
-                    DebugState->Interaction = DebugInteraction_ToggleValue;
-                } break;
+                    case DebugVariableType_Group:
+                    {
+                        DebugState->Interaction = DebugInteraction_ToggleValue;
+                    } break;
+                }
             }
         }
 
@@ -771,6 +797,7 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 
     DebugState->Interaction = DebugInteraction_None;
     DebugState->InteractingWith = 0;
+    DebugState->DraggingHierarchy = 0;
 }
 
 internal void
@@ -813,7 +840,19 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
                 Var->Profile.Dimension.x = Maximum(Var->Profile.Dimension.x, 10.0f);
                 Var->Profile.Dimension.y = Maximum(Var->Profile.Dimension.y, 10.0f);
             } break;
+
+            case DebugInteraction_TearValue:
+            {
+                if(DebugState->DraggingHierarchy)
+                {
+                    DebugState->DraggingHierarchy = 
+                        AddHierarchy(DebugState, DebugState->InteractingWith, V2(0, 0));
+                }
+
+                DebugState->DraggingHierarchy->UIP = MouseP;
+            } break;
         }
+        b32 AltUI = Input->MouseButtons[PlatformMouseButton_Right].EndedDown;
 
         // Click interaction.
         for(u32 TransitionIndex = Input->MouseButtons[PlatformMouseButton_Left].HalfTransitionCount;
@@ -821,7 +860,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
             --TransitionIndex)
         {
             DEBUGEndInteract(DebugState, Input, MouseP);
-            DEBUGBeginInteract(DebugState, Input, MouseP);
+            DEBUGBeginInteract(DebugState, Input, MouseP, AltUI);
         }
 
         if(!Input->MouseButtons[PlatformMouseButton_Left].EndedDown)
@@ -834,17 +873,18 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         DebugState->Hot = DebugState->NextHot;
         DebugState->HotInteraction = DebugState->NextHotInteraction;
 
+        b32 AltUI = Input->MouseButtons[PlatformMouseButton_Right].EndedDown;
         for(u32 TransitionIndex = Input->MouseButtons[PlatformMouseButton_Left].HalfTransitionCount;
             TransitionIndex > 1;
             --TransitionIndex)
         {
-            DEBUGBeginInteract(DebugState, Input, MouseP);
+            DEBUGBeginInteract(DebugState, Input, MouseP, AltUI);
             DEBUGEndInteract(DebugState, Input, MouseP);
         }
 
         if(Input->MouseButtons[PlatformMouseButton_Left].EndedDown)
         {
-            DEBUGBeginInteract(DebugState, Input, MouseP);
+            DEBUGBeginInteract(DebugState, Input, MouseP, AltUI);
         }
     }
 
@@ -866,7 +906,7 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
         debug_record *HotRecord = 0;
 
         v2 MouseP = V2(Input->MouseX, Input->MouseY);
-        DrawDebugMainMenu(DebugState, RenderGroup, MouseP);
+        DEBUGDrawMainMenu(DebugState, RenderGroup, MouseP);
         DEBUGInteract(DebugState, Input, MouseP);
 
         if(DebugState->Compiling)
