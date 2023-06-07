@@ -9,7 +9,7 @@ enum debug_variable_to_text_flag
     DEBUGVarToText_FloatSuffix = 0x4,
     DEBUGVarToText_LineFeedEnd = 0x8,
     DEBUGVarToText_NullTerminator = 0x10,
-    DEBUGVarToText_Colon = 0x20, 
+    DEBUGVarToText_Colon = 0x20,
     DEBUGVarToText_PrettyBools = 0x40,
 };
 
@@ -159,6 +159,7 @@ enum debug_interaction
     DebugInteraction_TearValue,
 
     DebugInteraction_ResizeProfile,
+    DebugInteraction_MoveHierarchy,
 };
 struct debug_state
 {
@@ -188,6 +189,8 @@ struct debug_state
     debug_variable *InteractingWith;
     debug_interaction NextHotInteraction;
     debug_variable *NextHot;
+    // TODO: Hierarchies should be debug variables.
+    debug_variable_hierarchy *NextHotHierarchy;
 
     debug_variable_hierarchy *DraggingHierarchy;
 

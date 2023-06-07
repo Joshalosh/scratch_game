@@ -19,13 +19,13 @@ DEBUGAddUnreferencedVariable(debug_state *State, debug_variable_type Type, char 
 }
 
 internal debug_variable_reference *
-DEBUGAddVariableReference(debug_variable_definition_context *Context, debug_variable *Var)
+DEBUGAddVariableReference(debug_state *State, debug_variable_reference *GroupRef, debug_variable *Var)
 {
-    debug_variable_reference *Ref = PushStruct(Context->Arena, debug_variable_reference);
+    debug_variable_reference *Ref = PushStruct(&State->DebugArena, debug_variable_reference);
     Ref->Var = Var;
     Ref->Next = 0;
 
-    Ref->Parent = Context->Group;
+    Ref->Parent = GroupRef;
     debug_variable *Group = (Ref->Parent) ? Ref->Parent->Var : 0;
     if(Group)
     {
@@ -33,7 +33,7 @@ DEBUGAddVariableReference(debug_variable_definition_context *Context, debug_vari
         {
             Group->Group.LastChild = Group->Group.LastChild->Next = Ref;
         }
-        else 
+        else
         {
             Group->Group.LastChild = Group->Group.FirstChild = Ref;
         }
@@ -43,31 +43,48 @@ DEBUGAddVariableReference(debug_variable_definition_context *Context, debug_vari
 }
 
 internal debug_variable_reference *
-DEBUGAddVariable(debug_variable_definition_context *Context, debug_variable_type Type, char *Name)
+DEBUGAddVariableReference(debug_variable_definition_context *Context, debug_variable *Var)
 {
-    debug_variable *Var = DEBUGAddUnreferencedVariable(Context, Type, Name);
-    debug_variable_reference *Ref = DEBUGAddVariableReference(Context, Var);
+    debug_variable_reference *Ref = DEBUGAddVariableReference(Context->State, Context->Group, Var);
 
     return(Ref);
 }
 
 internal debug_variable_reference *
-DEBUGAddRootGroup(debug_state *State, char *Name)
+DEBUGAddVariable(debug_variable_definition_context *Context, debug_variable_type Type, char *Name)
 {
-    debug_variable_reference *Group = DEBUGAddVariable(Context, DebugVariableType_Group, Name);
-    Group->Var->Group.Expanded = true;
-    Group->Var->Grou.FistChild = Group->Var->Group.LastChild = 0;
+    debug_variable *Var = DEBUGAddUnreferencedVariable(Context->State, Type, Name);
+    debug_variable_reference *Ref = DEBUGAddVariableReference(Context, Var);
+
+    return(Ref);
+}
+
+internal debug_variable *
+DEBUGAddRootGroupInternal(debug_state *State, char *Name)
+{
+    debug_variable *Group = DEBUGAddUnreferencedVariable(State, DebugVariableType_Group, Name);
+    Group->Group.Expanded = true;
+    Group->Group.FirstChild = Group->Group.LastChild = 0;
 
     return(Group);
 }
 
 internal debug_variable_reference *
+DEBUGAddRootGroup(debug_state *State, char *Name)
+{
+    debug_variable_reference *GroupRef =
+        DEBUGAddVariableReference(State, 0, DEBUGAddRootGroupInternal(State, Name));
+
+    return(GroupRef);
+}
+
+internal debug_variable_reference *
 DEBUGBeginVariableGroup(debug_variable_definition_context *Context, char *Name)
 {
-    debug_variable_reference *Group = DEBUGAddVariable(Context, DebugVariableType_Group, Name);
+    debug_variable_reference *Group =
+        DEBUGAddVariableReference(Context, DEBUGAddRootGroupInternal(Context->State, Name));
     Group->Var->Group.Expanded = false;
-    Group->Var->Group.FirstChild = Group->Var->Group.LastChild = 0;
-    
+
     Context->Group = Group;
 
     return(Group);

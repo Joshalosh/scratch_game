@@ -269,7 +269,7 @@ DEBUGTextLine(char *String)
         {
             ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
 
-            DEBUGTextOutAt(V2(DebugState->LeftEdge, 
+            DEBUGTextOutAt(V2(DebugState->LeftEdge,
                               DebugState->AtY - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)), String);
 
             DebugState->AtY -= GetLineAdvanceFor(Info)*DebugState->FontScale;
@@ -582,7 +582,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
     {
         r32 AtX = Hierarchy->UIP.x;
         r32 AtY = Hierarchy->UIP.y;
-        r32 LineAdvance = GetLineAdvanceFor(DebugState->DebugFontInfo);
+        r32 LineAdvance = DebugState->FontScale*GetLineAdvanceFor(DebugState->DebugFontInfo);
 
         r32 SpacingY = 4.0f;
         int Depth = 0;
@@ -590,6 +590,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         while(Ref)
         {
             debug_variable *Var = Ref->Var;
+
             b32 IsHot = (DebugState->Hot == Var);
             v4 ItemColor = (IsHot && (DebugState->HotInteraction == 0)) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
 
@@ -619,6 +620,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                         DebugState->NextHotInteraction = DebugInteraction_None;
                         DebugState->NextHot = Var;
                     }
+
+                    Bounds.Min.y -= SpacingY;
                 } break;
 
                 default:
@@ -632,8 +635,10 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 
                     r32 LeftPx = AtX + Depth*2.0f*LineAdvance;
                     r32 TopPy = AtY;
-                    Bounds = DEBUGGetTextSize(DebugState, Text);
-                    Bounds = Offset(Bounds, V2(LeftPx, TopPy - GetDim(Bounds).y));
+                    rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
+
+                    Bounds = RectMinMax(V2(LeftPx + TextBounds.Min.x, TopPy - LineAdvance),
+                                        V2(LeftPx + TextBounds.Max.x, TopPy));
                     DEBUGTextOutAt(V2(LeftPx, TopPy - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
                                    Text, ItemColor);
 
@@ -645,7 +650,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                 } break;
             }
 
-            AtY = GetMinCorner(Bounds).y - SpacingY;
+            AtY = GetMinCorner(Bounds).y;
 
             if((Var->Type == DebugVariableType_Group) && Var->Group.Expanded)
             {
@@ -671,7 +676,20 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         }
 
         DebugState->AtY = AtY;
+
+        if(1)
+        {
+            rectangle2 MoveBox = RectCenterHalfDim(Hierarchy->UIP - V2(4.0f, 4.0f), V2(4.0f, 4.0f));
+            PushRect(DebugState->RenderGroup, MoveBox, 0.0f, V4(1, 1, 1, 1));
+
+            if(IsInRectangle(MoveBox, MouseP))
+            {
+                DebugState->NextHotInteraction = DebugInteraction_MoveHierarchy;
+                DebugState->NextHotHierarchy = Hierarchy;
+            }
+        }
     }
+
 #if 0
     u32 NewHotMenuIndex = ArrayCount(DebugVariableList);
     r32 BestDistanceSq = Real32Maximum;
@@ -717,19 +735,19 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 internal void
 DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 AltUI)
 {
-    if(DebugState->Hot)
+    if(DebugState->HotInteraction)
     {
-        if(DebugState->HotInteraction)
-        {
-            DebugState->Interaction = DebugState->HotInteraction;
-        }
-        else
+        DebugState->Interaction = DebugState->HotInteraction;
+    }
+    else
+    {
+        if(DebugState->Hot)
         {
             if(AltUI)
             {
                 DebugState->Interaction = DebugInteraction_TearValue;
             }
-            else 
+            else
             {
                 switch(DebugState->Hot->Type)
                 {
@@ -749,16 +767,16 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
                     } break;
                 }
             }
-        }
 
-        if(DebugState->Interaction)
-        {
-            DebugState->InteractingWith = DebugState->Hot;
+            if(DebugState->Interaction)
+            {
+                DebugState->InteractingWith = DebugState->Hot;
+            }
         }
-    }
-    else
-    {
-        DebugState->Interaction = DebugInteraction_NOP;
+        else
+        {
+            DebugState->Interaction = DebugInteraction_NOP;
+        }
     }
 }
 
@@ -768,11 +786,11 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     if(DebugState->Interaction != DebugInteraction_NOP)
     {
         debug_variable *Var = DebugState->InteractingWith;
-        Assert(Var);
         switch(DebugState->Interaction)
         {
             case DebugInteraction_ToggleValue:
             {
+                Assert(Var);
                 switch(Var->Type)
                 {
                     case DebugVariableType_Bool32:
@@ -785,10 +803,6 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
                         Var->Group.Expanded = !Var->Group.Expanded;
                     } break;
                 }
-            } break;
-
-            case DebugInteraction_TearValue:
-            {
             } break;
         }
 
@@ -841,12 +855,18 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
                 Var->Profile.Dimension.y = Maximum(Var->Profile.Dimension.y, 10.0f);
             } break;
 
+            case DebugInteraction_MoveHierarchy:
+            {
+                DebugState->DraggingHierarchy->UIP += V2(dMouseP.x, dMouseP.y);
+            } break;
+
             case DebugInteraction_TearValue:
             {
-                if(DebugState->DraggingHierarchy)
+                if(!DebugState->DraggingHierarchy)
                 {
-                    DebugState->DraggingHierarchy = 
-                        AddHierarchy(DebugState, DebugState->InteractingWith, V2(0, 0));
+                    debug_variable_reference *RootGroup = DEBUGAddRootGroup(DebugState, "NewUserGroup");
+                    DEBUGAddVariableReference(DebugState, RootGroup, DebugState->InteractingWith);
+                    DebugState->DraggingHierarchy = AddHierarchy(DebugState, RootGroup, V2(0, 0));
                 }
 
                 DebugState->DraggingHierarchy->UIP = MouseP;
@@ -872,6 +892,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     {
         DebugState->Hot = DebugState->NextHot;
         DebugState->HotInteraction = DebugState->NextHotInteraction;
+        DebugState->DraggingHierarchy = DebugState->NextHotHierarchy;
 
         b32 AltUI = Input->MouseButtons[PlatformMouseButton_Right].EndedDown;
         for(u32 TransitionIndex = Input->MouseButtons[PlatformMouseButton_Left].HalfTransitionCount;
@@ -902,6 +923,7 @@ DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer)
         render_group *RenderGroup = DebugState->RenderGroup;
 
         DebugState->NextHot = 0;
+        DebugState->NextHotHierarchy = 0;
         DebugState->NextHotInteraction = DebugInteraction_None;
         debug_record *HotRecord = 0;
 
