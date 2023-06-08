@@ -573,6 +573,15 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP)
 #endif
 }
 
+inline b32 
+InteractionsAreEqual(debug_interaction A, debug_interaction B)
+{
+    b32 Result = ((A.Type == B.Type) &&
+                  (A.Generic == B.Generic));
+
+    return(Result);
+}
+
 internal void
 DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
@@ -591,8 +600,12 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         {
             debug_variable *Var = Ref->Var;
 
-            b32 IsHot = (DebugState->Hot == Var);
-            v4 ItemColor = (IsHot && (DebugState->HotInteraction == 0)) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
+            debug_interaction ItemInteraction = {};
+            ItemInteraction.Type = DebugInteraction_None;
+            ItemInteraction.Var = Var;
+
+            b32 IsHot = InteractionsAreEqual(ItemInteraction, DebugState->HotInteraction);
+            v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
 
             rectangle2 Bounds = {};
             switch(Var->Type)
@@ -605,6 +618,9 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     Bounds = RectMinMax(MinCorner, MaxCorner);
                     DrawProfileIn(DebugState, Bounds, MouseP);
 
+                    debug_interaction SizeInteraction = {};
+                    SizeInteraction.Type = DebugInteraction_ResizeProfile;
+                    SizeInteraction.Var = Var;
                     rectangle2 SizeBox = RectCenterHalfDim(SizeP, V2(4.0f, 4.0f));
                     PushRect(DebugState->RenderGroup, SizeBox, 0.0f,
                              (IsHot && (DebugState->HotInteraction == DebugInteraction_ResizeProfile)) ?
@@ -617,8 +633,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     }
                     else if(IsInRectangle(Bounds, MouseP))
                     {
-                        DebugState->NextHotInteraction = DebugInteraction_None;
-                        DebugState->NextHot = Var;
+                        DebugState->NextHotInteraction = ItemInteraction;
                     }
 
                     Bounds.Min.y -= SpacingY;
@@ -644,8 +659,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 
                     if(IsInRectangle(Bounds, MouseP))
                     {
-                        DebugState->NextHotInteraction = DebugInteraction_None;
-                        DebugState->NextHot = Var;
+                        DebugState->NextHotInteraction = ItemInteraction;
                     }
                 } break;
             }
@@ -767,16 +781,16 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
                     } break;
                 }
             }
-
-            if(DebugState->Interaction)
-            {
-                DebugState->InteractingWith = DebugState->Hot;
-            }
         }
         else
         {
             DebugState->Interaction = DebugInteraction_NOP;
         }
+    }
+
+    if(DebugState->Interaction)
+    {
+        DebugState->InteractingWith = DebugState->Hot;
     }
 }
 

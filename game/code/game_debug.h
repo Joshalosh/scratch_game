@@ -148,7 +148,7 @@ struct debug_thread
     debug_thread *Next;
 };
 
-enum debug_interaction
+enum debug_interaction_type
 {
     DebugInteraction_None,
 
@@ -161,6 +161,18 @@ enum debug_interaction
     DebugInteraction_ResizeProfile,
     DebugInteraction_MoveHierarchy,
 };
+
+struct debug_interaction
+{
+    debug_interaction_type Type;
+    union
+    { 
+        void *Generic;
+        debug_variable *Var;
+        debug_variable_hierarchy *Hierarchy;
+    };
+};
+
 struct debug_state
 {
     b32 Initialised;
@@ -182,17 +194,10 @@ struct debug_state
     debug_variable_reference *RootGroup;
     debug_variable_hierarchy HierarchySentinel;
 
-    debug_interaction Interaction;
     v2 LastMouseP;
+    debug_interaction Interaction;
     debug_interaction HotInteraction;
-    debug_variable *Hot;
-    debug_variable *InteractingWith;
     debug_interaction NextHotInteraction;
-    debug_variable *NextHot;
-    // TODO: Hierarchies should be debug variables.
-    debug_variable_hierarchy *NextHotHierarchy;
-
-    debug_variable_hierarchy *DraggingHierarchy;
 
     r32 LeftEdge;
     r32 RightEdge;
