@@ -154,12 +154,14 @@ enum debug_interaction_type
 
     DebugInteraction_NOP,
 
+    DebugInteraction_AutoModifyVariable,
+
     DebugInteraction_ToggleValue,
     DebugInteraction_DragValue,
     DebugInteraction_TearValue,
 
-    DebugInteraction_ResizeProfile,
-    DebugInteraction_MoveHierarchy,
+    DebugInteraction_Resize,
+    DebugInteraction_Move,
 };
 
 struct debug_interaction
@@ -170,6 +172,7 @@ struct debug_interaction
         void *Generic;
         debug_variable *Var;
         debug_variable_hierarchy *Hierarchy;
+        v2 *P;
     };
 };
 
