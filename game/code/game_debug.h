@@ -26,12 +26,15 @@ enum debug_variable_type
     DebugVariableType_CounterThreadList,
     // DebugVariableType_CounterFunctionList,
 
+    DebugVariableType_BitmapDisplay,
+
     DebugVariableType_Group,
 };
 inline b32
 DEBUGShouldBeWritten(debug_variable_type Type)
 {
-    b32 Result = (Type != DebugVariableType_CounterThreadList);
+    b32 Result = ((Type != DebugVariableType_CounterThreadList) &&
+                  (Type != DebugVariableType_BitmapDisplay));
 
     return(Result);
 }
@@ -64,6 +67,13 @@ struct debug_profile_settings
     v2 Dimension;
 };
 
+struct debug_bitmap_display
+{
+    bitmap_id ID;
+    v2 Dim;
+    b32 Alpha;
+};
+
 struct debug_variable
 {
     debug_variable_type Type;
@@ -80,6 +90,7 @@ struct debug_variable
         v4 Vector4;
         debug_variable_group Group;
         debug_profile_settings Profile;
+        debug_bitmap_display BitmapDisplay;
     };
 };
 
