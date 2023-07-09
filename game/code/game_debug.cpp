@@ -598,6 +598,47 @@ InteractionIsHot(debug_state *DebugState, debug_interaction B)
     return(Result);
 }
 
+struct layout
+{
+    v2 At;
+    int Depth;
+    real32 LineAdvance;
+    r32 SpacingY;
+};
+
+inline void
+Advance(layout *Layout, rectangle2 Bounds)
+{
+    Layout->At.y = GetMinCorner(Bounds).y;
+}
+
+inline rectangle2
+PlaceRectangle(layout *Layout, v2 Dim)
+{
+    v2 MinCorner = V2(Layout->At.x + Layout->Depth*2.0f*Layout->LineAdvance,
+                      Layout->At.y - Dim.y);
+    v2 MaxCorner = V2(MinCorner.x + Dim.x, Layout->At.y);
+    rectangle2 Bounds = RectMinMax(MinCorner, MaxCorner);
+    return(Bounds);
+}
+
+inline void
+{
+    v2 SizeP = V2(GetMaxCorner(Bounds).x, GetMinCorner(Bounds).y);
+    rectangle2 SizeBox = RectCenterHalfDim(SizeP, V2(16.0f, 16.0f));
+    debug_interaction SizeInteraction = {};
+    SizeInteraction.Type = DebugInteraction_Resize;
+    SizeInteraction.P = &Var->BitmapDisplay.Dim;
+
+    if(IsInRectangle(SizeBox, MouseP))
+    {
+        DebugState->NextHotInteraction = SizeInteraction;
+    }
+
+    PushRect(DebugState->RenderGroup, SizeBox, 0.0f,
+             (InteractionIsHot(DebugState, SizeInteraction) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1)));
+}
+
 internal void
 DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
@@ -605,12 +646,12 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         Hierarchy != &DebugState->HierarchySentinel;
         Hierarchy = Hierarchy->Next)
     {
-        r32 AtX = Hierarchy->UIP.x;
-        r32 AtY = Hierarchy->UIP.y;
-        r32 LineAdvance = DebugState->FontScale*GetLineAdvanceFor(DebugState->DebugFontInfo);
+        layout Layout = {};
+        Layout.At = Hierarchy->UIP;
+        Layout.LineAdvance = DebugState->FontScale*GetLineAdvanceFor(DebugState->DebugFontInfo);
+        //Layout.Depth = 0;
+        Layout.SpacingY = 4.0f;
 
-        r32 SpacingY = 4.0f;
-        int Depth = 0;
         debug_variable_reference *Ref = Hierarchy->Group->Var->Group.FirstChild;
         while(Ref)
         {
@@ -623,68 +664,41 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
             b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
             v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
 
-            rectangle2 Bounds = {};
             switch(Var->Type)
             {
                 case DebugVariableType_CounterThreadList:
                 {
-                    v2 MinCorner = V2(AtX + Depth*2.0f*LineAdvance, AtY - Var->Profile.Dimension.y);
-                    v2 MaxCorner = V2(MinCorner.x + Var->Profile.Dimension.x, AtY);
-                    v2 SizeP = V2(MaxCorner.x, MinCorner.y);
-                    Bounds = RectMinMax(MinCorner, MaxCorner);
+                    rectangle2 Bounds = PlaceRectangle(&Layout, &Var->Profile.Dimension);
                     DrawProfileIn(DebugState, Bounds, MouseP);
 
-                    debug_interaction SizeInteraction = {};
-                    SizeInteraction.Type = DebugInteraction_Resize;
-                    SizeInteraction.P = &Var->Profile.Dimension;
-
-                    rectangle2 SizeBox = RectCenterHalfDim(SizeP, V2(4.0f, 4.0f));
-                    PushRect(DebugState->RenderGroup, SizeBox, 0.0f,
-                             (InteractionIsHot(DebugState, SizeInteraction) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1)));
-
-                    if(IsInRectangle(SizeBox, MouseP))
-                    {
-                        DebugState->NextHotInteraction = SizeInteraction;
-                    }
-                    else if(IsInRectangle(Bounds, MouseP))
+                    layout_element Element = BeginElementRectangle(&Layout, Var->BitmapDisplay.Dim);
+                    MakeElementSizable(&Element);
+                    if(EndElement(Element))
                     {
                         DebugState->NextHotInteraction = ItemInteraction;
                     }
 
-                    Bounds.Min.y -= SpacingY;
+                    Bounds.Min.y -= Layout.SpacingY;
+
+                    Advance(&Layout, Bounds);
                 } break;
 
                 case DebugVariableType_BitmapDisplay:
                 {
                     loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, Var->BitmapDisplay.ID, RenderGroup->GenerationID);
                     r32 BitmapScale = Var->BitmapDisplay.Dim.y;
-                    v2 MinCorner = V2(AtX + Depth*2.0f*LineAdvance, AtY - Var->BitmapDisplay.Dim.y);
                     if(Bitmap)
                     {
-                        used_bitmap_dim Dim = GetBitmapDim(RenderGroup, Bitmap, BitmapScale, V3(MinCorner, 0.0f), 1.0f);
+                        used_bitmap_dim Dim = GetBitmapDim(RenderGroup, Bitmap, BitmapScale, V3(0.0f, 0.0f, 0.0f), 1.0f);
                         Var->BitmapDisplay.Dim.x = Dim.Size.x;
                     }
 
-                    v2 MaxCorner = V2(MinCorner.x + Var->BitmapDisplay.Dim.x, AtY);
-                    v2 SizeP = V2(MaxCorner.x, MinCorner.y);
-                    Bounds = RectMinMax(MinCorner, MaxCorner);
-
                     PushRect(DebugState->RenderGroup, Bounds, 0.0f, V4(0, 0, 0, 1.0f));
-                    PushBitmap(DebugState->RenderGroup, Var->BitmapDisplay.ID, BitmapScale, V3(MinCorner, 0.0f), V4(1, 1, 1, 1), 0.0f);
+                    PushBitmap(DebugState->RenderGroup, Var->BitmapDisplay.ID, BitmapScale, V3(GetMinCorner(Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
 
-                    debug_interaction SizeInteraction = {};
-                    SizeInteraction.Type = DebugInteraction_Resize;
-                    SizeInteraction.P = &Var->BitmapDisplay.Dim;
-
-                    rectangle2 SizeBox = RectCenterHalfDim(SizeP, V2(4.0f, 4.0f));
-                    PushRect(DebugState->RenderGroup, SizeBox, 0.0f,
-                             (InteractionIsHot(DebugState, SizeInteraction) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1)));
-
-                    if(IsInRectangle(SizeBox, MouseP))
-                    {
-                        DebugState->NextHotInteraction = SizeInteraction;
-                    }
-                    else if(IsInRectangle(Bounds, MouseP))
+                    layout_element Element = BeginElementRectangle(&Layout, Var->BitmapDisplay.Dim);
+                    MakeElementSizable(&Element);
+                    if(EndElement(Element))
                     {
                         debug_interaction TearInteraction = {};
                         TearInteraction.Type = DebugInteraction_TearValue;
@@ -692,7 +706,11 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                         DebugState->NextHotInteraction = TearInteraction;
                     }
 
-                    Bounds.Min.y -= SpacingY;
+                    rectangle2 Bounds = PlaceRectangle(&Layout, Var->BitmapDisplay.Dim);
+
+                    Bounds.Min.y -= Layout.SpacingY;
+
+                    Advance(&Layout, Bounds);
                 } break;
 
                 default:
@@ -704,11 +722,11 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                                         DEBUGVarToText_Colon|
                                         DEBUGVarToText_PrettyBools);
 
-                    r32 LeftPx = AtX + Depth*2.0f*LineAdvance;
-                    r32 TopPy = AtY;
+                    r32 LeftPx = Layout.At.x + Layout.Depth*2.0f*Layout.LineAdvance;
+                    r32 TopPy = Layout.At.y;
                     rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
 
-                    Bounds = RectMinMax(V2(LeftPx + TextBounds.Min.x, TopPy - LineAdvance),
+                    rectangle2 Bounds = RectMinMax(V2(LeftPx + TextBounds.Min.x, TopPy - Layout.LineAdvance),
                                         V2(LeftPx + TextBounds.Max.x, TopPy));
                     DEBUGTextOutAt(V2(LeftPx, TopPy - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
                                    Text, ItemColor);
@@ -717,15 +735,15 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     {
                         DebugState->NextHotInteraction = ItemInteraction;
                     }
+
+                    Advance(&Layout, Bounds);
                 } break;
             }
-
-            AtY = GetMinCorner(Bounds).y;
 
             if((Var->Type == DebugVariableType_Group) && Var->Group.Expanded)
             {
                 Ref = Var->Group.FirstChild;
-                ++Depth;
+                ++Layout.Depth;
             }
             else
             {
@@ -739,13 +757,14 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     else
                     {
                         Ref = Ref->Parent;
-                        --Depth;
+                        --Layout.Depth;
                     }
                 }
             }
+
         }
 
-        DebugState->AtY = AtY;
+        DebugState->AtY = Layout.At.y;
 
         if(1)
         {
