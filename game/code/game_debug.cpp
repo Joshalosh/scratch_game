@@ -600,43 +600,115 @@ InteractionIsHot(debug_state *DebugState, debug_interaction B)
 
 struct layout
 {
+    debug_state *DebugState;
+    v2 MouseP;
     v2 At;
     int Depth;
     real32 LineAdvance;
     r32 SpacingY;
 };
 
-inline void
-Advance(layout *Layout, rectangle2 Bounds)
-{
-    Layout->At.y = GetMinCorner(Bounds).y;
-}
-
 inline rectangle2
 PlaceRectangle(layout *Layout, v2 Dim)
 {
-    v2 MinCorner = V2(Layout->At.x + Layout->Depth*2.0f*Layout->LineAdvance,
-                      Layout->At.y - Dim.y);
-    v2 MaxCorner = V2(MinCorner.x + Dim.x, Layout->At.y);
-    rectangle2 Bounds = RectMinMax(MinCorner, MaxCorner);
-    return(Bounds);
+}
+
+struct layout_element
+{
+    // Storage
+    layout *Layout;
+    v2 *Dim;
+    v2 *Size;
+    debug_interactoin Interaction;
+
+    // Out
+    rectangle2 Bounds;
+};
+
+inline layout_element
+BeginElementRectangle(debug_state *DebugState, layout *Layout, v2 *Dim)
+{
+    layout_element Element = {};
+
+    Element.DebugState = DebugState;
+    Element.Layout = Layout;
+    Element.Dim = Dim;
+
+    return(Element);
 }
 
 inline void
+MakeElementSizable(layout_element *Element)
 {
-    v2 SizeP = V2(GetMaxCorner(Bounds).x, GetMinCorner(Bounds).y);
-    rectangle2 SizeBox = RectCenterHalfDim(SizeP, V2(16.0f, 16.0f));
+    Element->Size = Element->Dim;
+}
+
+inline void
+DefaultInteraction(layout_element *Element, debug_interaction Interaction)
+{
+    Element->Interaction = Interaction;
+}
+
+inline void
+EndElement(layout_element *Element)
+{
+    debug_state *DebugState = Element->DebugState;
+    layout *Layout = Element->Layout;
+
+    r32 SizeHandlePixels = 4.0f;
+
+    v2 Frame = {0, 0};
+    if(Element->Size)
+    {
+        Frame.x = SizeHandlePixels;
+        Frame.y = SizeHandlePixels;
+    }
+
+    v2 TotalDim = *Element->Dim + 2.0f*Frame;
+
+    v2 TotalMinCorner = V2(Layout->At.x + Layout->Depth*2.0f*Layout->LineAdvance,
+                           Layout->At.y - TotalDim.y);
+    v2 TotalMaxCorner = TotalMinCorner + TotalDim;
+
+    v2 InteriorMinCorner = TotalMinCorner + Frame;
+    v2 InteriorMaxCorner = InteriorMinCorner + *Element->Dim;
+
+    rectangle2 TotalBounds = RectMinMax(TotalMinCorner, TotalMaxCorner);
+    Element->Bounds = RectMinMax(InteriorMinCorner, InteriorMaxCorner);
+
+    PushRect(DebugState->RenderGroup, RectMinMax(V2(TotalMinCorner.x, InteriorMinCorner.y), 
+                                                 V2(InteriorMinCorner.x, InteriorMaxCorner.y)), 0.0f,
+             V4(0, 0, 0, 1));
+    PushRect(DebugState->RenderGroup, RectMinMax(V2(InteriorMaxCorner.x, InteriorMinCorner.y), 
+                                                 V2(TotalMaxCorner.x, InteriorMaxCorner.y)), 0.0f,
+             V4(0, 0, 0, 1));
+    PushRect(DebugState->RenderGroup, RectMinMax(V2(TotalMinCorner.x, TotalMinCorner.y), 
+                                                 V2(InteriorMaxCorner.x, InteriorMinCorner.y)), 0.0f,
+             V4(0, 0, 0, 1));
+    PushRect(DebugState->RenderGroup, RectMinMax(V2(TotalMinCorner.x, InteriorMaxCorner.y), 
+                                                 V2(InteriorMaxCorner.x, TotalMaxCorner.y)), 0.0f,
+             V4(0, 0, 0, 1));
+
     debug_interaction SizeInteraction = {};
     SizeInteraction.Type = DebugInteraction_Resize;
-    SizeInteraction.P = &Var->BitmapDisplay.Dim;
+    SizeInteraction.P = Element->Size;
 
-    if(IsInRectangle(SizeBox, MouseP))
+    rectangle2 SizeBox = RectMinMax(V2(InteriorMaxCorner.x, InteriorMinCorner.y),
+                                    V2(TotalMaxCorner.x, TotalMinCorner.y));
+    PushRect(DebugState->RenderGroup, SizeBox, 0.0f,
+             (InteractionIsHot(DebugState, SizeInteraction) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1)));
+    if(IsInRectangle(SizeBox, Layout->MouseP))
     {
         DebugState->NextHotInteraction = SizeInteraction;
     }
 
-    PushRect(DebugState->RenderGroup, SizeBox, 0.0f,
-             (InteractionIsHot(DebugState, SizeInteraction) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1)));
+    r32 SpacingY = Layout->SpacingY;
+    if(0)
+    {
+        SpacingY = 0.0f;
+    }
+    Layout->At.y = GetMinCorner(TotalBounds).y - SpacingY;
+
 }
 
 internal void
@@ -668,19 +740,12 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
             {
                 case DebugVariableType_CounterThreadList:
                 {
-                    rectangle2 Bounds = PlaceRectangle(&Layout, &Var->Profile.Dimension);
-                    DrawProfileIn(DebugState, Bounds, MouseP);
-
-                    layout_element Element = BeginElementRectangle(&Layout, Var->BitmapDisplay.Dim);
+                    layout_element Element = BeginElementRectangle(&Layout, &Var->BitmapDisplay.Dim);
                     MakeElementSizable(&Element);
-                    if(EndElement(Element))
-                    {
-                        DebugState->NextHotInteraction = ItemInteraction;
-                    }
+                    DefaultInteraction(&Element, ItemInteraction);
+                    EndElement(&Element);
 
-                    Bounds.Min.y -= Layout.SpacingY;
-
-                    Advance(&Layout, Bounds);
+                    DrawProfileIn(DebugState, Element.Bounds, MouseP);
                 } break;
 
                 case DebugVariableType_BitmapDisplay:
@@ -696,21 +761,14 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     PushRect(DebugState->RenderGroup, Bounds, 0.0f, V4(0, 0, 0, 1.0f));
                     PushBitmap(DebugState->RenderGroup, Var->BitmapDisplay.ID, BitmapScale, V3(GetMinCorner(Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
 
-                    layout_element Element = BeginElementRectangle(&Layout, Var->BitmapDisplay.Dim);
+                    debug_interaction TearInteraction = {};
+                    TearInteraction.Type = DebugInteraction_TearValue;
+                    TearInteraction.Var = Var;
+
+                    layout_element Element = BeginElementRectangle(&Layout, &Var->BitmapDisplay.Dim);
                     MakeElementSizable(&Element);
-                    if(EndElement(Element))
-                    {
-                        debug_interaction TearInteraction = {};
-                        TearInteraction.Type = DebugInteraction_TearValue;
-                        TearInteraction.Var = Var;
-                        DebugState->NextHotInteraction = TearInteraction;
-                    }
-
-                    rectangle2 Bounds = PlaceRectangle(&Layout, Var->BitmapDisplay.Dim);
-
-                    Bounds.Min.y -= Layout.SpacingY;
-
-                    Advance(&Layout, Bounds);
+                    DefaultInteraction(&Element, TearInteraction);
+                    EndElement(&Element);
                 } break;
 
                 default:
@@ -722,21 +780,17 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                                         DEBUGVarToText_Colon|
                                         DEBUGVarToText_PrettyBools);
 
-                    r32 LeftPx = Layout.At.x + Layout.Depth*2.0f*Layout.LineAdvance;
-                    r32 TopPy = Layout.At.y;
                     rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
+                    v2 Dim = {GetWidth(TextBounds), Layout->LineAdvance};
 
-                    rectangle2 Bounds = RectMinMax(V2(LeftPx + TextBounds.Min.x, TopPy - Layout.LineAdvance),
-                                        V2(LeftPx + TextBounds.Max.x, TopPy));
-                    DEBUGTextOutAt(V2(LeftPx, TopPy - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
+                    layout_element Element = BeginElementRectangle(&Layout, Dim);
+                    MakeElementSizable(&Element);
+                    DefaultInteraction(&Element, ItemInteraction);
+                    EndElement(&Element);
+
+                    DEBUGTextOutAt(V2(GetMinCorner(Element.Bounds).x, 
+                                      GetMaxCorner(Element.Bounds).y - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
                                    Text, ItemColor);
-
-                    if(IsInRectangle(Bounds, MouseP))
-                    {
-                        DebugState->NextHotInteraction = ItemInteraction;
-                    }
-
-                    Advance(&Layout, Bounds);
                 } break;
             }
 
