@@ -435,7 +435,7 @@ inline u32 GetThreadID(void)
 #endif
 
 struct debug_table;
-#define DEBUG_GAME_FRAME_END(name) debug_table *name(game_memory *Memory)
+#define DEBUG_GAME_FRAME_END(name) debug_table *name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)
 typedef DEBUG_GAME_FRAME_END(debug_game_frame_end);
 
 inline game_controller_input *GetController(game_input *Input, int unsigned ControllerIndex)

@@ -609,6 +609,20 @@ MakePyramidNormalMap(loaded_bitmap *Bitmap, real32 Roughness)
     }
 }
 
+internal game_assets *
+DEBUGGetGameAssets(game_memory *Memory)
+{
+    game_assets *Assets = 0;
+
+    transient_state *TranState = (transient_state *)Memory->TransientStorage;
+    if(TranState->IsInitialised)
+    {
+        Assets = TranState->Assets;
+    }
+
+    return(Assets);
+}
+
 #if GAME_INTERNAL
 game_memory *DebugGlobalMemory;
 #endif

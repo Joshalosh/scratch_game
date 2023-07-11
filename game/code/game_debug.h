@@ -239,10 +239,5 @@ struct debug_state
     open_debug_block *FirstFreeBlock;
 };
 
-internal void DEBUGStart(game_assets *Assets, u32 Width, u32 Height);
-internal void DEBUGEnd(game_input *Input, loaded_bitmap *DrawBuffer);
-
-internal void RefreshCollation(debug_state *DebugState);
-
 #define GAME_DEBUG_H
 #endif

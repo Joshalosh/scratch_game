@@ -1797,13 +1797,13 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK(GameUpdate);
 
+                    game_offscreen_buffer Buffer = {};
+                    Buffer.Memory = GlobalBackbuffer.Memory;
+                    Buffer.Width = GlobalBackbuffer.Width;
+                    Buffer.Height = GlobalBackbuffer.Height;
+                    Buffer.Pitch = GlobalBackbuffer.Pitch;
                     if(!GlobalPause)
                     {
-                        game_offscreen_buffer Buffer = {};
-                        Buffer.Memory = GlobalBackbuffer.Memory;
-                        Buffer.Width = GlobalBackbuffer.Width;
-                        Buffer.Height = GlobalBackbuffer.Height;
-                        Buffer.Pitch = GlobalBackbuffer.Pitch;
 
                         if(Win32State.InputRecordingIndex)
                         {
@@ -1975,6 +1975,21 @@ WinMain(HINSTANCE Instance,
                     //
                     //
 
+#if GAME_INTERNAL
+                    BEGIN_BLOCK(DebugCollation);
+
+                    if(Game.DEBUGFrameEnd)
+                    {
+                        GlobalDebugTable = Game.DEBUGFrameEnd(&GameMemory, NewInput, &Buffer);
+                    }
+                    GlobalDebugTable_.EventArrayIndex_EventIndex = 0;
+
+                    END_BLOCK(DebugCollation);
+#endif
+                    //
+                    //
+                    //
+
                     // TODO: Leave this off until I implement actual vblank support.
 #if 0
                     BEGIN_BLOCK(FramerateWait);
@@ -2041,18 +2056,6 @@ WinMain(HINSTANCE Instance,
                     // TODO: Should I clear these here?
 
                     END_BLOCK(FrameDisplay);
-
-#if GAME_INTERNAL
-                    BEGIN_BLOCK(DebugCollation);
-
-                    if(Game.DEBUGFrameEnd)
-                    {
-                        GlobalDebugTable = Game.DEBUGFrameEnd(&GameMemory);
-                    }
-                    GlobalDebugTable_.EventArrayIndex_EventIndex = 0;
-
-                    END_BLOCK(DebugCollation);
-#endif
 
                     LARGE_INTEGER EndCounter = Win32GetWallClock();
                     FRAME_MARKER(Win32GetSecondsElapsed(LastCounter, EndCounter));
