@@ -97,8 +97,6 @@ struct temporary_memory
     memory_index Used;
 };
 
-#include "game_debug.h"
-
 #define Minimum(A, B) ((A < B) ? (A) : (B))
 #define Maximum(A, B) ((A > B) ? (A) : (B))
 

@@ -101,6 +101,7 @@ Win32BuildEXEPathFilename(win32_state *State, char *Filename,
                DestCount, Dest);
 }
 
+#if GAME_INTERNAL
 DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)
 {
     if(Memory)
@@ -241,6 +242,7 @@ DEBUG_PLATFORM_GET_PROCESS_STATE(DEBUGGetProcessState)
 
     return(Result);
 }
+#endif
 
 inline FILETIME
 Win32GetLastWriteTime(char *Filename)
@@ -1369,8 +1371,10 @@ PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
     }
 }
 
+#if GAME_INTERNAL
 global_variable debug_table GlobalDebugTable_;
 debug_table *GlobalDebugTable = &GlobalDebugTable_;
+#endif
 
 int CALLBACK
 WinMain(HINSTANCE Instance,
@@ -1541,11 +1545,13 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.AllocateMemory = Win32AllocateMemory;
             GameMemory.PlatformAPI.DeallocateMemory = Win32DeallocateMemory;
 
+#if GAME_INTERNAL
             GameMemory.PlatformAPI.DEBUGFreeFileMemory = DEBUGPlatformFreeFileMemory;
             GameMemory.PlatformAPI.DEBUGReadEntireFile = DEBUGPlatformReadEntireFile;
             GameMemory.PlatformAPI.DEBUGWriteEntireFile = DEBUGPlatformWriteEntireFile;
             GameMemory.PlatformAPI.DEBUGExecuteSystemCommand = DEBUGExecuteSystemCommand;
             GameMemory.PlatformAPI.DEBUGGetProcessState = DEBUGGetProcessState;
+#endif
 
             Win32State.TotalSize = (GameMemory.PermanentStorageSize + 
                                     GameMemory.TransientStorageSize + 
@@ -1618,7 +1624,9 @@ WinMain(HINSTANCE Instance,
                         Win32CompleteAllWork(&HighPriorityQueue);
                         Win32CompleteAllWork(&LowPriorityQueue);
 
+#if GAME_INTERNAL
                         GlobalDebugTable = &GlobalDebugTable_;
+#endif
                         Win32UnloadGameCode(&Game);
                         Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                  TempGameCodeDLLFullPath,
@@ -2061,12 +2069,14 @@ WinMain(HINSTANCE Instance,
                     FRAME_MARKER(Win32GetSecondsElapsed(LastCounter, EndCounter));
                     LastCounter = EndCounter;
 
+#if GAME_INTERNAL
                     if(GlobalDebugTable)
                     {
                         // TODO: Perhaps I should move this to a global variable so 
                         // there can be timers below this one.
                         GlobalDebugTable->RecordCount[TRANSLATION_UNIT_INDEX] = __COUNTER__;
                     }
+#endif
                 }
             }
             else

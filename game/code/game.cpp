@@ -1606,4 +1606,13 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     OutputPlayingSounds(&GameState->AudioState, SoundBuffer, TranState->Assets, &TranState->TranArena);
 }
 
+#if GAME_INTERNAL
 #include "game_debug.cpp"
+#else
+extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
+{
+    return(0);
+}
+#endif
+
+    

@@ -2,6 +2,7 @@
 // TODO: Stop using stdio
 #include <stdio.h>
 
+#include "game_debug.h"
 #include "game_debug_variables.h"
 
 internal void RestartCollation(debug_state *DebugState, u32 InvalidEventArrayIndex);
@@ -1401,7 +1402,7 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
     u32 EventCount = ArrayIndex_EventIndex & 0xFFFFFFFF;
     GlobalDebugTable->EventCount[EventArrayIndex] = EventCount;
 
-    debug_state *DebugState = DEBUGGetState(Memory);
+    debug_state *DebugState = (debug_state *)Memory->DebugStorage;
     if(DebugState)
     {
         game_assets *Assets = DEBUGGetGameAssets(Memory);
