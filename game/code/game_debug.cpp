@@ -25,19 +25,19 @@ DEBUGGetState(void)
 }
 
 internal debug_variable_hierarchy *
-AddHierarchy(debug_state *DebugState, debug_variable_reference *Group, v2 AtP)
+AddTree(debug_state *DebugState, debug_variable_reference *Group, v2 AtP)
 {
-    debug_variable_hierarchy *Hierarchy = PushStruct(&DebugState->DebugArena, debug_variable_hierarchy);
+    debug_variable_hierarchy *Tree = PushStruct(&DebugState->DebugArena, debug_variable_hierarchy);
 
-    Hierarchy->UIP = AtP;
-    Hierarchy->Group = Group;
-    Hierarchy->Next = DebugState->HierarchySentinel.Next;
-    Hierarchy->Prev = &DebugState->HierarchySentinel;
+    Tree->UIP = AtP;
+    Tree->Group = Group;
+    Tree->Next = DebugState->TreeSentinel.Next;
+    Tree->Prev = &DebugState->TreeSentinel;
 
-    Hierarchy->Next->Prev = Hierarchy;
-    Hierarchy->Prev->Next = Hierarchy;
+    Tree->Next->Prev = Tree;
+    Tree->Prev->Next = Tree;
 
-    return(Hierarchy);
+    return(Tree);
 }
 
 inline b32
@@ -632,19 +632,19 @@ EndElement(layout_element *Element)
 internal void
 DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
-    for(debug_variable_hierarchy *Hierarchy = DebugState->HierarchySentinel.Next;
-        Hierarchy != &DebugState->HierarchySentinel;
-        Hierarchy = Hierarchy->Next)
+    for(debug_variable_hierarchy *Tree = DebugState->TreeSentinel.Next;
+        Tree != &DebugState->TreeSentinel;
+        Tree = Tree->Next)
     {
         layout Layout = {};
         Layout.DebugState = DebugState;
         Layout.MouseP = MouseP;
-        Layout.At = Hierarchy->UIP;
+        Layout.At = Tree->UIP;
         Layout.LineAdvance = DebugState->FontScale*GetLineAdvanceFor(DebugState->DebugFontInfo);
         //Layout.Depth = 0;
         Layout.SpacingY = 4.0f;
 
-        debug_variable_reference *Ref = Hierarchy->Group->Var->Group.FirstChild;
+        debug_variable_reference *Ref = Tree->Group->Var->Group.FirstChild;
         while(Ref)
         {
             debug_variable *Var = Ref->Var;
@@ -743,9 +743,9 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         {
             debug_interaction MoveInteraction = {};
             MoveInteraction.Type = DebugInteraction_Move;
-            MoveInteraction.P = &Hierarchy->UIP;
+            MoveInteraction.P = &Tree->UIP;
 
-            rectangle2 MoveBox = RectCenterHalfDim(Hierarchy->UIP - V2(4.0f, 4.0f), V2(4.0f, 4.0f));
+            rectangle2 MoveBox = RectCenterHalfDim(Tree->UIP - V2(4.0f, 4.0f), V2(4.0f, 4.0f));
             PushRect(DebugState->RenderGroup, MoveBox, 0.0f,
                      InteractionIsHot(DebugState, MoveInteraction) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1));
 
@@ -835,10 +835,10 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
             {
                 debug_variable_reference *RootGroup = DEBUGAddRootGroup(DebugState, "NewUserGroup");
                 DEBUGAddVariableReference(DebugState, RootGroup, DebugState->HotInteraction.Var);
-                debug_variable_hierarchy *Hierarchy = AddHierarchy(DebugState, RootGroup, V2(0, 0));
-                Hierarchy->UIP = MouseP;
+                debug_variable_hierarchy *Tree = AddTree(DebugState, RootGroup, V2(0, 0));
+                Tree->UIP = MouseP;
                 DebugState->HotInteraction.Type = DebugInteraction_Move;
-                DebugState->HotInteraction.P = &Hierarchy->UIP;
+                DebugState->HotInteraction.P = &Tree->UIP;
             } break;
         }
 
@@ -899,7 +899,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     if(DebugState->Interaction.Type)
     {
         debug_variable *Var = DebugState->Interaction.Var;
-        debug_variable_hierarchy *Hierarchy = DebugState->Interaction.Hierarchy;
+        debug_variable_hierarchy *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
         
         // Mouse move interaction.
@@ -1191,9 +1191,9 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
     if(!DebugState->Initialised)
     {
         DebugState->HighPriorityQueue = DebugGlobalMemory->HighPriorityQueue;
-        DebugState->HierarchySentinel.Next = &DebugState->HierarchySentinel;
-        DebugState->HierarchySentinel.Prev = &DebugState->HierarchySentinel;
-        DebugState->HierarchySentinel.Group = 0;
+        DebugState->TreeSentinel.Next = &DebugState->TreeSentinel;
+        DebugState->TreeSentinel.Prev = &DebugState->TreeSentinel;
+        DebugState->TreeSentinel.Group = 0;
 
         InitialiseArena(&DebugState->DebugArena, DebugGlobalMemory->DebugStorageSize - sizeof(debug_state),
                         DebugState + 1);
@@ -1244,7 +1244,7 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 
         RestartCollation(DebugState, 0);
 
-        AddHierarchy(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
+        AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
     }
 
     BeginRender(DebugState->RenderGroup);
