@@ -939,6 +939,7 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
                         }
                     }
                 }
+
             } break;
 
             default:
@@ -995,6 +996,7 @@ HandleDebugCycleCounters(game_memory *Memory)
 #endif
 
 #if 0
+
 internal void
 Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
                        int X, int Top, int Bottom, uint32_t Colour)
@@ -1098,6 +1100,7 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
                                    ThisMarker->FlipWriteCursor, WriteColor);
     }
 }
+
 #endif
 
 struct platform_work_queue_entry
@@ -1812,7 +1815,6 @@ WinMain(HINSTANCE Instance,
                     Buffer.Pitch = GlobalBackbuffer.Pitch;
                     if(!GlobalPause)
                     {
-
                         if(Win32State.InputRecordingIndex)
                         {
                             Win32RecordInput(&Win32State, NewInput);
@@ -1994,6 +1996,7 @@ WinMain(HINSTANCE Instance,
 
                     END_BLOCK(DebugCollation);
 #endif
+
                     //
                     //
                     //

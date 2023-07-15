@@ -9,7 +9,7 @@ struct debug_variable_definition_context
 };
 
 internal debug_variable *
-DEBUGAddUnreferencedVariable(debug_state *State, debug_variable_type Type, char *Name)
+DEBUGAddVariable(debug_state *State, debug_variable_type Type, char *Name)
 {
     debug_variable *Var = PushStruct(&State->DebugArena, debug_variable);
     Var->Type = Type;
@@ -18,114 +18,63 @@ DEBUGAddUnreferencedVariable(debug_state *State, debug_variable_type Type, char 
     return(Var);
 }
 
-internal debug_tree_entry *
-DEBUGAddVariableReference(debug_state *State, debug_tree_entry *GroupRef, debug_variable *Var)
-{
-    debug_tree_entry *Ref = PushStruct(&State->DebugArena, debug_tree_entry);
-    Ref->Var = Var;
-    Ref->Next = 0;
-
-    Ref->Parent = GroupRef;
-    debug_variable *Group = (Ref->Parent) ? Ref->Parent->Var : 0;
-    if(Group)
-    {
-        if(Group->Group.LastChild)
-        {
-            Group->Group.LastChild = Group->Group.LastChild->Next = Ref;
-        }
-        else
-        {
-            Group->Group.LastChild = Group->Group.FirstChild = Ref;
-        }
-    }
-
-    return(Ref);
-}
-
-internal debug_tree_entry *
-DEBUGAddVariableReference(debug_variable_definition_context *Context, debug_variable *Var)
-{
-    debug_tree_entry *Ref = DEBUGAddVariableReference(Context->State, Context->Group, Var);
-
-    return(Ref);
-}
-
-internal debug_tree_entry *
+internal debug_variable *
 DEBUGAddVariable(debug_variable_definition_context *Context, debug_variable_type Type, char *Name)
 {
-    debug_variable *Var = DEBUGAddUnreferencedVariable(Context->State, Type, Name);
-    debug_tree_entry *Ref = DEBUGAddVariableReference(Context, Var);
+    Assert(Context->VarCount < ArrayCount(Context->Vars));
 
-    return(Ref);
+    debug_variable *Var = DEBUGAddVariable(Context->State, Type, Name);
+    Context->Vars[Context->VarCount++] = Var;
+
+    return(Var);
 }
 
 internal debug_variable *
-DEBUGAddRootGroupInternal(debug_state *State, char *Name)
-{
-    debug_variable *Group = DEBUGAddUnreferencedVariable(State, DebugVariableType_Group, Name);
-    Group->Group.Expanded = true;
-    Group->Group.FirstChild = Group->Group.LastChild = 0;
-
-    return(Group);
-}
-
-internal debug_tree_entry *
-DEBUGAddRootGroup(debug_state *State, char *Name)
-{
-    debug_tree_entry *GroupRef =
-        DEBUGAddVariableReference(State, 0, DEBUGAddRootGroupInternal(State, Name));
-
-    return(GroupRef);
-}
-
-internal debug_tree_entry *
 DEBUGBeginVariableGroup(debug_variable_definition_context *Context, char *Name)
 {
-    debug_tree_entry *Group =
-        DEBUGAddVariableReference(Context, DEBUGAddRootGroupInternal(Context->State, Name));
-    Group->Var->Group.Expanded = false;
+    debug_variable *Group = DEBUGAddVariable(Context->State, DebugVariableType_VarArray, Name);
+    Group->VarArray.Count = 0;
 
-    Context->Group = Group;
+    u32 VarCount;
+    debug_variable *Vars[64];
 
     return(Group);
 }
 
-internal debug_tree_entry *
+internal debug_variable *
 DEBUGAddVariable(debug_variable_definition_context *Context, char *Name, b32 Value)
 {
-    debug_tree_entry *Ref = DEBUGAddVariable(Context, DebugVariableType_Bool32, Name);
-    Ref->Var->Bool32 = Value;
+    debug_variable *Var = DEBUGAddVariable(Context, DebugVariableType_Bool32, Name);
+    Var->Bool32 = Value;
 
-    return(Ref);
+    return(Var);
 }
 
-internal debug_tree_entry *
+internal debug_variable *
 DEBUGAddVariable(debug_variable_definition_context *Context, char *Name, r32 Value)
 {
-    debug_tree_entry *Ref = DEBUGAddVariable(Context, DebugVariableType_Real32, Name);
-    Ref->Var->Real32 = Value;
+    debug_variable *Var = DEBUGAddVariable(Context, DebugVariableType_Real32, Name);
+    Var->Real32 = Value;
 
-    return(Ref);
+    return(Var);
 }
 
-internal debug_tree_entry *
+internal debug_variable *
 DEBUGAddVariable(debug_variable_definition_context *Context, char *Name, v4 Value)
 {
-    debug_tree_entry *Ref = DEBUGAddVariable(Context, DebugVariableType_V4, Name);
-    Ref->Var->Vector4 = Value;
+    debug_variable *Var = DEBUGAddVariable(Context, DebugVariableType_V4, Name);
+    Var->Vector4 = Value;
 
-    return(Ref);
+    return(Var);
 }
 
-internal debug_tree_entry *
+internal debug_variable *
 DEBUGAddVariable(debug_variable_definition_context *Context, char *Name, bitmap_id Value)
 {
-    debug_tree_entry *Ref = DEBUGAddVariable(Context, DebugVariableType_BitmapDisplay, Name);
-    Ref->Var->BitmapDisplay.ID = Value;
-    Ref->Var->BitmapDisplay.Dim = V2(25.0f, 25.0f);
-    Ref->Var->BitmapDisplay.Alpha = true;
+    debug_variable *Var = DEBUGAddVariable(Context, DebugVariableType_BitmapDisplay, Name);
+    Var->BitmapDisplay.ID = Value;
 
-    return(Ref);
+    return(Var);
 }
 
 internal void
@@ -175,8 +124,6 @@ DEBUGCreateVariables(debug_variable_definition_context *Context)
     DEBUG_VARIABLE_LISTING(FamiliarFollowsHero);
     DEBUG_VARIABLE_LISTING(UseSpaceOutlines);
     DEBUG_VARIABLE_LISTING(FauxV4);
-
-    DEBUGAddVariableReference(Context, UseDebugCamRef->Var);
 
 #undef DEBUG_VARIABLE_LISTING
 }

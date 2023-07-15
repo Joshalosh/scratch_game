@@ -24,10 +24,10 @@ DEBUGGetState(void)
     return(Result);
 }
 
-internal debug_variable_hierarchy *
+internal debug_variable_tree *
 AddTree(debug_state *DebugState, debug_variable_reference *Group, v2 AtP)
 {
-    debug_variable_hierarchy *Tree = PushStruct(&DebugState->DebugArena, debug_variable_hierarchy);
+    debug_variable_tree *Tree = PushStruct(&DebugState->DebugArena, debug_variable_tree);
 
     Tree->UIP = AtP;
     Tree->Group = Group;
@@ -632,7 +632,7 @@ EndElement(layout_element *Element)
 internal void
 DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
-    for(debug_variable_hierarchy *Tree = DebugState->TreeSentinel.Next;
+    for(debug_variable_tree *Tree = DebugState->TreeSentinel.Next;
         Tree != &DebugState->TreeSentinel;
         Tree = Tree->Next)
     {
@@ -835,7 +835,7 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
             {
                 debug_variable_reference *RootGroup = DEBUGAddRootGroup(DebugState, "NewUserGroup");
                 DEBUGAddVariableReference(DebugState, RootGroup, DebugState->HotInteraction.Var);
-                debug_variable_hierarchy *Tree = AddTree(DebugState, RootGroup, V2(0, 0));
+                debug_variable_tree *Tree = AddTree(DebugState, RootGroup, V2(0, 0));
                 Tree->UIP = MouseP;
                 DebugState->HotInteraction.Type = DebugInteraction_Move;
                 DebugState->HotInteraction.P = &Tree->UIP;
@@ -899,7 +899,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     if(DebugState->Interaction.Type)
     {
         debug_variable *Var = DebugState->Interaction.Var;
-        debug_variable_hierarchy *Tree = DebugState->Interaction.Tree;
+        debug_variable_tree *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
         
         // Mouse move interaction.
@@ -1428,7 +1428,7 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
         DrawBuffer.Height = Buffer->Height;
         DrawBuffer.Pitch = Buffer->Pitch;
         DrawBuffer.Memory = Buffer->Memory;
-        DEBUGEnd(DebugState, Input, DrawBuffer);
+        DEBUGEnd(DebugState, Input, &DrawBuffer);
     }
 
     return(GlobalDebugTable);

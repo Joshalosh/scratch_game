@@ -60,7 +60,7 @@ enum debug_view_type
     DebugViewType_Collapsible,
 };
 
-struct debug_view 
+struct debug_view
 {
     debug_tree *Tree;
     debug_variable *Var;
@@ -85,7 +85,7 @@ struct debug_tree
 
 struct debug_profile_settings
 {
-    int placeholder;
+    int Placeholder;
 };
 
 struct debug_bitmap_display
@@ -204,10 +204,10 @@ struct debug_interaction
 {
     debug_interaction_type Type;
     union
-    { 
+    {
         void *Generic;
         debug_variable *Var;
-        debug_tree *Hierarchy;
+        debug_tree *Tree;
         v2 *P;
     };
 };

@@ -333,7 +333,8 @@ typedef struct platform_api
     debug_platform_write_entire_file *DEBUGWriteEntireFile;
     debug_platform_execute_system_command *DEBUGExecuteSystemCommand;
     debug_platform_get_process_state *DEBUGGetProcessState;
-#endif debug_table *
+#endif    debug_table *
+
 } platform_api;
 
 typedef struct game_memory
@@ -587,7 +588,7 @@ struct timed_block
 // SHARED UTILS
 //
 
-internal u32
+inline u32
 StringLength(char *String)
 {
     u32 Count = 0;
@@ -597,7 +598,6 @@ StringLength(char *String)
     }
     return(Count);
 }
-
 
 #ifdef __cplusplus
 }

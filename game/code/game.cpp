@@ -908,8 +908,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TranState->IsInitialised = true;
     }
 
-    DEBUGStart(TranState->Assets, Buffer->Width, Buffer->Height);
-
 #if DEBUGUI_RecomputeGroundChunkOnEXEChange
     // TODO: Re-enable this but make sure I don't touch ones that are in flight.
     if(Memory->ExecutableReloaded)
@@ -1594,8 +1592,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     CheckArena(&GameState->WorldArena);
     CheckArena(&TranState->TranArena);
-
-    DEBUGEnd(Input, DrawBuffer);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
@@ -1615,4 +1611,3 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 }
 #endif
 
-    
