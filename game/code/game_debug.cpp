@@ -24,18 +24,15 @@ DEBUGGetState(void)
     return(Result);
 }
 
-internal debug_variable_tree *
-AddTree(debug_state *DebugState, debug_variable_reference *Group, v2 AtP)
+internal debug_tree *
+AddTree(debug_state *DebugState, debug_variable *Group, v2 AtP)
 {
-    debug_variable_tree *Tree = PushStruct(&DebugState->DebugArena, debug_variable_tree);
+    debug_tree *Tree = PushStruct(&DebugState->DebugArena, debug_variable_tree);
 
     Tree->UIP = AtP;
     Tree->Group = Group;
-    Tree->Next = DebugState->TreeSentinel.Next;
-    Tree->Prev = &DebugState->TreeSentinel;
 
-    Tree->Next->Prev = Tree;
-    Tree->Prev->Next = Tree;
+    DLIST_INSERT(&DebugState->TreeSentinel, Tree);
 
     return(Tree);
 }
@@ -1201,8 +1198,9 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
         debug_variable_definition_context Context = {};
         Context.State = DebugState;
         Context.Arena = &DebugState->DebugArena;
-        Context.Group = DEBUGBeginVariableGroup(&Context, "Root");
+        Context.GroupStack[0] = 0;
 
+        DEBUGBeginVariableGroup(&Context, "Root");
         DEBUGBeginVariableGroup(&Context, "Debugging");
 
         DEBUGCreateVariables(&Context);
@@ -1228,6 +1226,7 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
         DEBUGAddVariable(&Context, "Test Bitmap", ID);
         
         DEBUGEndVariableGroup(&Context);
+        Assert(Context->GroupDepth == 0);
 
         DebugState->RootGroup = Context.Group;
 
