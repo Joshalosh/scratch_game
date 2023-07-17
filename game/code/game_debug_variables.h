@@ -1,12 +1,13 @@
 #if !defined(GAME_DEBUG_VARIABLES_H)
 
+#define DEBUG_MAX_VARIABLE_STACK_DEPTH 64
 struct debug_variable_definition_context
 {
     debug_state *State;
     memory_arena *Arena;
 
     u32 GroupDepth;
-    debug_variable *GroupStack[64];
+    debug_variable *GroupStack[DEBUG_MAX_VARIABLE_STACK_DEPTH];
 };
 
 internal debug_variable *
