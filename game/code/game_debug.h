@@ -264,6 +264,8 @@ struct debug_state
     debug_frame *Frames;
     debug_thread *FirstThread;
     open_debug_block *FirstFreeBlock;
+
+    debug_view Dummy;
 };
 
 #define GAME_DEBUG_H

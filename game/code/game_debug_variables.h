@@ -25,6 +25,7 @@ DEBUGAddVariableToGroup(debug_state *State, debug_variable *Group, debug_variabl
 {
     debug_variable_link *Link = PushStruct(&State->DebugArena, debug_variable_link);
     DLIST_INSERT(&Group->VarGroup, Link);
+    Link->Var = Add;
 }
 
 internal debug_variable *
@@ -43,7 +44,7 @@ DEBUGAddVariable(debug_variable_definition_context *Context, debug_variable_type
 internal debug_variable *
 DEBUGBeginVariableGroup(debug_variable_definition_context *Context, char *Name)
 {
-    debug_variable *Group = DEBUGAddVariable(Context->State, DebugVariableType_VarGroup, Name);
+    debug_variable *Group = DEBUGAddVariable(Context, DebugVariableType_VarGroup, Name);
     DLIST_INIT(&Group->VarGroup);
 
     Assert(Context->GroupDepth < (ArrayCount(Context->GroupStack) - 1));

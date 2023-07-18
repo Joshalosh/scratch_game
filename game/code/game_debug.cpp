@@ -634,14 +634,12 @@ EndElement(layout_element *Element)
     Layout->At.y = GetMinCorner(TotalBounds).y - SpacingY;
 }
 
-static debug_view Dummy = {};
-
 internal debug_view *
 GetDebugViewFor(debug_state *DebugState, debug_variable *Var)
 {
     debug_view *Result = 0;
 
-    Result = &Dummy;
+    Result = &DebugState->Dummy;
     // NotImplemented;
 
     return(Result);
@@ -747,7 +745,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     } break;
                 }
 
-                if(Var->Type == DebugVariableType_VarGroup)
+                if((Var->Type == DebugVariableType_VarGroup) &&
+                    View->Collapsible.ExpandedAlways)
                 {
                     Iter = Stack + Depth;
                     Iter->Link = Var->VarGroup.Next;
