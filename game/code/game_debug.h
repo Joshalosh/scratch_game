@@ -60,6 +60,11 @@ enum debug_view_type
     DebugViewType_Collapsible,
 };
 
+struct debug_id
+{
+    void *Value[2];
+};
+
 struct debug_view
 {
     debug_tree *Tree;
@@ -207,7 +212,7 @@ struct debug_interaction
     union
     {
         void *Generic;
-        debug_variable *Var;
+        debug_variable_link *Link;
         debug_tree *Tree;
         v2 *P;
     };
