@@ -120,7 +120,7 @@ DEBUGCreateVariables(debug_variable_definition_context *Context)
 
         DEBUGBeginVariableGroup(Context, "Camera");
         {
-            DebugCamRef = DEBUG_VARIABLE_LISTING(UseDebugCamera);
+            DEBUG_VARIABLE_LISTING(UseDebugCamera);
             DEBUG_VARIABLE_LISTING(DebugCameraDistance);
             DEBUG_VARIABLE_LISTING(UseRoomBasedCamera);
         }

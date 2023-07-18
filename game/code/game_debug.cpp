@@ -27,7 +27,7 @@ DEBUGGetState(void)
 internal debug_tree *
 AddTree(debug_state *DebugState, debug_variable *Group, v2 AtP)
 {
-    debug_tree *Tree = PushStruct(&DebugState->DebugArena, debug_variable_tree);
+    debug_tree *Tree = PushStruct(&DebugState->DebugArena, debug_tree);
 
     Tree->UIP = AtP;
     Tree->Group = Group;
@@ -634,6 +634,20 @@ EndElement(layout_element *Element)
     Layout->At.y = GetMinCorner(TotalBounds).y - SpacingY;
 }
 
+static debug_view Dummy = {};
+
+internal debug_view *
+GetDebugViewFor(debug_state *DebugState, debug_variable *Var)
+{
+    debug_view *Result = 0;
+
+    Result = &Dummy;
+    // NotImplemented;
+
+    return(Result);
+}
+
+
 internal void
 DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
@@ -674,12 +688,12 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                 b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
                 v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
 
-                debug_view View = GetDebugViewFor(DebugState, Var);
+                debug_view *View = GetDebugViewFor(DebugState, Var);
                 switch(Var->Type)
                 {
                     case DebugVariableType_CounterThreadList:
                     {
-                        layout_element Element = BeginElementRectangle(&Layout, &View->InlineBlock.Dimension);
+                        layout_element Element = BeginElementRectangle(&Layout, &View->InlineBlock.Dim);
                         MakeElementSizable(&Element);
                         DefaultInteraction(&Element, ItemInteraction);
                         EndElement(&Element);
@@ -690,18 +704,18 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     case DebugVariableType_BitmapDisplay:
                     {
                         loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, Var->BitmapDisplay.ID, RenderGroup->GenerationID);
-                        r32 BitmapScale = View->InlineBlock.Dimension;
+                        r32 BitmapScale = View->InlineBlock.Dim.y;
                         if(Bitmap)
                         {
                             used_bitmap_dim Dim = GetBitmapDim(RenderGroup, Bitmap, BitmapScale, V3(0.0f, 0.0f, 0.0f), 1.0f);
-                            Var->BitmapDisplay.Dim.x = Dim.Size.x;
+                            View->InlineBlock.Dim.x = Dim.Size.x;
                         }
 
                         debug_interaction TearInteraction = {};
                         TearInteraction.Type = DebugInteraction_TearValue;
                         TearInteraction.Var = Var;
 
-                        layout_element Element = BeginElementRectangle(&Layout, &Var->BitmapDisplay.Dim);
+                        layout_element Element = BeginElementRectangle(&Layout, &View->InlineBlock.Dim);
                         MakeElementSizable(&Element);
                         DefaultInteraction(&Element, TearInteraction);
                         EndElement(&Element);
@@ -823,7 +837,7 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
                     DebugState->HotInteraction.Type = DebugInteraction_DragValue;
                 } break;
 
-                case DebugVariableType_Group:
+                case DebugVariableType_VarGroup:
                 {
                     DebugState->HotInteraction.Type = DebugInteraction_ToggleValue;
                 } break;
@@ -839,12 +853,15 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
         {
             case DebugInteraction_TearValue:
             {
+                // TODO: Reimplement with new system
+#if 0
                 debug_variable_reference *RootGroup = DEBUGAddRootGroup(DebugState, "NewUserGroup");
                 DEBUGAddVariableReference(DebugState, RootGroup, DebugState->HotInteraction.Var);
                 debug_variable_tree *Tree = AddTree(DebugState, RootGroup, V2(0, 0));
                 Tree->UIP = MouseP;
                 DebugState->HotInteraction.Type = DebugInteraction_Move;
                 DebugState->HotInteraction.P = &Tree->UIP;
+#endif
             } break;
         }
 
@@ -872,9 +889,10 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
                     Var->Bool32 = !Var->Bool32;
                 } break;
 
-                case DebugVariableType_Group:
+                case DebugVariableType_VarGroup:
                 {
-                    Var->Group.Expanded = !Var->Group.Expanded;
+                    debug_view *View = GetDebugViewFor(DebugState, Var);
+                    View->Collapsible.ExpandedAlways = !View->Collapsible.ExpandedAlways;
                 } break;
             }
         } break;
@@ -905,7 +923,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     if(DebugState->Interaction.Type)
     {
         debug_variable *Var = DebugState->Interaction.Var;
-        debug_variable_tree *Tree = DebugState->Interaction.Tree;
+        debug_tree *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
         
         // Mouse move interaction.
@@ -1209,20 +1227,16 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
         Context.Arena = &DebugState->DebugArena;
         Context.GroupStack[0] = 0;
 
-        DEBUGBeginVariableGroup(&Context, "Root");
+        DebugState->RootGroup = DEBUGBeginVariableGroup(&Context, "Root");
         DEBUGBeginVariableGroup(&Context, "Debugging");
 
         DEBUGCreateVariables(&Context);
         DEBUGBeginVariableGroup(&Context, "Profile");
         DEBUGBeginVariableGroup(&Context, "By Thread");
-        debug_variable_reference *ThreadList =
-            DEBUGAddVariable(&Context, DebugVariableType_CounterThreadList, "");
-        ThreadList->Var->Profile.Dimension = V2(1024.0f, 100.0f);
+        DEBUGAddVariable(&Context, DebugVariableType_CounterThreadList, "");
         DEBUGEndVariableGroup(&Context);
         DEBUGBeginVariableGroup(&Context, "By Function");
-        debug_variable_reference *FunctionList =
-            DEBUGAddVariable(&Context, DebugVariableType_CounterThreadList, "");
-        FunctionList->Var->Profile.Dimension = V2(1024.0f, 200.0f);
+        DEBUGAddVariable(&Context, DebugVariableType_CounterThreadList, "");
         DEBUGEndVariableGroup(&Context);
         DEBUGEndVariableGroup(&Context);
 
@@ -1235,9 +1249,8 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
         DEBUGAddVariable(&Context, "Test Bitmap", ID);
         
         DEBUGEndVariableGroup(&Context);
-        Assert(Context->GroupDepth == 0);
-
-        DebugState->RootGroup = Context.Group;
+        DEBUGEndVariableGroup(&Context);
+        Assert(Context.GroupDepth == 0);
 
         DebugState->RenderGroup = AllocateRenderGroup(Assets, &DebugState->DebugArena, 
                                                       Megabytes(16), false);

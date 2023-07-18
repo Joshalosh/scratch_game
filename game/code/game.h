@@ -83,7 +83,7 @@
 #include "game_file_formats.h"
 
 #define DLIST_INSERT(Sentinel, Element)     \
-    (Element)->Next = (Seninel)->Next;      \
+    (Element)->Next = (Sentinel)->Next;      \
     (Element)->Prev = (Sentinel);           \
     (Element)->Next->Prev = (Element);      \
     (Element)->Prev->Next = (Element);
