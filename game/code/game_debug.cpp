@@ -8,11 +8,12 @@
 internal void RestartCollation(debug_state *DebugState, u32 InvalidEventArrayIndex);
 
 inline debug_id
-DebugIDFromLink(debug_variable_link *Link)
+DebugIDFromLink(debug_tree *Tree, debug_variable_link *Link)
 {
     debug_id Result = {};
 
-    Result.Value[0] = Link;
+    Result.Value[0] = Tree;
+    Result.Value[1] = Link;
 
     return(Result);
 }
@@ -653,10 +654,13 @@ DebugIDsAreEqual(debug_id A, debug_id B)
 }
 
 internal debug_view *
-GetDebugViewFor(debug_state *DebugState, debug_id ID)
+GetOrCreateDebugViewFor(debug_state *DebugState, debug_id ID)
 {
     // TODO: Better hash function
-    u32 HashIndex = (((u32)ID.Value[0] >> 2) + ((u32)ID.Value[1] >> 2)) % ArrayCount(DebugState->ViewHash);
+    // I might actually probably want to shift down by 4 instead of 2. I was type casting
+    // to u32 originally but picking up compiler warning so I've now changed it to u64
+    // But I think that would also mean shifting down by an extra 2 spots. Watch this space!
+    u32 HashIndex = (((u64)ID.Value[0] >> 2) + ((u64)ID.Value[1] >> 2)) % ArrayCount(DebugState->ViewHash);
     debug_view **HashSlot = DebugState->ViewHash + HashIndex;
 
     debug_view *Result = 0;
@@ -682,16 +686,15 @@ GetDebugViewFor(debug_state *DebugState, debug_id ID)
 }
 
 inline debug_interaction
-VarLinkInteraction(debug_interaction_type Type, debug_variable_link *Link)
+VarLinkInteraction(debug_interaction_type Type, debug_tree *Tree, debug_variable_link *Link)
 {
     debug_interaction ItemInteraction = {};
-    ItemInteraction.ID = DebugIDFromLink(Link);
+    ItemInteraction.ID = DebugIDFromLink(Tree, Link);
     ItemInteraction.Type = Type;
     ItemInteraction.Var = Link->Var;
 
     return(ItemInteraction);
 }
-
 
 internal void
 DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
@@ -711,8 +714,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         int Depth = 0;
         debug_variable_iterator Stack[DEBUG_MAX_VARIABLE_STACK_DEPTH];
 
-        Stack[Depth].Link = Tree->RootGroup->VarGroup.Next;
-        Stack[Depth].Sentinel = &Tree->RootGroup->VarGroup;
+        Stack[Depth].Link = Tree->Group->VarGroup.Next;
+        Stack[Depth].Sentinel = &Tree->Group->VarGroup;
         ++Depth;
         while(Depth > 0)
         {
@@ -730,12 +733,12 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                 Iter->Link = Iter->Link->Next;
 
                 debug_interaction ItemInteraction = 
-                    VarLinkInteraction(DebugInteraction_AutoModifyVariable, Link);
+                    VarLinkInteraction(DebugInteraction_AutoModifyVariable, Tree, Link);
 
                 b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
                 v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
 
-                debug_view *View = GetDebugViewFor(DebugState, DebugIDFromLink(Link));
+                debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugIDFromLink(Tree, Link));
                 switch(Var->Type)
                 {
                     case DebugVariableType_CounterThreadList:
@@ -758,8 +761,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                             View->InlineBlock.Dim.x = Dim.Size.x;
                         }
 
-                        debug_interaction TearInteraction = 
-                            VarLinkInteraction(DebugInteraction_TearValue, Link);
+                        debug_interaction TearInteraction = VarLinkInteraction(DebugInteraction_TearValue, Tree, Link);
 
                         layout_element Element = BeginElementRectangle(&Layout, &View->InlineBlock.Dim);
                         MakeElementSizable(&Element);
@@ -936,7 +938,7 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 
                 case DebugVariableType_VarGroup:
                 {
-                    debug_view *View = GetDebugViewFor(DebugState, DebugState->Interaction.ID);
+                    debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugState->Interaction.ID);
                     View->Collapsible.ExpandedAlways = !View->Collapsible.ExpandedAlways;
                 } break;
             }
