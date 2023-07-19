@@ -644,10 +644,39 @@ EndElement(layout_element *Element)
     Layout->At.y = GetMinCorner(TotalBounds).y - SpacingY;
 }
 
+inline b32
+DebugIDsAreEqual(debug_id A, debug_id B)
+{
+    b32 Result = ((A.Value[0] == B.Value[0]) &&
+                  (A.Value[1] == B.Value[1]));
+    return(Result);
+}
+
 internal debug_view *
 GetDebugViewFor(debug_state *DebugState, debug_id ViewID)
 {
+    // TODO: Better hash function
+    u32 HashIndex = (((u32)ID.Value[0] >> 2) + ((u32)ID.Value[1] >> 2)) % ArrayCount(DebugState->ViewHash);
+    debug_view **HashSlot = DebugState->ViewHash + HashIndex;
+
     debug_view *Result = 0;
+    for(debug_view *Search = *HashSlot; Search; Search = Search->NextInHash)
+    {
+        if(DebugIDsAreEqual(Search->ID, ID))
+        {
+            Result = Search;
+            break;
+        }
+    }
+
+    if(!Result)
+    {
+        Result = PushStruct(&DebugState->DebugArena, debug_view);
+        Result->ID = ID;
+        Result.Type = DebugViewType_Unkown;
+        Result->NextInHash = *HashSlot;
+        *HashSlot = Result;
+    }
 
     Result = &DebugState->Dummy;
     // NotImplemented;
