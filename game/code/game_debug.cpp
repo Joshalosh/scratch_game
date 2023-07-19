@@ -655,6 +655,17 @@ GetDebugViewFor(debug_state *DebugState, debug_id ViewID)
     return(Result);
 }
 
+inline debug_interaction
+VarLinkInteraction(debug_interaction_type Type, debug_variable_link *Link)
+{
+    debug_interaction ItemInteraction = {};
+    ItemInteraction.ID = DebugIDFromLink(Link);
+    ItemInteraction.Type = Type;
+    ItemInteraction.Var = Link->Var;
+
+    return(ItemInteraction);
+}
+
 
 internal void
 DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
@@ -690,9 +701,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                 debug_variable *Var = Iter->Link->Var;
                 Iter->Link = Iter->Link->Next;
 
-                debug_interaction ItemInteraction = {};
-                ItemInteraction.Type = DebugInteraction_AutoModifyVariable;
-                ItemInteraction.Link = Link;
+                debug_interaction ItemInteraction = 
+                    VarLinkInteraction(DebugInteraction_AutoModifyVariable, Link);
 
                 b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
                 v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
@@ -720,9 +730,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                             View->InlineBlock.Dim.x = Dim.Size.x;
                         }
 
-                        debug_interaction TearInteraction = {};
-                        TearInteraction.Type = DebugInteraction_TearValue;
-                        TearInteraction.Link = Link;
+                        debug_interaction TearInteraction = 
+                            VarLinkInteraction(DebugInteraction_TearValue, Link);
 
                         layout_element Element = BeginElementRectangle(&Layout, &View->InlineBlock.Dim);
                         MakeElementSizable(&Element);
@@ -835,7 +844,7 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
     {
         if(DebugState->HotInteraction.Type == DebugInteraction_AutoModifyVariable)
         {
-            switch(DebugState->HotInteraction.Link->Var->Type)
+            switch(DebugState->HotInteraction.Var->Type)
             {
                 case DebugVariableType_Bool32:
                 {
@@ -890,8 +899,7 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     {
         case DebugInteraction_ToggleValue:
         {
-            debug_variable_link *Link = DebugState->Interaction.Link;
-            debug_variable *Var = Link->Var;
+            debug_variable *Var = DebugState->Interaction.Var;
             Assert(Var);
             switch(Var->Type)
             {
@@ -902,7 +910,7 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 
                 case DebugVariableType_VarGroup:
                 {
-                    debug_view *View = GetDebugViewFor(DebugState, Link);
+                    debug_view *View = GetDebugViewFor(DebugState, DebugState->Interaction.ID);
                     View->Collapsible.ExpandedAlways = !View->Collapsible.ExpandedAlways;
                 } break;
             }
@@ -933,7 +941,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 */
     if(DebugState->Interaction.Type)
     {
-        debug_variable_link *Link = DebugState->Interaction.Link;
+        debug_variable *Var = DebugState->Interaction.Var;
         debug_tree *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
         
@@ -942,8 +950,6 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         {
             case DebugInteraction_DragValue:
             {
-                debug_variable *Var = Link->Var;
-
                 switch(Var->Type)
                 {
                     case DebugVariableType_Real32:

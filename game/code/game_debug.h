@@ -208,11 +208,12 @@ enum debug_interaction_type
 
 struct debug_interaction
 {
+    debug_id ID;
     debug_interaction_type Type;
     union
     {
         void *Generic;
-        debug_variable_link *Link;
+        debug_variable *Var;
         debug_tree *Tree;
         v2 *P;
     };
