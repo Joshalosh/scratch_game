@@ -653,7 +653,7 @@ DebugIDsAreEqual(debug_id A, debug_id B)
 }
 
 internal debug_view *
-GetDebugViewFor(debug_state *DebugState, debug_id ViewID)
+GetDebugViewFor(debug_state *DebugState, debug_id ID)
 {
     // TODO: Better hash function
     u32 HashIndex = (((u32)ID.Value[0] >> 2) + ((u32)ID.Value[1] >> 2)) % ArrayCount(DebugState->ViewHash);
@@ -673,13 +673,10 @@ GetDebugViewFor(debug_state *DebugState, debug_id ViewID)
     {
         Result = PushStruct(&DebugState->DebugArena, debug_view);
         Result->ID = ID;
-        Result.Type = DebugViewType_Unkown;
+        Result->Type = DebugViewType_Unkown;
         Result->NextInHash = *HashSlot;
         *HashSlot = Result;
     }
-
-    Result = &DebugState->Dummy;
-    // NotImplemented;
 
     return(Result);
 }
@@ -714,8 +711,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         int Depth = 0;
         debug_variable_iterator Stack[DEBUG_MAX_VARIABLE_STACK_DEPTH];
 
-        Stack[Depth].Link = DebugState->RootGroup->VarGroup.Next;
-        Stack[Depth].Sentinel = &DebugState->RootGroup->VarGroup;
+        Stack[Depth].Link = Tree->RootGroup->VarGroup.Next;
+        Stack[Depth].Sentinel = &Tree->RootGroup->VarGroup;
         ++Depth;
         while(Depth > 0)
         {
@@ -726,6 +723,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
             }
             else 
             {
+                Layout.Depth = Depth;
+
                 debug_variable_link *Link = Iter->Link;
                 debug_variable *Var = Iter->Link->Var;
                 Iter->Link = Iter->Link->Next;
@@ -902,14 +901,12 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
             case DebugInteraction_TearValue:
             {
                 // TODO: Reimplement with new system
-#if 0
-                debug_variable_reference *RootGroup = DEBUGAddRootGroup(DebugState, "NewUserGroup");
-                DEBUGAddVariableReference(DebugState, RootGroup, DebugState->HotInteraction.Var);
-                debug_variable_tree *Tree = AddTree(DebugState, RootGroup, V2(0, 0));
+                debug_variable *RootGroup = DEBUGAddRootGroup(DebugState, "NewUserGroup");
+                DEBUGAddVariableToGroup(DebugState, RootGroup, DebugState->HotInteraction.Var);
+                debug_tree *Tree = AddTree(DebugState, RootGroup, V2(0, 0));
                 Tree->UIP = MouseP;
                 DebugState->HotInteraction.Type = DebugInteraction_Move;
                 DebugState->HotInteraction.P = &Tree->UIP;
-#endif
             } break;
         }
 
