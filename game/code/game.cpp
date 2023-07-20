@@ -1483,6 +1483,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     InvalidCodePath;
                 } break;
             }
+
+#if DEBUGUI_DrawEntityOutlines
+            for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
+            {
+                sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+                PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                                Volume->Dim.xy, V4(1.0f, 0.0f, 1.0f, 1), 0.05f);
+            }
+#endif
         }
     }
 
