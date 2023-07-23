@@ -924,12 +924,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     world *World = GameState->World;
 
+#if 0
     {
         v2 MusicVolume;
         MusicVolume.y = SafeRatio0((r32)Input->MouseX, (r32)Buffer->Width);
         MusicVolume.x = 1.0f - MusicVolume.y;
         ChangeVolume(&GameState->AudioState, GameState->Music, 0.01f, MusicVolume);
     }
+#endif
 
     for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
@@ -1022,14 +1024,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBuffer->Height = 719;
 #endif
 
+    v2 MouseP = {Input->MouseX, Input->MouseY};
+
     // TODO: Need to figure out what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(4), false);
     BeginRender(RenderGroup);
     real32 WidthOfMonitor = 0.635f; // Horizontal measurement of monitor in metres
     real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
+
     real32 FocalLength = 0.6f;
     real32 DistanceAboveGround = 9.0f;
     Perspective(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, MetresToPixels, FocalLength, DistanceAboveGround);
+
     Clear(RenderGroup, V4(0.25f, 0.25f, 0.25f, 0.0f));
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
@@ -1488,8 +1494,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
             {
                 sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+
+                v4 OutlineColour = V4(1, 0, 1, 1);
+                v2 LocalMouseP = (Unproject(RenderGroup, MouseP, Volume->OffsetP.z) - Volume->OffsetP.xy);
+                if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
+                   (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
+                {
+                    OutlineColour = V4(1, 1, 0, 1);
+                }
+
                 PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                Volume->Dim.xy, V4(1.0f, 0.0f, 1.0f, 1), 0.05f);
+                                Volume->Dim.xy, OutlineColour, 0.05f);
             }
 #endif
         }
@@ -1586,6 +1601,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         MapP += YAxis + V2(0.0f, 6.0f);
     }
 #endif
+
+    Orthographic(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, 1.0f);
+
+    PushRectOutline(RenderGroup, V3(MouseP, 0.0f), V2(2.0f, 2.0f));
 
     TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer);
     EndRender(RenderGroup);

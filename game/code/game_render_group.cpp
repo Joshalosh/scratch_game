@@ -877,6 +877,8 @@ Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
 
     RenderGroup->Transform.Orthographic = false;
+    RenderGroup->Transform.OffsetP = V3(0, 0, 0);
+    RenderGroup->Transform.Scale = 1.0f;
 }
 
 inline void
@@ -892,6 +894,8 @@ Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
 
     RenderGroup->Transform.Orthographic = true;
+    RenderGroup->Transform.OffsetP = V3(0, 0, 0);
+    RenderGroup->Transform.Scale = 1.0f;
 }
 
 inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, v3 OriginalP)
