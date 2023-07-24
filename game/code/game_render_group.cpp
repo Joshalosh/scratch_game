@@ -1110,6 +1110,24 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
 #endif
 }
 
+#if 0
+inline v2 
+CompleteUnproject()
+{
+    if(Transform->Orthographic)
+    {
+        Result.P = Transform->ScreenCentre + Transform->MetresToPixels*P.xy;
+    }
+    else 
+    {
+        v2 A = (FinalP - Transform->ScreenCentre) / Transform->MetresToPixels;
+        v2 Result = ((Transform->DistanceAboveTarget - P.z)/Transform->FocalLength)*A;
+    }
+
+    Result -= Transform->OffsetP;
+}
+#endif
+
 inline v2
 Unproject(render_group *Group, v2 ProjectedXY, real32 AtDistanceFromCamera)
 {
