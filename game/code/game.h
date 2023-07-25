@@ -18,6 +18,7 @@
 
  - Rendering
    - Get rid of "even" scan line notion.
+   - Real projections with solid concept of project/unproject
    - Straighten out all of the coordinate systems.
      - Screen
      - World
@@ -83,12 +84,12 @@
 #include "game_file_formats.h"
 
 #define DLIST_INSERT(Sentinel, Element)     \
-    (Element)->Next = (Sentinel)->Next;      \
+    (Element)->Next = (Sentinel)->Next;     \
     (Element)->Prev = (Sentinel);           \
     (Element)->Next->Prev = (Element);      \
     (Element)->Prev->Next = (Element);
 
-#define DLIST_INIT(Sentinel) \
+#define DLIST_INIT(Sentinel)       \
     (Sentinel)->Next = (Sentinel); \
     (Sentinel)->Prev = (Sentinel);
 

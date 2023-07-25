@@ -1492,39 +1492,37 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
 #if DEBUGUI_DrawEntityOutlines
 
-            RenderGroup->Transform.OffsetP = V3(0, 0, 0);
-            RenderGroup->Transform.Scale = 1.0f;
-            v2 MetresMouseP = MouseP*(1.0f / RenderGroup->Transform.MetresToPixels);
-            r32 LocalZ = 10.0f;
-            v2 WorldMouseP = Unproject(RenderGroup, MetresMouseP, LocalZ);
-            RenderGroup->Transform.OffsetP = V3(WorldMouseP, RenderGroup->Transform.DistanceAboveTarget - LocalZ);
-            PushRect(RenderGroup, V3(0, 0, 0), V2(1.0f, 1.0f),
-                     V4(0.0f, 1.0f, 1.0f, 1.0f));
+#if 1
 
 #if 0
-            if(EntityIndex == 10)
+            RenderGroup->Transform.OffsetP = V3(0, 0, 0);
+            RenderGroup->Transform.Scale = 1.0f;
+            r32 LocalZ = 3.0f;
+            v3 WorldMouseP = Unproject(RenderGroup, MouseP, LocalZ);
+            RenderGroup->Transform.OffsetP = WorldMouseP;
+            PushRect(RenderGroup, V3(0, 0, 0), V2(1.0f, 1.0f), V4(0.0f, 1.0f, 1.0f, 1.0f));
+#endif
+
+            for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
             {
-                for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
+                sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+
+                v3 LocalMouseP = Unproject(RenderGroup, MouseP);
+#if 0
+                PushRect(RenderGroup, V3(LocalMouseP.xy, 0.0f), V2(1.0f, 1.0f), 
+                         V4(0.0f, 1.0f, 1.0f, 1.0f));
+#endif
+
+                if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
+                   (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
                 {
-                    sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-
-                    r32 LocalZ = RenderGroup->Transform.OffsetP.z + Volume->OffsetP.z;
-                    v4 OutlineColour = V4(1, 0, 1, 1);
-                    v2 LocalMouseP = (Unproject(RenderGroup, MetresMouseP, LocalZ) - 
-                                      (RenderGroup->Transform.OffsetP.xy + Volume->OffsetP.xy));
-                    PushRect(RenderGroup, V3(LocalMouseP, Volume->OffsetP.z), V2(1.0f, 1.0f), 
-                             V4(0.0f, 1.0f, 1.0f, 1.0f));
-
-                    if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
-                       (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
-                    {
-                        OutlineColour = V4(1, 1, 0, 1);
-                    }
-
+                    v4 OutlineColour = V4(1, 1, 0, 1);
                     PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
                                     Volume->Dim.xy, OutlineColour, 0.05f);
+                    DEBUG_HOT_ELEMENT(Entity);
                 }
             }
+
 #endif
 
 #endif
