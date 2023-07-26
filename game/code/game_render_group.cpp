@@ -1118,9 +1118,7 @@ Unproject(render_group *Group, v2 PixelsXY)
     v2 UnprojectedXY;
     if(Transform->Orthographic)
     {
-        Assert(!"Not Implemented");
-        //Result.P = Transform->ScreenCentre + Transform->MetresToPixels*P.xy;
-        UnprojectedXY = V2(0, 0);
+        UnprojectedXY = UnprojectedXY = (1.0f / Transform->MetresToPixels)*(PixelsXY - Transform->ScreenCentre);
     }
     else 
     {

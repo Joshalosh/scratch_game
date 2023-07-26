@@ -1519,7 +1519,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     v4 OutlineColour = V4(1, 1, 0, 1);
                     PushRectOutline(RenderGroup, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
                                     Volume->Dim.xy, OutlineColour, 0.05f);
-                    DEBUG_HOT_ELEMENT(Entity);
+                    DEBUG_BEGIN_HOT_ELEMENT(Entity);
+                    DEBUG_VALUE(Entity->StorageIndex);
+                    DEBUG_VALUE(Entity->Updatable);
+                    DEBUG_VALUE(Entity->Type);
+                    DEBUG_VALUE(Entity->P);
+                    DEBUG_VALUE(Entity->dP);
+                    DEBUG_VALUE(Entity->DistanceLimit);
+                    DEBUG_VALUE(Entity->FacingDirection);
+                    DEBUG_VALUE(tBob);
+                    DEBUG_VALUE(dAbsTileZ);
+                    DEBUG_VALUE(Entity->HitPointMax);
+                    for(u32 HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
+                    {
+                        DEBUG_VALUE(Entity->HitPoint[HitPointIndex]);
+                    }
+                    DEBUG_END_ARRAY();
+                    DEBUG_VALUE(Entity->Sword);
+                    DEBUG_VALUE(Entity->WalkableDim);
+                    DEBUG_VALUE(Entity->WalkableHeight);
+                    DEBUG_END_HOT_ELEMENT();
                 }
             }
 
