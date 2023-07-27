@@ -78,6 +78,8 @@
    * Continuous save for crash recovery?
 */
 
+#define introspect(params)
+
 #include "game_platform.h"
 #include "game_intrinsics.h"
 #include "game_math.h"
