@@ -7,13 +7,13 @@ ReadEntireFileIntoMemoryAndNullTerminate(char *Filename)
     char *Result = 0;
 
     FILE *File = fopen(Filename, "r");
-    if(file)
+    if(File)
     {
         fseek(File, 0, SEEK_END);
         size_t FileSize = ftell(File);
         fseek(File, 0, SEEK_SET);
 
-        Result = (char *)malloc(Filesize + 1);
+        Result = (char *)malloc(FileSize + 1);
         fread(Result, FileSize, 1, File);
         Result[FileSize] = 0;
 
@@ -32,7 +32,7 @@ enum token_type
     Token_Colon,
     Token_SemiColon,
     Token_Asterisk,
-    Token_OpenBacket,
+    Token_OpenBracket,
     Token_CloseBracket,
     Token_OpenBrace,
     Token_CloseBrace,
@@ -40,7 +40,7 @@ enum token_type
     Token_String,
     Token_Identifier,
 
-    Token_EnOfStream,
+    Token_EndOfStream,
 
 };
 struct token 
@@ -96,7 +96,7 @@ EatAllWhiteSpace(tokeniser *Tokeniser)
 {
     for(;;)
     {
-        while (IsWhiteSpace(Tokeniser->At[0]))
+        if(IsWhiteSpace(Tokeniser->At[0]))
         {
             ++Tokeniser->At;
         }
@@ -140,7 +140,9 @@ GetToken(tokeniser *Tokeniser)
     token Token = {};
     Token.TextLength = 1;
     Token.Text = Tokeniser->At;
-    switch(Tokeniser->At[0])
+    char C = Tokeniser->At[0];
+    ++Tokeniser->At;
+    switch(C)
     {
         case '\0': {Token.Type = Token_EndOfStream;} break;
 
@@ -156,13 +158,14 @@ GetToken(tokeniser *Tokeniser)
 
         case '"':
         {
-            ++Tokeniser->At;
+            Token.Type = Token_String;
+
             Token.Text = Tokeniser->At;
 
             while(Tokeniser->At[0] &&
                   Tokeniser->At[0] != '"')
             {
-                if((Tokenizer->At[0] == '\\') &&
+                if((Tokeniser->At[0] == '\\') &&
                     Tokeniser->At[1])
                 {
                     ++Tokeniser->At;
@@ -170,8 +173,7 @@ GetToken(tokeniser *Tokeniser)
                 ++Tokeniser->At;
             }
 
-            Token.Type = Token_String;
-            Token.TextLength = Tokensizer->At - Token.Text;
+            Token.TextLength = Tokeniser->At - Token.Text;
             if(Tokeniser->At[0] == '"')
             {
                 ++Tokeniser->At;
@@ -180,8 +182,10 @@ GetToken(tokeniser *Tokeniser)
 
         default:
         {
-            if(IsAlpha(Tokeniser->At[0]))
+            if(IsAlpha(C))
             {
+                Token.Type = Token_Identifier;
+
                 while(IsAlpha(Tokeniser->At[0]) ||
                       IsNumber(Tokeniser->At[0]) ||
                       (Tokeniser->At[0] == '_'))
@@ -192,14 +196,14 @@ GetToken(tokeniser *Tokeniser)
                 Token.TextLength = Tokeniser->At - Token.Text;
             }
 #if 0
-            else if(IsNumeric(Tokeniser->At[0]))
+            else if(IsNumeric(C))
             {
                 ParseNumber();
             }
 #endif
             else 
             {
-                Token.Type == Token_Unknown;
+                Token.Type = Token_Unknown;
             }
         } break;
     }
@@ -210,7 +214,7 @@ GetToken(tokeniser *Tokeniser)
 int 
 main(int ArgCount, char **Args)
 {
-    char *FileContents = ReadEntireFileIntoMemoryAndNullTerminate("handmade_sim_region.h");
+    char *FileContents = ReadEntireFileIntoMemoryAndNullTerminate("game_sim_region.h");
 
     tokeniser Tokeniser = {};
     Tokeniser.At = FileContents;
@@ -232,7 +236,7 @@ main(int ArgCount, char **Args)
 
             default:
             {
-                printf("%d: %.*s\n", Token.Type, Token.TextLength, Token.Text);
+                printf("%d: %.*s\n", Token.Type, (int)Token.TextLength, Token.Text);
             } break;
         }
     }
