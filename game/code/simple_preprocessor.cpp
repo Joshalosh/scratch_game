@@ -30,7 +30,7 @@ enum token_type
     Token_OpenParen,
     Token_CloseParen,
     Token_Colon,
-    Token_SemiColon,
+    Token_Semicolon,
     Token_Asterisk,
     Token_OpenBracket,
     Token_CloseBracket,
@@ -69,6 +69,8 @@ IsWhiteSpace(char C)
 {
     bool Result = ((C == ' ') ||
                    (C == '\t') ||
+                   (C == '\v') ||
+                   (C == '\f') ||
                    IsEndOfLine(C));
 
     return(Result);
@@ -88,6 +90,23 @@ IsNumber(char C)
 {
     bool Result = ((C >= '0') && (C <= '9'));
 
+    return(Result);
+}
+
+inline bool
+TokenEquals(token Token, char *Match)
+{
+    char *At = Match;
+    for(int Index = 0; Index < Token.TextLength; ++Index, ++At)
+    {
+        if((*At == 0) ||
+           (Token.Text[Index] != *At))
+        {
+            return(false);
+        }
+    }
+
+    bool Result = (*At == 0);
     return(Result);
 }
 
@@ -149,7 +168,7 @@ GetToken(tokeniser *Tokeniser)
         case '(': {Token.Type = Token_OpenParen;} break;
         case ')': {Token.Type = Token_CloseParen;} break;
         case ':': {Token.Type = Token_Colon;} break;
-        case ';': {Token.Type = Token_SemiColon;} break;
+        case ';': {Token.Type = Token_Semicolon;} break;
         case '*': {Token.Type = Token_Asterisk;} break;
         case '[': {Token.Type = Token_OpenBracket;} break;
         case ']': {Token.Type = Token_CloseBracket;} break;
@@ -211,6 +230,117 @@ GetToken(tokeniser *Tokeniser)
     return(Token);
 }
 
+static bool
+RequireToken(tokeniser *Tokeniser, token_type DesiredType)
+{
+    token Token = GetToken(Tokeniser);
+    bool Result = (Token.Type == DesiredType);
+    return(Result);
+}
+
+static void 
+ParseIntrospectionParams(tokeniser *Tokeniser)
+{
+    for(;;)
+    {
+        token Token = GetToken(Tokeniser);
+        if((Token.Type == Token_CloseParen) ||
+           (Token.Type == Token_EndOfStream))
+        {
+            break;
+        }
+    }
+}
+
+static void
+ParseMember(tokeniser *Tokeniser, token MemberTypeToken)
+{
+#if 1
+    bool Parsing = true;
+    bool IsPointer = false;
+    while(Parsing)
+    {
+        token Token = GetToken(Tokeniser);
+        switch(Token.Type)
+        {
+            case Token_Asterisk:
+            {
+                IsPointer = true;
+            } break;
+
+            case Token_Identifier:
+            {
+                printf("{\"%.*s\"},\n", (int)Token.TextLength, Token.Text);
+            } break;
+
+            case Token_Semicolon:
+            case Token_EndOfStream:
+            {
+                Parsing = false;
+            } break;
+        }
+    }
+#else 
+    token Token = GetToken(Tokeniser);
+    switch(Token.Type)
+    {
+        case Token_Asterisk:
+        {
+            ParseMember(Tokeniser, Token);
+        } break;
+
+        case Token_Identifier:
+        {
+            printf("DEBUG_VALUE(%.*s);\n", (int)Token.TextLength, Token.Text);
+        } break;
+    }
+#endif
+}
+
+static void 
+ParseStruct(tokeniser *Tokeniser)
+{
+    token NameToken = GetToken(Tokeniser);
+    if(RequireToken(Tokeniser, Token_OpenBrace))
+    {
+        for(;;)
+        {
+            token MemberToken = GetToken(Tokeniser);
+            if(MemberToken.Type == Token_CloseBrace)
+            {
+                break;
+            }
+            else 
+            {
+                ParseMember(Tokeniser, MemberToken);
+            }
+        }
+    }
+}
+
+static void 
+ParseIntrospectable(tokeniser *Tokeniser)
+{
+    if(RequireToken(Tokeniser, Token_OpenParen))
+    {
+        ParseIntrospectionParams(Tokeniser);
+
+        token TypeToken = GetToken(Tokeniser);
+        if(TokenEquals(TypeToken, "struct"))
+        {
+            ParseStruct(Tokeniser);
+        }
+        else 
+        {
+            fprintf(stderr, "ERROR: Introspection is only supported for structs right now :(\n");
+        }
+    }
+    else 
+    {
+        fprintf(stderr, "ERROR: Missing parentheses.\n");
+    }
+}
+
 int 
 main(int ArgCount, char **Args)
 {
@@ -234,9 +364,17 @@ main(int ArgCount, char **Args)
             {
             } break;
 
+            case Token_Identifier:
+            {
+                if(TokenEquals(Token, "introspect"))
+                {
+                    ParseIntrospectable(&Tokeniser);
+                }
+            } break;
+
             default:
             {
-                printf("%d: %.*s\n", Token.Type, (int)Token.TextLength, Token.Text);
+                //printf("%d: %.*s\n", Token.Type, (int)Token.TextLength, Token.Text);
             } break;
         }
     }
