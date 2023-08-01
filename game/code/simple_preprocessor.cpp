@@ -41,9 +41,8 @@ enum token_type
     Token_Identifier,
 
     Token_EndOfStream,
-
 };
-struct token 
+struct token
 {
     token_type Type;
 
@@ -57,15 +56,16 @@ struct tokeniser
 };
 
 inline bool
-IsEndOfLine(char C) 
+IsEndOfLine(char C)
 {
     bool Result = ((C == '\n') ||
                    (C == '\r'));
-    return Result;
+
+    return(Result);
 }
 
 inline bool
-IsWhiteSpace(char C) 
+IsWhitespace(char C)
 {
     bool Result = ((C == ' ') ||
                    (C == '\t') ||
@@ -77,7 +77,7 @@ IsWhiteSpace(char C)
 }
 
 inline bool
-IsAlpha(char C) 
+IsAlpha(char C)
 {
     bool Result = (((C >= 'a') && (C <= 'z')) ||
                    ((C >= 'A') && (C <= 'Z')));
@@ -85,8 +85,8 @@ IsAlpha(char C)
     return(Result);
 }
 
-inline bool 
-IsNumber(char C) 
+inline bool
+IsNumber(char C)
 {
     bool Result = ((C >= '0') && (C <= '9'));
 
@@ -111,11 +111,11 @@ TokenEquals(token Token, char *Match)
 }
 
 static void
-EatAllWhiteSpace(tokeniser *Tokeniser)
+EatAllWhitespace(tokeniser *Tokeniser)
 {
     for(;;)
     {
-        if(IsWhiteSpace(Tokeniser->At[0]))
+        if(IsWhitespace(Tokeniser->At[0]))
         {
             ++Tokeniser->At;
         }
@@ -144,7 +144,7 @@ EatAllWhiteSpace(tokeniser *Tokeniser)
                 Tokeniser->At += 2;
             }
         }
-        else 
+        else
         {
             break;
         }
@@ -154,7 +154,7 @@ EatAllWhiteSpace(tokeniser *Tokeniser)
 static token
 GetToken(tokeniser *Tokeniser)
 {
-    EatAllWhiteSpace(Tokeniser);
+    EatAllWhitespace(Tokeniser);
 
     token Token = {};
     Token.TextLength = 1;
@@ -185,7 +185,7 @@ GetToken(tokeniser *Tokeniser)
                   Tokeniser->At[0] != '"')
             {
                 if((Tokeniser->At[0] == '\\') &&
-                    Tokeniser->At[1])
+                   Tokeniser->At[1])
                 {
                     ++Tokeniser->At;
                 }
@@ -238,7 +238,7 @@ RequireToken(tokeniser *Tokeniser, token_type DesiredType)
     return(Result);
 }
 
-static void 
+static void
 ParseIntrospectionParams(tokeniser *Tokeniser)
 {
     for(;;)
@@ -270,7 +270,9 @@ ParseMember(tokeniser *Tokeniser, token MemberTypeToken)
 
             case Token_Identifier:
             {
-                printf("{\"%.*s\"},\n", (int)Token.TextLength, Token.Text);
+                printf("{Type_%.*s, \"%.*s\"},\n",
+                       (int)MemberTypeToken.TextLength, MemberTypeToken.Text,
+                       (int)Token.TextLength, Token.Text);
             } break;
 
             case Token_Semicolon:
@@ -280,7 +282,7 @@ ParseMember(tokeniser *Tokeniser, token MemberTypeToken)
             } break;
         }
     }
-#else 
+#else
     token Token = GetToken(Tokeniser);
     switch(Token.Type)
     {
@@ -297,12 +299,15 @@ ParseMember(tokeniser *Tokeniser, token MemberTypeToken)
 #endif
 }
 
-static void 
+static void
 ParseStruct(tokeniser *Tokeniser)
 {
     token NameToken = GetToken(Tokeniser);
     if(RequireToken(Tokeniser, Token_OpenBrace))
     {
+
+        printf("member_definition MembersOf_%.*s[] = \n", (int)NameToken.TextLength, NameToken.Text);
+        printf("{\n");
         for(;;)
         {
             token MemberToken = GetToken(Tokeniser);
@@ -310,15 +315,16 @@ ParseStruct(tokeniser *Tokeniser)
             {
                 break;
             }
-            else 
+            else
             {
                 ParseMember(Tokeniser, MemberToken);
             }
         }
+        printf("}\n");
     }
 }
 
-static void 
+static void
 ParseIntrospectable(tokeniser *Tokeniser)
 {
     if(RequireToken(Tokeniser, Token_OpenParen))
@@ -330,18 +336,18 @@ ParseIntrospectable(tokeniser *Tokeniser)
         {
             ParseStruct(Tokeniser);
         }
-        else 
+        else
         {
             fprintf(stderr, "ERROR: Introspection is only supported for structs right now :(\n");
         }
     }
-    else 
+    else
     {
         fprintf(stderr, "ERROR: Missing parentheses.\n");
     }
 }
 
-int 
+int
 main(int ArgCount, char **Args)
 {
     char *FileContents = ReadEntireFileIntoMemoryAndNullTerminate("game_sim_region.h");
