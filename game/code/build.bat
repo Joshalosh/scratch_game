@@ -13,6 +13,9 @@ del *.pdb > NUL 2> NUL
 
 REM Simple preprocessor 
 cl %CommonCompilerFlags% -D_CRT_SECURE_NO_WARNINGS ..\game\code\simple_preprocessor.cpp /link %CommonLinkerFlags%
+pushd ..\game\code
+..\..\build\simple_preprocessor.exe > game_generated.h
+popd
 
 REM Asset file builder build
 REM cl %CommonCompilerFlags% -DTRANSLATION_UNIT_INDEX=0 -D_CRT_SECURE_NO_WARNINGS ..\game\code\test_asset_builder.cpp /link %CommonLinkerFlags%

@@ -253,7 +253,7 @@ ParseIntrospectionParams(tokeniser *Tokeniser)
 }
 
 static void
-ParseMember(tokeniser *Tokeniser, token MemberTypeToken)
+ParseMember(tokeniser *Tokeniser, token StructTypeToken, token MemberTypeToken)
 {
 #if 1
     bool Parsing = true;
@@ -270,8 +270,10 @@ ParseMember(tokeniser *Tokeniser, token MemberTypeToken)
 
             case Token_Identifier:
             {
-                printf("{Type_%.*s, \"%.*s\"},\n",
+                printf("    {Type_%.*s, \"%.*s\", (u32)&((%.*s *)0)->%.*s},\n",
                        (int)MemberTypeToken.TextLength, MemberTypeToken.Text,
+                       (int)Token.TextLength, Token.Text,
+                       (int)StructTypeToken.TextLength, StructTypeToken.Text,
                        (int)Token.TextLength, Token.Text);
             } break;
 
@@ -317,10 +319,10 @@ ParseStruct(tokeniser *Tokeniser)
             }
             else
             {
-                ParseMember(Tokeniser, MemberToken);
+                ParseMember(Tokeniser, NameToken, MemberToken);
             }
         }
-        printf("}\n");
+        printf("};\n");
     }
 }
 

@@ -71,8 +71,6 @@ introspect(category:"regular butter") struct sim_entity
     world_chunk *OldChunk;
     uint32_t StorageIndex;
     bool32 Updatable;
-    
-    //
 
     entity_type Type;
     uint32_t Flags;

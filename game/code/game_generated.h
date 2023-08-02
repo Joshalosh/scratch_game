@@ -1,0 +1,20 @@
+member_definition MembersOf_sim_entity[] = 
+{
+    {Type_world_chunk, "OldChunk", (u32)&((sim_entity *)0)->OldChunk},
+    {Type_uint32_t, "StorageIndex", (u32)&((sim_entity *)0)->StorageIndex},
+    {Type_bool32, "Updatable", (u32)&((sim_entity *)0)->Updatable},
+    {Type_entity_type, "Type", (u32)&((sim_entity *)0)->Type},
+    {Type_uint32_t, "Flags", (u32)&((sim_entity *)0)->Flags},
+    {Type_v3, "P", (u32)&((sim_entity *)0)->P},
+    {Type_v3, "dP", (u32)&((sim_entity *)0)->dP},
+    {Type_real32, "DistanceLimit", (u32)&((sim_entity *)0)->DistanceLimit},
+    {Type_sim_entity_collision_volume_group, "Collision", (u32)&((sim_entity *)0)->Collision},
+    {Type_real32, "FacingDirection", (u32)&((sim_entity *)0)->FacingDirection},
+    {Type_real32, "tBob", (u32)&((sim_entity *)0)->tBob},
+    {Type_int32_t, "dAbsTileZ", (u32)&((sim_entity *)0)->dAbsTileZ},
+    {Type_uint32_t, "HitPointMax", (u32)&((sim_entity *)0)->HitPointMax},
+    {Type_hit_point, "HitPoint", (u32)&((sim_entity *)0)->HitPoint},
+    {Type_entity_reference, "Sword", (u32)&((sim_entity *)0)->Sword},
+    {Type_v2, "WalkableDim", (u32)&((sim_entity *)0)->WalkableDim},
+    {Type_real32, "WalkableHeight", (u32)&((sim_entity *)0)->WalkableHeight},
+};
