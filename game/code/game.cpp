@@ -5,6 +5,7 @@
 #include "game_entity.cpp"
 #include "game_asset.cpp"
 #include "game_audio.cpp"
+#include "game_meta.cpp"
 
 struct add_low_entity_result
 {

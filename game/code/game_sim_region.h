@@ -103,7 +103,7 @@ struct sim_entity_hash
     uint32_t Index;
 };
 
-struct sim_region
+introspect(category:"regular butter") struct sim_region
 {
     world *World;
     real32 MaxEntityRadius;

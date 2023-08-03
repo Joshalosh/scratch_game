@@ -1,5 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
+
+struct meta_struct
+{
+    char *Name;
+    meta_struct *Next;
+};
+static meta_struct *FirstMetaStruct;
 
 static char *
 ReadEntireFileIntoMemoryAndNullTerminate(char *Filename)
@@ -270,7 +278,7 @@ ParseMember(tokeniser *Tokeniser, token StructTypeToken, token MemberTypeToken)
 
             case Token_Identifier:
             {
-                printf("    {Type_%.*s, \"%.*s\", (u32)&((%.*s *)0)->%.*s},\n",
+                printf("    {MetaType_%.*s, \"%.*s\", (u64)&((%.*s *)0)->%.*s},\n",
                        (int)MemberTypeToken.TextLength, MemberTypeToken.Text,
                        (int)Token.TextLength, Token.Text,
                        (int)StructTypeToken.TextLength, StructTypeToken.Text,
@@ -307,7 +315,6 @@ ParseStruct(tokeniser *Tokeniser)
     token NameToken = GetToken(Tokeniser);
     if(RequireToken(Tokeniser, Token_OpenBrace))
     {
-
         printf("member_definition MembersOf_%.*s[] = \n", (int)NameToken.TextLength, NameToken.Text);
         printf("{\n");
         for(;;)
@@ -323,6 +330,13 @@ ParseStruct(tokeniser *Tokeniser)
             }
         }
         printf("};\n");
+
+        meta_struct *Meta = (meta_struct *)malloc(sizeof(meta_struct));
+        Meta->Name = (char *)malloc(NameToken.TextLength + 1);
+        memcpy(Meta->Name, NameToken.Text, NameToken.TextLength);
+        Meta->Name[NameToken.TextLength] = 0;
+        Meta->Next = FirstMetaStruct;
+        FirstMetaStruct = Meta;
     }
 }
 
@@ -352,38 +366,54 @@ ParseIntrospectable(tokeniser *Tokeniser)
 int
 main(int ArgCount, char **Args)
 {
-    char *FileContents = ReadEntireFileIntoMemoryAndNullTerminate("game_sim_region.h");
-
-    tokeniser Tokeniser = {};
-    Tokeniser.At = FileContents;
-
-    bool Parsing = true;
-    while(Parsing)
+    char *Filenames[] =
     {
-        token Token = GetToken(&Tokeniser);
-        switch(Token.Type)
+        "game_sim_region.h",
+        "game_math.h",
+    };
+    for(int FileIndex = 0; FileIndex < (sizeof(Filenames)/sizeof(Filenames[0])); ++FileIndex)
+    {
+        char *FileContents = ReadEntireFileIntoMemoryAndNullTerminate(Filenames[FileIndex]);
+
+        tokeniser Tokeniser = {};
+        Tokeniser.At = FileContents;
+
+        bool Parsing = true;
+        while(Parsing)
         {
-            case Token_EndOfStream:
+            token Token = GetToken(&Tokeniser);
+            switch(Token.Type)
             {
-                Parsing = false;
-            } break;
-
-            case Token_Unknown:
-            {
-            } break;
-
-            case Token_Identifier:
-            {
-                if(TokenEquals(Token, "introspect"))
+                case Token_EndOfStream:
                 {
-                    ParseIntrospectable(&Tokeniser);
-                }
-            } break;
+                    Parsing = false;
+                } break;
 
-            default:
-            {
-                //printf("%d: %.*s\n", Token.Type, (int)Token.TextLength, Token.Text);
-            } break;
+                case Token_Unknown:
+                {
+                } break;
+
+                case Token_Identifier:
+                {
+                    if(TokenEquals(Token, "introspect"))
+                    {
+                        ParseIntrospectable(&Tokeniser);
+                    }
+                } break;
+
+                default:
+                {
+                    //printf("%d: %.*s\n", Token.Type, (int)Token.TextLength, Token.Text);
+                } break;
+            }
         }
+    }
+
+    printf("#define META_HANDLE_TYPE_DUMP(MemberPtr) \\\n");
+    for(meta_struct *Meta = FirstMetaStruct; Meta; Meta = Meta->Next)
+    {
+        printf("    case MetaType_%s: {DEBUGDumpStruct(ArrayCount(MembersOf_%s), MembersOf_%s, MemberPtr);} break; %s\n",
+               Meta->Name, Meta->Name, Meta->Name,
+               Meta->Next ? "\\" : "");
     }
 }

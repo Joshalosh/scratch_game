@@ -1337,6 +1337,65 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 }
 
 internal void
+DEBUGDumpStruct(u32 MemberCount, member_definition *MemberDefs, void *StructPtr)
+{
+    for(u32 MemberIndex = 0; MemberIndex < MemberCount; ++MemberIndex)
+    {
+        member_definition *Member = MemberDefs + MemberIndex;
+
+        void *MemberPtr = (((u8 *)StructPtr) + Member->Offset);
+        char TextBuffer[256];
+        TextBuffer[0] = 0;
+        switch(Member->Type)
+        {
+            case MetaType_uint32_t:
+            {
+                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %u", Member->Name, *(u32 *)MemberPtr);
+            } break;
+
+            case MetaType_bool32:
+            {
+                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %u", Member->Name, *(b32 *)MemberPtr);
+            } break;
+
+            case MetaType_int32_t:
+            {
+                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %d", Member->Name, *(s32 *)MemberPtr);
+            } break;
+
+            case MetaType_real32:
+            {
+                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %f", Member->Name, *(r32 *)MemberPtr);
+            } break;
+
+            case MetaType_v2:
+            {
+                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: {%f,%f}",
+                            Member->Name,
+                            ((v3 *)MemberPtr)->x,
+                            ((v3 *)MemberPtr)->y);
+            } break;
+
+            case MetaType_v3:
+            {
+                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: {%f,%f,%f}",
+                            Member->Name,
+                            ((v3 *)MemberPtr)->x,
+                            ((v3 *)MemberPtr)->y,
+                            ((v3 *)MemberPtr)->z);
+            } break;
+
+            META_HANDLE_TYPE_DUMP(MemberPtr);
+        }
+
+        if(TextBuffer[0])
+        {
+            DEBUGTextLine(TextBuffer);
+        }
+    }
+}
+
+internal void
 DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
 {
     TIMED_FUNCTION();
@@ -1349,6 +1408,25 @@ DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
     v2 MouseP = Unproject(DebugState->RenderGroup, V2(Input->MouseX, Input->MouseY)).xy;
     DEBUGDrawMainMenu(DebugState, RenderGroup, MouseP);
     DEBUGInteract(DebugState, Input, MouseP);
+
+    sim_entity TestEntity = {};
+    TestEntity.DistanceLimit = 10.0f;
+    TestEntity.tBob = 0.1f;
+    TestEntity.FacingDirection = 360.0f;
+    TestEntity.dAbsTileZ = 4;
+
+    sim_region TestRegion = {};
+    TestRegion.MaxEntityRadius = 25.0f;
+    TestRegion.MaxEntityVelocity = 9.98f;
+    TestRegion.MaxEntityCount = 3;
+    TestRegion.EntityCount = 2;
+    TestRegion.Bounds = RectMinMax(V3(1, 2, 3), V3(4, 5, 6));
+    TestRegion.UpdatableBounds = RectMinMax(V3(10, 20, 30), V3(40, 50, 60));
+
+    DEBUGTextLine("sim_entity:");
+    DEBUGDumpStruct(ArrayCount(MembersOf_sim_entity), MembersOf_sim_entity, &TestEntity);
+    DEBUGTextLine("sim_region:");
+    DEBUGDumpStruct(ArrayCount(MembersOf_sim_region), MembersOf_sim_region, &TestRegion);
 
     if(DebugState->Compiling)
     {

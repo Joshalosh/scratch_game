@@ -84,6 +84,7 @@
 #include "game_intrinsics.h"
 #include "game_math.h"
 #include "game_file_formats.h"
+#include "game_meta.h"
 
 #define DLIST_INSERT(Sentinel, Element)     \
     (Element)->Next = (Sentinel)->Next;     \
