@@ -1337,60 +1337,78 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 }
 
 internal void
-DEBUGDumpStruct(u32 MemberCount, member_definition *MemberDefs, void *StructPtr)
+DEBUGDumpStruct(u32 MemberCount, member_definition *MemberDefs, void *StructPtr, u32 IndentLevel = 0)
 {
     for(u32 MemberIndex = 0; MemberIndex < MemberCount; ++MemberIndex)
     {
+        char TextBufferBase[256];
+        char *TextBuffer = TextBufferBase;
+        for(u32 Indent = 0; Indent < IndentLevel; ++Indent)
+        {
+            *TextBuffer++ = ' ';
+            *TextBuffer++ = ' ';
+            *TextBuffer++ = ' ';
+            *TextBuffer++ = ' ';
+        }
+        TextBuffer[0] = 0;
+        size_t TextBufferLeft = (TextBufferBase + sizeof(TextBufferBase)) - TextBuffer;
+
         member_definition *Member = MemberDefs + MemberIndex;
 
         void *MemberPtr = (((u8 *)StructPtr) + Member->Offset);
-        char TextBuffer[256];
-        TextBuffer[0] = 0;
-        switch(Member->Type)
+        if(Member->Flags & MetaMemberFlag_IsPointer)
         {
-            case MetaType_uint32_t:
-            {
-                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %u", Member->Name, *(u32 *)MemberPtr);
-            } break;
+            MemberPtr = *(void **)MemberPtr;
+        }
 
-            case MetaType_bool32:
+        if(MemberPtr)
+        {
+            switch(Member->Type)
             {
-                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %u", Member->Name, *(b32 *)MemberPtr);
-            } break;
+                case MetaType_uint32_t:
+                {
+                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %u", Member->Name, *(u32 *)MemberPtr);
+                } break;
 
-            case MetaType_int32_t:
-            {
-                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %d", Member->Name, *(s32 *)MemberPtr);
-            } break;
+                case MetaType_bool32:
+                {
+                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %u", Member->Name, *(b32 *)MemberPtr);
+                } break;
 
-            case MetaType_real32:
-            {
-                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: %f", Member->Name, *(r32 *)MemberPtr);
-            } break;
+                case MetaType_int32_t:
+                {
+                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %d", Member->Name, *(s32 *)MemberPtr);
+                } break;
 
-            case MetaType_v2:
-            {
-                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: {%f,%f}",
-                            Member->Name,
-                            ((v3 *)MemberPtr)->x,
-                            ((v3 *)MemberPtr)->y);
-            } break;
+                case MetaType_real32:
+                {
+                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %f", Member->Name, *(r32 *)MemberPtr);
+                } break;
 
-            case MetaType_v3:
-            {
-                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%s: {%f,%f,%f}",
-                            Member->Name,
-                            ((v3 *)MemberPtr)->x,
-                            ((v3 *)MemberPtr)->y,
-                            ((v3 *)MemberPtr)->z);
-            } break;
+                case MetaType_v2:
+                {
+                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: {%f,%f}",
+                                Member->Name,
+                                ((v3 *)MemberPtr)->x,
+                                ((v3 *)MemberPtr)->y);
+                } break;
 
-            META_HANDLE_TYPE_DUMP(MemberPtr);
+                case MetaType_v3:
+                {
+                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: {%f,%f,%f}",
+                                Member->Name,
+                                ((v3 *)MemberPtr)->x,
+                                ((v3 *)MemberPtr)->y,
+                                ((v3 *)MemberPtr)->z);
+                } break;
+
+                META_HANDLE_TYPE_DUMP(MemberPtr, IndentLevel + 1);
+            }
         }
 
         if(TextBuffer[0])
         {
-            DEBUGTextLine(TextBuffer);
+            DEBUGTextLine(TextBufferBase);
         }
     }
 }
@@ -1409,11 +1427,23 @@ DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
     DEBUGDrawMainMenu(DebugState, RenderGroup, MouseP);
     DEBUGInteract(DebugState, Input, MouseP);
 
+    sim_entity_collision_volume Volumes[] =
+    {
+        {{10, 11, 12}, {13, 14, 15}},
+        {{16, 17, 18}, {19, 20, 21}},
+    };
+    sim_entity_collision_volume_group TestCollisionVolumeGroup = {};
+    TestCollisionVolumeGroup.TotalVolume.OffsetP = V3(9, 8, 7);
+    TestCollisionVolumeGroup.TotalVolume.Dim = V3(4, 5, 6);
+    TestCollisionVolumeGroup.VolumeCount = 2;
+    TestCollisionVolumeGroup.Volumes = Volumes;
+
     sim_entity TestEntity = {};
     TestEntity.DistanceLimit = 10.0f;
     TestEntity.tBob = 0.1f;
     TestEntity.FacingDirection = 360.0f;
     TestEntity.dAbsTileZ = 4;
+    TestEntity.Collision = &TestCollisionVolumeGroup;
 
     sim_region TestRegion = {};
     TestRegion.MaxEntityRadius = 25.0f;

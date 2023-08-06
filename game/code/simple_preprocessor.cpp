@@ -278,7 +278,8 @@ ParseMember(tokeniser *Tokeniser, token StructTypeToken, token MemberTypeToken)
 
             case Token_Identifier:
             {
-                printf("    {MetaType_%.*s, \"%.*s\", (u64)&((%.*s *)0)->%.*s},\n",
+                printf("    {%s, MetaType_%.*s, \"%.*s\", (u64)&((%.*s *)0)->%.*s},\n",
+                        IsPointer ? "MetaMemberFlag_IsPointer" : "0",
                        (int)MemberTypeToken.TextLength, MemberTypeToken.Text,
                        (int)Token.TextLength, Token.Text,
                        (int)StructTypeToken.TextLength, StructTypeToken.Text,
@@ -370,6 +371,7 @@ main(int ArgCount, char **Args)
     {
         "game_sim_region.h",
         "game_math.h",
+        "game_world.h",
     };
     for(int FileIndex = 0; FileIndex < (sizeof(Filenames)/sizeof(Filenames[0])); ++FileIndex)
     {
@@ -409,10 +411,10 @@ main(int ArgCount, char **Args)
         }
     }
 
-    printf("#define META_HANDLE_TYPE_DUMP(MemberPtr) \\\n");
+    printf("#define META_HANDLE_TYPE_DUMP(MemberPtr, NextIndentLevel) \\\n");
     for(meta_struct *Meta = FirstMetaStruct; Meta; Meta = Meta->Next)
     {
-        printf("    case MetaType_%s: {DEBUGDumpStruct(ArrayCount(MembersOf_%s), MembersOf_%s, MemberPtr);} break; %s\n",
+        printf("    case MetaType_%s: {DEBUGTextLine(Member->Name); DEBUGDumpStruct(ArrayCount(MembersOf_%s), MembersOf_%s, MemberPtr, (NextIndentLevel));} break; %s\n",
                Meta->Name, Meta->Name, Meta->Name,
                Meta->Next ? "\\" : "");
     }

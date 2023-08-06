@@ -1,6 +1,6 @@
 #if !defined(GAME_WORLD_H)
 
-struct world_position
+introspect(category:"world") struct world_position
 {
     // It seems like we have to store ChunkX/Y/Z with each
     // Entity because even though the sim region gather doesn't

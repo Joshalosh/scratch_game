@@ -20,10 +20,16 @@ enum meta_type
     MetaType_sim_region,
     MetaType_sim_entity,
     MetaType_sim_entity_hash,
+    MetaType_sim_entity_collision_volume
 };
 
+enum member_definition_flag
+{
+    MetaMemberFlag_IsPointer = 0x1,
+};
 struct member_definition
 {
+    u32 Flags;
     meta_type Type;
     char *Name;
     u32 Offset;
