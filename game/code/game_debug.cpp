@@ -1427,37 +1427,6 @@ DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
     DEBUGDrawMainMenu(DebugState, RenderGroup, MouseP);
     DEBUGInteract(DebugState, Input, MouseP);
 
-    sim_entity_collision_volume Volumes[] =
-    {
-        {{10, 11, 12}, {13, 14, 15}},
-        {{16, 17, 18}, {19, 20, 21}},
-    };
-    sim_entity_collision_volume_group TestCollisionVolumeGroup = {};
-    TestCollisionVolumeGroup.TotalVolume.OffsetP = V3(9, 8, 7);
-    TestCollisionVolumeGroup.TotalVolume.Dim = V3(4, 5, 6);
-    TestCollisionVolumeGroup.VolumeCount = 2;
-    TestCollisionVolumeGroup.Volumes = Volumes;
-
-    sim_entity TestEntity = {};
-    TestEntity.DistanceLimit = 10.0f;
-    TestEntity.tBob = 0.1f;
-    TestEntity.FacingDirection = 360.0f;
-    TestEntity.dAbsTileZ = 4;
-    TestEntity.Collision = &TestCollisionVolumeGroup;
-
-    sim_region TestRegion = {};
-    TestRegion.MaxEntityRadius = 25.0f;
-    TestRegion.MaxEntityVelocity = 9.98f;
-    TestRegion.MaxEntityCount = 3;
-    TestRegion.EntityCount = 2;
-    TestRegion.Bounds = RectMinMax(V3(1, 2, 3), V3(4, 5, 6));
-    TestRegion.UpdatableBounds = RectMinMax(V3(10, 20, 30), V3(40, 50, 60));
-
-    DEBUGTextLine("sim_entity:");
-    DEBUGDumpStruct(ArrayCount(MembersOf_sim_entity), MembersOf_sim_entity, &TestEntity);
-    DEBUGTextLine("sim_region:");
-    DEBUGDumpStruct(ArrayCount(MembersOf_sim_region), MembersOf_sim_region, &TestRegion);
-
     if(DebugState->Compiling)
     {
         debug_process_state State = Platform.DEBUGGetProcessState(DebugState->Compiler);
