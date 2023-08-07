@@ -8,9 +8,9 @@ introspect(category:"world") struct world_position
     // references pull in entities WITHOUT going through their
     // world_chunk, and so still need to know the ChunkX/Y/Z.
 
-    int32_t ChunkX;
-    int32_t ChunkY;
-    int32_t ChunkZ;
+    s32 ChunkX;
+    s32 ChunkY;
+    s32 ChunkZ;
 
     v3 Offset_;
 };

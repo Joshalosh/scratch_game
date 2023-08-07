@@ -61,7 +61,7 @@ introspect(category:"sim_region") struct sim_entity_collision_volume_group
     // has any volume. In the future, this could be compressed if necessary
     // to say that the volumecount can be 0 if the totalvolume should be
     // used as the only collision volume for the entity.
-    uint32_t VolumeCount;
+    u32 VolumeCount;
     sim_entity_collision_volume *Volumes;
 };
 
@@ -69,32 +69,32 @@ introspect(category:"regular butter") struct sim_entity
 {
     // Note: These are only for the sim region.
     world_chunk *OldChunk;
-    uint32_t StorageIndex;
-    bool32 Updatable;
+    u32 StorageIndex;
+    b32 Updatable;
 
     entity_type Type;
-    uint32_t Flags;
+    u32 Flags;
 
     v3 P;
     v3 dP;
 
-    real32 DistanceLimit;
+    r32 DistanceLimit;
 
     sim_entity_collision_volume_group *Collision;
 
-    real32 FacingDirection;
-    real32 tBob;
+    r32 FacingDirection;
+    r32 tBob;
 
-    int32_t dAbsTileZ;
+    s32 dAbsTileZ;
 
-    uint32_t HitPointMax;
+    u32 HitPointMax;
     hit_point HitPoint[16];
 
     entity_reference Sword;
 
     // TODO Only for Stairwells
     v2 WalkableDim;
-    real32 WalkableHeight;
+    r32 WalkableHeight;
 };
 
 struct sim_entity_hash
@@ -106,15 +106,15 @@ struct sim_entity_hash
 introspect(category:"regular butter") struct sim_region
 {
     world *World;
-    real32 MaxEntityRadius;
-    real32 MaxEntityVelocity;
+    r32 MaxEntityRadius;
+    r32 MaxEntityVelocity;
 
     world_position Origin;
     rectangle3 Bounds;
     rectangle3 UpdatableBounds;
 
-    uint32_t MaxEntityCount;
-    uint32_t EntityCount;
+    u32 MaxEntityCount;
+    u32 EntityCount;
     sim_entity *Entities;
 
     sim_entity_hash Hash[4096];

@@ -1071,7 +1071,8 @@ GetDebugThread(debug_state *DebugState, u32 ThreadID)
         Result = PushStruct(&DebugState->CollateArena, debug_thread);
         Result->ID = ThreadID;
         Result->LaneIndex = DebugState->FrameBarLaneCount++;
-        Result->FirstOpenBlock = 0;
+        Result->FirstOpenCodeBlock = 0;
+        Result->FirstOpenDataBlock = 0;
         Result->Next = DebugState->FirstThread;
         DebugState->FirstThread = Result;
     }
@@ -1112,6 +1113,29 @@ GetRecordFrom(open_debug_block *Block)
     debug_record *Result = Block ? Block->Source : 0;
 
     return(Result);
+}
+
+inline open_debug_block *
+AllocateOpenDebugBlock(debug_state *DebugState)
+{
+    open_debug_block *Result = DebugState->FirstFreeBlock;
+    if(Result)
+    {
+        DebugState->FirstFreeBlock = Result->NextFree;
+    }
+    else 
+    {
+        Result = PushStruct(&DebugState->CollateArena, open_debug_block);
+    }
+
+    return(Result);
+}
+
+inline void
+DeallocateOpenDebugBlock(debug_state *DebugState, open_debug_block *Block)
+{
+    Block->NextFree = DebugState->FirstFreeBlock;
+    DebugState->FirstFreeBlock = Block;
 }
 
 internal void
@@ -1175,72 +1199,117 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                     int x = 5;
                 }
 
-                if(Event->Type == DebugEvent_BeginBlock)
+                switch(Event->Type)
                 {
-                    open_debug_block *DebugBlock = DebugState->FirstFreeBlock;
-                    if(DebugBlock)
+                    case DebugEvent_BeginBlock:
                     {
-                        DebugState->FirstFreeBlock = DebugBlock->NextFree;
-                    }
-                    else
-                    {
-                        DebugBlock = PushStruct(&DebugState->CollateArena, open_debug_block);
-                    }
-
-                    DebugBlock->StartingFrameIndex = FrameIndex;
-                    DebugBlock->OpeningEvent = Event;
-                    DebugBlock->Parent = Thread->FirstOpenBlock;
-                    DebugBlock->Source = Source;
-                    Thread->FirstOpenBlock = DebugBlock;
-                    DebugBlock->NextFree = 0;
-                }
-                else if(Event->Type == DebugEvent_EndBlock)
-                {
-                    if(Thread->FirstOpenBlock)
-                    {
-                        open_debug_block *MatchingBlock = Thread->FirstOpenBlock;
-                        debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
-                        if((OpeningEvent->TC.ThreadID == Event->TC.ThreadID) &&
-                           (OpeningEvent->DebugRecordIndex == Event->DebugRecordIndex) &&
-                           (OpeningEvent->TranslationUnit == Event->TranslationUnit))
+                        open_debug_block *DebugBlock = AllocateOpenDebugBlock(DebugState);
+                        if(DebugBlock)
                         {
-                            if(MatchingBlock->StartingFrameIndex == FrameIndex)
-                            {
-                                if(GetRecordFrom(MatchingBlock->Parent) == DebugState->ScopeToRecord)
-                                {
-                                    r32 MinT = (r32)(OpeningEvent->Clock - DebugState->CollationFrame->BeginClock);
-                                    r32 MaxT = (r32)(Event->Clock - DebugState->CollationFrame->BeginClock);
-                                    r32 ThresholdT = 0.01f;
-                                    if((MaxT - MinT) > ThresholdT)
-                                    {
-                                        debug_frame_region *Region = AddRegion(DebugState, DebugState->CollationFrame);
-                                        Region->Record = Source;
-                                        Region->CycleCount = (Event->Clock - OpeningEvent->Clock);
-                                        Region->LaneIndex = (u16)Thread->LaneIndex;
-                                        Region->MinT = MinT;
-                                        Region->MaxT = MaxT;
-                                        Region->ColorIndex = (u16)OpeningEvent->DebugRecordIndex;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // TODO: Record all frames in between and begin/end spans.
-                            }
-
-                            Thread->FirstOpenBlock->NextFree = DebugState->FirstFreeBlock;
-                            DebugState->FirstFreeBlock = Thread->FirstOpenBlock;
-                            Thread->FirstOpenBlock = MatchingBlock->Parent;
+                            DebugState->FirstFreeBlock = DebugBlock->NextFree;
                         }
                         else
                         {
-                            // TODO: Record span that goes to the beginning of the frame series.
+                            DebugBlock = PushStruct(&DebugState->CollateArena, open_debug_block);
                         }
-                    }
-                }
-                else
-                {
-                    Assert(!"Invalid event type");
+
+                        DebugBlock->StartingFrameIndex = FrameIndex;
+                        DebugBlock->OpeningEvent = Event;
+                        DebugBlock->Parent = Thread->FirstOpenCodeBlock;
+                        DebugBlock->Source = Source;
+                        Thread->FirstOpenCodeBlock = DebugBlock;
+                        DebugBlock->NextFree = 0;
+                    } break;
+
+                    case DebugEvent_EndBlock: 
+                    {
+                        if(Thread->FirstOpenCodeBlock)
+                        {
+                            open_debug_block *MatchingBlock = Thread->FirstOpenCodeBlock;
+                            debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
+                            if((OpeningEvent->TC.ThreadID == Event->TC.ThreadID) &&
+                               (OpeningEvent->DebugRecordIndex == Event->DebugRecordIndex) &&
+                               (OpeningEvent->TranslationUnit == Event->TranslationUnit))
+                            {
+                                if(MatchingBlock->StartingFrameIndex == FrameIndex)
+                                {
+                                    if(GetRecordFrom(MatchingBlock->Parent) == DebugState->ScopeToRecord)
+                                    {
+                                        r32 MinT = (r32)(OpeningEvent->Clock - DebugState->CollationFrame->BeginClock);
+                                        r32 MaxT = (r32)(Event->Clock - DebugState->CollationFrame->BeginClock);
+                                        r32 ThresholdT = 0.01f;
+                                        if((MaxT - MinT) > ThresholdT)
+                                        {
+                                            debug_frame_region *Region = AddRegion(DebugState, DebugState->CollationFrame);
+                                            Region->Record = Source;
+                                            Region->CycleCount = (Event->Clock - OpeningEvent->Clock);
+                                            Region->LaneIndex = (u16)Thread->LaneIndex;
+                                            Region->MinT = MinT;
+                                            Region->MaxT = MaxT;
+                                            Region->ColorIndex = (u16)OpeningEvent->DebugRecordIndex;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // TODO: Record all frames in between and begin/end spans.
+                                }
+
+                                DeallocateOpenDebugBlock(DebugState, Thread->FirstOpenCodeBlock);
+
+                                Thread->FirstOpenCodeBlock = MatchingBlock->Parent;
+                            }
+                            else
+                            {
+                                // TODO: Record span that goes to the beginning of the frame series.
+                            }
+                        }
+                    } break;
+
+                    case DebugEvent_OpenDataBlock:
+                    {
+                    } break;
+
+                    case DebugEvent_CloseDataBlock:
+                    {
+                    } break;
+
+                    case DebugEvent_R32:
+                    {
+                    } break;
+
+                    case DebugEvent_U32:
+                    {
+                    } break;
+
+                    case DebugEvent_S32:
+                    {
+                    } break;
+
+                    case DebugEvent_V2:
+                    {
+                    } break;
+
+                    case DebugEvent_V3:
+                    {
+                    } break;
+
+                    case DebugEvent_V4:
+                    {
+                    } break;
+
+                    case DebugEvent_Rectangle2:
+                    {
+                    } break;
+
+                    case DebugEvent_Rectangle3:
+                    {
+                    } break;
+
+                    default:
+                    {
+                        Assert(!"Invalid event type");
+                    } break;
                 }
             }
         }
@@ -1365,22 +1434,22 @@ DEBUGDumpStruct(u32 MemberCount, member_definition *MemberDefs, void *StructPtr,
         {
             switch(Member->Type)
             {
-                case MetaType_uint32_t:
+                case MetaType_u32:
                 {
                     _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %u", Member->Name, *(u32 *)MemberPtr);
                 } break;
 
-                case MetaType_bool32:
+                case MetaType_b32:
                 {
                     _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %u", Member->Name, *(b32 *)MemberPtr);
                 } break;
 
-                case MetaType_int32_t:
+                case MetaType_s32:
                 {
                     _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %d", Member->Name, *(s32 *)MemberPtr);
                 } break;
 
-                case MetaType_real32:
+                case MetaType_r32:
                 {
                     _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %f", Member->Name, *(r32 *)MemberPtr);
                 } break;

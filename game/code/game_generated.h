@@ -6,39 +6,39 @@ member_definition MembersOf_sim_entity_collision_volume[] =
 member_definition MembersOf_sim_entity_collision_volume_group[] = 
 {
     {0, MetaType_sim_entity_collision_volume, "TotalVolume", (u64)&((sim_entity_collision_volume_group *)0)->TotalVolume},
-    {0, MetaType_uint32_t, "VolumeCount", (u64)&((sim_entity_collision_volume_group *)0)->VolumeCount},
+    {0, MetaType_u32, "VolumeCount", (u64)&((sim_entity_collision_volume_group *)0)->VolumeCount},
     {MetaMemberFlag_IsPointer, MetaType_sim_entity_collision_volume, "Volumes", (u64)&((sim_entity_collision_volume_group *)0)->Volumes},
 };
 member_definition MembersOf_sim_entity[] = 
 {
     {MetaMemberFlag_IsPointer, MetaType_world_chunk, "OldChunk", (u64)&((sim_entity *)0)->OldChunk},
-    {0, MetaType_uint32_t, "StorageIndex", (u64)&((sim_entity *)0)->StorageIndex},
-    {0, MetaType_bool32, "Updatable", (u64)&((sim_entity *)0)->Updatable},
+    {0, MetaType_u32, "StorageIndex", (u64)&((sim_entity *)0)->StorageIndex},
+    {0, MetaType_b32, "Updatable", (u64)&((sim_entity *)0)->Updatable},
     {0, MetaType_entity_type, "Type", (u64)&((sim_entity *)0)->Type},
-    {0, MetaType_uint32_t, "Flags", (u64)&((sim_entity *)0)->Flags},
+    {0, MetaType_u32, "Flags", (u64)&((sim_entity *)0)->Flags},
     {0, MetaType_v3, "P", (u64)&((sim_entity *)0)->P},
     {0, MetaType_v3, "dP", (u64)&((sim_entity *)0)->dP},
-    {0, MetaType_real32, "DistanceLimit", (u64)&((sim_entity *)0)->DistanceLimit},
+    {0, MetaType_r32, "DistanceLimit", (u64)&((sim_entity *)0)->DistanceLimit},
     {MetaMemberFlag_IsPointer, MetaType_sim_entity_collision_volume_group, "Collision", (u64)&((sim_entity *)0)->Collision},
-    {0, MetaType_real32, "FacingDirection", (u64)&((sim_entity *)0)->FacingDirection},
-    {0, MetaType_real32, "tBob", (u64)&((sim_entity *)0)->tBob},
-    {0, MetaType_int32_t, "dAbsTileZ", (u64)&((sim_entity *)0)->dAbsTileZ},
-    {0, MetaType_uint32_t, "HitPointMax", (u64)&((sim_entity *)0)->HitPointMax},
+    {0, MetaType_r32, "FacingDirection", (u64)&((sim_entity *)0)->FacingDirection},
+    {0, MetaType_r32, "tBob", (u64)&((sim_entity *)0)->tBob},
+    {0, MetaType_s32, "dAbsTileZ", (u64)&((sim_entity *)0)->dAbsTileZ},
+    {0, MetaType_u32, "HitPointMax", (u64)&((sim_entity *)0)->HitPointMax},
     {0, MetaType_hit_point, "HitPoint", (u64)&((sim_entity *)0)->HitPoint},
     {0, MetaType_entity_reference, "Sword", (u64)&((sim_entity *)0)->Sword},
     {0, MetaType_v2, "WalkableDim", (u64)&((sim_entity *)0)->WalkableDim},
-    {0, MetaType_real32, "WalkableHeight", (u64)&((sim_entity *)0)->WalkableHeight},
+    {0, MetaType_r32, "WalkableHeight", (u64)&((sim_entity *)0)->WalkableHeight},
 };
 member_definition MembersOf_sim_region[] = 
 {
     {MetaMemberFlag_IsPointer, MetaType_world, "World", (u64)&((sim_region *)0)->World},
-    {0, MetaType_real32, "MaxEntityRadius", (u64)&((sim_region *)0)->MaxEntityRadius},
-    {0, MetaType_real32, "MaxEntityVelocity", (u64)&((sim_region *)0)->MaxEntityVelocity},
+    {0, MetaType_r32, "MaxEntityRadius", (u64)&((sim_region *)0)->MaxEntityRadius},
+    {0, MetaType_r32, "MaxEntityVelocity", (u64)&((sim_region *)0)->MaxEntityVelocity},
     {0, MetaType_world_position, "Origin", (u64)&((sim_region *)0)->Origin},
     {0, MetaType_rectangle3, "Bounds", (u64)&((sim_region *)0)->Bounds},
     {0, MetaType_rectangle3, "UpdatableBounds", (u64)&((sim_region *)0)->UpdatableBounds},
-    {0, MetaType_uint32_t, "MaxEntityCount", (u64)&((sim_region *)0)->MaxEntityCount},
-    {0, MetaType_uint32_t, "EntityCount", (u64)&((sim_region *)0)->EntityCount},
+    {0, MetaType_u32, "MaxEntityCount", (u64)&((sim_region *)0)->MaxEntityCount},
+    {0, MetaType_u32, "EntityCount", (u64)&((sim_region *)0)->EntityCount},
     {MetaMemberFlag_IsPointer, MetaType_sim_entity, "Entities", (u64)&((sim_region *)0)->Entities},
     {0, MetaType_sim_entity_hash, "Hash", (u64)&((sim_region *)0)->Hash},
 };
@@ -54,9 +54,9 @@ member_definition MembersOf_rectangle3[] =
 };
 member_definition MembersOf_world_position[] = 
 {
-    {0, MetaType_int32_t, "ChunkX", (u64)&((world_position *)0)->ChunkX},
-    {0, MetaType_int32_t, "ChunkY", (u64)&((world_position *)0)->ChunkY},
-    {0, MetaType_int32_t, "ChunkZ", (u64)&((world_position *)0)->ChunkZ},
+    {0, MetaType_s32, "ChunkX", (u64)&((world_position *)0)->ChunkX},
+    {0, MetaType_s32, "ChunkY", (u64)&((world_position *)0)->ChunkY},
+    {0, MetaType_s32, "ChunkZ", (u64)&((world_position *)0)->ChunkZ},
     {0, MetaType_v3, "Offset_", (u64)&((world_position *)0)->Offset_},
 };
 #define META_HANDLE_TYPE_DUMP(MemberPtr, NextIndentLevel) \
