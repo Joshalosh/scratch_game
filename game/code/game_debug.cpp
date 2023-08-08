@@ -1160,6 +1160,14 @@ EventsMatch(debug_event A, debug_event B)
     return(Result);
 }
 
+internal debug_variable *
+DEBUGBeginVariableGroup(debug_state *DebugState, char *Name)
+{
+    debug_variable *Group = DEBUGAddRootGroup(DebugState, Name);
+
+    return(Group);
+}
+
 internal void
 CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 {
@@ -1204,6 +1212,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 }
 
                 DebugState->CollationFrame = DebugState->Frames + DebugState->FrameCount;
+                DebugState->RootGroup = 0;
                 DebugState->CollationFrame->BeginClock = Event->Clock;
                 DebugState->CollationFrame->EndClock = 0;
                 DebugState->CollationFrame->RegionCount = 0;
@@ -1304,34 +1313,60 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 
                     case DebugEvent_R32:
                     {
+                        debug_variable *Var = DEBUGAddVariable(DebugState, Thread->FirstOpenBlock,
+                                                               DebugVariableType_Real32, Source->BlockName);
+                        Var->Real32 = Event->VecR32[0];
                     } break;
 
                     case DebugEvent_U32:
                     {
+                        debug_variable *Var = DEBUGAddVariable(DebugState, Thread->FirstOpenBlock,
+                                                               DebugVariableType_UInt32, Source->BlockName);
+                        Var->UInt32 = Event->VecU32[0];
                     } break;
 
                     case DebugEvent_S32:
                     {
+                        debug_variable *Var = DEBUGAddVariable(DebugState, Thread->FirstOpenDataBlock,
+                                                               DebugVariableType_Int32, Source->BlockName);
+                        Var->Int32 = Event->VecS32[0];
                     } break;
 
                     case DebugEvent_V2:
                     {
+                        debug_variable *Var = DBEUGAddVariable(DebugState, Thread->FirstOpenDataBlock,
+                                                               DebugVariableType_V2, Source->BlockName);
+                        Var->V2.x = Event->VecR32[0];
+                        Var->V2.y = Event->VecR32[1];
                     } break;
 
                     case DebugEvent_V3:
                     {
+                        debug_variable *Var = DBEUGAddVariable(DebugState, Thread->FirstOpenDataBlock,
+                                                               DebugVariableType_V3, Source->BlockName);
+                        Var->V3.x = Event->VecR32[0];
+                        Var->V3.y = Event->VecR32[1];
+                        Var->V3.z = Event->VecR32[2];
                     } break;
 
                     case DebugEvent_V4:
                     {
+                        debug_variable *Var = DBEUGAddVariable(DebugState, Thread->FirstOpenDataBlock,
+                                                               DebugVariableType_V4, Source->BlockName);
+                        Var->V4.x = Event->VecR32[0];
+                        Var->V4.y = Event->VecR32[1];
+                        Var->V4.z = Event->VecR32[2];
+                        Var->V4.w = Event->VecR32[3];
                     } break;
 
                     case DebugEvent_Rectangle2:
                     {
+                        // TODO: implement
                     } break;
 
                     case DebugEvent_Rectangle3:
                     {
+                        // TODO: implement
                     } break;
 
                     default:

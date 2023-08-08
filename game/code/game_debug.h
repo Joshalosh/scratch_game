@@ -169,6 +169,8 @@ struct debug_frame
     u64 EndClock;
     r32 WallSecondsElapsed;
 
+    debug_variable *RootGroup;
+
     u32 RegionCount;
     debug_frame_region *Regions;
 };
