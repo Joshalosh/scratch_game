@@ -1116,7 +1116,8 @@ GetRecordFrom(open_debug_block *Block)
 }
 
 inline open_debug_block *
-AllocateOpenDebugBlock(debug_state *DebugState)
+AllocateOpenDebugBlock(debug_state *DebugState, u32 FrameIndex, debug_event *Event,
+                       debug_record *Source, open_debug_block **FirstOpenBlock)
 {
     open_debug_block *Result = DebugState->FirstFreeBlock;
     if(Result)
@@ -1128,14 +1129,35 @@ AllocateOpenDebugBlock(debug_state *DebugState)
         Result = PushStruct(&DebugState->CollateArena, open_debug_block);
     }
 
+    Result->StartingFrameIndex = FrameIndex;
+    Result->OpeningEvent = Event;
+    Result->Source = Source;
+    Result->NextFree = 0;
+
+    Result->Parent = *FirstOpenBlock;
+    *FirstOpenBlock = Result;
+
     return(Result);
 }
 
 inline void
-DeallocateOpenDebugBlock(debug_state *DebugState, open_debug_block *Block)
+DeallocateOpenDebugBlock(debug_state *DebugState, open_debug_block **FirstOpenBlock)
 {
-    Block->NextFree = DebugState->FirstFreeBlock;
-    DebugState->FirstFreeBlock = Block;
+    open_debug_block *FreeBlock = *FirstOpenBlock;
+    *FirstOpenBlock = FreeBlock->Parent;
+
+    FreeBlock->NextFree = DebugState->FirstFreeBlock;
+    DebugState->FirstFreeBlock = FreeBlock;
+}
+
+inline b32
+EventsMatch(debug_event A, debug_event B)
+{
+    b32 Result = ((A.TC.ThreadID == B.TC.ThreadID) &&
+                  (A.DebugRecordIndex == B.DebugRecordIndex) &&
+                  (A.TranslationUnit == B.TranslationUnit));
+
+    return(Result);
 }
 
 internal void
@@ -1203,22 +1225,8 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 {
                     case DebugEvent_BeginBlock:
                     {
-                        open_debug_block *DebugBlock = AllocateOpenDebugBlock(DebugState);
-                        if(DebugBlock)
-                        {
-                            DebugState->FirstFreeBlock = DebugBlock->NextFree;
-                        }
-                        else
-                        {
-                            DebugBlock = PushStruct(&DebugState->CollateArena, open_debug_block);
-                        }
-
-                        DebugBlock->StartingFrameIndex = FrameIndex;
-                        DebugBlock->OpeningEvent = Event;
-                        DebugBlock->Parent = Thread->FirstOpenCodeBlock;
-                        DebugBlock->Source = Source;
-                        Thread->FirstOpenCodeBlock = DebugBlock;
-                        DebugBlock->NextFree = 0;
+                        open_debug_block *DebugBlock = AllocateOpenDebugBlock(DebugState, FrameIndex,
+                                                                              Event, Source, &Thread->FirstOpenCodeBlock);
                     } break;
 
                     case DebugEvent_EndBlock: 
@@ -1227,9 +1235,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         {
                             open_debug_block *MatchingBlock = Thread->FirstOpenCodeBlock;
                             debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
-                            if((OpeningEvent->TC.ThreadID == Event->TC.ThreadID) &&
-                               (OpeningEvent->DebugRecordIndex == Event->DebugRecordIndex) &&
-                               (OpeningEvent->TranslationUnit == Event->TranslationUnit))
+                            if(EventsMatch(*OpeningEvent, *Event))
                             {
                                 if(MatchingBlock->StartingFrameIndex == FrameIndex)
                                 {
@@ -1255,7 +1261,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                                     // TODO: Record all frames in between and begin/end spans.
                                 }
 
-                                DeallocateOpenDebugBlock(DebugState, Thread->FirstOpenCodeBlock);
+                                DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
 
                                 Thread->FirstOpenCodeBlock = MatchingBlock->Parent;
                             }
@@ -1268,10 +1274,32 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 
                     case DebugEvent_OpenDataBlock:
                     {
+                        open_debug_block *DebugBlock = AllocateOpenDebugBlock(
+                                DebugState, FrameIndex, Event, Source, &Thread->FirstOpenDataBlock);
+
+                        debug_vairable *Group = DEBUGAddRootsGroup(Context->State, Name);
+                        DEBUGAddVariableToDefaultGroup(Context, Group);
+                        
+                        Assert(Context->GroupDepth < (ArrayCount(Context->GroupStack) - 1));
+                        Context->GroupStack[++Context->GroupDepth] = Group;
+
                     } break;
 
                     case DebugEvent_CloseDataBlock:
                     {
+                        if(Thread->FirstOpenDataBlock)
+                        {
+                            open_debug_block *MatchingBlock = Thread->FirstOpenDataBlock;
+                            debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
+                            if(EventsMatch(*OpeningEvent, *Event))
+                            {
+                                DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenDataBlock);
+                            }
+                            else 
+                            {
+                                // Record span that goes to the beginning of the frame series.
+                            }
+                        }
                     } break;
 
                     case DebugEvent_R32:
