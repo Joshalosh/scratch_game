@@ -182,6 +182,9 @@ struct open_debug_block
     debug_event *OpeningEvent;
     open_debug_block *Parent;
 
+    // Only for data block I think?
+    debug_variable *Group;
+
     open_debug_block *NextFree;
 };
 

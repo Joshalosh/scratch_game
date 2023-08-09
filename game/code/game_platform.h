@@ -616,6 +616,7 @@ StringLength(char *String)
 }
 #endif
 
+
 #if defined(__cplusplus) && defined(GAME_INTERNAL)
 
 inline void
