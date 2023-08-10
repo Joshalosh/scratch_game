@@ -1238,7 +1238,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 if(DebugState->CollationFrame)
                 {
                     DebugState->CollationFrame->EndClock = Event->Clock;
-                    DebugState->CollationFrame->WallSecondsElapsed = Event->SecondsElapsed;
+                    DebugState->CollationFrame->WallSecondsElapsed = Event->Real32;
                     ++DebugState->FrameCount;
 
                     r32 ClockRange = (r32)(DebugState->CollationFrame->EndClock - DebugState->CollationFrame->BeginClock);
@@ -1355,7 +1355,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         debug_variable *Var = CollateCreateGroupedVariable(
                             DebugState, Thread->FirstOpenDataBlock,
                             DebugVariableType_Real32, Source->BlockName);
-                        Var->Real32 = Event->VecR32[0];
+                        Var->Real32 = Event->Real32;
                     } break;
 
                     case DebugEvent_U32:
@@ -1363,7 +1363,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         debug_variable *Var = CollateCreateGroupedVariable(
                             DebugState, Thread->FirstOpenDataBlock,
                             DebugVariableType_UInt32, Source->BlockName);
-                        Var->UInt32 = Event->VecU32[0];
+                        Var->UInt32 = Event->UInt32;
                     } break;
 
                     case DebugEvent_S32:
@@ -1371,7 +1371,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         debug_variable *Var = CollateCreateGroupedVariable(
                             DebugState, Thread->FirstOpenDataBlock,
                             DebugVariableType_Int32, Source->BlockName);
-                        Var->Int32 = Event->VecS32[0];
+                        Var->Int32 = Event->Int32;
                     } break;
 
                     case DebugEvent_V2:
@@ -1379,8 +1379,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         debug_variable *Var = CollateCreateGroupedVariable(
                             DebugState, Thread->FirstOpenDataBlock,
                             DebugVariableType_V2, Source->BlockName);
-                        Var->Vector2.x = Event->VecR32[0];
-                        Var->Vector2.y = Event->VecR32[1];
+                        Var->Vector2 = Event->Vector2;
                     } break;
 
                     case DebugEvent_V3:
@@ -1388,9 +1387,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         debug_variable *Var = CollateCreateGroupedVariable(
                             DebugState, Thread->FirstOpenDataBlock,
                             DebugVariableType_V3, Source->BlockName);
-                        Var->Vector3.x = Event->VecR32[0];
-                        Var->Vector3.y = Event->VecR32[1];
-                        Var->Vector3.z = Event->VecR32[2];
+                        Var->Vector3 = Event->Vector3;
                     } break;
 
                     case DebugEvent_V4:
@@ -1398,10 +1395,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         debug_variable *Var = CollateCreateGroupedVariable(
                             DebugState, Thread->FirstOpenDataBlock,
                             DebugVariableType_V4, Source->BlockName);
-                        Var->Vector4.x = Event->VecR32[0];
-                        Var->Vector4.y = Event->VecR32[1];
-                        Var->Vector4.z = Event->VecR32[2];
-                        Var->Vector4.w = Event->VecR32[3];
+                        Var->Vector4 = Event->Vector4;
                     } break;
 
                     case DebugEvent_Rectangle2:

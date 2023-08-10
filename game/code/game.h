@@ -78,9 +78,6 @@
    * Continuous save for crash recovery?
 */
 
-#define introspect(params)
-#define counted_pointer(params)
-
 #include "game_platform.h"
 #include "game_intrinsics.h"
 #include "game_math.h"

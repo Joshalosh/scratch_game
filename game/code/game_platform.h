@@ -1,5 +1,8 @@
 #if !defined(GAME_PLATFORM_H)
 
+#define introspect(params)
+#define counted_pointer(params)
+
 #include "game_config.h"
 
 /*
@@ -76,6 +79,117 @@ typedef uint64_t u64;
 
 typedef real32 r32;
 typedef real64 r64;
+
+union v2
+{
+    struct
+    {
+        real32 x, y;
+    };
+    struct
+    {
+        real32 u, v;
+    };
+    real32 E[2];
+};
+
+union v3
+{
+    struct
+    {
+        real32 x, y, z;
+    };
+    struct
+    {
+        real32 u, v, w;
+    };
+    struct
+    {
+        real32 r, g, b;
+    };
+    struct
+    {
+        v2 xy;
+        real32 Ignored0_;
+    };
+    struct
+    {
+        real32 Ignored1_;
+        v2 yz;
+    };
+    struct
+    {
+        v2 uv;
+        real32 Ignored2_;
+    };
+    struct
+    {
+        real32 Ignored3_;
+        v2 vw;
+    };
+    real32 E[3];
+};
+
+union v4
+{
+    struct
+    {
+        union
+        {
+            v3 xyz;
+            struct
+            {
+                real32 x, y, z;
+            };
+        };
+
+        real32 w;
+    };
+    struct
+    {
+        union
+        {
+            v3 rgb;
+            struct
+            {
+                real32 r, g, b;
+            };
+        };
+
+        real32 a;
+    };
+    struct
+    {
+        v2 xy;
+        real32 Ignored0_;
+        real32 Ignored1_;
+    };
+    struct
+    {
+        real32 Ignored2_;
+        v2 yz;
+        real32 Ignored3_;
+    };
+    struct
+    {
+        real32 Ignored4_;
+        real32 Ignored5_;
+        v2 zw;
+    };
+    real32 E[4];
+};
+
+introspect(category:"math") struct rectangle2
+{
+    v2 Min;
+    v2 Max;
+};
+
+introspect(category:"math") struct rectangle3
+{
+    v3 Min;
+    v3 Max;
+};
 
 #define Real32Maximum FLT_MAX
 
@@ -491,11 +605,17 @@ struct debug_event
     u8 Type;
     union
     {
-        r32 SecondsElapsed;
-        void *VecPtr[3];
-        s32 VecS32[6];
-        u32 VecU32[6];
-        r32 VecR32[6];
+        void *VecPtr[2];
+
+        b32 Bool32;
+        s32 Int32;
+        u32 UInt32;
+        r32 Real32;
+        v2 Vector2;
+        v3 Vector3;
+        v4 Vector4;
+        rectangle2 Rectangle2;
+        rectangle3 Rectangle3;
     };
 };
 
@@ -540,7 +660,7 @@ extern debug_table *GlobalDebugTable;
      { \
      int Counter = __COUNTER__; \
      RecordDebugEvent(Counter, DebugEvent_FrameMarker); \
-     Event->SecondsElapsed = SecondsElapsedInit;    \
+     Event->Real32 = SecondsElapsedInit;    \
      debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
      Record->Filename = __FILE__; \
      Record->LineNumber = __LINE__; \
@@ -623,21 +743,56 @@ inline void
 DEBUGValueSetEventData(debug_event *Event, r32 Value)
 {
     Event->Type = DebugEvent_R32;
-    Event->VecR32[0] = Value;
+    Event->Real32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, u32 Value)
 {
     Event->Type = DebugEvent_U32;
-    Event->VecU32[0] = Value;
+    Event->UInt32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, s32 Value)
 {
     Event->Type = DebugEvent_S32;
-    Event->VecS32[0] = Value;
+    Event->Int32 = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, v2 Value)
+{
+    Event->Type = DebugEvent_V2;
+    Event->Vector2 = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, v3 Value)
+{
+    Event->Type = DebugEvent_V3;
+    Event->Vector3 = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, v4 Value)
+{
+    Event->Type = DebugEvent_V3;
+    Event->Vector4 = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, rectangle2 Value)
+{
+    Event->Type = DebugEvent_Rectangle2;
+    Event->Rectangle2 = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, rectangle3 Value)
+{
+    Event->Type = DebugEvent_Rectangle3;
+    Event->Rectangle3 = Value;
 }
 
 #define DEBUG_BEGIN_DATA_BLOCK(Name, Ptr0, Ptr1)                                        \

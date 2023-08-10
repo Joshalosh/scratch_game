@@ -370,6 +370,7 @@ main(int ArgCount, char **Args)
     char *Filenames[] =
     {
         "game_sim_region.h",
+        "game_platform.h",
         "game_math.h",
         "game_world.h",
     };

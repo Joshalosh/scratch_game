@@ -113,6 +113,7 @@ struct debug_variable
 
     union
     {
+        // debug_event Event;
         b32 Bool32;
         s32 Int32;
         u32 UInt32;
@@ -120,6 +121,7 @@ struct debug_variable
         v2 Vector2;
         v3 Vector3;
         v4 Vector4;
+
         debug_profile_settings Profile;
         debug_bitmap_display BitmapDisplay;
         debug_variable_link VarGroup;
