@@ -1,5 +1,6 @@
 #if !defined(GAME_PLATFORM_H)
 
+// TODO: Have the meta-parser ignore its own #define
 #define introspect(params)
 #define counted_pointer(params)
 
@@ -79,6 +80,23 @@ typedef uint64_t u64;
 
 typedef real32 r32;
 typedef real64 r64;
+
+#pragma pack(push, 1)
+struct bitmap_id 
+{
+    u32 Value;
+};
+
+struct sound_id
+{
+    u32 Value;
+};
+
+struct font_id
+{
+    u32 Value;
+};
+#pragma pack(pop)
 
 union v2
 {
@@ -573,23 +591,34 @@ struct debug_record
     u32 Reserved;
 };
 
-enum debug_event_type
+enum debug_type
 {
-    DebugEvent_FrameMarker,
-    DebugEvent_BeginBlock,
-    DebugEvent_EndBlock,
+    DebugType_FrameMarker,
+    DebugType_BeginBlock,
+    DebugType_EndBlock,
 
-    DebugEvent_OpenDataBlock,
-    DebugEvent_CloseDataBlock,
+    DebugType_OpenDataBlock,
+    DebugType_CloseDataBlock,
 
-    DebugEvent_R32,
-    DebugEvent_U32,
-    DebugEvent_S32,
-    DebugEvent_V2,
-    DebugEvent_V3,
-    DebugEvent_V4,
-    DebugEvent_Rectangle2,
-    DebugEvent_Rectangle3,
+    DebugType_B32,
+    DebugType_R32,
+    DebugType_U32,
+    DebugType_S32,
+    DebugType_V2,
+    DebugType_V3,
+    DebugType_V4,
+    DebugType_Rectangle2,
+    DebugType_Rectangle3,
+    DebugType_BitmapID,
+    DebugType_SoundID,
+    DebugType_FontID,
+    
+    //
+
+    DebugType_FirstUIType = 256,
+    DebugType_CounterThreadList,
+    // DebugType_CounterFunctionLost,
+    DebugType_VarGroup,
 };
 struct threadid_coreindex
 {
@@ -616,6 +645,9 @@ struct debug_event
         v4 Vector4;
         rectangle2 Rectangle2;
         rectangle3 Rectangle3;
+        bitmap_id BitmapID;
+        sound_id SoundID;
+        font_id FontID;
     };
 };
 
@@ -659,7 +691,7 @@ extern debug_table *GlobalDebugTable;
 #define FRAME_MARKER(SecondsElapsedInit) \
      { \
      int Counter = __COUNTER__; \
-     RecordDebugEvent(Counter, DebugEvent_FrameMarker); \
+     RecordDebugEvent(Counter, DebugType_FrameMarker); \
      Event->Real32 = SecondsElapsedInit;    \
      debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
      Record->Filename = __FILE__; \
@@ -677,10 +709,10 @@ extern debug_table *GlobalDebugTable;
     Record->Filename = FilenameInit; \
     Record->LineNumber = LineNumberInit; \
     Record->BlockName = BlockNameInit; \
-    RecordDebugEvent(Counter, DebugEvent_BeginBlock);}
+    RecordDebugEvent(Counter, DebugType_BeginBlock);}
 #define END_BLOCK_(Counter) \
 { \
-    RecordDebugEvent(Counter, DebugEvent_EndBlock); \
+    RecordDebugEvent(Counter, DebugType_EndBlock); \
 }
 
 #define BEGIN_BLOCK(Name) \
@@ -742,63 +774,84 @@ StringLength(char *String)
 inline void
 DEBUGValueSetEventData(debug_event *Event, r32 Value)
 {
-    Event->Type = DebugEvent_R32;
+    Event->Type = DebugType_R32;
     Event->Real32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, u32 Value)
 {
-    Event->Type = DebugEvent_U32;
+    Event->Type = DebugType_U32;
     Event->UInt32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, s32 Value)
 {
-    Event->Type = DebugEvent_S32;
+    Event->Type = DebugType_S32;
     Event->Int32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, v2 Value)
 {
-    Event->Type = DebugEvent_V2;
+    Event->Type = DebugType_V2;
     Event->Vector2 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, v3 Value)
 {
-    Event->Type = DebugEvent_V3;
+    Event->Type = DebugType_V3;
     Event->Vector3 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, v4 Value)
 {
-    Event->Type = DebugEvent_V3;
+    Event->Type = DebugType_V3;
     Event->Vector4 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, rectangle2 Value)
 {
-    Event->Type = DebugEvent_Rectangle2;
+    Event->Type = DebugType_Rectangle2;
     Event->Rectangle2 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, rectangle3 Value)
 {
-    Event->Type = DebugEvent_Rectangle3;
+    Event->Type = DebugType_Rectangle3;
     Event->Rectangle3 = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, bitmap_id Value)
+{
+    Event->Type = DebugType_BitmapID;
+    Event->BitmapID = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, sound_id Value)
+{
+    Event->Type = DebugType_SoundID;
+    Event->SoundID = Value;
+}
+
+inline void
+DEBUGValueSetEventData(debug_event *Event, font_id Value)
+{
+    Event->Type = DebugType_FontID;
+    Event->FontID = Value;
 }
 
 #define DEBUG_BEGIN_DATA_BLOCK(Name, Ptr0, Ptr1)                                        \
 {                                                                                       \
     int Counter = __COUNTER__;                                                          \
-    RecordDebugEvent(Counter, DebugEvent_OpenDataBlock);                          \
+    RecordDebugEvent(Counter, DebugType_OpenDataBlock);                          \
     Event->VecPtr[0] = Ptr0;                                                            \
     Event->VecPtr[1] = Ptr1;                                                            \
     debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
@@ -810,7 +863,7 @@ DEBUGValueSetEventData(debug_event *Event, rectangle3 Value)
 #define DEBUG_END_DATA_BLOCK()                                                          \
 {                                                                                       \
     int Counter = __COUNTER__;                                                          \
-    RecordDebugEvent(Counter, DebugEvent_CloseDataBlock);                         \
+    RecordDebugEvent(Counter, DebugType_CloseDataBlock);                         \
     debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
     Record->Filename = __FILE__;                                                        \
     Record->LineNumber = __LINE__;                                                      \
@@ -819,7 +872,7 @@ DEBUGValueSetEventData(debug_event *Event, rectangle3 Value)
 #define DEBUG_VALUE(Value)                                                              \
 {                                                                                       \
     int Counter = __COUNTER__;                                                          \
-    RecordDebugEvent(Counter, DebugEvent_R32);                                    \
+    RecordDebugEvent(Counter, DebugType_R32);                                    \
     DEBUGValueSetEventData(Event, Value);                                               \
     debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
     Record->Filename = __FILE__;                                                        \

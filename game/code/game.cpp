@@ -1533,6 +1533,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                     DEBUG_VALUE(Entity->tBob);
                     DEBUG_VALUE(Entity->dAbsTileZ);
                     DEBUG_VALUE(Entity->HitPointMax);
+                    DEBUG_VALUE(HeroBitmaps.Torso);
 #if 0
                     DEBUG_BEGIN_ARRAY(Entity->HitPoint);
                     for(u32 HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
