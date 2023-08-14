@@ -1,7 +1,5 @@
 #if !defined(GAME_DEBUG_H)
 
-struct debug_variable;
-
 enum debug_variable_to_text_flag
 {
     DEBUGVarToText_AddDebugUI = 0x1,
@@ -14,7 +12,6 @@ enum debug_variable_to_text_flag
 };
 
 struct debug_tree;
-struct debug_variable;
 
 struct debug_view_inline_block
 {
@@ -69,19 +66,12 @@ struct debug_variable_link
     debug_variable_link *Next;
     debug_variable_link *Prev;
     debug_variable_group *Children;
-    debug_variable *Var;
+    debug_event *Event;
 };
 
 struct debug_variable_group
 {
     debug_variable_link Sentinel;
-};
-
-struct debug_variable
-{
-    debug_type Type;
-    char *Name;
-    debug_event Event;
 };
 
 struct render_group;
@@ -178,7 +168,7 @@ struct debug_interaction
     union
     {
         void *Generic;
-        debug_variable *Var;
+        debug_event *Event;
         debug_tree *Tree;
         v2 *P;
     };

@@ -253,12 +253,23 @@ EndDebugStatistic(debug_statistic *Stat)
     }
 }
 
+inline char *
+GetName(debug_event *Event)
+{
+    debug_record *Source = (GlobalDebugTable->Records[Event->TranslationUnit] +
+                            Event->DebugRecordIndex);
+    char *Result = Source->BlockName;
+
+    return(Result);
+}
+
 internal memory_index
-DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
+DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
 {
     // This is a really good example of how to add flag parameters to a function.
     // the corresponding enums are in game_debug.h.
     char *At = Buffer;
+    char *Name = GetName(Event);
 
     if(Flags & DEBUGVarToText_AddDebugUI)
     {
@@ -269,15 +280,15 @@ DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
     if(Flags & DEBUGVarToText_AddName)
     {
         At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                          "%s%s ", Var->Name, (Flags & DEBUGVarToText_Colon) ? ":" : "");
+                          "%s%s ", Name, (Flags & DEBUGVarToText_Colon) ? ":" : "");
     }
 
-    switch(Var->Type)
+    switch(Event->Type)
     {
         case DebugType_R32:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%f", Var->Event.Real32);
+                              "%f", Event->Real32);
             if(Flags & DEBUGVarToText_FloatSuffix)
             {
                 *At++ = 'f';
@@ -289,67 +300,67 @@ DEBUGVariableToText(char *Buffer, char *End, debug_variable *Var, u32 Flags)
             if(Flags & DEBUGVarToText_PrettyBools)
             {
                 At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "%s", Var->Event.Bool32 ? "true" : "false");
+                                  "%s", Event->Bool32 ? "true" : "false");
             }
             else
             {
                 At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "%d", Var->Event.Bool32);
+                                  "%d", Event->Bool32);
             }
         } break;
 
         case DebugType_S32:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%d", Var->Event.Int32);
+                              "%d", Event->Int32);
         } break;
 
         case DebugType_U32:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%u", Var->Event.UInt32);
+                              "%u", Event->UInt32);
         } break;
 
         case DebugType_V2:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "V2(%f, %f)", Var->Event.Vector2.x, Var->Event.Vector2.y);
+                              "V2(%f, %f)", Event->Vector2.x, Event->Vector2.y);
         } break;
 
         case DebugType_V3:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "V3(%f, %f, %f)", Var->Event.Vector3.x, Var->Event.Vector3.y, Var->Event.Vector3.z);
+                              "V3(%f, %f, %f)", Event->Vector3.x, Event->Vector3.y, Event->Vector3.z);
         } break;
 
         case DebugType_V4:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
                               "V4(%f, %f, %f, %f)", 
-                              Var->Event.Vector4.x, Var->Event.Vector4.y, 
-                              Var->Event.Vector4.z, Var->Event.Vector4.w);
+                              Event->Vector4.x, Event->Vector4.y, 
+                              Event->Vector4.z, Event->Vector4.w);
         } break;
 
         case DebugType_Rectangle2:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
                               "Rect2(%f, %f, -> %f, %f,)",
-                              Var->Event.Rectangle2.Min.x,
-                              Var->Event.Rectangle2.Min.y,
-                              Var->Event.Rectangle2.Max.x,
-                              Var->Event.Rectangle2.Max.y);
+                              Event->Rectangle2.Min.x,
+                              Event->Rectangle2.Min.y,
+                              Event->Rectangle2.Max.x,
+                              Event->Rectangle2.Max.y);
         } break;
         
         case DebugType_Rectangle3:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
                               "Rect3(%f, %f, %f -> %f, %f, %f)",
-                              Var->Event.Rectangle3.Min.x,
-                              Var->Event.Rectangle3.Min.y,
-                              Var->Event.Rectangle3.Min.z,
-                              Var->Event.Rectangle3.Max.x,
-                              Var->Event.Rectangle3.Max.y, 
-                              Var->Event.Rectangle3.Max.z);
+                              Event->Rectangle3.Min.x,
+                              Event->Rectangle3.Min.y,
+                              Event->Rectangle3.Min.z,
+                              Event->Rectangle3.Max.x,
+                              Event->Rectangle3.Max.y, 
+                              Event->Rectangle3.Max.z);
         } break;
 
         case DebugType_CounterThreadList:
@@ -717,7 +728,7 @@ VarLinkInteraction(debug_interaction_type Type, debug_tree *Tree, debug_variable
     debug_interaction ItemInteraction = {};
     ItemInteraction.ID = DebugIDFromLink(Tree, Link);
     ItemInteraction.Type = Type;
-    ItemInteraction.Var = Link->Var;
+    ItemInteraction.Event = Link->Event;
 
     return(ItemInteraction);
 }
@@ -766,7 +777,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     Layout.Depth = Depth;
 
                     debug_variable_link *Link = Iter->Link;
-                    debug_variable *Var = Iter->Link->Var;
+                    debug_event *Event = Iter->Link->Event;
                     Iter->Link = Iter->Link->Next;
 
                     debug_interaction ItemInteraction =
@@ -776,7 +787,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                     v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
 
                     debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugIDFromLink(Tree, Link));
-                    switch(Var->Type)
+                    switch(Event->Type)
                     {
                         case DebugType_CounterThreadList:
                         {
@@ -790,7 +801,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 
                         case DebugType_BitmapID:
                         {
-                            loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, Var->Event.BitmapID, RenderGroup->GenerationID);
+                            loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, Event->BitmapID, RenderGroup->GenerationID);
                             r32 BitmapScale = View->InlineBlock.Dim.y;
                             if(Bitmap)
                             {
@@ -806,14 +817,14 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                             EndElement(&Element);
 
                             PushRect(DebugState->RenderGroup, Element.Bounds, 0.0f, V4(0, 0, 0, 1.0f));
-                            PushBitmap(DebugState->RenderGroup, Var->Event.BitmapID, BitmapScale,
+                            PushBitmap(DebugState->RenderGroup, Event->BitmapID, BitmapScale,
                                        V3(GetMinCorner(Element.Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
                         } break;
 
                         default:
                         {
                             char Text[256];
-                            DEBUGVariableToText(Text, Text + sizeof(Text), Var,
+                            DEBUGEventToText(Text, Text + sizeof(Text), Event,
                                                 DEBUGVarToText_AddName|
                                                 DEBUGVarToText_NullTerminator|
                                                 DEBUGVarToText_Colon|
@@ -913,7 +924,7 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
     {
         if(DebugState->HotInteraction.Type == DebugInteraction_AutoModifyVariable)
         {
-            switch(DebugState->HotInteraction.Var->Type)
+            switch(DebugState->HotInteraction.Event->Type)
             {
                 case DebugType_B32:
                 {
@@ -967,13 +978,13 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     {
         case DebugInteraction_ToggleValue:
         {
-            debug_variable *Var = DebugState->Interaction.Var;
-            Assert(Var);
-            switch(Var->Type)
+            debug_event *Event = DebugState->Interaction.Event;
+            Assert(Event);
+            switch(Event->Type)
             {
                 case DebugType_B32:
                 {
-                    Var->Event.Bool32 = !Var->Event.Bool32;
+                    Event->Bool32 = !Event->Bool32;
                 } break;
 
                 case DebugType_VarGroup:
@@ -1009,7 +1020,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 */
     if(DebugState->Interaction.Type)
     {
-        debug_variable *Var = DebugState->Interaction.Var;
+        debug_event *Event = DebugState->Interaction.Event;
         debug_tree *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
         
@@ -1018,11 +1029,11 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         {
             case DebugInteraction_DragValue:
             {
-                switch(Var->Type)
+                switch(Event->Type)
                 {
                     case DebugType_R32:
                     {
-                        Var->Event.Real32 += 0.1f*dMouseP.y;
+                        Event->Real32 += 0.1f*dMouseP.y;
                     } break;
                 }
             } break;
@@ -1201,23 +1212,26 @@ EventsMatch(debug_event A, debug_event B)
     return(Result);
 }
 
-internal debug_variable *
+internal debug_event *
 CollateCreateVariable(debug_state *State, debug_type Type, char *Name)
 {
-    debug_variable *Var = PushStruct(&State->CollateArena, debug_variable);
-    Var->Type = Type;
-    Var->Name = (char *)PushCopy(&State->CollateArena, StringLength(Name) + 1, Name);
+    debug_event *Var = PushStruct(&State->CollateArena, debug_event);
+    ZeroStruct(*Var);
+    Var->Type = (u8)Type;
+    //Var->Name = (char *)PushCopy(&State->CollateArena, StringLength(Name) + 1, Name);
+
+    Assert(Var->Type != DebugType_EndBlock);
 
     return(Var);
 }
 
 internal debug_variable_link *
-CollateAddVariableToGroup(debug_state *State, debug_variable_group *Group, debug_variable *Add)
+CollateAddVariableToGroup(debug_state *State, debug_variable_group *Group, debug_event *Add)
 {
     debug_variable_link *Link = PushStruct(&State->CollateArena, debug_variable_link);
     DLIST_INSERT(&Group->Sentinel, Link);
     Link->Children = 0;
-    Link->Var = Add;
+    Link->Event = Add;
     return(Link);
 }
 
@@ -1231,11 +1245,11 @@ CollateCreateVariableGroup(debug_state *DebugState)
     return(Group);
 }
 
-internal debug_variable *
+internal debug_event *
 CollateCreateGroupedVariable(debug_state *DebugState, open_debug_block *Block,
                              debug_type Type, char *Name)
 {
-    debug_variable *Result = CollateCreateVariable(DebugState, Type, Name);
+    debug_event *Result = CollateCreateVariable(DebugState, Type, Name);
     Assert(Block);
     Assert(Block->Group);
 
@@ -1361,7 +1375,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                             DebugState, FrameIndex, Event, Source, &Thread->FirstOpenDataBlock);
 
                         DebugBlock->Group = CollateCreateVariableGroup(DebugState);
-                        debug_variable *Var = CollateCreateVariable(DebugState, DebugType_VarGroup, Source->BlockName);
+                        debug_event *Var = CollateCreateVariable(DebugState, DebugType_VarGroup, Source->BlockName);
                         debug_variable_link *Link =
                             CollateAddVariableToGroup(DebugState,
                                                       DebugBlock->Parent ? DebugBlock->Parent->Group : DebugState->CollationFrame->RootGroup,
@@ -1388,10 +1402,11 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 
                     default:
                     {
-                        debug_variable *Var = CollateCreateGroupedVariable(
+                        debug_event *Var = CollateCreateGroupedVariable(
                                 DebugState, Thread->FirstOpenDataBlock,
                                 (debug_type)Event->Type, Source->BlockName);
-                        Var->Event = *Event;
+                        *Var = *Event;
+                        Assert(Var->Type != DebugType_EndBlock);
                     } break;
                 }
             }
