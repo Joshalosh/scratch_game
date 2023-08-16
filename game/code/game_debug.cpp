@@ -1220,8 +1220,6 @@ CollateCreateVariable(debug_state *State, debug_type Type, char *Name)
     Var->Type = (u8)Type;
     //Var->Name = (char *)PushCopy(&State->CollateArena, StringLength(Name) + 1, Name);
 
-    Assert(Var->Type != DebugType_EndBlock);
-
     return(Var);
 }
 
