@@ -104,14 +104,13 @@ extern debug_table *GlobalDebugTable;
 // TODO: I think i'll probably swicth away from the translation unity indexing
 // and just go to a more standard one-time hash table because the complexity
 // seems to be causing problems.
-#define RecordDebugEvent(RecordIndex, EventType, Block)                                         \
+#define RecordDebugEvent(EventType, Block)                                         \
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1); \
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
     Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                                                 \
     debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;    \
     Event->Clock = __rdtsc();                                                                   \
     Event->DebugRecordIndex = (u16)RecordIndex;                                                 \
-    Event->TranslationUnit = TRANSLATION_UNIT_INDEX;                                            \
     Event->Type = (u8)EventType;                                                                \
     Event->TC.CoreIndex = 0;                                                                    \
     Event->TC.ThreadID = (u16)GetThreadID();                                                    \
@@ -122,7 +121,7 @@ extern debug_table *GlobalDebugTable;
 #define FRAME_MARKER(SecondsElapsedInit)                               \
      {                                                                 \
      int Counter = __COUNTER__;                                        \
-     RecordDebugEvent(Counter, DebugType_FrameMarker, "Frame Marker"); \
+     RecordDebugEvent(DebugType_FrameMarker, "Frame Marker"); \
      Event->Real32 = SecondsElapsedInit;                               \
     }
 
@@ -132,10 +131,10 @@ extern debug_table *GlobalDebugTable;
 #define TIMED_FUNCTION(...) TIMED_BLOCK_((char *)__FUNCTION__, __LINE__, ## __VA_ARGS__)
 
 #define BEGIN_BLOCK_(Counter, FilenameInit, LineNumberInit, BlockNameInit) \
-    {RecordDebugEvent(Counter, DebugType_BeginBlock, BlockNameInit);}
+    {RecordDebugEvent(DebugType_BeginBlock, BlockNameInit);}
 #define END_BLOCK_(Counter) \
 { \
-    RecordDebugEvent(Counter, DebugType_EndBlock, "End Block"); \
+    RecordDebugEvent(DebugType_EndBlock, "End Block"); \
 }
 
 #define BEGIN_BLOCK(Name) \
@@ -273,34 +272,20 @@ DEBUGValueSetEventData(debug_event *Event, font_id Value)
 
 #define DEBUG_BEGIN_DATA_BLOCK(Name, Ptr0, Ptr1)                                        \
 {                                                                                       \
-    int Counter = __COUNTER__;                                                          \
-    RecordDebugEvent(Counter, DebugType_OpenDataBlock);                          \
+    RecordDebugEvent(DebugType_OpenDataBlock, #Name);                                   \
     Event->VecPtr[0] = Ptr0;                                                            \
     Event->VecPtr[1] = Ptr1;                                                            \
-    debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
-    Record->Filename = __FILE__;                                                        \
-    Record->LineNumber = __LINE__;                                                      \
-    Record->BlockName = Name;                                                           \
 }
 
 #define DEBUG_END_DATA_BLOCK()                                                          \
 {                                                                                       \
-    int Counter = __COUNTER__;                                                          \
-    RecordDebugEvent(Counter, DebugType_CloseDataBlock);                         \
-    debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
-    Record->Filename = __FILE__;                                                        \
-    Record->LineNumber = __LINE__;                                                      \
+    RecordDebugEvent(DebugType_CloseDataBlock, "End Data Block");                       \
 }
 
 #define DEBUG_VALUE(Value)                                                              \
 {                                                                                       \
-    int Counter = __COUNTER__;                                                          \
-    RecordDebugEvent(Counter, DebugType_R32);                                    \
+    RecordDebugEvent(DebugType_R32, #Value);                                            \
     DEBUGValueSetEventData(Event, Value);                                               \
-    debug_record *Record = GlobalDebugTable->Records[TRANSLATION_UNIT_INDEX] + Counter; \
-    Record->Filename = __FILE__;                                                        \
-    Record->LineNumber = __LINE__;                                                      \
-    Record->BlockName = "Value";                                                        \
 }
 
 #define DEBUG_BEGIN_ARRAY(...)
