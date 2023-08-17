@@ -94,7 +94,7 @@ extern debug_table *GlobalDebugTable;
 #define FRAME_MARKER(SecondsElapsedInit)                               \
      {                                                                 \
      int Counter = __COUNTER__;                                        \
-     RecordDebugEvent(DebugType_FrameMarker, "Frame Marker"); \
+     RecordDebugEvent(DebugType_FrameMarker, "Frame Marker");          \
      Event->Real32 = SecondsElapsedInit;                               \
     }
 
