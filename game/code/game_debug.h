@@ -102,7 +102,7 @@ struct debug_counter_state
 
 struct debug_frame_region
 {
-    debug_record *Record;
+    debug_event *Event;
     u64 CycleCount;
     u16 LaneIndex;
     u16 ColorIndex;
@@ -126,7 +126,6 @@ struct debug_frame
 struct open_debug_block
 {
     u32 StartingFrameIndex;
-    debug_record *Source;
     debug_event *OpeningEvent;
     open_debug_block *Parent;
 
@@ -209,7 +208,7 @@ struct debug_state
     r32 GlobalWidth;
     r32 GlobalHeight;
 
-    debug_record *ScopeToRecord;
+    char *ScopeToRecord;
 
     // Collation.
     memory_arena CollateArena;

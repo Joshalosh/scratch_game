@@ -3,24 +3,7 @@ struct debug_table;
 #define DEBUG_GAME_FRAME_END(name) debug_table *name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)
 typedef DEBUG_GAME_FRAME_END(debug_game_frame_end);
 
-inline game_controller_input *GetController(game_input *Input, int unsigned ControllerIndex)
-{
-    Assert(ControllerIndex < ArrayCount(Input->Controllers));
-    
-    game_controller_input *Result = &Input->Controllers[ControllerIndex];
-    return(Result);
-}
-
 #if GAME_INTERNAL
-struct debug_record
-{
-    char *Filename;
-    char *BlockName;
-
-    u32 LineNumber;
-    u32 Reserved;
-};
-
 enum debug_type
 {
     DebugType_FrameMarker,
@@ -47,22 +30,17 @@ enum debug_type
 
     DebugType_CounterThreadList,
     // DebugType_CounterFunctionLost,
-    DebugType_VarGroup,
-};
-struct threadid_coreindex
-{
-    u16 ThreadID;
-    u16 CoreIndex;
 };
 struct debug_event
 {
     u64 Clock;
+    // TODO: To save space we could put these two strings back-to-back 
+    // with a null terminator in the middle
     char *Filename;
     char *BlockName;
     u32 LineNumber;
-
-    // TODO: Expand this out and pack it better?
-    threadid_coreindex TC;
+    u16 ThreadID;
+    u16 CoreIndex;
     u8 Type;
     union
     {
@@ -85,7 +63,6 @@ struct debug_event
 
 #define MAX_DEBUG_THREAD_COUNT 256
 #define MAX_DEBUG_EVENT_ARRAY_COUNT 8
-#define MAX_DEBUG_TRANSLATION_UNITS 3
 #define MAX_DEBUG_EVENT_COUNT (16*65536)
 struct debug_table
 {
@@ -101,19 +78,15 @@ struct debug_table
 
 extern debug_table *GlobalDebugTable;
 
-// TODO: I think i'll probably swicth away from the translation unity indexing
-// and just go to a more standard one-time hash table because the complexity
-// seems to be causing problems.
-#define RecordDebugEvent(EventType, Block)                                         \
+#define RecordDebugEvent(EventType, Block)                                                      \
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1); \
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
     Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                                                 \
     debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;    \
     Event->Clock = __rdtsc();                                                                   \
-    Event->DebugRecordIndex = (u16)RecordIndex;                                                 \
     Event->Type = (u8)EventType;                                                                \
-    Event->TC.CoreIndex = 0;                                                                    \
-    Event->TC.ThreadID = (u16)GetThreadID();                                                    \
+    Event->CoreIndex = 0;                                                                       \
+    Event->ThreadID = (u16)GetThreadID();                                                       \
     Event->Filename = __FILE__;                                                                 \
     Event->LineNumber = __LINE__;                                                               \
     Event->BlockName = Block;                                                                   \

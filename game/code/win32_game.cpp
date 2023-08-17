@@ -2071,15 +2071,6 @@ WinMain(HINSTANCE Instance,
                     LARGE_INTEGER EndCounter = Win32GetWallClock();
                     FRAME_MARKER(Win32GetSecondsElapsed(LastCounter, EndCounter));
                     LastCounter = EndCounter;
-
-#if GAME_INTERNAL
-                    if(GlobalDebugTable)
-                    {
-                        // TODO: Perhaps I should move this to a global variable so 
-                        // there can be timers below this one.
-                        GlobalDebugTable->RecordCount[TRANSLATION_UNIT_INDEX] = __COUNTER__;
-                    }
-#endif
                 }
             }
             else

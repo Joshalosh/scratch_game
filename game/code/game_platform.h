@@ -387,6 +387,14 @@ typedef struct game_input
     game_controller_input Controllers[5];
 } game_input;
 
+inline game_controller_input *GetController(game_input *Input, int unsigned ControllerIndex)
+{
+    Assert(ControllerIndex < ArrayCount(Input->Controllers));
+    
+    game_controller_input *Result = &Input->Controllers[ControllerIndex];
+    return(Result);
+}
+
 inline b32 WasPressed(game_button_state State)
 {
     b32 Result = ((State.HalfTransitionCount > 1) ||

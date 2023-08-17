@@ -18,7 +18,7 @@ pushd ..\game\code
 popd
 
 REM Asset file builder build
-REM cl %CommonCompilerFlags% -DTRANSLATION_UNIT_INDEX=0 -D_CRT_SECURE_NO_WARNINGS ..\game\code\test_asset_builder.cpp /link %CommonLinkerFlags%
+REM cl %CommonCompilerFlags% -D_CRT_SECURE_NO_WARNINGS ..\game\code\test_asset_builder.cpp /link %CommonLinkerFlags%
 
 REM 32-bit build
 REM cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link -subsystem:windows,5.1 %CommonLinkerFlags%
@@ -26,10 +26,10 @@ REM cl %CommonCompilerFlags% ..\game\code\win32_game.cpp /link -subsystem:window
 REM 64-bit build
 REM Optimisation switches /wO2 
 echo WAITING FOR PDB > lock.tmp
-cl %CommonCompilerFlags% -DTRANSLATION_UNIT_INDEX=1 -O2 -I..\iaca-win64\ -c ..\game\code\game_optimised.cpp -Fogame_optimised.obj -LD
-cl %CommonCompilerFlags% -DTRANSLATION_UNIT_INDEX=0 -I..\iaca-win64\ ..\game\code\game.cpp game_optimised.obj -Fmgame.map -LD /link -incremental:no -PDB:game_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender -EXPORT:DEBUGGameFrameEnd
+cl %CommonCompilerFlags% -O2 -I..\iaca-win64\ -c ..\game\code\game_optimised.cpp -Fogame_optimised.obj -LD
+cl %CommonCompilerFlags% -I..\iaca-win64\ ..\game\code\game.cpp game_optimised.obj -Fmgame.map -LD /link -incremental:no -PDB:game_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender -EXPORT:DEBUGGameFrameEnd
 del lock.tmp
-cl %CommonCompilerFlags% -DTRANSLATION_UNIT_INDEX=2 ..\game\code\win32_game.cpp -Fmwin32_game.map /link %CommonLinkerFlags%
+cl %CommonCompilerFlags% ..\game\code\win32_game.cpp -Fmwin32_game.map /link %CommonLinkerFlags%
 popd
 
 ctime -end game.ctm
