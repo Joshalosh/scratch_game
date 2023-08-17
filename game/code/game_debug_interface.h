@@ -105,16 +105,16 @@ extern debug_table *GlobalDebugTable;
 
 #define BEGIN_BLOCK_(Counter, FilenameInit, LineNumberInit, BlockNameInit) \
     {RecordDebugEvent(DebugType_BeginBlock, BlockNameInit);}
-#define END_BLOCK_(Counter) \
-{ \
+#define END_BLOCK_(Counter)                            \
+{                                                      \
     RecordDebugEvent(DebugType_EndBlock, "End Block"); \
 }
 
-#define BEGIN_BLOCK(Name) \
-    int Counter_##Name = __COUNTER__; \
+#define BEGIN_BLOCK(Name)                                   \
+    int Counter_##Name = __COUNTER__;                       \
     BEGIN_BLOCK_(Counter_##Name, __FILE__, __LINE__, #Name);
 
-#define END_BLOCK(Name) \
+#define END_BLOCK(Name)         \
     END_BLOCK_(Counter_##Name);
 
 struct timed_block
