@@ -26,16 +26,11 @@ struct debug_view_collapsible
 
 enum debug_view_type
 {
-    DebugViewType_Unkown,
+    DebugViewType_Unknown,
 
     DebugViewType_Basic,
     DebugViewType_InlineBlock,
     DebugViewType_Collapsible,
-};
-
-struct debug_id
-{
-    void *Value[2];
 };
 
 struct debug_view
@@ -52,6 +47,14 @@ struct debug_view
 };
 
 struct debug_variable_group;
+struct debug_variable_link
+{
+    debug_variable_link *Next;
+    debug_variable_link *Prev;
+    debug_variable_group *Children;
+    debug_event *Event;
+};
+
 struct debug_tree
 {
     v2 UIP;
@@ -59,14 +62,6 @@ struct debug_tree
 
     debug_tree *Next;
     debug_tree *Prev;
-};
-
-struct debug_variable_link
-{
-    debug_variable_link *Next;
-    debug_variable_link *Prev;
-    debug_variable_group *Children;
-    debug_event *Event;
 };
 
 struct debug_variable_group
@@ -158,6 +153,8 @@ enum debug_interaction_type
 
     DebugInteraction_Resize,
     DebugInteraction_Move,
+
+    DebugInteraction_Select,
 };
 
 struct debug_interaction
@@ -190,6 +187,9 @@ struct debug_state
 
     v2 MenuP;
     b32 MenuActive;
+
+    u32 SelectedIDCount;
+    debug_id SelectedID[64];
 
     debug_variable_group *RootGroup;
     debug_view *ViewHash[4096];
