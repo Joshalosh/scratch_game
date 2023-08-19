@@ -11,6 +11,8 @@ struct debug_id
 #if GAME_INTERNAL
 enum debug_type
 {
+    DebugType_Unknown,
+
     DebugType_FrameMarker,
     DebugType_BeginBlock,
     DebugType_EndBlock,
@@ -18,18 +20,18 @@ enum debug_type
     DebugType_OpenDataBlock,
     DebugType_CloseDataBlock,
 
-    DebugType_B32,
-    DebugType_R32,
-    DebugType_U32,
-    DebugType_S32,
-    DebugType_V2,
-    DebugType_V3,
-    DebugType_V4,
-    DebugType_Rectangle2,
-    DebugType_Rectangle3,
-    DebugType_BitmapID,
-    DebugType_SoundID,
-    DebugType_FontID,
+    DebugType_b32,
+    DebugType_r32,
+    DebugType_u32,
+    DebugType_s32,
+    DebugType_v2,
+    DebugType_v3,
+    DebugType_v4,
+    DebugType_rectangle2,
+    DebugType_rectangle3,
+    DebugType_bitmap_id,
+    DebugType_sound_id,
+    DebugType_font_id,
 
     DebugType_CounterThreadList,
     // DebugType_CounterFunctionLost,
@@ -49,18 +51,18 @@ struct debug_event
     {
         debug_id DebugID;
 
-        b32 Bool32;
-        s32 Int32;
-        u32 UInt32;
-        r32 Real32;
-        v2 Vector2;
-        v3 Vector3;
-        v4 Vector4;
-        rectangle2 Rectangle2;
-        rectangle3 Rectangle3;
-        bitmap_id BitmapID;
-        sound_id SoundID;
-        font_id FontID;
+        b32 Value_b32;
+        s32 Value_s32;
+        u32 Value_u32;
+        r32 Value_r32;
+        v2 Value_v2;
+        v3 Value_v3;
+        v4 Value_v4;
+        rectangle2 Value_rectangle2;
+        rectangle3 Value_rectangle3;
+        bitmap_id Value_bitmap_id;
+        sound_id Value_sound_id;
+        font_id Value_font_id;
     };
 };
 
@@ -98,7 +100,7 @@ extern debug_table *GlobalDebugTable;
      {                                                                 \
      int Counter = __COUNTER__;                                        \
      RecordDebugEvent(DebugType_FrameMarker, "Frame Marker");          \
-     Event->Real32 = SecondsElapsedInit;                               \
+     Event->Value_r32 = SecondsElapsedInit;                            \
     }
 
 #define TIMED_BLOCK__(BlockName, Number, ...) timed_block TimedBlock_##Number(__COUNTER__, __FILE__, __LINE__, BlockName, ## __VA_ARGS__)
@@ -171,78 +173,78 @@ StringLength(char *String)
 inline void
 DEBUGValueSetEventData(debug_event *Event, r32 Value)
 {
-    Event->Type = DebugType_R32;
-    Event->Real32 = Value;
+    Event->Type = DebugType_r32;
+    Event->Value_r32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, u32 Value)
 {
-    Event->Type = DebugType_U32;
-    Event->UInt32 = Value;
+    Event->Type = DebugType_u32;
+    Event->Value_u32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, s32 Value)
 {
-    Event->Type = DebugType_S32;
-    Event->Int32 = Value;
+    Event->Type = DebugType_s32;
+    Event->Value_s32 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, v2 Value)
 {
-    Event->Type = DebugType_V2;
-    Event->Vector2 = Value;
+    Event->Type = DebugType_v2;
+    Event->Value_v2 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, v3 Value)
 {
-    Event->Type = DebugType_V3;
-    Event->Vector3 = Value;
+    Event->Type = DebugType_v3;
+    Event->Value_v3 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, v4 Value)
 {
-    Event->Type = DebugType_V3;
-    Event->Vector4 = Value;
+    Event->Type = DebugType_v4;
+    Event->Value_v4 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, rectangle2 Value)
 {
-    Event->Type = DebugType_Rectangle2;
-    Event->Rectangle2 = Value;
+    Event->Type = DebugType_rectangle2;
+    Event->Value_rectangle2 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, rectangle3 Value)
 {
-    Event->Type = DebugType_Rectangle3;
-    Event->Rectangle3 = Value;
+    Event->Type = DebugType_rectangle3;
+    Event->Value_rectangle3 = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, bitmap_id Value)
 {
-    Event->Type = DebugType_BitmapID;
-    Event->BitmapID = Value;
+    Event->Type = DebugType_bitmap_id;
+    Event->Value_bitmap_id = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, sound_id Value)
 {
-    Event->Type = DebugType_SoundID;
-    Event->SoundID = Value;
+    Event->Type = DebugType_sound_id;
+    Event->Value_sound_id = Value;
 }
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, font_id Value)
 {
-    Event->Type = DebugType_FontID;
-    Event->FontID = Value;
+    Event->Type = DebugType_font_id;
+    Event->Value_font_id = Value;
 }
 
 #define DEBUG_BEGIN_DATA_BLOCK(Name, ID)                                                \
@@ -258,7 +260,7 @@ DEBUGValueSetEventData(debug_event *Event, font_id Value)
 
 #define DEBUG_VALUE(Value)                                                              \
 {                                                                                       \
-    RecordDebugEvent(DebugType_R32, #Value);                                            \
+    RecordDebugEvent(DebugType_Unknown, #Value);                                        \
     DEBUGValueSetEventData(Event, Value);                                               \
 }
 
@@ -278,6 +280,24 @@ internal void DEBUG_HIT(debug_id ID, r32 ZValue);
 internal b32 DEBUG_HIGHLIGHTED(debug_id ID, v4 *Colour);
 internal b32 DEBUG_REQUESTED(debug_id ID);
 
+internal debug_event InitialiseDebugValue(debug_type Type, debug_event *Event, char *Name);
+
+#if 0
+
+#define DEBUG_IF__(Name, Path) \
+local_persist debug_event DebugValue##Variable = InitialiseDebugValue(DebugType_b32, &DebugValue##Variable, #Path); \
+if(DebugValue##Path.Value_b32)
+
+#define DEBUG_VARIABLE__(type, Path, Variable) \
+local_persist debug_event DebugValue##Variable = InitialiseDebugValue(DebugType_##type, &DebugValue##Variable, Path "_" #Variable); \
+type Variable = DebugValue##Variable.Value_##type;
+
+#else
+
+#define DEBUG_IF__(Path) if(GlobalConstants_##Path)
+#define DEBUG_VARIABLE__(type, Path, Variable) type Variable = GlobalConstants_##Path##_##Variable;
+
+#endif
 #else
 
 inline debug_id DEBUG_POINTER_ID(void *Pointer) {debug_id NullID = {}; return(NullID)}
@@ -293,6 +313,11 @@ inline debug_id DEBUG_POINTER_ID(void *Pointer) {debug_id NullID = {}; return(Nu
 #define DEBUG_REQUESTED(...) 0
 
 #endif
+#define DEBUG_IF_(Path) DEBUG_IF__(Path)
+#define DEBUG_IF(Path) DEBUG_IF_(Path)
+
+#define DEBUG_VARIABLE_(type, Path, Variable) DEBUG_VARIABLE__(type, Path, Variable)
+#define DEBUG_VARIABLE(type, Path, Variable) DEBUG_VARIABLE_(type, Path, Variable)
 
 #define GAME_DEBUG_INTERFACE_H
 #endif

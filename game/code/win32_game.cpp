@@ -1669,6 +1669,10 @@ WinMain(HINSTANCE Instance,
                         NewInput->MouseX = (r32)MouseP.x;
                         NewInput->MouseY = (r32)((GlobalBackbuffer.Height - 1) - MouseP.y);
                         NewInput->MouseZ = 0; //TODO: Support mousewheel.
+                        
+                        NewInput->ShiftDown = (GetKeyState(VK_SHIFT) & (1 << 15));
+                        NewInput->AltDown = (GetKeyState(VK_MENU) & (1 << 15));
+                        NewInput->ControlDown = (GetKeyState(VK_CONTROL) & (1 << 15));
 
                         DWORD WinButtonID[PlatformMouseButton_Count] =
                         {

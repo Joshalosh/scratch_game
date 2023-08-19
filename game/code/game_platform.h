@@ -379,12 +379,14 @@ enum game_input_mouse_button
 };
 typedef struct game_input
 {
-    game_button_state MouseButtons[PlatformMouseButton_Count];
-    r32 MouseX, MouseY, MouseZ;
-
     r32 dtForFrame;
 
     game_controller_input Controllers[5];
+
+    // For debugging only
+    game_button_state MouseButtons[PlatformMouseButton_Count];
+    r32 MouseX, MouseY, MouseZ;
+    b32 ShiftDown, AltDown, ControlDown;
 } game_input;
 
 inline game_controller_input *GetController(game_input *Input, int unsigned ControllerIndex)

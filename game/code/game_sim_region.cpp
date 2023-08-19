@@ -230,28 +230,31 @@ EndSim(sim_region *Region, game_state *GameState)
 
             NewCameraP.ChunkZ = Stored->P.ChunkZ;
 
-#if DEBUGUI_UseRoomBasedCamera
-            if(Entity->P.x > (9.0f))
+            DEBUG_IF(Renderer_Camera_RoomBased)
             {
-                NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(18.0f, 0.0f, 0.0f));
+                if(Entity->P.x > (9.0f))
+                {
+                    NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(18.0f, 0.0f, 0.0f));
+                }
+                if(Entity->P.x < -(9.0f))
+                {
+                    NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(-18.0f, 0.0f, 0.0f));
+                }
+                if(Entity->P.y > (5.0f))
+                {
+                    NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(18.0f, 10.0f, 0.0f));
+                }
+                if(Entity->P.y < -(5.0f))
+                {
+                    NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(0.0f, -10.0f, 0.0f));
+                }
             }
-            if(Entity->P.x < -(9.0f))
+            else 
             {
-                NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(-18.0f, 0.0f, 0.0f));
-            }
-            if(Entity->P.y > (5.0f))
-            {
-                NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(18.0f, 10.0f, 0.0f));
-            }
-            if(Entity->P.y < -(5.0f))
-            {
-                NewCameraP = MapIntoChunkSpace(GameState->World, NewCameraP, V3(0.0f, -10.0f, 0.0f));
-            }
-#else
 //            real32 CamZOffset = NewCameraP.Offset_.z;
             NewCameraP = Stored->P;
 //            NewCameraP.Offset_.z = CamZOffset;
-#endif
+            }
 
             GameState->CameraP = NewCameraP;
         }

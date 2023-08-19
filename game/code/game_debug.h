@@ -1,5 +1,7 @@
 #if !defined(GAME_DEBUG_H)
 
+#define DEBUG_MAX_VARIABLE_STACK_DEPTH 64
+
 enum debug_variable_to_text_flag
 {
     DEBUGVarToText_AddDebugUI = 0x1,

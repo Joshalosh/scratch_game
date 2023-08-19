@@ -157,11 +157,12 @@ SampleEnvironmentMap(v2 ScreenSpaceUV, v3 SampleDirection, real32 Roughness,
     Assert((X >= 0) && (X < LOD->Width));
     Assert((Y >= 0) && (Y < LOD->Height));
 
-#if DEBUGUI_ShowLightingSamples
-    // Turn this on to see where in the map i'm sampling from.
-    uint8_t *TexelPtr = ((uint8_t *)LOD->Memory) + Y*LOD->Pitch + X*sizeof(uint32_t);
-    *(uint32_t *)TexelPtr = 0xFFFFFFFF;
-#endif
+    DEBUG_IF(Renderer_ShowLightingSamples)
+    {
+        // Turn this on to see where in the map i'm sampling from.
+        uint8_t *TexelPtr = ((uint8_t *)LOD->Memory) + Y*LOD->Pitch + X*sizeof(uint32_t);
+        *(uint32_t *)TexelPtr = 0xFFFFFFFF;
+    }
 
     bilinear_sample Sample = BilinearSample(LOD, X, Y);
     v3 Result = SRGBBilinearBlend(Sample, fX, fY).xyz;
@@ -917,13 +918,13 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
         real32 OffsetZ = 0.0f;
 
         real32 DistanceAboveTarget = Transform->DistanceAboveTarget;
-#if DEBUGUI_UseDebugCamera
-        // TODO: Figure out how I want to control the debug camera.
-        if(1)
+
+        DEBUG_IF(Renderer_Camera_UseDebug)
         {
-            DistanceAboveTarget += DEBUGUI_DebugCameraDistance;
+            DEBUG_VARIABLE(r32, Renderer_Camera, DebugDistance);
+
+            DistanceAboveTarget += DebugDistance;
         }
-#endif
 
         real32 DistanceToPZ = (DistanceAboveTarget - P.z);
         real32 NearClipPlane = 0.2f;

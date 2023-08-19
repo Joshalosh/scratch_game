@@ -3,7 +3,6 @@
 #include <stdio.h>
 
 #include "game_debug.h"
-#include "game_debug_variables.h"
 
 internal void RestartCollation(debug_state *DebugState, u32 InvalidEventArrayIndex);
 
@@ -282,86 +281,86 @@ DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
 
     switch(Event->Type)
     {
-        case DebugType_R32:
+        case DebugType_r32:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%f", Event->Real32);
+                              "%f", Event->Value_r32);
             if(Flags & DEBUGVarToText_FloatSuffix)
             {
                 *At++ = 'f';
             }
         } break;
 
-        case DebugType_B32:
+        case DebugType_b32:
         {
             if(Flags & DEBUGVarToText_PrettyBools)
             {
                 At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "%s", Event->Bool32 ? "true" : "false");
+                                  "%s", Event->Value_b32 ? "true" : "false");
             }
             else
             {
                 At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "%d", Event->Bool32);
+                                  "%d", Event->Value_b32);
             }
         } break;
 
-        case DebugType_S32:
+        case DebugType_s32:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%d", Event->Int32);
+                              "%d", Event->Value_s32);
         } break;
 
-        case DebugType_U32:
+        case DebugType_u32:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "%u", Event->UInt32);
+                              "%u", Event->Value_u32);
         } break;
 
-        case DebugType_V2:
+        case DebugType_v2:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "V2(%f, %f)", Event->Vector2.x, Event->Vector2.y);
+                              "V2(%f, %f)", Event->Value_v2.x, Event->Value_v2.y);
         } break;
 
-        case DebugType_V3:
+        case DebugType_v3:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                              "V3(%f, %f, %f)", Event->Vector3.x, Event->Vector3.y, Event->Vector3.z);
+                              "V3(%f, %f, %f)", Event->Value_v3.x, Event->Value_v3.y, Event->Value_v3.z);
         } break;
 
-        case DebugType_V4:
+        case DebugType_v4:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
                               "V4(%f, %f, %f, %f)",
-                              Event->Vector4.x, Event->Vector4.y,
-                              Event->Vector4.z, Event->Vector4.w);
+                              Event->Value_v4.x, Event->Value_v4.y,
+                              Event->Value_v4.z, Event->Value_v4.w);
         } break;
 
-        case DebugType_Rectangle2:
+        case DebugType_rectangle2:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
                               "Rect2(%f, %f -> %f, %f)",
-                              Event->Rectangle2.Min.x,
-                              Event->Rectangle2.Min.y,
-                              Event->Rectangle2.Max.x,
-                              Event->Rectangle2.Max.y);
+                              Event->Value_rectangle2.Min.x,
+                              Event->Value_rectangle2.Min.y,
+                              Event->Value_rectangle2.Max.x,
+                              Event->Value_rectangle2.Max.y);
         } break;
         
-        case DebugType_Rectangle3:
+        case DebugType_rectangle3:
         {
             At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
                               "Rect3(%f, %f, %f -> %f, %f, %f)",
-                              Event->Rectangle3.Min.x,
-                              Event->Rectangle3.Min.y,
-                              Event->Rectangle3.Min.z,
-                              Event->Rectangle3.Max.x,
-                              Event->Rectangle3.Max.y,
-                              Event->Rectangle3.Max.z);
+                              Event->Value_rectangle3.Min.x,
+                              Event->Value_rectangle3.Min.y,
+                              Event->Value_rectangle3.Min.z,
+                              Event->Value_rectangle3.Max.x,
+                              Event->Value_rectangle3.Max.y,
+                              Event->Value_rectangle3.Max.z);
         } break;
 
         case DebugType_CounterThreadList:
-        case DebugType_BitmapID:
+        case DebugType_bitmap_id:
         case DebugType_OpenDataBlock:
         {
         } break;
@@ -889,9 +888,9 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                             DrawProfileIn(DebugState, Element.Bounds, MouseP);
                         } break;
 
-                        case DebugType_BitmapID:
+                        case DebugType_bitmap_id:
                         {
-                            loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, Event->BitmapID, RenderGroup->GenerationID);
+                            loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, Event->Value_bitmap_id, RenderGroup->GenerationID);
                             r32 BitmapScale = View->InlineBlock.Dim.y;
                             if(Bitmap)
                             {
@@ -907,7 +906,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                             EndElement(&Element);
 
                             PushRect(DebugState->RenderGroup, Element.Bounds, 0.0f, V4(0, 0, 0, 1.0f));
-                            PushBitmap(DebugState->RenderGroup, Event->BitmapID, BitmapScale,
+                            PushBitmap(DebugState->RenderGroup, Event->Value_bitmap_id, BitmapScale,
                                        V3(GetMinCorner(Element.Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
                         } break;
 
@@ -1016,12 +1015,12 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
         {
             switch(DebugState->HotInteraction.Event->Type)
             {
-                case DebugType_B32:
+                case DebugType_b32:
                 {
                     DebugState->HotInteraction.Type = DebugInteraction_ToggleValue;
                 } break;
 
-                case DebugType_R32:
+                case DebugType_r32:
                 {
                     DebugState->HotInteraction.Type = DebugInteraction_DragValue;
                 } break;
@@ -1055,7 +1054,7 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
             case DebugInteraction_Select:
             {
                 // TODO: Add modifier keys or some kind of way to do multi-select
-                if(0)
+                if(!Input->ShiftDown)
                 {
                     ClearSelection(DebugState);
                 }
@@ -1082,9 +1081,9 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
             Assert(Event);
             switch(Event->Type)
             {
-                case DebugType_B32:
+                case DebugType_b32:
                 {
-                    Event->Bool32 = !Event->Bool32;
+                    Event->Value_b32 = !Event->Value_b32;
                 } break;
 
                 case DebugType_OpenDataBlock:
@@ -1131,9 +1130,9 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
             {
                 switch(Event->Type)
                 {
-                    case DebugType_R32:
+                    case DebugType_r32:
                     {
-                        Event->Real32 += 0.1f*dMouseP.y;
+                        Event->Value_r32 += 0.1f*dMouseP.y;
                     } break;
                 }
             } break;
@@ -1356,7 +1355,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 if(DebugState->CollationFrame)
                 {
                     DebugState->CollationFrame->EndClock = Event->Clock;
-                    DebugState->CollationFrame->WallSecondsElapsed = Event->Real32;
+                    DebugState->CollationFrame->WallSecondsElapsed = Event->Value_r32;
                     ++DebugState->FrameCount;
 
                     r32 ClockRange = (r32)(DebugState->CollationFrame->EndClock - DebugState->CollationFrame->BeginClock);
