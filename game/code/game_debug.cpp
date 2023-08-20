@@ -842,7 +842,8 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         debug_variable_group *Group = Tree->Group;
         if(DebugState->FrameCount > 0)
         {
-            debug_variable_group *HackyGroup = DebugState->Frames[0].RootGroup;
+            //debug_variable_group *HackyGroup = DebugState->Frames[0].RootGroup;
+            debug_variable_group *HackyGroup = DebugState->ValuesGroup;
             if(HackyGroup)
             {
                 Group = HackyGroup;
@@ -1053,7 +1054,6 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
 
             case DebugInteraction_Select:
             {
-                // TODO: Add modifier keys or some kind of way to do multi-select
                 if(!Input->ShiftDown)
                 {
                     ClearSelection(DebugState);
@@ -1309,9 +1309,12 @@ CollateCreateVariable(debug_state *State, debug_type Type, char *Name)
 }
 
 internal debug_variable_link *
-CollateAddVariableToGroup(debug_state *State, debug_variable_group *Group, debug_event *Add)
+CollateAddVariableToGroup(debug_state *DebugState, debug_variable_group *Group, debug_event *Add,
+                          b32 Permanent)
 {
-    debug_variable_link *Link = PushStruct(&State->CollateArena, debug_variable_link);
+    // TODO: Move everything to permanent
+    debug_variable_link *Link = PushStruct(Permanent ? &DebugState->DebugArena : &DebugState->CollateArena, debug_variable_link);
+
     DLIST_INSERT(&Group->Sentinel, Link);
     Link->Children = 0;
     Link->Event = Add;
@@ -1321,13 +1324,21 @@ CollateAddVariableToGroup(debug_state *State, debug_variable_group *Group, debug
 }
 
 internal debug_variable_group *
-CollateCreateVariableGroup(debug_state *DebugState)
+CollateCreateVariableGroup(debug_state *DebugState, b32 Permanent)
 {
-    debug_variable_group *Group = PushStruct(&DebugState->CollateArena, debug_variable_group);
+    // TODO: Move everything to permanent
+    debug_variable_group *Group = PushStruct(Permanent ? &DebugState->DebugArena : &DebugState->CollateArena, debug_variable_group);
 
     DLIST_INIT(&Group->Sentinel);
 
     return(Group);
+}
+
+internal debug_variable_group *
+GetGroupForHierarchicalName(debug_state *DebugState, char *Name)
+{
+    debug_variable_group *Result = DebugState->ValuesGroup;
+    return(Result);
 }
 
 internal void
@@ -1350,7 +1361,13 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
         {
             debug_event *Event = GlobalDebugTable->Events[EventArrayIndex] + EventIndex;
 
-            if(Event->Type == DebugType_FrameMarker)
+            if(Event->Type == DebugType_MarkDebugValue)
+            {
+                CollateAddVariableToGroup(DebugState,
+                                          GetGroupForHierarchicalName(DebugState, Event->Value_debug_event->BlockName),
+                                          Event->Value_debug_event, true);
+            }
+            else if(Event->Type == DebugType_FrameMarker)
             {
                 if(DebugState->CollationFrame)
                 {
@@ -1372,7 +1389,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                 }
 
                 DebugState->CollationFrame = DebugState->Frames + DebugState->FrameCount;
-                DebugState->CollationFrame->RootGroup = CollateCreateVariableGroup(DebugState);
+                DebugState->CollationFrame->RootGroup = CollateCreateVariableGroup(DebugState, false);
                 DebugState->CollationFrame->BeginClock = Event->Clock;
                 DebugState->CollationFrame->EndClock = 0;
                 DebugState->CollationFrame->RegionCount = 0;
@@ -1441,11 +1458,11 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
                         open_debug_block *DebugBlock = AllocateOpenDebugBlock(
                             DebugState, FrameIndex, Event, &Thread->FirstOpenDataBlock);
 
-                        DebugBlock->Group = CollateCreateVariableGroup(DebugState);
+                        DebugBlock->Group = CollateCreateVariableGroup(DebugState, false);
                         debug_variable_link *Link =
                             CollateAddVariableToGroup(DebugState,
                                                       DebugBlock->Parent ? DebugBlock->Parent->Group : DebugState->CollationFrame->RootGroup,
-                                                      Event);
+                                                      Event, false);
                         Link->Children = DebugBlock->Group;
                     } break;
 
@@ -1468,7 +1485,7 @@ CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
 
                     default:
                     {
-                        CollateAddVariableToGroup(DebugState, Thread->FirstOpenDataBlock->Group, Event);
+                        CollateAddVariableToGroup(DebugState, Thread->FirstOpenDataBlock->Group, Event, false);
                     } break;
                 }
             }
@@ -1530,13 +1547,13 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
         Assert(Context.GroupDepth == 0);
 #endif
 
-        DebugState->RenderGroup = AllocateRenderGroup(Assets, &DebugState->DebugArena, 
-                                                      Megabytes(16), false);
+        DebugState->RenderGroup = AllocateRenderGroup(Assets, &DebugState->DebugArena, Megabytes(16), false);
 
         DebugState->Paused = false;
         DebugState->ScopeToRecord = 0;
 
         DebugState->Initialised = true;
+        DebugState->ValuesGroup = CollateCreateVariableGroup(DebugState, true);
 
         SubArena(&DebugState->CollateArena, &DebugState->DebugArena, Megabytes(32), 4);
         DebugState->CollateTemp = BeginTemporaryMemory(&DebugState->CollateArena);

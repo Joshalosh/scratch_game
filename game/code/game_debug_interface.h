@@ -300,12 +300,12 @@ inline debug_event DEBUGInitialiseValue(debug_type Type, debug_event *SubEvent, 
 }
 
 #define DEBUG_IF__(Path) \
-local_persist debug_event DebugValue##Path = DEBUGInitialiseValue((DebugValue##Path.Value_b32 = GlobalConstants_##Path, DebugType_b32), &DebugValue##Path, #Path, __FILE__, __LINE__); \
-if(DebugValue##Path.Value_b32)
+    local_persist debug_event DebugValue##Path = DEBUGInitialiseValue((DebugValue##Path.Value_b32 = GlobalConstants_##Path, DebugType_b32), &DebugValue##Path, #Path, __FILE__, __LINE__); \
+    if(DebugValue##Path.Value_b32)
 
 #define DEBUG_VARIABLE__(type, Path, Variable) \
-local_persist debug_event DebugValue##Variable = DEBUGInitialiseValue((DebugValue##Variable.Value_##type = GlobalConstants_##Path_##Variable, DebugType_##type), &DebugValue##Variable, #Path "_" #Variable, __FILE__, __LINE__); \
-type Variable = DebugValue##Variable.Value_##type;
+    local_persist debug_event DebugValue##Variable = DEBUGInitialiseValue((DebugValue##Variable.Value_##type = GlobalConstants_##Path##_##Variable, DebugType_##type), &DebugValue##Variable, #Path "_" #Variable, __FILE__, __LINE__); \
+    type Variable = DebugValue##Variable.Value_##type;
 
 #else
 
