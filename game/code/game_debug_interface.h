@@ -70,7 +70,7 @@ struct debug_event
 };
 
 #define MAX_DEBUG_THREAD_COUNT 256
-#define MAX_DEBUG_EVENT_ARRAY_COUNT 8
+#define MAX_DEBUG_EVENT_ARRAY_COUNT 2
 #define MAX_DEBUG_EVENT_COUNT (16*65536)
 struct debug_table
 {
