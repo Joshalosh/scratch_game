@@ -94,6 +94,9 @@
     (Sentinel)->Next = (Sentinel); \
     (Sentinel)->Prev = (Sentinel);
 
+#define FREELIST_ALLOC(type, Result, FreeListPointer, Arena) \
+    if((Result) = (FreeListPointer)) {FreeListPointer = (Result)->Next;} else {Result = PushStruct(Arena, type);}
+
 struct memory_arena
 {
     memory_index Size;

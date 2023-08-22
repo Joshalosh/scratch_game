@@ -69,19 +69,14 @@ struct debug_event
     };
 };
 
-#define MAX_DEBUG_THREAD_COUNT 256
-#define MAX_DEBUG_EVENT_ARRAY_COUNT 2
-#define MAX_DEBUG_EVENT_COUNT (16*65536)
 struct debug_table
 {
     // TODO: No attempt is being made at the moment to ensure that
     // the final debug records being written to the event array 
     // actually complete their output to the swap of the event array index.
-    
     u32 CurrentEventArrayIndex;
     u64 volatile EventArrayIndex_EventIndex;
-    u32 EventCount[MAX_DEBUG_EVENT_ARRAY_COUNT];
-    debug_event Events[MAX_DEBUG_EVENT_ARRAY_COUNT][MAX_DEBUG_EVENT_COUNT];
+    debug_event Events[2][16*65536];
 };
 
 extern debug_table *GlobalDebugTable;
@@ -89,7 +84,7 @@ extern debug_table *GlobalDebugTable;
 #define RecordDebugEvent(EventType, Block)                                                      \
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1); \
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
-    Assert(EventIndex < MAX_DEBUG_EVENT_COUNT);                                                 \
+    Assert(EventIndex < ArrayCount(GlobalDebugTable->Events[0]));                               \
     debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;    \
     Event->Clock = __rdtsc();                                                                   \
     Event->Type = (u8)EventType;                                                                \

@@ -114,10 +114,14 @@ struct debug_frame
     u64 EndClock;
     r32 WallSecondsElapsed;
 
+    r32 FrameBarScale;
+
     debug_variable_group *RootGroup;
 
     u32 RegionCount;
     debug_frame_region *Regions;
+
+    debug_frame *Next;
 };
 
 struct open_debug_block
@@ -203,6 +207,7 @@ struct debug_state
     debug_interaction Interaction;
     debug_interaction HotInteraction;
     debug_interaction NextHotInteraction;
+    b32 Paused;
 
     r32 LeftEdge;
     r32 RightEdge;
@@ -214,18 +219,14 @@ struct debug_state
 
     char *ScopeToRecord;
 
-    // Collation.
-    memory_arena CollateArena;
-    temporary_memory CollateTemp;
-
-    u32 CollationArrayIndex;
-    debug_frame *CollationFrame;
-    u32 FrameBarLaneCount;
     u32 FrameCount;
-    r32 FrameBarScale;
-    b32 Paused;
+    debug_frame *OldestFrame;
+    debug_frame *MostRecentFrame;
+    debug_frame *FirstFreeFrame;
 
-    debug_frame *Frames;
+    debug_frame *CollationFrame;
+
+    u32 FrameBarLaneCount;
     debug_thread *FirstThread;
     open_debug_block *FirstFreeBlock;
 };
