@@ -94,8 +94,11 @@
     (Sentinel)->Next = (Sentinel); \
     (Sentinel)->Prev = (Sentinel);
 
-#define FREELIST_ALLOC(type, Result, FreeListPointer, Arena) \
-    if((Result) = (FreeListPointer)) {FreeListPointer = (Result)->Next;} else {Result = PushStruct(Arena, type);}
+#define FREELIST_ALLOCATE(type, Result, FreeListPointer, Arena) \
+    (Result) = (FreeListPointer); \
+    if(Result) {FreeListPointer = (Result)->NextFree;} else {Result = PushStruct(Arena, type);}
+#define FREELIST_DEALLOCATE(Pointer, FreeListPointer) \
+    if(Pointer) {(Pointer)->NextFree = (FreeListPointer); (FreeListPointer) = (Pointer);}
 
 struct memory_arena
 {

@@ -110,6 +110,13 @@ struct debug_frame_region
 #define MAX_REGIONS_PER_FRAME 2*4096
 struct debug_frame
 {
+    // This actually gets freed as a set in FreeFrame
+    union 
+    {
+        debug_frame *Next;
+        debug_frame *NextFree;
+    };
+
     u64 BeginClock;
     u64 EndClock;
     r32 WallSecondsElapsed;
@@ -120,29 +127,35 @@ struct debug_frame
 
     u32 RegionCount;
     debug_frame_region *Regions;
-
-    debug_frame *Next;
 };
 
 struct open_debug_block
 {
+    union
+    {
+        open_debug_block *Parent;
+        open_debug_block *NextFree;
+    };
+
     u32 StartingFrameIndex;
     debug_event *OpeningEvent;
-    open_debug_block *Parent;
 
     // Only for data block I think?
     debug_variable_group *Group;
-
-    open_debug_block *NextFree;
 };
 
 struct debug_thread
 {
+    union 
+    {
+        debug_thread *Next;
+        debug_thread *NextFree;
+    };
+
     u32 ID;
     u32 LaneIndex;
     open_debug_block *FirstOpenCodeBlock;
     open_debug_block *FirstOpenDataBlock;
-    debug_thread *Next;
 };
 
 enum debug_interaction_type
@@ -165,8 +178,6 @@ enum debug_interaction_type
 
 struct debug_interaction
 {
-    debug_id ID;
-    debug_interaction_type Type;
     union
     {
         void *Generic;
@@ -174,6 +185,9 @@ struct debug_interaction
         debug_tree *Tree;
         v2 *P;
     };
+
+    debug_id ID;
+    debug_interaction_type Type;
 };
 
 struct debug_state
@@ -228,6 +242,7 @@ struct debug_state
 
     u32 FrameBarLaneCount;
     debug_thread *FirstThread;
+    debug_thread *FirstFreeThread;
     open_debug_block *FirstFreeBlock;
 };
 

@@ -75,6 +75,8 @@ struct debug_table
     // the final debug records being written to the event array 
     // actually complete their output to the swap of the event array index.
     u32 CurrentEventArrayIndex;
+    // TODO: This could actually be a u32 atomic now, since I 
+    // only need 1 bit to store which array we're using.
     u64 volatile EventArrayIndex_EventIndex;
     debug_event Events[2][16*65536];
 };
@@ -166,7 +168,7 @@ StringLength(char *String)
 #endif
 
 
-#if defined(__cplusplus) && defined(GAME_INTERNAL)
+#if defined(__cplusplus) && GAME_INTERNAL
 
 inline void
 DEBUGValueSetEventData(debug_event *Event, r32 Value)
@@ -304,7 +306,7 @@ inline debug_event DEBUGInitialiseValue(debug_type Type, debug_event *SubEvent, 
 
 #else
 
-inline debug_id DEBUG_POINTER_ID(void *Pointer) {debug_id NullID = {}; return(NullID)}
+inline debug_id DEBUG_POINTER_ID(void *Pointer) {debug_id NullID = {}; return(NullID);}
 
 #define DEBUG_BEGIN_DATA_BLOCK(...)
 #define DEBUG_END_DATA_BLOCK(...)

@@ -462,15 +462,10 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP)
 
     r32 BarSpacing = 4.0f;
     r32 LaneHeight = 0.0f;
-    u32 LaneCount = 0;
+    u32 LaneCount = DebugState->FrameBarLaneCount;
     r32 FrameBarScale = FLT_MAX;
     for(debug_frame *Frame = DebugState->OldestFrame; Frame; Frame = Frame->Next)
     {
-        if(LaneCount < Frame->FrameBarLaneCount)
-        {
-            LaneCount = Frame-?FrameBarLaneCount;
-        }
-
         if(FrameBarScale < Frame->FrameBarScale)
         {
             FrameBarScale = Frame->FrameBarScale;
@@ -515,7 +510,7 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP)
     };
 
     u32 FrameIndex = 0;
-    for(debug_frame Frame = DebugState->OldestFrame; Frame; Frame = Frame->Next, ++FrameIndex)
+    for(debug_frame *Frame = DebugState->OldestFrame; Frame; Frame = Frame->Next, ++FrameIndex)
     {
         r32 StackX = ChartLeft;
         r32 StackY = ChartTop - BarsPlusSpacing*(r32)FrameIndex;
@@ -1228,10 +1223,10 @@ GetDebugThread(debug_state *DebugState, u32 ThreadID)
 
     if(!Result)
     {
-        FREELIST_ALLOC(debug_thread, Result, DebugState->FirstFreeThread, &DebugState->DebugArena);
+        FREELIST_ALLOCATE(debug_thread, Result, DebugState->FirstFreeThread, &DebugState->DebugArena);
 
         Result->ID = ThreadID;
-        Result->LaneIndex = DebugState->CollationFrame->FrameBarLaneCount++;
+        Result->LaneIndex = DebugState->FrameBarLaneCount++;
         Result->FirstOpenCodeBlock = 0;
         Result->FirstOpenDataBlock = 0;
         Result->Next = DebugState->FirstThread;
@@ -1254,15 +1249,8 @@ inline open_debug_block *
 AllocateOpenDebugBlock(debug_state *DebugState, u32 FrameIndex, debug_event *Event,
                        open_debug_block **FirstOpenBlock)
 {
-    open_debug_block *Result = DebugState->FirstFreeBlock;
-    if(Result)
-    {
-        DebugState->FirstFreeBlock = Result->NextFree;
-    }
-    else
-    {
-        Result = PushStruct(&DebugState->CollateArena, open_debug_block);
-    }
+    open_debug_block *Result = 0;
+    FREELIST_ALLOCATE(open_debug_block, Result, DebugState->FirstFreeBlock, &DebugState->DebugArena);
 
     Result->StartingFrameIndex = FrameIndex;
     Result->OpeningEvent = Event;
@@ -1326,6 +1314,14 @@ CreateVariableGroup(debug_state *DebugState)
     return(Group);
 }
 
+internal void
+FreeVariableGroup(debug_state *DebugState, debug_variable_group *Group)
+{
+    // TODO: Also remember to trigger freeing frames during arena pushes
+    // TODO: Remember to copy out the debug events into the debug variable links
+    Assert(!"Not implemented");
+}
+
 internal debug_variable_group *
 GetGroupForHierarchicalName(debug_state *DebugState, char *Name)
 {
@@ -1334,163 +1330,191 @@ GetGroupForHierarchicalName(debug_state *DebugState, char *Name)
 }
 
 internal debug_frame *
-NewFrame(debug_state *DebugState, u32 InvalidEventArrayIndex)
+NewFrame(debug_state *DebugState, u64 BeginClock)
 {
-    debug_frame *Result = PushStruct(&DebugState->DebugArena, debug_frame);
-    ZeroStruct(*Result);
+    // TODO: Simplify this when regions are more reasonable.
+    debug_frame *Result = DebugState->FirstFreeFrame;
+    if(Result)
+    {
+        DebugState->FirstFreeFrame = Result->NextFree;
+        debug_frame_region *Regions = Result->Regions;
+        ZeroStruct(*Result);
+        Result->Regions = Regions;
+    }
+    else 
+    {
+        Result = PushStruct(&DebugState->DebugArena, debug_frame);
+        ZeroStruct(*Result);
+        Result->Regions = PushArray(&DebugState->DebugArena, MAX_REGIONS_PER_FRAME, debug_frame_region);
+    }
+
     Result->FrameBarScale = 1.0f;
-    Result->RootGroup = CreateVariableGroup();
+    Result->RootGroup = CreateVariableGroup(DebugState);
+
+    Result->BeginClock = BeginClock;
 
     return(Result);
 }
 
-internal void
-CollateDebugRecords(debug_state *DebugState, u32 InvalidEventArrayIndex)
+internal void 
+FreeFrame(debug_state *DebugState, debug_frame *Frame)
 {
-    for(; ; ++DebugState->CollationArrayIndex)
+    FreeVariableGroup(DebugState, Frame->RootGroup);
+    FREELIST_DEALLOCATE(Frame, DebugState->FirstFreeFrame);
+
+}
+
+internal void
+CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventArray)
+{
+    for(u32 EventIndex = 0; EventIndex < EventCount; ++EventIndex)
     {
-        if(DebugState->CollationArrayIndex == MAX_DEBUG_EVENT_ARRAY_COUNT)
+        debug_event *Event = EventArray + EventIndex;
+
+        if(!DebugState->CollationFrame)
         {
-            DebugState->CollationArrayIndex = 0;
+            DebugState->CollationFrame = NewFrame(DebugState, Event->Clock);
         }
 
-        u32 EventArrayIndex = DebugState->CollationArrayIndex;
-        if(EventArrayIndex == InvalidEventArrayIndex)
+        if(Event->Type == DebugType_MarkDebugValue)
         {
-            break;
+            AddVariableToGroup(DebugState,
+                               GetGroupForHierarchicalName(DebugState, Event->Value_debug_event->BlockName),
+                               Event->Value_debug_event);
         }
-
-        for(u32 EventIndex = 0; EventIndex < GlobalDebugTable->EventCount[EventArrayIndex]; ++EventIndex)
+        else if(Event->Type == DebugType_FrameMarker)
         {
-            debug_event *Event = GlobalDebugTable->Events[EventArrayIndex] + EventIndex;
+            Assert(DebugState->CollationFrame);
 
-            if(Event->Type == DebugType_MarkDebugValue)
-            {
-                AddVariableToGroup(DebugState,
-                                   GetGroupForHierarchicalName(DebugState, Event->Value_debug_event->BlockName),
-                                   Event->Value_debug_event);
-            }
-            else if(Event->Type == DebugType_FrameMarker)
-            {
-                if(DebugState->CollationFrame)
-                {
-                    DebugState->CollationFrame->EndClock = Event->Clock;
-                    DebugState->CollationFrame->WallSecondsElapsed = Event->Value_r32;
-                    ++DebugState->FrameCount;
+            DebugState->CollationFrame->EndClock = Event->Clock;
+            DebugState->CollationFrame->WallSecondsElapsed = Event->Value_r32;
 
-                    r32 ClockRange = (r32)(DebugState->CollationFrame->EndClock - DebugState->CollationFrame->BeginClock);
+            r32 ClockRange = (r32)(DebugState->CollationFrame->EndClock - DebugState->CollationFrame->BeginClock);
+            // TODO: Can I reenable this now?
 #if 0
-                    if(ClockRange > 0.0f)
-                    {
-                        r32 FrameBarScale = 1.0f / ClockRange;
-                        if(DebugState->FrameBarScale > FrameBarScale)
-                        {
-                            DebugState->FrameBarScale = FrameBarScale;
-                        }
-                    }
+            if(ClockRange > 0.0f)
+            {
+                r32 FrameBarScale = 1.0f / ClockRange;
+                if(DebugState->FrameBarScale > FrameBarScale)
+                {
+                    DebugState->FrameBarScale = FrameBarScale;
+                }
+            }
 #endif
+
+            if(DebugState->Paused)
+            {
+                FreeFrame(DebugState, DebugState->CollationFrame);
+            }
+            else 
+            {
+                if(DebugState->MostRecentFrame)
+                {
+                    DebugState->MostRecentFrame->Next = DebugState->CollationFrame;
+                }
+                else 
+                {
+                    DebugState->OldestFrame = DebugState->MostRecentFrame = DebugState->CollationFrame;
                 }
 
-                DebugState->CollationFrame = DebugState->Frames + DebugState->FrameCount;
-                DebugState->CollationFrame->RootGroup = CreateVariableGroup(DebugState);
-                DebugState->CollationFrame->BeginClock = Event->Clock;
-                DebugState->CollationFrame->EndClock = 0;
-                DebugState->CollationFrame->RegionCount = 0;
-                DebugState->CollationFrame->Regions = PushArray(&DebugState->DebugArena, MAX_REGIONS_PER_FRAME, debug_frame_region);
-                DebugState->CollationFrame->WallSecondsElapsed = 0.0f;
+                ++DebugState->FrameCount;
             }
-            else if(DebugState->CollationFrame)
+
+            DebugState->CollationFrame = NewFrame(DebugState, Event->Clock);
+        }
+        else
+        {
+            Assert(DebugState->CollationFrame)
+
+            u32 FrameIndex = DebugState->FrameCount - 1;
+            debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
+            u64 RelativeClock = Event->Clock - DebugState->CollationFrame->BeginClock;
+
+            switch(Event->Type)
             {
-                u32 FrameIndex = DebugState->FrameCount - 1;
-                debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
-                u64 RelativeClock = Event->Clock - DebugState->CollationFrame->BeginClock;
-
-                switch(Event->Type)
+                case DebugType_BeginBlock:
                 {
-                    case DebugType_BeginBlock:
-                    {
-                        open_debug_block *DebugBlock = AllocateOpenDebugBlock(
-                            DebugState, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
-                    } break;
+                    open_debug_block *DebugBlock = AllocateOpenDebugBlock(
+                        DebugState, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
+                } break;
 
-                    case DebugType_EndBlock:
+                case DebugType_EndBlock:
+                {
+                    if(Thread->FirstOpenCodeBlock)
                     {
-                        if(Thread->FirstOpenCodeBlock)
+                        open_debug_block *MatchingBlock = Thread->FirstOpenCodeBlock;
+                        debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
+                        if(EventsMatch(*OpeningEvent, *Event))
                         {
-                            open_debug_block *MatchingBlock = Thread->FirstOpenCodeBlock;
-                            debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
-                            if(EventsMatch(*OpeningEvent, *Event))
+                            if(MatchingBlock->StartingFrameIndex == FrameIndex)
                             {
-                                if(MatchingBlock->StartingFrameIndex == FrameIndex)
+                                char *MatchName =
+                                    MatchingBlock->Parent ? MatchingBlock->Parent->OpeningEvent->BlockName : 0;
+                                if(MatchName == DebugState->ScopeToRecord)
                                 {
-                                    char *MatchName =
-                                        MatchingBlock->Parent ? MatchingBlock->Parent->OpeningEvent->BlockName : 0;
-                                    if(MatchName == DebugState->ScopeToRecord)
+                                    r32 MinT = (r32)(OpeningEvent->Clock - DebugState->CollationFrame->BeginClock);
+                                    r32 MaxT = (r32)(Event->Clock - DebugState->CollationFrame->BeginClock);
+                                    r32 ThresholdT = 0.01f;
+                                    if((MaxT - MinT) > ThresholdT)
                                     {
-                                        r32 MinT = (r32)(OpeningEvent->Clock - DebugState->CollationFrame->BeginClock);
-                                        r32 MaxT = (r32)(Event->Clock - DebugState->CollationFrame->BeginClock);
-                                        r32 ThresholdT = 0.01f;
-                                        if((MaxT - MinT) > ThresholdT)
-                                        {
-                                            debug_frame_region *Region = AddRegion(DebugState, DebugState->CollationFrame);
-                                            Region->Event = OpeningEvent;
-                                            Region->CycleCount = (Event->Clock - OpeningEvent->Clock);
-                                            Region->LaneIndex = (u16)Thread->LaneIndex;
-                                            Region->MinT = MinT;
-                                            Region->MaxT = MaxT;
-                                            Region->ColorIndex = (u64)OpeningEvent->BlockName;
-                                        }
+                                        debug_frame_region *Region = AddRegion(DebugState, DebugState->CollationFrame);
+                                        Region->Event = OpeningEvent;
+                                        Region->CycleCount = (Event->Clock - OpeningEvent->Clock);
+                                        Region->LaneIndex = (u16)Thread->LaneIndex;
+                                        Region->MinT = MinT;
+                                        Region->MaxT = MaxT;
+                                        Region->ColorIndex = (u64)OpeningEvent->BlockName;
                                     }
                                 }
-                                else
-                                {
-                                    // TODO: Record all frames in between and begin/end spans.
-                                }
-
-                                DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
                             }
                             else
                             {
-                                // TODO: Record span that goes to the beginning of the frame series.
+                                // TODO: Record all frames in between and begin/end spans.
                             }
+
+                            DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
                         }
-                    } break;
-
-                    case DebugType_OpenDataBlock:
-                    {
-                        open_debug_block *DebugBlock = AllocateOpenDebugBlock(
-                            DebugState, FrameIndex, Event, &Thread->FirstOpenDataBlock);
-
-                        DebugBlock->Group = CreateVariableGroup(DebugState);
-                        debug_variable_link *Link =
-                            AddVariableToGroup(DebugState,
-                                               DebugBlock->Parent ? DebugBlock->Parent->Group : DebugState->CollationFrame->RootGroup,
-                                               Event);
-                        Link->Children = DebugBlock->Group;
-                    } break;
-
-                    case DebugType_CloseDataBlock:
-                    {
-                        if(Thread->FirstOpenDataBlock)
+                        else
                         {
-                            open_debug_block *MatchingBlock = Thread->FirstOpenDataBlock;
-                            debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
-                            if(EventsMatch(*OpeningEvent, *Event))
-                            {
-                                DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenDataBlock);
-                            }
-                            else
-                            {
-                                // Record span that goes to the beginning of the frame series.
-                            }
+                            // TODO: Record span that goes to the beginning of the frame series.
                         }
-                    } break;
+                    }
+                } break;
 
-                    default:
+                case DebugType_OpenDataBlock:
+                {
+                    open_debug_block *DebugBlock = AllocateOpenDebugBlock(
+                        DebugState, FrameIndex, Event, &Thread->FirstOpenDataBlock);
+
+                    DebugBlock->Group = CreateVariableGroup(DebugState);
+                    debug_variable_link *Link =
+                        AddVariableToGroup(DebugState,
+                                           DebugBlock->Parent ? DebugBlock->Parent->Group : DebugState->CollationFrame->RootGroup,
+                                           Event);
+                    Link->Children = DebugBlock->Group;
+                } break;
+
+                case DebugType_CloseDataBlock:
+                {
+                    if(Thread->FirstOpenDataBlock)
                     {
-                        AddVariableToGroup(DebugState, Thread->FirstOpenDataBlock->Group, Event);
-                    } break;
-                }
+                        open_debug_block *MatchingBlock = Thread->FirstOpenDataBlock;
+                        debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
+                        if(EventsMatch(*OpeningEvent, *Event))
+                        {
+                            DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenDataBlock);
+                        }
+                        else
+                        {
+                            // Record span that goes to the beginning of the frame series.
+                        }
+                    }
+                } break;
+
+                default:
+                {
+                    AddVariableToGroup(DebugState, Thread->FirstOpenDataBlock->Group, Event);
+                } break;
             }
         }
     }
@@ -1510,7 +1534,7 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 
         DebugState->FrameCount = 0;
 
-        DebugState->OldestFrame = DebugState->MostRecentFrame DebugState->FirstFreeFrame = 0;
+        DebugState->OldestFrame = DebugState->MostRecentFrame = DebugState->FirstFreeFrame = 0;
         DebugState->CollationFrame = 0;
 
         DebugState->HighPriorityQueue = DebugGlobalMemory->HighPriorityQueue;
@@ -1560,8 +1584,6 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 
         DebugState->Initialised = true;
         DebugState->ValuesGroup = CreateVariableGroup(DebugState);
-
-        DebugState->CollationFrame = NewFrame(DebugState);
 
         AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
     }
@@ -1752,12 +1774,12 @@ DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
         }
 #endif
 
-        if(DebugState->FrameCount)
+        if(DebugState->MostRecentFrame)
         {
             char TextBuffer[256];
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
                         "Last frame time: %.02fms",
-                        DebugState->Frames[DebugState->FrameCount - 1].WallSecondsElapsed * 1000.0f);
+                        DebugState->MostRecentFrame->WallSecondsElapsed * 1000.0f);
             DEBUGTextLine(TextBuffer);
         }
     }
@@ -1772,7 +1794,6 @@ DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
         {
             DebugState->ScopeToRecord = 0;
         }
-        RefreshCollation(DebugState);
     }
 
     TiledRenderGroupToOutput(DebugState->HighPriorityQueue, DebugState->RenderGroup, DrawBuffer);
@@ -1784,18 +1805,13 @@ DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
 
 extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 {
-    ++GlobalDebugTable->CurrentEventArrayIndex;
-    if(GlobalDebugTable->CurrentEventArrayIndex >= ArrayCount(GlobalDebugTable->Events))
-    {
-        GlobalDebugTable->CurrentEventArrayIndex = 0;
-    }
-
+    GlobalDebugTable->CurrentEventArrayIndex = !GlobalDebugTable->CurrentEventArrayIndex;
     u64 ArrayIndex_EventIndex = AtomicExchangeU64(&GlobalDebugTable->EventArrayIndex_EventIndex,
                                                   (u64)GlobalDebugTable->CurrentEventArrayIndex << 32);
 
     u32 EventArrayIndex = ArrayIndex_EventIndex >> 32;
+    Assert(EventArrayIndex <= 1);
     u32 EventCount = ArrayIndex_EventIndex & 0xFFFFFFFF;
-    GlobalDebugTable->EventCount[EventArrayIndex] = EventCount;
 
     debug_state *DebugState = (debug_state *)Memory->DebugStorage;
     if(DebugState)
@@ -1803,22 +1819,7 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
         game_assets *Assets = DEBUGGetGameAssets(Memory);
 
         DEBUGStart(DebugState, Assets, Buffer->Width, Buffer->Height);
-
-        if(Memory->ExecutableReloaded)
-        {
-            RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
-        }
-
-        if(!DebugState->Paused)
-        {
-            // TODO: Need to unify the collation paging out with the
-            // events paging out now that they are the same thing
-            //if(DebugState->FrameCount >= (MAX_DEBUG_EVENT_ARRAY_COUNT*4 - 1))
-            {
-                RestartCollation(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
-            }
-            CollateDebugRecords(DebugState, GlobalDebugTable->CurrentEventArrayIndex);
-        }
+        CollateDebugRecords(DebugState, EventCount, GlobalDebugTable->Events[EventArrayIndex]);
 
         loaded_bitmap DrawBuffer = {};
         DrawBuffer.Width = Buffer->Width;
