@@ -839,7 +839,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->CameraP = NewCameraP;
 
         AddMonster(GameState, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
-        for(int FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
+        for(u32 FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
         {
             int32_t FamiliarOffsetX = RandomBetween(&Series, -7, 7);
             int32_t FamiliarOffsetY = RandomBetween(&Series, -3, -1);
@@ -938,7 +938,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 #endif
 
-    for(int ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
+    for(u32 ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
         controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
