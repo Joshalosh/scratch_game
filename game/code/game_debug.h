@@ -48,6 +48,26 @@ struct debug_view
     };
 };
 
+struct debug_stored_event
+{
+    union
+    {
+        debug_stored_event *Next;
+        debug_stored_event *NextFree;
+    };
+
+    u32 FrameIndex;
+    debug_event Event;
+};
+
+struct debug_element
+{
+    debug_element *NextInHash;
+
+    debug_stored_event *OldestEvent;
+    debug_stored_event *MostRecentEvent;
+};
+
 struct debug_variable_group;
 struct debug_variable_link
 {
@@ -123,10 +143,7 @@ struct debug_frame
 
     r32 FrameBarScale;
 
-    debug_variable_group *RootGroup;
-
-    u32 RegionCount;
-    debug_frame_region *Regions;
+    u32 FrameIndex;
 };
 
 struct open_debug_block
@@ -211,10 +228,9 @@ struct debug_state
     u32 SelectedIDCount;
     debug_id SelectedID[64];
 
-    debug_variable_group *ValuesGroup;
-
-    debug_variable_group *RootGroup;
+    debug_element *ElementHash[4096];
     debug_view *ViewHash[4096];
+    debug_tree *RootTree;
     debug_tree TreeSentinel;
 
     v2 LastMouseP;
@@ -233,6 +249,7 @@ struct debug_state
 
     char *ScopeToRecord;
 
+    u32 TotalFrameCount;
     u32 FrameCount;
     debug_frame *OldestFrame;
     debug_frame *MostRecentFrame;
