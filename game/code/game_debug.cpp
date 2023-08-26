@@ -889,16 +889,6 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         debug_variable_iterator Stack[DEBUG_MAX_VARIABLE_STACK_DEPTH];
 
         debug_variable_group *Group = Tree->Group;
-        if(DebugState->FrameCount > 0)
-        {
-            //debug_variable_group *HackyGroup = DebugState->Frames[0].RootGroup;
-            debug_variable_group *HackyGroup = DebugState->ValuesGroup;
-            if(HackyGroup)
-            {
-                Group = HackyGroup;
-            }
-        }
-
         if(Group)
         {
             Stack[Depth].Link = Group->Sentinel.Next;
@@ -1579,6 +1569,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
 
                 default:
                 {
+                    HashThisEvent;
                     AddVariableToGroup(DebugState, Thread->FirstOpenDataBlock->Group, Event);
                 } break;
             }

@@ -257,6 +257,8 @@ struct debug_state
 
     debug_frame *CollationFrame;
 
+    debug_stored_event *FirstFreeStoredEvent;
+
     u32 FrameBarLaneCount;
     debug_thread *FirstThread;
     debug_thread *FirstFreeThread;
