@@ -931,10 +931,10 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                             {
                                 char Text[256];
                                 DEBUGEventToText(Text, Text + sizeof(Text), Event,
-                                                    DEBUGVarToText_AddName|
-                                                    DEBUGVarToText_NullTerminator|
-                                                    DEBUGVarToText_Colon|
-                                                    DEBUGVarToText_PrettyBools);
+                                                 DEBUGVarToText_AddName|
+                                                 DEBUGVarToText_NullTerminator|
+                                                 DEBUGVarToText_Colon|
+                                                 DEBUGVarToText_PrettyBools);
 
                                 rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
                                 v2 Dim = {GetDim(TextBounds).x, Layout.LineAdvance};
@@ -1292,13 +1292,14 @@ EventsMatch(debug_event A, debug_event B)
     return(Result);
 }
 
+#if 0
 internal debug_event *
-CreateVariable(debug_state *DebugState, debug_type Type, char *Name)
+CreateVariable(debug_state *State, debug_type Type, char *Name)
 {
-    debug_event *Var = PushStruct(DebugState->DebugArena, debug_event);
+    debug_event *Var = DebugPushStruct(State, debug_event);
     ZeroStruct(*Var);
     Var->Type = (u8)Type;
-    Var->BlockName = (char *)DebugPushCopy(DebugState, StringLength(Name) + 1, Name);
+    Var->BlockName = (char *)DebugPushCopy(State, StringLength(Name) + 1, Name);
 
     return(Var);
 }
@@ -1341,13 +1342,13 @@ GetGroupForHierarchicalName(debug_state *DebugState, char *Name)
 }
 #endif
 
-internal void 
+internal void
 FreeFrame(debug_state *DebugState, debug_frame *Frame)
 {
     for(u32 ElementHashIndex = 0; ElementHashIndex < ArrayCount(DebugState->ElementHash); ++ElementHashIndex)
     {
-        for(debug_element *Element = DebugState->ElementHash[ElementHashIndex]; 
-            Element; 
+        for(debug_element *Element = DebugState->ElementHash[ElementHashIndex];
+            Element;
             Element = Element->NextInHash)
         {
             while(Element->OldestEvent && (Element->OldestEvent->FrameIndex <= Frame->FrameIndex))
@@ -1391,18 +1392,18 @@ NewFrame(debug_state *DebugState, u64 BeginClock)
     debug_frame *Result = 0;
     while(!Result)
     {
-        Result = DebugState->FirstFreeFrame = Result->NextFree;
+        Result = DebugState->FirstFreeFrame;
         if(Result)
         {
             DebugState->FirstFreeFrame = Result->NextFree;
         }
-        else 
+        else
         {
             if(ArenaHasRoomFor(&DebugState->PerFrameArena, sizeof(debug_frame)))
             {
                 Result = PushStruct(&DebugState->PerFrameArena, debug_frame);
             }
-            else 
+            else
             {
                 Assert(DebugState->OldestFrame);
                 FreeOldestFrame(DebugState);
@@ -1429,13 +1430,13 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
         {
             DebugState->FirstFreeStoredEvent = Result->NextFree;
         }
-        else 
+        else
         {
             if(ArenaHasRoomFor(&DebugState->PerFrameArena, sizeof(debug_stored_event)))
             {
                 Result = PushStruct(&DebugState->PerFrameArena, debug_stored_event);
             }
-            else 
+            else
             {
                 Assert(DebugState->OldestFrame);
                 FreeOldestFrame(DebugState);
@@ -1451,7 +1452,7 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
     {
         Element->MostRecentEvent = Element->MostRecentEvent->Next = Result;
     }
-    else 
+    else
     {
         Element->OldestEvent = Element->MostRecentEvent = Result;
     }
@@ -1534,17 +1535,16 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             {
                 FreeFrame(DebugState, DebugState->CollationFrame);
             }
-            else 
+            else
             {
                 if(DebugState->MostRecentFrame)
                 {
-                    DebugState->MostRecentFrame->Next = DebugState->CollationFrame;
+                    DebugState->MostRecentFrame = DebugState->MostRecentFrame->Next = DebugState->CollationFrame;
                 }
-                else 
+                else
                 {
                     DebugState->OldestFrame = DebugState->MostRecentFrame = DebugState->CollationFrame;
                 }
-
                 ++DebugState->FrameCount;
             }
 
@@ -1552,7 +1552,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
         }
         else
         {
-            Assert(DebugState->CollationFrame)
+            Assert(DebugState->CollationFrame);
 
             u32 FrameIndex = DebugState->FrameCount - 1;
             debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
@@ -1676,7 +1676,12 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 
         memory_index TotalMemorySize = DebugGlobalMemory->DebugStorageSize - sizeof(debug_state);
         InitialiseArena(&DebugState->DebugArena, TotalMemorySize, DebugState + 1);
+#if 1
         SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, (TotalMemorySize / 2));
+#else
+        // This is the stress-testing case to make sure the memory recycling works
+        SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, 128*1024);
+#endif
 
 #if 0
         debug_variable_definition_context Context = {};
@@ -1717,7 +1722,7 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 
         DebugState->Initialised = true;
 
-//        AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
+        //        AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
     }
 
     BeginRender(DebugState->RenderGroup);
@@ -1912,6 +1917,11 @@ DEBUGEnd(debug_state *DebugState, game_input *Input, loaded_bitmap *DrawBuffer)
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
                         "Last frame time: %.02fms",
                         DebugState->MostRecentFrame->WallSecondsElapsed * 1000.0f);
+            DEBUGTextLine(TextBuffer);
+
+            _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                        "Per-frame arena space remaining: %ukb",
+                        (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, 1) / 1024));
             DEBUGTextLine(TextBuffer);
         }
     }

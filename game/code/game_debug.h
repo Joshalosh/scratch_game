@@ -164,7 +164,7 @@ struct open_debug_block
 
 struct debug_thread
 {
-    union 
+    union
     {
         debug_thread *Next;
         debug_thread *NextFree;
@@ -196,6 +196,8 @@ enum debug_interaction_type
 
 struct debug_interaction
 {
+    debug_id ID;
+    debug_interaction_type Type;
     union
     {
         void *Generic;
@@ -203,9 +205,6 @@ struct debug_interaction
         debug_tree *Tree;
         v2 *P;
     };
-
-    debug_id ID;
-    debug_interaction_type Type;
 };
 
 struct debug_state
@@ -230,7 +229,7 @@ struct debug_state
     u32 SelectedIDCount;
     debug_id SelectedID[64];
 
-    debug_element *ElementHash[4096];
+    debug_element *ElementHash[1024];
     debug_view *ViewHash[4096];
     debug_tree *RootTree;
     debug_tree TreeSentinel;
