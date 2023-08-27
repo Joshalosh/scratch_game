@@ -62,6 +62,7 @@ struct debug_stored_event
 
 struct debug_element
 {
+    char *GUID;
     debug_element *NextInHash;
 
     debug_stored_event *OldestEvent;
@@ -74,7 +75,7 @@ struct debug_variable_link
     debug_variable_link *Next;
     debug_variable_link *Prev;
     debug_variable_group *Children;
-    debug_event *Event;
+    debug_element *Element;
 };
 
 struct debug_tree
@@ -214,6 +215,7 @@ struct debug_state
     platform_work_queue *HighPriorityQueue;
 
     memory_arena DebugArena;
+    memory_arena PerFrameArena;
 
     render_group *RenderGroup;
     loaded_font *DebugFont;
@@ -253,16 +255,17 @@ struct debug_state
     u32 FrameCount;
     debug_frame *OldestFrame;
     debug_frame *MostRecentFrame;
-    debug_frame *FirstFreeFrame;
 
     debug_frame *CollationFrame;
-
-    debug_stored_event *FirstFreeStoredEvent;
 
     u32 FrameBarLaneCount;
     debug_thread *FirstThread;
     debug_thread *FirstFreeThread;
     open_debug_block *FirstFreeBlock;
+
+    // Per-frame storage management
+    debug_stored_event *FirstFreeStoredEvent;
+    debug_frame *FirstFreeFrame;
 };
 
 #define GAME_DEBUG_H
