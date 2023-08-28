@@ -74,6 +74,7 @@ struct debug_variable_link
 {
     debug_variable_link *Next;
     debug_variable_link *Prev;
+
     debug_variable_group *Children;
     debug_element *Element;
 };
@@ -231,7 +232,7 @@ struct debug_state
 
     debug_element *ElementHash[1024];
     debug_view *ViewHash[4096];
-    debug_tree *RootTree;
+    debug_variable_group *RootGroup;
     debug_tree TreeSentinel;
 
     v2 LastMouseP;

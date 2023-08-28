@@ -365,7 +365,12 @@ DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
         {
         } break;
 
-        InvalidDefaultCase;
+        default:
+        {
+            At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
+                              "UNHANDLED: %s", Event->BlockName);
+        } break;
+
     }
 
     if(Flags & DEBUGVarToText_LineFeedEnd)
@@ -1292,55 +1297,69 @@ EventsMatch(debug_event A, debug_event B)
     return(Result);
 }
 
-#if 0
-internal debug_event *
-CreateVariable(debug_state *State, debug_type Type, char *Name)
+internal debug_variable_group *
+GetGroupForHierarchicalName(debug_state *DebugState, char *Name)
 {
-    debug_event *Var = DebugPushStruct(State, debug_event);
-    ZeroStruct(*Var);
-    Var->Type = (u8)Type;
-    Var->BlockName = (char *)DebugPushCopy(State, StringLength(Name) + 1, Name);
+    debug_variable_group *Result = Parent;
 
-    return(Var);
+    char *FirstUnderscore = 0;
+    for(char *Scan = Name; *Scan; ++Scan)
+    {
+        if(*Scan == '_')
+        {
+            FirstUnderscore = Scan;
+            break;
+        }
+    }
+
+    if(FirstUnderscore)
+    {
+    }
+    else 
+    {
+    }
+
+    return(Result);
+}
+
+internal void
+FreeVariableGroup(debug_state *DebugState, debug_variable_group *Group)
+{
+    Assert(!"Not implemented");
 }
 
 internal debug_variable_link *
-AddVariableToGroup(debug_state *DebugState, debug_variable_group *Group, debug_event *Add)
+AddElementToGroup(debug_state *DebugState, debug_variable_group *Parent, debug_element *Element)
 {
-    debug_variable_link *Link = DebugPushStruct(DebugState, debug_variable_link);
+    debug_variable_link *Link = PushStruct(&DebugState->DebugArena, debug_variable_link);
 
-    DLIST_INSERT(&Group->Sentinel, Link);
+    DLIST_INSERT(&Parent->Sentinel, Link);
     Link->Children = 0;
-    Link->Event = Add;
+    Link->Element = Element;
 
-    Assert(Link->Event->Type != DebugType_BeginBlock);
+    return(Link);
+}
+
+internal debug_variable_link *
+AddGroupToGroup(debug_state *DebugState, debug_variable_group *Parent, debug_variable_group *Group)
+{
+    debug_variable_link *Link = PushStruct(&DebugState->DebugArena, debug_variable_link);
+
+    DLIST_INSERT(&Parent->Sentinel, Link);
+    Link->Children = Group;
+    Link->Element = 0;
+
     return(Link);
 }
 
 internal debug_variable_group *
 CreateVariableGroup(debug_state *DebugState)
 {
-    debug_variable_group *Group = DebugPushStruct(DebugState, debug_variable_group);
+    debug_variable_group *Group = PushStruct(&DebugState->DebugArena, debug_variable_group);
     DLIST_INIT(&Group->Sentinel);
 
     return(Group);
 }
-
-internal void
-FreeVariableGroup(debug_state *DebugState, debug_variable_group *Group)
-{
-    // TODO: Also remember to trigger freeing frames during arena pushes
-    // TODO: Remember to copy out the debug events into the debug variable links
-    Assert(!"Not implemented");
-}
-
-internal debug_variable_group *
-GetGroupForHierarchicalName(debug_state *DebugState, char *Name)
-{
-    debug_variable_group *Result = DebugState->ValuesGroup;
-    return(Result);
-}
-#endif
 
 internal void
 FreeFrame(debug_state *DebugState, debug_frame *Frame)
@@ -1489,6 +1508,9 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
         DebugState->ElementHash[Index] = Result;
 
         Result->OldestEvent = Result->MostRecentEvent = 0;
+
+        debug_variable_group *ParentGroup = GetGroupForHierarchicalName(DebugState, Event->BlockName);
+        AddElementToGroup(DebugState, ParentGroup, Result);
     }
 
     return(Result);
@@ -1683,6 +1705,8 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
         SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, 128*1024);
 #endif
 
+        DebugState->RootGroup = CreateVariableGroup(DebugState);
+
 #if 0
         debug_variable_definition_context Context = {};
         Context.State = DebugState;
@@ -1722,7 +1746,7 @@ DEBUGStart(debug_state *DebugState, game_assets *Assets, u32 Width, u32 Height)
 
         DebugState->Initialised = true;
 
-        //        AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
+        AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
     }
 
     BeginRender(DebugState->RenderGroup);
