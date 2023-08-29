@@ -90,6 +90,8 @@ struct debug_tree
 
 struct debug_variable_group
 {
+    u32 NameLength;
+    char *Name;
     debug_variable_link Sentinel;
 };
 
@@ -193,6 +195,8 @@ enum debug_interaction_type
     DebugInteraction_Move,
 
     DebugInteraction_Select,
+
+    DebugInteraction_ToggleExpansion,
 };
 
 struct debug_interaction
