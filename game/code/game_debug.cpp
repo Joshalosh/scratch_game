@@ -1289,7 +1289,8 @@ AddRegion(debug_state *DebugState, debug_frame *CurrentFrame)
 #endif
 
 inline open_debug_block *
-AllocateOpenDebugBlock(debug_state *DebugState, u32 FrameIndex, debug_event *Event,
+AllocateOpenDebugBlock(debug_state *DebugState, debug_element *Element, 
+                       u32 FrameIndex, debug_event *Event,
                        open_debug_block **FirstOpenBlock)
 {
     open_debug_block *Result = 0;
@@ -1297,6 +1298,7 @@ AllocateOpenDebugBlock(debug_state *DebugState, u32 FrameIndex, debug_event *Eve
 
     Result->StartingFrameIndex = FrameIndex;
     Result->OpeningEvent = Event;
+    Result->Element = Element;
     Result->NextFree = 0;
 
     Result->Parent = *FirstOpenBlock;
@@ -1637,7 +1639,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                 case DebugType_BeginBlock:
                 {
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
-                        DebugState, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
+                        DebugState, Element, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
                 } break;
 
                 case DebugType_EndBlock:
@@ -1688,16 +1690,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                 case DebugType_OpenDataBlock:
                 {
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
-                        DebugState, FrameIndex, Event, &Thread->FirstOpenDataBlock);
-
-#if 0
-                    DebugBlock->Group = CreateVariableGroup(DebugState);
-                    debug_variable_link *Link =
-                        AddVariableToGroup(DebugState,
-                                           DebugBlock->Parent ? DebugBlock->Parent->Group : DebugState->CollationFrame->RootGroup,
-                                           Event);
-                    Link->Children = DebugBlock->Group;
-#endif
+                        DebugState, Element, FrameIndex, Event, &Thread->FirstOpenDataBlock);
                 } break;
 
                 case DebugType_CloseDataBlock:
@@ -1710,16 +1703,17 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         {
                             DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenDataBlock);
                         }
-                        else
-                        {
-                            // Record span that goes to the beginning of the frame series.
-                        }
                     }
                 } break;
 
                 default:
                 {
-                    StoreEvent(DebugState, Element, Event);
+                    debug_element *StorageElement = Element;
+                    if(Thread->FirstOpenDataBlock)
+                    {
+                        StorageElement = Thread->FirstOpenDataBlock->Element;
+                    }
+                    StoreEvent(DebugState, StorageElement, Event);
                 } break;
             }
         }

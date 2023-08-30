@@ -160,6 +160,7 @@ struct open_debug_block
 
     u32 StartingFrameIndex;
     debug_event *OpeningEvent;
+    debug_element *Element;
 
     // Only for data block I think?
     debug_variable_group *Group;
