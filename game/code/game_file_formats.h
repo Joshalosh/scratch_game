@@ -14,6 +14,9 @@ enum asset_tag_id
     Tag_UnicodeCodepoint,
     Tag_FontType, // 0 - Default Game Font, 10 - Debug font.
 
+    Tag_ShotIndex,
+    Tag_LayerIndex,
+
     Tag_Count,
 };
 
@@ -56,6 +59,8 @@ enum asset_type_id
     //
     //
     //
+
+    Asset_OpeningCutscne,
 
     Asset_Count,
 };
