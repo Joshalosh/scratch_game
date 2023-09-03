@@ -60,7 +60,7 @@ enum asset_type_id
     //
     //
 
-    Asset_OpeningCutscne,
+    Asset_OpeningCutscene,
 
     Asset_Count,
 };
