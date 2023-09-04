@@ -1,4 +1,5 @@
 
+
 enum finalise_asset_operation
 {
     FinaliseAsset_None,

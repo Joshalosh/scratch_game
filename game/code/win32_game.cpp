@@ -1289,6 +1289,16 @@ internal PLATFORM_GET_ALL_FILE_OF_TYPE_END(Win32GetAllFilesOfTypeEnd)
     }
 }
 
+internal void WinLastError()
+{
+    DWORD code = GetLastError();
+    char buffer[4096];
+    unsigned long flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+    int32_t size = FormatMessageA(flags, nullptr, code, 0, buffer, sizeof(buffer), nullptr);
+
+    printf("Error(%lu): %.*s\n", code, size, buffer);
+}
+
 internal PLATFORM_OPEN_FILE(Win32OpenNextFile)
 {
     win32_platform_file_group *Win32FileGroup = (win32_platform_file_group *)FileGroup->Platform;
@@ -1313,6 +1323,8 @@ internal PLATFORM_OPEN_FILE(Win32OpenNextFile)
             Win32FileGroup->FindHandle = INVALID_HANDLE_VALUE;
         }
     }
+
+    WinLastError();
 
     return(Result);
 }
@@ -1350,6 +1362,7 @@ internal PLATFORM_READ_DATA_FROM_FILE(Win32ReadDataFromFile)
             Win32FileError(Source, "Read file failed.");
         }
     }
+    WinLastError();
 }
 
 /*
