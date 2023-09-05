@@ -25,15 +25,45 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
     for(u32 LayerIndex = 1; LayerIndex <= Scene->LayerCount; ++LayerIndex)
     {
         scene_layer Layer = Scene->Layers[LayerIndex - 1];
-        v3 P = Layer.P;
-        if(Layer.Flags & SceneLayerFlag_AtInfinity)
+        b32 Active = true;
+        if(Layer.Flags & SceneLayerFlag_Transient)
         {
-            P.z += CameraOffset.z;
+            Avtive = ((tNormal >= Layer.MinTime) &&
+                      (tNormal < Layer.MaxTime));
         }
-        RenderGroup->Transform.OffsetP = Layer.P - CameraOffset;
-        MatchVector.E[Tag_LayerIndex] = (r32)LayerIndex;
-        bitmap_id LayerImage = GetBestMatchBitmapFrom(Assets, Asset_OpeningCutscene, &MatchVector, &WeightVector);
-        PushBitmap(RenderGroup, LayerImage, Layer.Height, V3(0, 0, 0));
+
+        if(Active)
+        {
+            v3 P = Layer.P;
+            if(Layer.Flags & SceneLayerFlag_AtInfinity)
+            {
+                P.z += CameraOffset.z;
+            }
+
+            if(Layer.Flags & SceneLayerFlag_CounterCameraX)
+            {
+                RenderGroup->Transform.OffsetP.x = P.x + CameraOffset.x;
+            }
+            else 
+            {
+                RenderGroup->Transform.OffsetP.x = P.x - CameraOffset.x;
+            }
+
+            if(Layer.Flags & SceneLayerFlag_CounterCameraX)
+            {
+                RenderGroup->Transform.OffsetP.y = P.y + CameraOffset.y;
+            }
+            else 
+            {
+                RenderGroup->Transform.OffsetP.y = P.y - CameraOffset.y;
+            }
+
+            RenderGroup->Transform.OffsetP.z = P.z - CameraOffset.z;
+
+            MatchVector.E[Tag_LayerIndex] = (r32)LayerIndex;
+            bitmap_id LayerImage = GetBestMatchBitmapFrom(Assets, Asset_OpeningCutscene, &MatchVector, &WeightVector);
+            PushBitmap(RenderGroup, LayerImage, Layer.Height, V3(0, 0, 0));
+        }
     }
 }
 
@@ -42,7 +72,7 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
                r32 tCutScene)
 {
     r32 tStart = 0.0f;
-    r32 tEnd = 5.0f;
+    r32 tEnd = 20.0f;
 
     r32 tNormal = Clamp01MapToRange(tStart, tCutScene, tEnd);
 
@@ -52,7 +82,7 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
     {
         Scene.AssetType = Asset_OpeningCutscene;
         Scene.ShotIndex = 1;
-        int LayerCount = 8;
+        Scene.LayerCount = 8;
         scene_layer Layers[] =
         {
             {{0.0f, 0.0f, -200.0f}, 300.0f, SceneLayerFlag_AtInfinity}, // Sky Background
@@ -73,7 +103,7 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
     {
         Scene.AssetType = Asset_OpeningCutscene;
         Scene.ShotIndex = 2;
-        int LayerCount = 2;
+        Scene.LayerCount = 3;
         scene_layer Layers[] =
         {
             {{2.0f, -2.0f, -22.0f}, 30.0f}, // Hero and tree 
@@ -88,17 +118,76 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
     // Shot 3
     {
         Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 2;
-        int LayerCount = 2;
+        Scene.ShotIndex = 3;
+        Scene.LayerCount = 4;
         scene_layer Layers[] =
         {
-            {{2.0f, -2.0f, -22.0f}, 30.0f}, // Hero and tree 
-            {{0.0f, 0.0f, -18.0f}, 22.0f}, // Wall and window 
-            {{0.0f, 2.0f, -8.0f}, 10.0f}, // Icicles 
+            {{0.0f, 0.0f, -30.0f}, 100.0f, SceneLayerFlag_AtInfinity}, // Hero and tree 
+            {{0.0f, 0.0f, -20.0f}, 45.0f, SceneLayerFlag_CounterCameraY}, // Wall and window 
+            {{0.0f, -2.0f, -4.0f}, 15.0f, SceneLayerFlag_CounterCameraY}, // Icicles 
+            {{0.0f, 0.35, -0.5f}, 1.0f}, // Icicles 
+        };
+        Scene.Layers = Layers;
+        Scene.CameraStart = {0.0f, 0.5f, 0.0f};
+        Scene.CameraEnd = {0.0f, 3.0f, 0.0f};
+    }
+    
+    // Shot 4
+    {
+        r32 ShotChangeTime = 0.5f;
+        Scene.AssetType = Asset_OpeningCutscene;
+        Scene.ShotIndex = 4;
+        Scene.LayerCount = 5;
+        scene_layer Layers[] =
+        {
+            {{0.0f, 0.0f, -4.0f}, 6.0f},
+            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, 0.0f, ShotChangeTime},
+            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
+            {{2.25f, -1.5f, -3.0f}, 2.0f},
+            {{0.0f, 0.35f, -1.0f}, 1.0f},
         };
         Scene.Layers = Layers;
         Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {0.5f, -0.5f, -1.0f};
+        Scene.CameraEnd = {0.0f, 0.0f, -0.5f};
+    }
+    
+    // Shot 5
+    {
+        r32 ShotChangeTime = 0.5f;
+        Scene.AssetType = Asset_OpeningCutscene;
+        Scene.ShotIndex = 5;
+        Scene.LayerCount = 5;
+        scene_layer Layers[] =
+        {
+            {{0.0f, 0.0f, -20.0f}, 30.0f},
+            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, 0.0f, ShotChangeTime},
+            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
+            {{0.0f, 0.0f, -3.0f}, 4.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
+            {{0.0f, 0.0f, -2.0f}, 3.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
+        };
+        Scene.Layers = Layers;
+        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
+        Scene.CameraEnd = {0.0f, 0.5f, -1.0f};
+    }
+    
+    // Shot 6
+    {
+        r32 ShotChangeTime = 0.5f;
+        Scene.AssetType = Asset_OpeningCutscene;
+        Scene.ShotIndex = 6;
+        Scene.LayerCount = 6;
+        scene_layer Layers[] =
+        {
+            {{0.0f, 0.0f, -8.0f}, 12.0f},
+            {{0.0f, 0.0f, -5.0f}, 7.0f},
+            {{1.0f, -1.0f, -3.0f}, 3.0f},
+            {{0.85f, -0.95f, -3.0f}, 0.5f},
+            {{-2.0f, -1.0f, -2.5f}, 2.0f},
+            {{0.2f, 0.5f, -1.0f}, 1.0f},
+        };
+        Scene.Layers = Layers;
+        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
+        Scene.CameraEnd = {-0.5f, 0.5f, -1.0f};
     }
     
     RenderLayeredScene(Assets, RenderGroup, DrawBuffer, &Scene, tNormal);

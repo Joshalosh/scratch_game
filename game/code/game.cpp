@@ -1670,7 +1670,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     RenderCutscene(TranState->Assets, RenderGroup, DrawBuffer, GameState->tCutScene);
     GameState->tCutScene += Input->dtForFrame;
-    if(GameState->tCutScene > 5.0f)
+    if(GameState->tCutScene > 20.0f)
     {
         GameState->tCutScene = 0.0f;
     }
