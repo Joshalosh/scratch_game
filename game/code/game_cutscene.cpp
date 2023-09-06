@@ -28,8 +28,8 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
         b32 Active = true;
         if(Layer.Flags & SceneLayerFlag_Transient)
         {
-            Avtive = ((tNormal >= Layer.MinTime) &&
-                      (tNormal < Layer.MaxTime));
+            Active = ((tNormal >= Layer.Param.x) &&
+                      (tNormal < Layer.Param.y));
         }
 
         if(Active)
@@ -38,6 +38,11 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
             if(Layer.Flags & SceneLayerFlag_AtInfinity)
             {
                 P.z += CameraOffset.z;
+            }
+
+            if(Layer.Flags & SceneLayerFlag_Floaty)
+            {
+                P.y += Layer.Param.x*Sin(Layer.Param.y*tNormal);
             }
 
             if(Layer.Flags & SceneLayerFlag_CounterCameraX)
@@ -106,7 +111,7 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
         Scene.LayerCount = 3;
         scene_layer Layers[] =
         {
-            {{2.0f, -2.0f, -22.0f}, 30.0f}, // Hero and tree 
+            {{2.0f, -1.0f, -22.0f}, 30.0f}, // Hero and tree 
             {{0.0f, 0.0f, -18.0f}, 22.0f}, // Wall and window 
             {{0.0f, 2.0f, -8.0f}, 10.0f}, // Icicles 
         };
@@ -141,8 +146,8 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
         scene_layer Layers[] =
         {
             {{0.0f, 0.0f, -4.0f}, 6.0f},
-            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, 0.0f, ShotChangeTime},
-            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
+            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {0.0f, ShotChangeTime}},
+            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
             {{2.25f, -1.5f, -3.0f}, 2.0f},
             {{0.0f, 0.35f, -1.0f}, 1.0f},
         };
@@ -160,10 +165,10 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
         scene_layer Layers[] =
         {
             {{0.0f, 0.0f, -20.0f}, 30.0f},
-            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, 0.0f, ShotChangeTime},
-            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
-            {{0.0f, 0.0f, -3.0f}, 4.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
-            {{0.0f, 0.0f, -2.0f}, 3.0f, SceneLayerFlag_Transient, ShotChangeTime, 1.0f},
+            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, {0.0f, ShotChangeTime}},
+            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
+            {{0.0f, 0.0f, -3.0f}, 4.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
+            {{0.0f, 0.0f, -2.0f}, 3.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
         };
         Scene.Layers = Layers;
         Scene.CameraStart = {0.0f, 0.0f, 0.0f};
@@ -190,6 +195,57 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
         Scene.CameraEnd = {-0.5f, 0.5f, -1.0f};
     }
     
+    // Shot 7
+    {
+        r32 ShotChangeTime = 0.5f;
+        Scene.AssetType = Asset_OpeningCutscene;
+        Scene.ShotIndex = 7;
+        Scene.LayerCount = 2;
+        scene_layer Layers[] =
+        {
+            {{-0.5f, 0.0f, -8.0f}, 12.0f, SceneLayerFlag_CounterCameraX},
+            {{-1.0f, 0.0f, -4.0f}, 6.0f},
+        };
+        Scene.Layers = Layers;
+        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
+        Scene.CameraEnd = {2.0f, 0.0f, 0.0f};
+    }
+    
+    // Shot 8
+    {
+        r32 ShotChangeTime = 0.5f;
+        Scene.AssetType = Asset_OpeningCutscene;
+        Scene.ShotIndex = 8;
+        Scene.LayerCount = 4;
+        scene_layer Layers[] =
+        {
+            {{0.0f, 0.0f, -8.0f}, 12.0f},
+            {{0.0f, -1.0f, -5.0f}, 4.0f, SceneLayerFlag_Floaty, {0.05f, 15.0f}},
+            {{3.0f, -1.5f, -3.0f}, 2.0f},
+            {{0.0f, 0.0f, -1.5f}, 2.5f},
+        };
+        Scene.Layers = Layers;
+        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
+        Scene.CameraEnd = {0.0f, -0.5f, -1.0f};
+    }
+    
+    // Shot 9
+    {
+        r32 ShotChangeTime = 0.5f;
+        Scene.AssetType = Asset_OpeningCutscene;
+        Scene.ShotIndex = 9;
+        Scene.LayerCount = 4;
+        scene_layer Layers[] =
+        {
+            {{0.0f, 0.0f, -8.0f}, 12.0f},
+            {{0.0f, 0.25f, -3.0f}, 4.0f},
+            {{1.0f, 0.0f, -2.0f}, 3.0f},
+            {{1.0f, 0.1f, -1.0f}, 2.0f},
+        };
+        Scene.Layers = Layers;
+        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
+        Scene.CameraEnd = {-0.75f, -0.5f, -1.0f};
+    }
+    
     RenderLayeredScene(Assets, RenderGroup, DrawBuffer, &Scene, tNormal);
-
 }

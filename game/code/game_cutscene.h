@@ -6,6 +6,7 @@ enum scene_layer_flags
     SceneLayerFlag_CounterCameraX = 0x2,
     SceneLayerFlag_CounterCameraY = 0x4,
     SceneLayerFlag_Transient = 0x8,
+    SceneLayerFlag_Floaty = 0x10,
 };
 
 struct scene_layer 
@@ -13,8 +14,7 @@ struct scene_layer
     v3 P;
     r32 Height;
     u32 Flags;
-    r32 MinTime;
-    r32 MaxTime;
+    v2 Param;
 };
 
 struct layered_scene
