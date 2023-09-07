@@ -72,180 +72,146 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
     }
 }
 
+global_variable scene_layer IntroLayers1[] =
+{
+    {{0.0f, 0.0f, -200.0f}, 300.0f, SceneLayerFlag_AtInfinity}, // Sky Background
+    {{0.0f, 0.0f, -170.0f}, 300.0f}, // Weird sky light
+    {{0.0f, 0.0f, -100.0f}, 40.0f}, // Backmost row of trees
+    {{0.0f, 10.0f, -70.0f}, 80.0f}, // Middle hills and trees
+    {{0.0f, 0.0f, -50.0f}, 70.0f}, // Front hills and trees
+    {{30.0f, 0.0f, -30.0f}, 50.0f}, // Right side tree and fence
+    {{0.0f, -2.0f, -20.0f}, 40.0f}, // 7
+    {{2.0f, -1.0f, -5.0f}, 25.0f}, // 8
+};
+
+global_variable scene_layer IntroLayers2[] =
+{
+    {{2.0f, -1.0f, -22.0f}, 30.0f}, // Hero and tree 
+    {{0.0f, 0.0f, -18.0f}, 22.0f}, // Wall and window 
+    {{0.0f, 2.0f, -8.0f}, 10.0f}, // Icicles 
+};
+
+global_variable scene_layer IntroLayers3[] =
+{
+    {{0.0f, 0.0f, -30.0f}, 100.0f, SceneLayerFlag_AtInfinity}, // Hero and tree 
+    {{0.0f, 0.0f, -20.0f}, 45.0f, SceneLayerFlag_CounterCameraY}, // Wall and window 
+    {{0.0f, -2.0f, -4.0f}, 15.0f, SceneLayerFlag_CounterCameraY}, // Icicles 
+    {{0.0f, 0.35, -0.5f}, 1.0f}, // Icicles 
+};
+
+global_variable scene_layer IntroLayers4[] =
+{
+    {{0.0f, 0.0f, -4.0f}, 6.0f},
+    {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {0.0f, 0.5f}},
+    {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {0.5f, 1.0f}},
+    {{2.25f, -1.5f, -3.0f}, 2.0f},
+    {{0.0f, 0.35f, -1.0f}, 1.0f},
+};
+
+global_variable scene_layer IntroLayers5[] =
+{
+    {{0.0f, 0.0f, -20.0f}, 30.0f},
+    {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, {0.0f, 0.5f}},
+    {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, {0.5f, 1.0f}},
+    {{0.0f, 0.0f, -3.0f}, 4.0f, SceneLayerFlag_Transient, {0.5f, 1.0f}},
+    {{0.0f, 0.0f, -2.0f}, 3.0f, SceneLayerFlag_Transient, {0.5f, 1.0f}},
+};
+
+global_variable scene_layer IntroLayers6[] =
+{
+    {{0.0f, 0.0f, -8.0f}, 12.0f},
+    {{0.0f, 0.0f, -5.0f}, 7.0f},
+    {{1.0f, -1.0f, -3.0f}, 3.0f},
+    {{0.85f, -0.95f, -3.0f}, 0.5f},
+    {{-2.0f, -1.0f, -2.5f}, 2.0f},
+    {{0.2f, 0.5f, -1.0f}, 1.0f},
+};
+
+global_variable scene_layer IntroLayers7[] =
+{
+    {{-0.5f, 0.0f, -8.0f}, 12.0f, SceneLayerFlag_CounterCameraX},
+    {{-1.0f, 0.0f, -4.0f}, 6.0f},
+};
+
+global_variable scene_layer IntroLayers8[] =
+{
+    {{0.0f, 0.0f, -8.0f}, 12.0f},
+    {{0.0f, -1.0f, -5.0f}, 4.0f, SceneLayerFlag_Floaty, {0.05f, 15.0f}},
+    {{3.0f, -1.5f, -3.0f}, 2.0f},
+    {{0.0f, 0.0f, -1.5f}, 2.5f},
+};
+
+global_variable scene_layer IntroLayers9[] =
+{
+    {{0.0f, 0.0f, -8.0f}, 12.0f},
+    {{0.0f, 0.25f, -3.0f}, 4.0f},
+    {{1.0f, 0.0f, -2.0f}, 3.0f},
+    {{1.0f, 0.1f, -1.0f}, 2.0f},
+};
+
+global_variable scene_layer IntroLayers10[] =
+{
+    {{-15.0f, 25.0f, -100.0f}, 130.0f, SceneLayerFlag_AtInfinity},
+    {{0.0f, 0.0f, -10.0f}, 22.0f},
+    {{-0.8f, -0.2f, -3.0f}, 4.5f},
+    {{0.0f, 0.0f, -2.0f}, 4.5f},
+    {{0.0f, -0.25f, -1.0f}, 1.5f},
+    {{0.2f, 0.2f, -0.5f}, 1.0f},
+};
+
+global_variable scene_layer IntroLayers11[] =
+{
+    {{0.0f, 0.0f, -100.0f}, 150.0f, SceneLayerFlag_AtInfinity},
+    {{0.0f, 10.0f, -40.0f}, 40.0f},
+    {{0.0f, 3.2f, -20.0f}, 23.0f},
+    {{0.25f, 0.9f, -10.0f}, 13.5f},
+    {{-0.5f, 0.625f, -5.0f}, 7.0f},
+    {{0.0f, 0.1f, -2.5f}, 3.9f},
+    {{-0.3f, -0.15f, -1.0f}, 1.2f},
+};
+
+#define INTRO_SHOT(Index) Asset_OpeningCutscene, Index, ArrayCount(IntroLayers##Index), IntroLayers##Index
+global_variable layered_scene IntroCutscene[] =
+{
+    {INTRO_SHOT(1), 20.0f, {0.0f, 0.0f, 10.0f}, {-4.0f, -2.0f, 5.0f}},
+    {INTRO_SHOT(2), 20.0f, {0.0f, 0.0f, 0.0f}, {0.5f, -0.5f, -1.0f}},
+    {INTRO_SHOT(3), 20.0f, {0.0f, 0.5f, 0.0f}, {0.0f, 3.0f, 0.0f}},
+    {INTRO_SHOT(4), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -0.5f}},
+    {INTRO_SHOT(5), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.5f, -1.0f}},
+    {INTRO_SHOT(6), 20.0f, {0.0f, 0.0f, 0.0f}, {-0.5f, 0.5f, -1.0f}},
+    {INTRO_SHOT(7), 20.0f, {0.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}},
+    {INTRO_SHOT(8), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, -0.5f, -1.0f}},
+    {INTRO_SHOT(9), 20.0f, {0.0f, 0.0f, 0.0f}, {-0.75f, -0.5f, -1.0f}},
+    {INTRO_SHOT(10), 20.0f, {0.0f, 0.0f, 0.0f}, {-0.1f, 0.05f, -0.5f}},
+    {INTRO_SHOT(11), 20.0f, {0.0f, 0.0f, 0.0f}, {0.6f, 0.5f, -2.0f}},
+};
+
 internal void
 RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer,
-               r32 tCutScene)
+               r32 *tCutScene)
 {
-    r32 tStart = 0.0f;
-    r32 tEnd = 20.0f;
+    b32 PrettyStupid = false;
 
-    r32 tNormal = Clamp01MapToRange(tStart, tCutScene, tEnd);
+    r32 tBase = 0.0f;
+    for(u32 ShotIndex = 0; ShotIndex < ArrayCount(IntroCutscene); ++ShotIndex)
+    {
+        layered_scene *Scene = IntroCutscene + ShotIndex;
+        r32 tStart = tBase;
+        r32 tEnd = tStart + Scene->Duration;
 
-    layered_scene Scene;
+        if((*tCutScene >= tStart) &&
+           (*tCutScene < tEnd))
+        {
+            r32 tNormal = Clamp01MapToRange(tStart, *tCutScene, tEnd);
+            RenderLayeredScene(Assets, RenderGroup, DrawBuffer, &IntroCutscene[ShotIndex], tNormal);
+            PrettyStupid = true;
+        }
 
-    // Shot 1
-    {
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 1;
-        Scene.LayerCount = 8;
-        scene_layer Layers[] =
-        {
-            {{0.0f, 0.0f, -200.0f}, 300.0f, SceneLayerFlag_AtInfinity}, // Sky Background
-            {{0.0f, 0.0f, -170.0f}, 300.0f}, // Weird sky light
-            {{0.0f, 0.0f, -100.0f}, 40.0f}, // Backmost row of trees
-            {{0.0f, 10.0f, -70.0f}, 80.0f}, // Middle hills and trees
-            {{0.0f, 0.0f, -50.0f}, 70.0f}, // Front hills and trees
-            {{30.0f, 0.0f, -30.0f}, 50.0f}, // Right side tree and fence
-            {{0.0f, -2.0f, -20.0f}, 40.0f}, // 7
-            {{2.0f, -1.0f, -5.0f}, 25.0f}, // 8
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 10.0f};
-        Scene.CameraEnd = {-4.0f, -2.0f, 5.0f};
+        tBase = tEnd;
     }
-    
-    // Shot 2
+
+    if(!PrettyStupid)
     {
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 2;
-        Scene.LayerCount = 3;
-        scene_layer Layers[] =
-        {
-            {{2.0f, -1.0f, -22.0f}, 30.0f}, // Hero and tree 
-            {{0.0f, 0.0f, -18.0f}, 22.0f}, // Wall and window 
-            {{0.0f, 2.0f, -8.0f}, 10.0f}, // Icicles 
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {0.5f, -0.5f, -1.0f};
+        *tCutScene = 0.0f;
     }
-    
-    // Shot 3
-    {
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 3;
-        Scene.LayerCount = 4;
-        scene_layer Layers[] =
-        {
-            {{0.0f, 0.0f, -30.0f}, 100.0f, SceneLayerFlag_AtInfinity}, // Hero and tree 
-            {{0.0f, 0.0f, -20.0f}, 45.0f, SceneLayerFlag_CounterCameraY}, // Wall and window 
-            {{0.0f, -2.0f, -4.0f}, 15.0f, SceneLayerFlag_CounterCameraY}, // Icicles 
-            {{0.0f, 0.35, -0.5f}, 1.0f}, // Icicles 
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.5f, 0.0f};
-        Scene.CameraEnd = {0.0f, 3.0f, 0.0f};
-    }
-    
-    // Shot 4
-    {
-        r32 ShotChangeTime = 0.5f;
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 4;
-        Scene.LayerCount = 5;
-        scene_layer Layers[] =
-        {
-            {{0.0f, 0.0f, -4.0f}, 6.0f},
-            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {0.0f, ShotChangeTime}},
-            {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
-            {{2.25f, -1.5f, -3.0f}, 2.0f},
-            {{0.0f, 0.35f, -1.0f}, 1.0f},
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {0.0f, 0.0f, -0.5f};
-    }
-    
-    // Shot 5
-    {
-        r32 ShotChangeTime = 0.5f;
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 5;
-        Scene.LayerCount = 5;
-        scene_layer Layers[] =
-        {
-            {{0.0f, 0.0f, -20.0f}, 30.0f},
-            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, {0.0f, ShotChangeTime}},
-            {{0.0f, 0.0f, -5.0f}, 8.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
-            {{0.0f, 0.0f, -3.0f}, 4.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
-            {{0.0f, 0.0f, -2.0f}, 3.0f, SceneLayerFlag_Transient, {ShotChangeTime, 1.0f}},
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {0.0f, 0.5f, -1.0f};
-    }
-    
-    // Shot 6
-    {
-        r32 ShotChangeTime = 0.5f;
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 6;
-        Scene.LayerCount = 6;
-        scene_layer Layers[] =
-        {
-            {{0.0f, 0.0f, -8.0f}, 12.0f},
-            {{0.0f, 0.0f, -5.0f}, 7.0f},
-            {{1.0f, -1.0f, -3.0f}, 3.0f},
-            {{0.85f, -0.95f, -3.0f}, 0.5f},
-            {{-2.0f, -1.0f, -2.5f}, 2.0f},
-            {{0.2f, 0.5f, -1.0f}, 1.0f},
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {-0.5f, 0.5f, -1.0f};
-    }
-    
-    // Shot 7
-    {
-        r32 ShotChangeTime = 0.5f;
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 7;
-        Scene.LayerCount = 2;
-        scene_layer Layers[] =
-        {
-            {{-0.5f, 0.0f, -8.0f}, 12.0f, SceneLayerFlag_CounterCameraX},
-            {{-1.0f, 0.0f, -4.0f}, 6.0f},
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {2.0f, 0.0f, 0.0f};
-    }
-    
-    // Shot 8
-    {
-        r32 ShotChangeTime = 0.5f;
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 8;
-        Scene.LayerCount = 4;
-        scene_layer Layers[] =
-        {
-            {{0.0f, 0.0f, -8.0f}, 12.0f},
-            {{0.0f, -1.0f, -5.0f}, 4.0f, SceneLayerFlag_Floaty, {0.05f, 15.0f}},
-            {{3.0f, -1.5f, -3.0f}, 2.0f},
-            {{0.0f, 0.0f, -1.5f}, 2.5f},
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {0.0f, -0.5f, -1.0f};
-    }
-    
-    // Shot 9
-    {
-        r32 ShotChangeTime = 0.5f;
-        Scene.AssetType = Asset_OpeningCutscene;
-        Scene.ShotIndex = 9;
-        Scene.LayerCount = 4;
-        scene_layer Layers[] =
-        {
-            {{0.0f, 0.0f, -8.0f}, 12.0f},
-            {{0.0f, 0.25f, -3.0f}, 4.0f},
-            {{1.0f, 0.0f, -2.0f}, 3.0f},
-            {{1.0f, 0.1f, -1.0f}, 2.0f},
-        };
-        Scene.Layers = Layers;
-        Scene.CameraStart = {0.0f, 0.0f, 0.0f};
-        Scene.CameraEnd = {-0.75f, -0.5f, -1.0f};
-    }
-    
-    RenderLayeredScene(Assets, RenderGroup, DrawBuffer, &Scene, tNormal);
 }
