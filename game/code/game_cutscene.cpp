@@ -86,7 +86,7 @@ global_variable scene_layer IntroLayers1[] =
 
 global_variable scene_layer IntroLayers2[] =
 {
-    {{2.0f, -1.0f, -22.0f}, 30.0f}, // Hero and tree 
+    {{2.0f, -1.0f, -22.0f}, 32.0f}, // Hero and tree 
     {{0.0f, 0.0f, -18.0f}, 22.0f}, // Wall and window 
     {{0.0f, 2.0f, -8.0f}, 10.0f}, // Icicles 
 };
@@ -173,6 +173,7 @@ global_variable scene_layer IntroLayers11[] =
 #define INTRO_SHOT(Index) Asset_OpeningCutscene, Index, ArrayCount(IntroLayers##Index), IntroLayers##Index
 global_variable layered_scene IntroCutscene[] =
 {
+    {},
     {INTRO_SHOT(1), 20.0f, {0.0f, 0.0f, 10.0f}, {-4.0f, -2.0f, 5.0f}},
     {INTRO_SHOT(2), 20.0f, {0.0f, 0.0f, 0.0f}, {0.5f, -0.5f, -1.0f}},
     {INTRO_SHOT(3), 20.0f, {0.0f, 0.5f, 0.0f}, {0.0f, 3.0f, 0.0f}},
@@ -193,7 +194,7 @@ RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *Dr
     b32 PrettyStupid = false;
 
     r32 tBase = 0.0f;
-    for(u32 ShotIndex = 0; ShotIndex < ArrayCount(IntroCutscene); ++ShotIndex)
+    for(u32 ShotIndex = 1; ShotIndex < ArrayCount(IntroCutscene); ++ShotIndex)
     {
         layered_scene *Scene = IntroCutscene + ShotIndex;
         r32 tStart = tBase;

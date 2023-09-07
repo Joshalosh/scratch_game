@@ -927,7 +927,7 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
         }
 
         real32 DistanceToPZ = (DistanceAboveTarget - P.z);
-        real32 NearClipPlane = 0.2f;
+        real32 NearClipPlane = 0.1f;
 
         v3 RawXY = V3(P.xy, 1.0f);
 
