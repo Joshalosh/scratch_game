@@ -83,6 +83,8 @@
 #include "game_math.h"
 #include "game_file_formats.h"
 #include "game_meta.h"
+#include "game_cutscene.h"
+
 
 #define DLIST_INSERT(Sentinel, Element)     \
     (Element)->Next = (Sentinel)->Next;     \
@@ -425,7 +427,7 @@ struct game_state
     particle Particles[256];
     particle_cel ParticleCels[PARTICLE_CEL_DIM][PARTICLE_CEL_DIM];
 
-    r32 tCutscene;
+    playing_cutscene CurrentCutscene;
 };
 
 struct task_with_memory

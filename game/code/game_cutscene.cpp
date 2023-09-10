@@ -1,6 +1,4 @@
 
-#include "game_cutscene.h"
-
 #define CUTSCENE_WARMUP_SECONDS 2.0f
 
 internal void
@@ -26,6 +24,11 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
     WeightVector.E[Tag_LayerIndex] = 1.0f;
 
     MatchVector.E[Tag_ShotIndex] = (r32)Scene->ShotIndex;
+
+    if(Scene->LayerCount == 0)
+    {
+        Clear(RenderGroup, V4(0.0f, 0.0f, 0.0f, 0.0f));
+    }
 
     for(u32 LayerIndex = 1; LayerIndex <= Scene->LayerCount; ++LayerIndex)
     {
@@ -201,14 +204,15 @@ global_variable layered_scene IntroCutscene[] =
 };
 
 internal b32
-RenderCutsceneAtTime(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer, r32 tCutscene)
+RenderCutsceneAtTime(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer, 
+                     playing_cutscene *Cutscene, r32 tCutscene)
 {
     b32 CutsceneComplete = false;
 
     r32 tBase = 0.0f;
-    for(u32 ShotIndex = 0; ShotIndex < ArrayCount(IntroCutscene); ++ShotIndex)
+    for(u32 ShotIndex = 0; ShotIndex < Cutscene->SceneCount; ++ShotIndex)
     {
-        layered_scene *Scene = IntroCutscene + ShotIndex;
+        layered_scene *Scene = Cutscene->Scenes + ShotIndex;
         r32 tStart = tBase;
         r32 tEnd = tStart + Scene->Duration;
 
@@ -228,13 +232,29 @@ RenderCutsceneAtTime(game_assets *Assets, render_group *RenderGroup, loaded_bitm
 
 internal void
 RenderCutscene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer,
-               r32 *tCutscene)
+               playing_cutscene *Cutscene)
 {
-    RenderCutsceneAtTime(Assets, 0, DrawBuffer, *tCutscene + CUTSCENE_WARMUP_SECONDS);
-
-    b32 CutsceneComplete = RenderCutsceneAtTime(Assets, 0, DrawBuffer, *tCutscene);
+    RenderCutsceneAtTime(Assets, 0, DrawBuffer, Cutscene, Cutscene->t + CUTSCENE_WARMUP_SECONDS);
+    b32 CutsceneComplete = RenderCutsceneAtTime(Assets, RenderGroup, DrawBuffer, Cutscene, Cutscene->t);
     if(!CutsceneComplete)
     {
-        *tCutscene = 0.0f;
+        Cutscene->t = 0.0f;
     }
+}
+
+internal void
+AdvanceCutscene(playing_cutscene *Cutscene, r32 dt)
+{
+    Cutscene->t += dt;
+}
+
+internal playing_cutscene
+MakeIntroCutscene(void)
+{
+    playing_cutscene Result = {};
+
+    Result.SceneCount = ArrayCount(IntroCutscene);
+    Result.Scenes = IntroCutscene;
+
+    return(Result);
 }
