@@ -425,7 +425,7 @@ struct game_state
     particle Particles[256];
     particle_cel ParticleCels[PARTICLE_CEL_DIM][PARTICLE_CEL_DIM];
 
-    r32 tCutScene;
+    r32 tCutscene;
 };
 
 struct task_with_memory
