@@ -1394,76 +1394,27 @@ debug_table *GlobalDebugTable = &GlobalDebugTable_;
 #endif
 
 internal void
-FadeOut(HINSTANCE Instance)
+SetFadeAlpha(HWND Window, r32 Alpha)
 {
-#if 0
-    WNDCLASSA WindowClass = {};
+    BYTE WindowsAlpha = (BYTE)(Alpha*255.0f);
+    SetLayeredWindowAttributes(Window, RGB(0, 0, 0), WindowsAlpha, LWA_ALPHA);
 
-    WindowClass.style = CS_HREDRAW|CS_VREDRAW;
-    WindowClass.lpfnWndProc = DefWindowProcA;
-    WindowClass.hInstance = Instance;
-    WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
-    WindowClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-    WindowClass.lpszClassName = "GameFadeOutWindowClass";
-
-    if(RegisterClassA(&WindowClass))
+    if(Alpha == 0)
     {
-        HWND Window =
-            CreateWindowExA(
-                WS_EX_TOPMOST|WS_EX_LAYERED,
-                WindowClass.lpszClassName,
-                "Game",
-                WS_OVERLAPPEDWINDOW,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                0,
-                0,
-                Instance,
-                0);
-        if(Window)
-        {
-            ToggleFullscreen(Window);
-
-            ShowWindow(Window, SW_SHOW);
-
-            RECT ClientRect;
-            GetClientRect(Window, &ClientRect);
-            int Width = ClientRect.right - ClientRect.left;
-            int Height = ClientRect.bottom - ClientRect.top;
-
-            win32_offscreen_buffer Buffer;
-            Win32ResizeDIBSection(&Buffer, Width, Height);
-
-            HDC ScreenDC = GetDC(0);
-            HDC CompatDC = CreateCompatibleDC();
-
-            for(u32 AlphaLevel = 50; AlphaLeverl <= 255; ++AlphaLevel)
-            {
-                BLENDFUNCTION Blend = {};
-                Blend.BlendOp = AC_SRC_OVER;
-                Blend.BlendFlags = 0;
-                Blend.SourceConstantAlpha = (BYTE)AlphaLevel;
-                Blend.AlphaFormat = 0;
-                UpdateLayeredWindow(Window, 
-                                    0, 0, 0, 0, 0, RGB(0, 0, 0),
-                                    &Blend, ULW_ALPHA);
-                int Error = GetLastError();
-                Sleep(1000);
-            }
-        }
+        ShowWindow(Window, SW_HIDE);
     }
-#endif
+    else 
+    {
+        ShowWindow(Window, SW_SHOW);
+    }
 }
+
 int CALLBACK
 WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
         LPSTR CommandLine,
         int ShowCode)
 {
-    FadeOut(Instance);
-
     win32_state Win32State = {};
 
     platform_work_queue HighPriorityQueue = {};
@@ -1523,6 +1474,41 @@ WinMain(HINSTANCE Instance,
 
     Win32LoadXInput();
 
+    HWND FadeWindow = 0;
+    {
+        WNDCLASSA WindowClass = {};
+
+        WindowClass.style = CS_HREDRAW|CS_VREDRAW;
+        WindowClass.lpfnWndProc = DefWindowProcA;
+        WindowClass.hInstance = Instance;
+        WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
+        WindowClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+        WindowClass.lpszClassName = "GameFadeOutWindowClass";
+
+        if(RegisterClassA(&WindowClass))
+        {
+            FadeWindow =
+                CreateWindowExA(
+                    WS_EX_TOPMOST|WS_EX_LAYERED,
+                    WindowClass.lpszClassName,
+                    "Game",
+                    WS_OVERLAPPEDWINDOW,
+                    CW_USEDEFAULT,
+                    CW_USEDEFAULT,
+                    CW_USEDEFAULT,
+                    CW_USEDEFAULT,
+                    0,
+                    0,
+                    Instance,
+                    0);
+            if(FadeWindow)
+            {
+                ToggleFullScreen(FadeWindow);
+            }
+        }
+    }
+
+
 #if GAME_INTERNAL
     DEBUGGlobalShowCursor = true;
 #endif
@@ -1558,8 +1544,7 @@ WinMain(HINSTANCE Instance,
                 0);
         if(Window)
         {
-            ToggleFullscreen(Window);
-            ShowWindow(Window, SW_SHOW);
+            ToggleFullScreen(Window);
 
             win32_sound_output SoundOutput = {};
 
@@ -1690,6 +1675,7 @@ WinMain(HINSTANCE Instance,
                 DWORD AudioLatencyBytes = 0;
                 real32 AudioLatencySeconds = 0;
                 bool32 SoundIsValid = false;
+                r32 FadeAlpha = 0.0f;
 
                 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                          TempGameCodeDLLFullPath,
@@ -1702,6 +1688,26 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK(ExecutableRefresh);
                     NewInput->dtForFrame = TargetSecondsPerFrame;
+
+                    if(FadeAlpha < 0.0f)
+                    {
+                        FadeAlpha = 0.0f;
+                    }
+                    else if(FadeAlpha > 1.0f)
+                    {
+                        FadeAlpha = 1.0f;
+                    }
+
+                    if(FadeAlpha == 1.0f)
+                    {
+                        ShowWindow(Window, SW_SHOW);
+                        SetFadeAlpha(FadeWindow, 0.0f);
+                    }
+                    else 
+                    {
+                        FadeAlpha += NewInput->dtForFrame;
+                        SetFadeAlpha(FadeWindow, FadeAlpha);
+                    }
 
                     GameMemory.ExecutableReloaded = false;
                     FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);
@@ -2093,7 +2099,7 @@ WinMain(HINSTANCE Instance,
                     //
 
                     // TODO: Leave this off until I implement actual vblank support.
-#if 0
+#if 1
                     BEGIN_BLOCK(FramerateWait);
 
                     if(!GlobalPause)
