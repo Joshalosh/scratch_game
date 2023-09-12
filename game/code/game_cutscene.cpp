@@ -10,6 +10,14 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
     real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
     real32 FocalLength = 0.6f;
 
+    r32 SceneFadeValue = 1.0f;
+    if(tNormal < Scene->tFadeIn)
+    {
+        SceneFadeValue = Clamp01MapToRange(0.0f, tNormal, Scene->tFadeIn);
+    }
+
+    v4 Colour = {SceneFadeValue, SceneFadeValue, SceneFadeValue, 1.0f};
+
     v3 CameraStart = Scene->CameraStart;
     v3 CameraEnd = Scene->CameraEnd;
     v3 CameraOffset = Lerp(CameraStart, tNormal, CameraEnd);
@@ -78,7 +86,7 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
 
                 RenderGroup->Transform.OffsetP.z = P.z - CameraOffset.z;
 
-                PushBitmap(RenderGroup, LayerImage, Layer.Height, V3(0, 0, 0));
+                PushBitmap(RenderGroup, LayerImage, Layer.Height, V3(0, 0, 0), Colour);
             }
             else 
             {
@@ -190,7 +198,7 @@ global_variable scene_layer IntroLayers11[] =
 global_variable layered_scene IntroCutscene[] =
 {
     {Asset_None, 0, 0, 0, CUTSCENE_WARMUP_SECONDS},
-    {INTRO_SHOT(1), 20.0f, {0.0f, 0.0f, 10.0f}, {-4.0f, -2.0f, 5.0f}},
+    {INTRO_SHOT(1), 20.0f, {0.0f, 0.0f, 10.0f}, {-4.0f, -2.0f, 5.0f}, 0.5f},
     {INTRO_SHOT(2), 20.0f, {0.0f, 0.0f, 0.0f}, {0.5f, -0.5f, -1.0f}},
     {INTRO_SHOT(3), 20.0f, {0.0f, 0.5f, 0.0f}, {0.0f, 3.0f, 0.0f}},
     {INTRO_SHOT(4), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -0.5f}},
