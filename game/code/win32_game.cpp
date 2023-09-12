@@ -515,6 +515,34 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
 }
 
 internal LRESULT CALLBACK
+Win32FadeWindowCallback(HWND Window,
+                        UINT Message,
+                        WPARAM WParam,
+                        LPARAM LParam)
+{
+    LRESULT Result = 0;
+
+    switch(Message)
+    {
+        case WM_CLOSE:
+        {
+        } break;
+
+        case WM_SETCURSOR:
+        {
+            SetCursor(0);
+        } break;
+
+        default:
+        {
+            Result = DefWindowProcA(Window, Message, WParam, LParam);
+        } break;
+    }
+
+    return(Result);
+}
+
+internal LRESULT CALLBACK
 Win32MainWindowCallback(HWND Window,
                         UINT Message,
                         WPARAM WParam,
@@ -1397,15 +1425,20 @@ internal void
 SetFadeAlpha(HWND Window, r32 Alpha)
 {
     BYTE WindowsAlpha = (BYTE)(Alpha*255.0f);
-    SetLayeredWindowAttributes(Window, RGB(0, 0, 0), WindowsAlpha, LWA_ALPHA);
-
     if(Alpha == 0)
     {
-        ShowWindow(Window, SW_HIDE);
+        if(IsWindowVisible(Window))
+        {
+            ShowWindow(Window, SW_HIDE);
+        }
     }
     else 
     {
-        ShowWindow(Window, SW_SHOW);
+        SetLayeredWindowAttributes(Window, RGB(0, 0, 0), WindowsAlpha, LWA_ALPHA);
+        if(!IsWindowVisible(Window))
+        {
+            ShowWindow(Window, SW_SHOW);
+        }
     }
 }
 
@@ -1479,7 +1512,7 @@ WinMain(HINSTANCE Instance,
         WNDCLASSA WindowClass = {};
 
         WindowClass.style = CS_HREDRAW|CS_VREDRAW;
-        WindowClass.lpfnWndProc = DefWindowProcA;
+        WindowClass.lpfnWndProc = Win32FadeWindowCallback;
         WindowClass.hInstance = Instance;
         WindowClass.hCursor = LoadCursor(0, IDC_ARROW);
         WindowClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
@@ -1489,7 +1522,7 @@ WinMain(HINSTANCE Instance,
         {
             FadeWindow =
                 CreateWindowExA(
-                    WS_EX_TOPMOST|WS_EX_LAYERED,
+                    WS_EX_TOPMOST, //|WS_EX_LAYERED,
                     WindowClass.lpszClassName,
                     "Game",
                     WS_OVERLAPPEDWINDOW,
@@ -1675,6 +1708,8 @@ WinMain(HINSTANCE Instance,
                 DWORD AudioLatencyBytes = 0;
                 real32 AudioLatencySeconds = 0;
                 bool32 SoundIsValid = false;
+                b32 FadingComplete = false;
+                b32 ShowingComplete = false;
                 r32 FadeAlpha = 0.0f;
 
                 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
@@ -1689,24 +1724,37 @@ WinMain(HINSTANCE Instance,
                     BEGIN_BLOCK(ExecutableRefresh);
                     NewInput->dtForFrame = TargetSecondsPerFrame;
 
-                    if(FadeAlpha < 0.0f)
+                    if(FadingComplete)
                     {
-                        FadeAlpha = 0.0f;
-                    }
-                    else if(FadeAlpha > 1.0f)
-                    {
-                        FadeAlpha = 1.0f;
-                    }
-
-                    if(FadeAlpha == 1.0f)
-                    {
-                        ShowWindow(Window, SW_SHOW);
-                        SetFadeAlpha(FadeWindow, 0.0f);
+                        if(!ShowingComplete)
+                        {
+                            SetFadeAlpha(FadeWindow, 0.0f);
+                            ShowingComplete = true;
+                        }
                     }
                     else 
                     {
-                        FadeAlpha += NewInput->dtForFrame;
-                        SetFadeAlpha(FadeWindow, FadeAlpha);
+                        if(FadeAlpha < 0.0f)
+                        {
+                            FadeAlpha = 0.0f;
+                        }
+                        else if(FadeAlpha > 1.0f)
+                        {
+                            FadeAlpha = 1.0f;
+                        }
+
+                        if(FadeAlpha == 1.0f)
+                        {
+                            ShowWindow(Window, SW_SHOW);
+                            InvalidateRect(Window, 0, TRUE);
+                            UpdateWindow(Window);
+                            FadingComplete = true;
+                        }
+                        else 
+                        {
+                            FadeAlpha += NewInput->dtForFrame;
+                            SetFadeAlpha(FadeWindow, FadeAlpha);
+                        }
                     }
 
                     GameMemory.ExecutableReloaded = false;
