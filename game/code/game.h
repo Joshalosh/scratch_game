@@ -280,6 +280,12 @@ EndTemporaryMemory(temporary_memory TempMem)
 }
 
 inline void
+Clear(memory_arena *Arena)
+{
+    InitialiseArena(Arena, Arena->Base);
+}
+
+inline void
 CheckArena(memory_arena *Arena)
 {
     Assert(Arena->TempCount == 0);
@@ -379,12 +385,20 @@ struct particle
     v4 dColor;
 };
 
+enum game_mode
+{
+    GameMode_TitleScreen,
+    GameMode_Cutscene,
+    GameMode_World,
+};
+
 struct game_state
 {
     bool32 IsInitialised;
     
     memory_arena MetaArena;
-    memory_arena WorldArena;
+
+    memory_arena ModeArena;
     world *World;
 
     real32 TypicalFloorHeight;
@@ -427,7 +441,13 @@ struct game_state
     particle Particles[256];
     particle_cel ParticleCels[PARTICLE_CEL_DIM][PARTICLE_CEL_DIM];
 
-    playing_cutscene CurrentCutscene;
+    game_mode GameMode;
+    union
+    {
+        game_mode_title_screen *Attract;
+        game_mode_cutscene *Cutscene;
+        // game_mode_workd *World;
+    };
 };
 
 struct task_with_memory

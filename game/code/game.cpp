@@ -636,8 +636,8 @@ DEBUGGetGameAssets(game_memory *Memory)
 }
 
 internal void
-UpdateAndRenderGame(game_state *GameState, transient_state *TranState,
-                    game_input *Input, render_group *RenderGroup, loaded_bitmap *DrawBuffer)
+UpdateAndRenderWorld(game_state *GameState, transient_state *TranState,
+                     game_input *Input, render_group *RenderGroup, loaded_bitmap *DrawBuffer)
 {
     world *World = GameState->World;
 
@@ -1268,6 +1268,13 @@ UpdateAndRenderGame(game_state *GameState, transient_state *TranState,
     EndTemporaryMemory(SimMemory);
 }
 
+internal void
+SetGameMode(game_state *GameState, game_mode GameMode)
+{
+    Clear(&GameState->ModeArena);
+    GameState->GameMode = GameMode;
+}
+
 #if GAME_INTERNAL
 game_memory *DebugGlobalMemory;
 #endif
@@ -1693,12 +1700,29 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #if 1
     if(HeroesExist)
     {
-        UpdateAndRenderGame(GameState, TranState, Input, RenderGroup, DrawBuffer);
     }
     else 
     {
-        RenderCutscene(TranState->Assets, RenderGroup, DrawBuffer, &GameState->CurrentCutscene);
-        AdvanceCutscene(&GameState->CurrentCutscene, Input->dtForFrame);
+    }
+
+    switch(GameState->GameMode)
+    {
+        case GameMode_TitleScreen:
+        {
+            UpdateAndRenderTitleScreen();
+        } break;
+
+        case GameMode_Cutscene:
+        {
+            UpdateAndRenderCutscene();
+        } break;
+
+        case GameMode_World:
+        {
+            UpdateAndRenderWorld(GameState, TranState, Input, RenderGroup, DrawBuffer);
+        } break;
+
+        InvalidDefaultCase;
     }
 #else 
         UpdateAndRenderGame(GameState, TranState, Input, RenderGroup, DrawBuffer);
