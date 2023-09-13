@@ -38,7 +38,7 @@ struct game_mode_cutscene
     r32 t;
 };
 
-struct game_mode_attract
+struct game_mode_title_screen
 {
     r32 t;
 };

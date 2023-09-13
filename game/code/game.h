@@ -81,6 +81,7 @@
 #include "game_platform.h"
 #include "game_intrinsics.h"
 #include "game_math.h"
+#include "game_random.h"
 #include "game_file_formats.h"
 #include "game_meta.h"
 #include "game_cutscene.h"
@@ -282,7 +283,7 @@ EndTemporaryMemory(temporary_memory TempMem)
 inline void
 Clear(memory_arena *Arena)
 {
-    InitialiseArena(Arena, Arena->Base);
+    InitialiseArena(Arena, Arena->Size, Arena->Base);
 }
 
 inline void
@@ -325,16 +326,10 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
 #include "game_world.h"
 #include "game_sim_region.h"
 #include "game_entity.h"
+#include "game_world_mode.h"
 #include "game_render_group.h"
 #include "game_asset.h"
-#include "game_random.h"
 #include "game_audio.h"
-
-struct low_entity
-{
-    world_position P;
-    sim_entity Sim;
-};
 
 struct controlled_hero
 {
@@ -344,18 +339,6 @@ struct controlled_hero
     v2 dSword;
     real32 dZ;
 };
-
-struct pairwise_collision_rule
-{
-    bool32 CanCollide;
-    uint32_t StorageIndexA;
-    uint32_t StorageIndexB;
-
-    pairwise_collision_rule *NextInHash;
-};
-struct game_state;
-internal void AddCollisionRule(game_state *GameState, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide);
-internal void ClearCollisionRulesFor(game_state *GameState, uint32_t StorageIndex); 
 
 struct ground_buffer
 {
@@ -370,21 +353,6 @@ struct hero_bitmap_ids
     bitmap_id Torso;
 };
 
-struct particle_cel
-{
-    r32 Density;
-    v3 VelocityTimesDensity;
-};
-struct particle
-{
-    bitmap_id BitmapID;
-    v3 P;
-    v3 dP;
-    v3 ddP;
-    v4 Color;
-    v4 dColor;
-};
-
 enum game_mode
 {
     GameMode_TitleScreen,
@@ -396,57 +364,23 @@ struct game_state
 {
     bool32 IsInitialised;
     
-    memory_arena MetaArena;
-
     memory_arena ModeArena;
-    world *World;
-
-    real32 TypicalFloorHeight;
-
-    // TODO: Allow split-screen?
-    uint32_t CameraFollowingEntityIndex;
-    world_position CameraP;
+    memory_arena AudioArena; // TODO: Move this into the audio system proper
 
     controlled_hero ControlledHeroes[ArrayCount(((game_input *)0)->Controllers)];
-
-    uint32_t LowEntityCount;
-    low_entity LowEntities[100000];
-
-    // Must be a power of two.
-    pairwise_collision_rule *CollisionRuleHash[256];
-    pairwise_collision_rule *FirstFreeCollisionRule;
-
-    sim_entity_collision_volume_group *NullCollision;
-    sim_entity_collision_volume_group *SwordCollision;
-    sim_entity_collision_volume_group *StairCollision;
-    sim_entity_collision_volume_group *PlayerCollision;
-    sim_entity_collision_volume_group *MonsterCollision;
-    sim_entity_collision_volume_group *FamiliarCollision;
-    sim_entity_collision_volume_group *WallCollision;
-    sim_entity_collision_volume_group *StandardRoomCollision;
-
-    real32 Time;
 
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;
 
-    random_series EffectsEntropy; // This is entropy that doesn't affect the gameplay.
-    real32 tSine;
-
     audio_state AudioState;
     playing_sound *Music;
-
-#define PARTICLE_CEL_DIM 32
-    u32 NextParticle;
-    particle Particles[256];
-    particle_cel ParticleCels[PARTICLE_CEL_DIM][PARTICLE_CEL_DIM];
 
     game_mode GameMode;
     union
     {
-        game_mode_title_screen *Attract;
+        game_mode_title_screen *TitleScreen;
         game_mode_cutscene *Cutscene;
-        // game_mode_workd *World;
+        game_mode_world *WorldMode;
     };
 };
 
@@ -479,23 +413,15 @@ struct transient_state
     environment_map EnvMaps[3];
 };
 
-inline low_entity *
-GetLowEntity(game_state *GameState, uint32_t Index)
-{
-    low_entity *Result = 0;
-
-    if((Index > 0) && (Index < GameState->LowEntityCount))
-    {
-        Result = GameState->LowEntities + Index;
-    }
-
-    return(Result);
-}
-
 global_variable platform_api Platform;
 
 internal task_with_memory *BeginTaskWithMemory(transient_state *TranState);
 internal void EndTaskWithMemory(task_with_memory *Task);
+internal void SetGameMode(game_state *GameState, game_mode GameMode);
+
+// TODO: Get these into a more reasonable location
+#define GroundBufferWidth 256
+#define GroundBufferHeight 256
 
 #define GAME_H
 #endif

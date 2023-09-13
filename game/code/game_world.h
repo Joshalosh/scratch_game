@@ -40,6 +40,8 @@ struct world
     world_entity_block *FirstFree;
 
     world_chunk ChunkHash[4096];
+
+    memory_arena Arena;
 };
 
 #define GAME_WORLD_H

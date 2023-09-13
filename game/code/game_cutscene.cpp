@@ -240,7 +240,7 @@ RenderCutsceneAtTime(game_assets *Assets, render_group *RenderGroup, loaded_bitm
 
 internal void
 UpdateAndRenderCutscene(game_assets *Assets, render_group *RenderGroup,
-                        loaded_bitmap *DrawBuffer, game_input *Input, playing_cutscene *Cutscene)
+                        loaded_bitmap *DrawBuffer, game_input *Input, game_mode_cutscene *Cutscene)
 {
     RenderCutsceneAtTime(Assets, 0, DrawBuffer, Cutscene, Cutscene->t + CUTSCENE_WARMUP_SECONDS);
     b32 CutsceneComplete = RenderCutsceneAtTime(Assets, RenderGroup, DrawBuffer, Cutscene, Cutscene->t);
@@ -263,7 +263,7 @@ PlayIntroCutscene(game_state *GameState)
 {
     SetGameMode(GameState, GameMode_Cutscene);
 
-    game_mode_cutscene *Result = PushStruct(Arena, game_mode_cutscene);
+    game_mode_cutscene *Result = PushStruct(&GameState->ModeArena, game_mode_cutscene);
 
     Result->SceneCount = ArrayCount(IntroCutscene);
     Result->Scenes = IntroCutscene;
@@ -277,7 +277,7 @@ PlayTitleScreen(game_state *GameState)
 {
     SetGameMode(GameState, GameMode_TitleScreen);
 
-    game_mode_title_screen *Result = PushStruct(Arena, game_mode_title_screen);
+    game_mode_title_screen *Result = PushStruct(&GameState->ModeArena, game_mode_title_screen);
 
     Result->t = 0;
 
