@@ -455,27 +455,31 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     BeginRender(RenderGroup);
 
 #if 1
-    switch(GameState->GameMode)
+    b32 Rerun = false;
+    do 
     {
-        case GameMode_TitleScreen:
+        switch(GameState->GameMode)
         {
-            UpdateAndRenderTitleScreen(TranState->Assets, RenderGroup, DrawBuffer,
-                                       GameState->TitleScreen);
-        } break;
+            case GameMode_TitleScreen:
+            {
+                Rerun = UpdateAndRenderTitleScreen(TranState->Assets, RenderGroup, DrawBuffer,
+                                                   GameState->TitleScreen);
+            } break;
 
-        case GameMode_Cutscene:
-        {
-            UpdateAndRenderCutscene(TranState->Assets, RenderGroup, DrawBuffer,
-                                    Input, GameState->Cutscene);
-        } break;
+            case GameMode_Cutscene:
+            {
+                Rerun = UpdateAndRenderCutscene(TranState->Assets, RenderGroup, DrawBuffer,
+                                                Input, GameState->Cutscene);
+            } break;
 
-        case GameMode_World:
-        {
-            UpdateAndRenderWorld(GameState->WorldMode, TranState, Input, RenderGroup, DrawBuffer);
-        } break;
+            case GameMode_World:
+            {
+                Rerun = UpdateAndRenderWorld(GameState->WorldMode, TranState, Input, RenderGroup, DrawBuffer);
+            } break;
 
-        InvalidDefaultCase;
-    }
+            InvalidDefaultCase;
+        }
+    } while(Rerun);
 #else 
         UpdateAndRenderGame(GameState, TranState, Input, RenderGroup, DrawBuffer);
 #endif

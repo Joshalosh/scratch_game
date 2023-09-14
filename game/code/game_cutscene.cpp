@@ -110,7 +110,7 @@ global_variable scene_layer IntroLayers1[] =
 
 global_variable scene_layer IntroLayers2[] =
 {
-    {{2.0f, -1.0f, -22.0f}, 32.0f}, // Hero and tree 
+    {{3.0f, -4.0f, -62.0f}, 102.0f}, // Hero and tree 
     {{0.0f, 0.0f, -18.0f}, 22.0f}, // Wall and window 
     {{0.0f, 2.0f, -8.0f}, 10.0f}, // Icicles 
 };
@@ -199,7 +199,7 @@ global_variable layered_scene IntroCutscene[] =
 {
     {Asset_None, 0, 0, 0, CUTSCENE_WARMUP_SECONDS},
     {INTRO_SHOT(1), 20.0f, {0.0f, 0.0f, 10.0f}, {-4.0f, -2.0f, 5.0f}, 0.5f},
-    {INTRO_SHOT(2), 20.0f, {0.0f, 0.0f, 0.0f}, {0.5f, -0.5f, -1.0f}},
+    {INTRO_SHOT(2), 20.0f, {0.0f, 0.0f, 0.0f}, {2.0f, -2.0f, -4.0f}},
     {INTRO_SHOT(3), 20.0f, {0.0f, 0.5f, 0.0f}, {0.0f, 3.0f, 0.0f}},
     {INTRO_SHOT(4), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -0.5f}},
     {INTRO_SHOT(5), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.5f, -1.0f}},
@@ -238,24 +238,57 @@ RenderCutsceneAtTime(game_assets *Assets, render_group *RenderGroup, loaded_bitm
     return(CutsceneComplete);
 }
 
-internal void
-UpdateAndRenderCutscene(game_assets *Assets, render_group *RenderGroup,
-                        loaded_bitmap *DrawBuffer, game_input *Input, game_mode_cutscene *Cutscene)
+internal b32
+CheckForMetaInput(game_state *GameState, game_input *Input)
 {
-    RenderCutsceneAtTime(Assets, 0, DrawBuffer, Cutscene, Cutscene->t + CUTSCENE_WARMUP_SECONDS);
-    b32 CutsceneComplete = RenderCutsceneAtTime(Assets, RenderGroup, DrawBuffer, Cutscene, Cutscene->t);
-    if(!CutsceneComplete)
+    b32 Result = false;
+    for(u32 ControllerIndex = 0; ControllerInex < ArrayCount(Input->Controllers); ++ControllerIndex)
     {
-        Cutscene->t = 0.0f;
+        game_controller_input *Controller = GetController(Input, ControllerIndex);
+        if(WasPressed(Controller->Back))
+        {
+            Input->QuitRequested = true;
+            break;
+        }
+        else if(WasPressed(Controller->Start))
+        {
+            PlayWorld(GameState);
+            Result = true;
+            break;
+        }
     }
 
-    Cutscene->t += Input->dtForFrame;
+    return(Result);
+}
+
+internal b32
+UpdateAndRenderCutscene(game_state *GameState, game_assets *Assets, render_group *RenderGroup,
+                        loaded_bitmap *DrawBuffer, game_input *Input, game_mode_cutscene *Cutscene)
+{
+    b32 Result = CheckForMetaInput(GameState, Input);
+    if(!Result);
+    {
+        RenderCutsceneAtTime(Assets, 0, DrawBuffer, Cutscene, Cutscene->t + CUTSCENE_WARMUP_SECONDS);
+        b32 CutsceneComplete = RenderCutsceneAtTime(Assets, RenderGroup, DrawBuffer, Cutscene, Cutscene->t);
+        if(!CutsceneComplete)
+        {
+            Cutscene->t = 0.0f;
+        }
+
+        Cutscene->t += Input->dtForFrame;
+    }
+
+    return(Result);
 }
 
 internal void
-UpdateAndRenderTitleScreen(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer,
+UpdateAndRenderTitleScreen(game_state *GameState, game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer,
                            game_mode_title_screen *TitleScreen)
 {
+    b32 Result = CheckForMetaInput(GameState, Input);
+    if(!Result)
+    {
+    }
 }
 
 internal void
