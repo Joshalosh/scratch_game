@@ -102,9 +102,11 @@ GetWorldChunk(world *World, int32_t ChunkX, int32_t ChunkY, int32_t ChunkZ,
     return(Chunk);
 }
 
-internal void
-InitialiseWorld(world *World, v3 ChunkDimInMeters, memory_arena *ParentArena)
+internal world *
+CreateWorld(v3 ChunkDimInMeters, memory_arena *ParentArena)
 {
+    world *World = PushStruct(ParentArena, world);
+
     World->ChunkDimInMeters = ChunkDimInMeters;
     World->FirstFree = 0;
     SubArena(&World->Arena, ParentArena, GetArenaSizeRemaining(ParentArena));
@@ -116,6 +118,8 @@ InitialiseWorld(world *World, v3 ChunkDimInMeters, memory_arena *ParentArena)
         World->ChunkHash[ChunkIndex].ChunkX = TILE_CHUNK_UNINITIALISED;
         World->ChunkHash[ChunkIndex].FirstBlock.EntityCount = 0;
     }
+
+    return(World);
 }
 
 inline void
