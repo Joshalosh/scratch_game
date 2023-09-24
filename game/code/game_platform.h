@@ -84,7 +84,7 @@ typedef real64 r64;
 #define PointerToU32(Pointer) ((u32)(memory_index)(Pointer))
 
 #pragma pack(push, 1)
-struct bitmap_id 
+struct bitmap_id
 {
     u32 Value;
 };

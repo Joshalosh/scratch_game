@@ -43,6 +43,7 @@ struct game_mode_world
     // TODO: Allow split-screen?
     uint32_t CameraFollowingEntityIndex;
     world_position CameraP;
+    world_position LastCameraP;
 
     uint32_t LowEntityCount;
     low_entity LowEntities[100000];
@@ -68,6 +69,7 @@ struct game_mode_world
 #define PARTICLE_CEL_DIM 32
     u32 NextParticle;
     particle Particles[256];
+
     particle_cel ParticleCels[PARTICLE_CEL_DIM][PARTICLE_CEL_DIM];
 };
 
@@ -86,6 +88,5 @@ GetLowEntity(game_mode_world *WorldMode, uint32_t Index)
 
 internal void PlayWorld(game_state *GameState);
 
-#define GAME_WORLD_H
 #define GAME_WORLD_MODE_H
 #endif

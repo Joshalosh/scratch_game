@@ -145,7 +145,7 @@ InsertAssetHeaderAtFront(game_assets *Assets, asset_memory_header *Header)
     Header->Prev->Next = Header;
 }
 
-internal void
+inline void
 RemoveAssetHeaderFromList(asset_memory_header *Header)
 {
     Header->Prev->Next = Header->Next;

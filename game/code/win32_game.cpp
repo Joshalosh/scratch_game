@@ -1457,7 +1457,7 @@ InitFader(win32_fader *Fader, HINSTANCE Instance)
     {
         Fader->Window =
             CreateWindowExA(
-                WS_EX_TOPMOST, //|WS_EX_LAYERED,
+                WS_EX_LAYERED,//|WS_EX_TOPMOST,
                 WindowClass.lpszClassName,
                 "Game",
                 WS_OVERLAPPEDWINDOW,
@@ -1550,7 +1550,7 @@ UpdateFade(win32_fader *Fader, r32 dt, HWND GameWindow)
                 SetFadeAlpha(Fader->Window, 0.0f);
                 Fader->State = Win32Fade_WaitingForClose;
             }
-            else 
+            else
             {
                 SetFadeAlpha(Fader->Window, Fader->Alpha);
             }
@@ -1635,7 +1635,7 @@ WinMain(HINSTANCE Instance,
 
     Win32LoadXInput();
 
-    win32_fader Fader;
+    win32_fader Fader = {};
     InitFader(&Fader, Instance);
 
 #if GAME_INTERNAL

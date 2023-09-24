@@ -1,7 +1,7 @@
 #include "game.h"
 #include "game_render_group.cpp"
-#include "game_audio.cpp"
 #include "game_asset.cpp"
+#include "game_audio.cpp"
 #include "game_world.cpp"
 #include "game_sim_region.cpp"
 #include "game_entity.cpp"
@@ -367,7 +367,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     BeginRender(RenderGroup);
 
     b32 Rerun = false;
-    do 
+    do
     {
         switch(GameState->GameMode)
         {
@@ -401,7 +401,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     EndTemporaryMemory(RenderMemory);
 
 #if 0
-    if(!HeroesExist &&QuitRequested)
+    if(!HeroesExist && QuitRequested)
     {
         Memory->QuitRequested = true;
     }

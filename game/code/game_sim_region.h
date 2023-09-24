@@ -47,7 +47,7 @@ enum sim_entity_flags
     EntityFlag_Simming = (1 << 30),
 };
 
-introspect(category:"sime_region") struct sim_entity_collision_volume
+introspect(category:"sim_region") struct sim_entity_collision_volume
 {
     v3 OffsetP;
     v3 Dim;

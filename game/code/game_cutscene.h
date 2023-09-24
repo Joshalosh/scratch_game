@@ -9,7 +9,7 @@ enum scene_layer_flags
     SceneLayerFlag_Floaty = 0x10,
 };
 
-struct scene_layer 
+struct scene_layer
 {
     v3 P;
     r32 Height;

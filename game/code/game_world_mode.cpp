@@ -26,7 +26,7 @@ AddLowEntity(game_mode_world *WorldMode, entity_type Type, world_position P)
 }
 
 internal void
-DeleteLowEntity(game_mode_world *WorldMode, int index)
+DeleteLowEntity(game_mode_world *WorldMode, int Index)
 {
     // Actually delete
 }
@@ -353,7 +353,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
                     Color = V4(0, 0, 1, 1);
                 }
             }
-            else 
+            else
             {
                 Color = {1, 1, 1, 1};
             }
@@ -739,7 +739,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             {
                 QuitRequested = true;
             }
-            if(WasPressed(Controller->Start))
+            else if(WasPressed(Controller->Start))
             {
                 *ConHero = {};
                 ConHero->EntityIndex = AddPlayer(WorldMode).LowIndex;

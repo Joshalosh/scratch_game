@@ -801,7 +801,8 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
 }
 
 internal render_group *
-AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBufferSize, b32 RendersInBackground)
+AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBufferSize,
+                    b32 RendersInBackground)
 {
     render_group *Result = PushStruct(Arena, render_group);
 
@@ -1111,7 +1112,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
 #endif
 }
 
-inline v3 
+inline v3
 Unproject(render_group *Group, v2 PixelsXY)
 {
     render_transform *Transform = &Group->Transform;
@@ -1119,9 +1120,9 @@ Unproject(render_group *Group, v2 PixelsXY)
     v2 UnprojectedXY;
     if(Transform->Orthographic)
     {
-        UnprojectedXY = UnprojectedXY = (1.0f / Transform->MetresToPixels)*(PixelsXY - Transform->ScreenCentre);
+        UnprojectedXY = (1.0f / Transform->MetresToPixels)*(PixelsXY - Transform->ScreenCentre);
     }
-    else 
+    else
     {
         v2 A = (PixelsXY - Transform->ScreenCentre) * (1.0f / Transform->MetresToPixels);
         UnprojectedXY = ((Transform->DistanceAboveTarget - Transform->OffsetP.z)/Transform->FocalLength) * A;

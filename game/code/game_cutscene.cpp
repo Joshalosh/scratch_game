@@ -26,8 +26,8 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
         Perspective(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, MetresToPixels, FocalLength, 0.0f);
     }
 
-    asset_vector MatchVector = {};  
-    asset_vector WeightVector = {}; 
+    asset_vector MatchVector = {};
+    asset_vector WeightVector = {};
     WeightVector.E[Tag_ShotIndex] = 10.0f;
     WeightVector.E[Tag_LayerIndex] = 1.0f;
 
@@ -51,7 +51,7 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
         if(Active)
         {
             MatchVector.E[Tag_LayerIndex] = (r32)LayerIndex;
-            bitmap_id LayerImage = GetBestMatchBitmapFrom(Assets, Asset_OpeningCutscene, &MatchVector, &WeightVector);
+            bitmap_id LayerImage = GetBestMatchBitmapFrom(Assets, Scene->AssetType, &MatchVector, &WeightVector);
 
             if(RenderGroup)
             {
@@ -70,16 +70,16 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
                 {
                     RenderGroup->Transform.OffsetP.x = P.x + CameraOffset.x;
                 }
-                else 
+                else
                 {
                     RenderGroup->Transform.OffsetP.x = P.x - CameraOffset.x;
                 }
 
-                if(Layer.Flags & SceneLayerFlag_CounterCameraX)
+                if(Layer.Flags & SceneLayerFlag_CounterCameraY)
                 {
                     RenderGroup->Transform.OffsetP.y = P.y + CameraOffset.y;
                 }
-                else 
+                else
                 {
                     RenderGroup->Transform.OffsetP.y = P.y - CameraOffset.y;
                 }
@@ -88,7 +88,7 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
 
                 PushBitmap(RenderGroup, LayerImage, Layer.Height, V3(0, 0, 0), Colour);
             }
-            else 
+            else
             {
                 PrefetchBitmap(Assets, LayerImage);
             }
@@ -111,7 +111,7 @@ global_variable scene_layer IntroLayers1[] =
 global_variable scene_layer IntroLayers2[] =
 {
     {{3.0f, -4.0f, -62.0f}, 102.0f}, // Hero and tree 
-    {{0.0f, 0.0f, -18.0f}, 22.0f}, // Wall and window 
+    {{0.0f, 0.0f, -14.0f}, 22.0f}, // Wall and window 
     {{0.0f, 2.0f, -8.0f}, 10.0f}, // Icicles 
 };
 
@@ -120,7 +120,7 @@ global_variable scene_layer IntroLayers3[] =
     {{0.0f, 0.0f, -30.0f}, 100.0f, SceneLayerFlag_AtInfinity}, // Hero and tree 
     {{0.0f, 0.0f, -20.0f}, 45.0f, SceneLayerFlag_CounterCameraY}, // Wall and window 
     {{0.0f, -2.0f, -4.0f}, 15.0f, SceneLayerFlag_CounterCameraY}, // Icicles 
-    {{0.0f, 0.35, -0.5f}, 1.0f}, // Icicles 
+    {{0.0f, 0.35f, -0.5f}, 1.0f}, // Icicles 
 };
 
 global_variable scene_layer IntroLayers4[] =
@@ -144,7 +144,7 @@ global_variable scene_layer IntroLayers5[] =
 global_variable scene_layer IntroLayers6[] =
 {
     {{0.0f, 0.0f, -8.0f}, 12.0f},
-    {{0.0f, 0.0f, -5.0f}, 7.0f},
+    {{0.0f, 0.0f, -5.0f}, 8.0f},
     {{1.0f, -1.0f, -3.0f}, 3.0f},
     {{0.85f, -0.95f, -3.0f}, 0.5f},
     {{-2.0f, -1.0f, -2.5f}, 2.0f},
@@ -200,7 +200,7 @@ global_variable layered_scene IntroCutscene[] =
     {Asset_None, 0, 0, 0, CUTSCENE_WARMUP_SECONDS},
     {INTRO_SHOT(1), 20.0f, {0.0f, 0.0f, 10.0f}, {-4.0f, -2.0f, 5.0f}, 0.5f},
     {INTRO_SHOT(2), 20.0f, {0.0f, 0.0f, 0.0f}, {2.0f, -2.0f, -4.0f}},
-    {INTRO_SHOT(3), 20.0f, {0.0f, 0.5f, 0.0f}, {0.0f, 3.0f, 0.0f}},
+    {INTRO_SHOT(3), 20.0f, {0.0f, 0.5f, 0.0f}, {0.0f, 6.5f, -1.5f}},
     {INTRO_SHOT(4), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -0.5f}},
     {INTRO_SHOT(5), 20.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.5f, -1.0f}},
     {INTRO_SHOT(6), 20.0f, {0.0f, 0.0f, 0.0f}, {-0.5f, 0.5f, -1.0f}},
@@ -212,7 +212,7 @@ global_variable layered_scene IntroCutscene[] =
 };
 
 internal b32
-RenderCutsceneAtTime(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer, 
+RenderCutsceneAtTime(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer,
                      game_mode_cutscene *Cutscene, r32 tCutscene)
 {
     b32 CutsceneStillRunning = false;
@@ -274,7 +274,7 @@ UpdateAndRenderCutscene(game_state *GameState, game_assets *Assets, render_group
         {
             Cutscene->t += Input->dtForFrame;
         }
-        else 
+        else
         {
             PlayTitleScreen(GameState);
         }
@@ -295,7 +295,7 @@ UpdateAndRenderTitleScreen(game_state *GameState, game_assets *Assets, render_gr
         {
             PlayIntroCutscene(GameState);
         }
-        else 
+        else
         {
             TitleScreen->t += Input->dtForFrame;
         }

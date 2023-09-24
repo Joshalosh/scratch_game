@@ -114,7 +114,6 @@ EntityOverlapsRectangle(v3 P, sim_entity_collision_volume Volume, rectangle3 Rec
 {
     rectangle3 Grown = AddRadiusTo(Rect, 0.5f*Volume.Dim);
     bool32 Result = IsInRectangle(Grown, P + Volume.OffsetP);
-
     return(Result);
 }
 
@@ -251,10 +250,10 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
                     NewCameraP = MapIntoChunkSpace(World, NewCameraP, V3(0.0f, -10.0f, 0.0f));
                 }
             }
-            else 
+            else
             {
 //            real32 CamZOffset = NewCameraP.Offset_.z;
-            NewCameraP = Stored->P;
+                NewCameraP = Stored->P;
 //            NewCameraP.Offset_.z = CamZOffset;
             }
 
