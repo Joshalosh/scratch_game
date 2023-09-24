@@ -62,7 +62,7 @@ enum win32_fader_state
     Win32Fade_FadingOut,
     Win32Fade_WaitingForClose,
 };
-struct win32_fader 
+struct win32_fader
 {
     win32_fader_state State;
     HWND Window;

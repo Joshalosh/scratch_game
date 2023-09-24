@@ -1317,16 +1317,6 @@ internal PLATFORM_GET_ALL_FILE_OF_TYPE_END(Win32GetAllFilesOfTypeEnd)
     }
 }
 
-internal void WinLastError()
-{
-    DWORD code = GetLastError();
-    char buffer[4096];
-    unsigned long flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
-    int32_t size = FormatMessageA(flags, nullptr, code, 0, buffer, sizeof(buffer), nullptr);
-
-    printf("Error(%lu): %.*s\n", code, size, buffer);
-}
-
 internal PLATFORM_OPEN_FILE(Win32OpenNextFile)
 {
     win32_platform_file_group *Win32FileGroup = (win32_platform_file_group *)FileGroup->Platform;
@@ -1334,8 +1324,9 @@ internal PLATFORM_OPEN_FILE(Win32OpenNextFile)
 
     if(Win32FileGroup->FindHandle != INVALID_HANDLE_VALUE)
     {
-        win32_platform_file_handle *Win32Handle = (win32_platform_file_handle *)VirtualAlloc(0, sizeof(win32_platform_file_handle),
-                                                                                MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+        win32_platform_file_handle *Win32Handle = (win32_platform_file_handle *)VirtualAlloc(
+            0, sizeof(win32_platform_file_handle),
+            MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
         Result.Platform = Win32Handle;
 
         if(Win32Handle)
@@ -1351,8 +1342,6 @@ internal PLATFORM_OPEN_FILE(Win32OpenNextFile)
             Win32FileGroup->FindHandle = INVALID_HANDLE_VALUE;
         }
     }
-
-    WinLastError();
 
     return(Result);
 }
@@ -1390,7 +1379,6 @@ internal PLATFORM_READ_DATA_FROM_FILE(Win32ReadDataFromFile)
             Win32FileError(Source, "Read file failed.");
         }
     }
-    WinLastError();
 }
 
 /*
@@ -1757,11 +1745,13 @@ WinMain(HINSTANCE Instance,
                                     GameMemory.TransientStorageSize + 
                                     GameMemory.DebugStorageSize);
             Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
-                                                      MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+                                                      MEM_RESERVE|MEM_COMMIT,
+                                                      PAGE_READWRITE);
             GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
             GameMemory.TransientStorage = ((uint8_t *)GameMemory.PermanentStorage +
                                            GameMemory.PermanentStorageSize);
-            GameMemory.DebugStorage = ((u8 *)GameMemory.TransientStorage + GameMemory.TransientStorageSize);
+            GameMemory.DebugStorage = ((u8 *)GameMemory.TransientStorage +
+                                       GameMemory.TransientStorageSize);
 
             for(int ReplayIndex = 1; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
             {
