@@ -31,7 +31,7 @@ UnscaleAndBiasNormal(v4 Normal)
 internal void
 DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i ClipRect, bool32 Even)
 {
-//    IGNORED_TIMED_FUNCTION();
+    TIMED_FUNCTION();
 
     real32 R = Color.r;
     real32 G = Color.g;

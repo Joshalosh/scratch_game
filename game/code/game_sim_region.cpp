@@ -476,7 +476,6 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, sim_entity *Entity
     }
 
     ddP *= MoveSpec->Speed;
-    
 
     v3 Drag = -MoveSpec->Drag*Entity->dP;
     Drag.z = 0.0f;
@@ -559,14 +558,10 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, sim_entity *Entity
                                 {
                                     test_wall Walls[] =
                                     {
-                                        {MinCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y,
-                                         MinCorner.y, MaxCorner.y, V3(-1, 0, 0)},
-                                        {MaxCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y,
-                                         MinCorner.y, MaxCorner.y, V3(1, 0, 0)},
-                                        {MinCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x,
-                                         MinCorner.x, MaxCorner.x, V3(0, -1, 0)},
-                                        {MaxCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x,
-                                         MinCorner.x, MaxCorner.x, V3(0, 1, 0)},
+                                        {MinCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y, MinCorner.y, MaxCorner.y, V3(-1, 0, 0)},
+                                        {MaxCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y, MinCorner.y, MaxCorner.y, V3(1, 0, 0)},
+                                        {MinCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x, MinCorner.x, MaxCorner.x, V3(0, -1, 0)},
+                                        {MaxCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x, MinCorner.x, MaxCorner.x, V3(0, 1, 0)},
                                     };
 
                                     if(IsSet(TestEntity, EntityFlag_Traversable))
