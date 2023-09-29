@@ -1635,7 +1635,7 @@ WinMain(HINSTANCE Instance,
 
     Win32LoadXInput();
 
-    win32_fader Fader;
+    win32_fader Fader = {};
     InitFader(&Fader, Instance);
 
 #if GAME_INTERNAL
