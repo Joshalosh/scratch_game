@@ -71,7 +71,7 @@ enum asset_type_id
 
 struct ga_header
 {
-#define GA_MAGIC_VALUE GA_CODE('g','a','f',' ')
+#define GA_MAGIC_VALUE GA_CODE('h', 'h','a','f')
     u32 MagicValue;
 
 #define GA_VERSION 0
