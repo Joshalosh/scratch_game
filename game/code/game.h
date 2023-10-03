@@ -359,6 +359,8 @@ struct hero_bitmap_ids
 
 enum game_mode
 {
+    GameMode_None,
+
     GameMode_TitleScreen,
     GameMode_Cutscene,
     GameMode_World,
@@ -390,7 +392,8 @@ struct game_state
 
 struct task_with_memory
 {
-    bool32 BeingUsed;
+    b32 BeingUsed;
+    b32 DependsOnGameMode;
     memory_arena Arena;
 
     temporary_memory MemoryFlush;
@@ -418,9 +421,9 @@ struct transient_state
 
 global_variable platform_api Platform;
 
-internal task_with_memory *BeginTaskWithMemory(transient_state *TranState);
+internal task_with_memory *BeginTaskWithMemory(transient_state *TranState, b32 DependsOnGameMode);
 internal void EndTaskWithMemory(task_with_memory *Task);
-internal void SetGameMode(game_state *GameState, game_mode GameMode);
+internal void SetGameMode(game_state *GameState, transient_state *TranState, game_mode GameMode);
 
 // TODO: Get these into a more reasonable location
 #define GroundBufferWidth 256

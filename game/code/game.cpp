@@ -10,7 +10,7 @@
 #include "game_cutscene.cpp"
 
 internal task_with_memory *
-BeginTaskWithMemory(transient_state *TranState)
+BeginTaskWithMemory(transient_state *TranState, b32 DependsOnGameMode)
 {
     task_with_memory *FoundTask = 0;
 
@@ -21,6 +21,7 @@ BeginTaskWithMemory(transient_state *TranState)
         {
             FoundTask = Task;
             Task->BeingUsed = true;
+            Task->DependsOnGameMode = DependsOnGameMode;
             Task->MemoryFlush = BeginTemporaryMemory(&Task->Arena);
             break;
         }
@@ -221,8 +222,17 @@ DEBUGGetGameAssets(game_memory *Memory)
 }
 
 internal void
-SetGameMode(game_state *GameState, game_mode GameMode)
+SetGameMode(game_state *GameState, transient_state *TranState, game_mode GameMode)
 {
+    b32 NeedToWait = false;
+    for(u32 TaskIndex = 0; TaskIndex < ArrayCount(TranState->Tasks); ++TaskIndex)
+    {
+        NeedToWait = NeedToWait || TranState->Tasks[TaskIndex].DependsOnGameMode;
+    }
+    if(NeedToWait)
+    {
+        Platform.CompleteAllWork(TranState->LowPriorityQueue);
+    }
     Clear(&GameState->ModeArena);
     GameState->GameMode = GameMode;
 }
@@ -255,8 +265,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                  GetArenaSizeRemaining(&TotalArena));
 
         InitialiseAudioState(&GameState->AudioState, &GameState->AudioArena);
-        //PlayIntroCutscene(GameState);
-        PlayTitleScreen(GameState);
 
         GameState->IsInitialised = true;
     }
@@ -320,6 +328,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TranState->IsInitialised = true;
     }
 
+    if(GameState->GameMode == GameMode_None)
+    {
+        PlayIntroCutscene(GameState, TranState);
+    }
+
     DEBUG_IF(GroundChunks_RecomputeOnEXEChange)
     {
         if(Memory->ExecutableReloaded)
@@ -373,13 +386,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             case GameMode_TitleScreen:
             {
-                Rerun = UpdateAndRenderTitleScreen(GameState, TranState->Assets, RenderGroup, DrawBuffer,
+                Rerun = UpdateAndRenderTitleScreen(GameState, TranState, RenderGroup, DrawBuffer,
                                                    Input, GameState->TitleScreen);
             } break;
 
             case GameMode_Cutscene:
             {
-                Rerun = UpdateAndRenderCutscene(GameState, TranState->Assets, RenderGroup, DrawBuffer,
+                Rerun = UpdateAndRenderCutscene(GameState, TranState, RenderGroup, DrawBuffer,
                                                 Input, GameState->Cutscene);
             } break;
 
