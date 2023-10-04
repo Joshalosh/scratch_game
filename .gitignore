@@ -12,3 +12,15 @@
 
 # Ignore all sln files
 *.sln
+
+# Ignore entire build dir
+build/
+
+# Ignore entire iaca-win64 dir
+iaca-win64/
+
+# Ignore entire ctime dir
+game/ctime/
+
+# Ignore entire data dir
+game/data/
