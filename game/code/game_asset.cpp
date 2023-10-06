@@ -303,7 +303,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Immediate)
                 Work.FinalState = AssetState_Loaded;
                 if(Task)
                 {
-                    load_asset_work *TaskWork = PushStruct(&Task->Arena, load_asset_work);
+                    load_asset_work *TaskWork = PushStruct(&Task->Arena, load_asset_work, NoClear());
                     *TaskWork = Work;
                     Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, TaskWork);
                 }
@@ -434,7 +434,7 @@ LoadFont(game_assets *Assets, font_id ID, b32 Immediate)
                 Work.FinalState = AssetState_Loaded;
                 if(Task)
                 {
-                    load_asset_work *TaskWork = PushStruct(&Task->Arena, load_asset_work);
+                    load_asset_work *TaskWork = PushStruct(&Task->Arena, load_asset_work, NoClear());
                     *TaskWork = Work;
                     Platform.AddEntry(Assets->TranState->LowPriorityQueue, LoadAssetWork, TaskWork);
                 }
@@ -599,7 +599,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     Assets->MemorySentinel.Prev = &Assets->MemorySentinel;
     Assets->MemorySentinel.Next = &Assets->MemorySentinel;
 
-    InsertBlock(&Assets->MemorySentinel, Size, PushSize(Arena, Size));
+    InsertBlock(&Assets->MemorySentinel, Size, PushSize(Arena, Size, NoClear()));
 
     Assets->TranState = TranState;
 

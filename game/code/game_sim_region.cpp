@@ -143,7 +143,6 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
     TIMED_FUNCTION();
 
     sim_region *SimRegion = PushStruct(SimArena, sim_region);
-    ZeroStruct(SimRegion->Hash);
 
     // TODO Try to make these get enforced more rigorously
     SimRegion->MaxEntityRadius = 5.0f;

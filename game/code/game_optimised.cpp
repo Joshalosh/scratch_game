@@ -15,7 +15,7 @@
 void
 DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
                      loaded_bitmap *Texture, real32 PixelsToMetres, 
-                     rectangle2i ClipRect, bool32 Even)
+                     rectangle2i ClipRect)
 {
     IGNORED_TIMED_FUNCTION();
 
@@ -56,10 +56,6 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 //    rectangle2i ClipRect = {0, 0, WidthMax, HeightMax};
 //    rectangle2i ClipRect = {128, 128, 256, 256};
     FillRect = Intersect(ClipRect, FillRect);
-    if(!Even == (FillRect.MinY & 1))
-    {
-        FillRect.MinY += 1;
-    }
 
     if(HasArea(FillRect))
     {
@@ -128,7 +124,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         uint8_t *Row = ((uint8_t *)Buffer->Memory + 
                         FillRect.MinX*BITMAP_BYTES_PER_PIXEL + 
                         FillRect.MinY*Buffer->Pitch);
-        int32_t RowAdvance = 2*Buffer->Pitch;
+        int32_t RowAdvance = Buffer->Pitch;
 
         void *TextureMemory = Texture->Memory;
         int32_t TexturePitch = Texture->Pitch;
@@ -139,7 +135,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         int MaxX = FillRect.MaxX;
 
         IGNORED_TIMED_BLOCK(PixelFill, GetClampedRectArea(FillRect) / 2);
-        for(int Y = MinY; Y < MaxY; Y += 2)
+        for(int Y = MinY; Y < MaxY; Y++)
         {
             __m128 PixelPy = _mm_set1_ps((real32)Y);
             PixelPy = _mm_sub_ps(PixelPy, Originy_4x);

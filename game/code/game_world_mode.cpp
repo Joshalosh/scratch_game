@@ -395,7 +395,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 
     Assert(AllResourcesPresent(RenderGroup));
 
-    RenderGroupToOutput(RenderGroup, Buffer);
+    RenderGroupToOutput(RenderGroup, Buffer, &Work->Task->Arena);
     EndRender(RenderGroup);
 
     EndTaskWithMemory(Work->Task);

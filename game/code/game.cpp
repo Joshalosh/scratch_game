@@ -39,16 +39,6 @@ EndTaskWithMemory(task_with_memory *Task)
     Task->BeingUsed = false;
 }
 
-internal void
-ClearBitmap(loaded_bitmap *Bitmap)
-{
-    if(Bitmap->Memory)
-    {
-        int32_t TotalBitmapSize = Bitmap->Width*Bitmap->Height*BITMAP_BYTES_PER_PIXEL;
-        ZeroSize(TotalBitmapSize, Bitmap->Memory);
-    }
-}
-
 internal loaded_bitmap
 MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 ClearToZero = true)
 {
@@ -61,11 +51,7 @@ MakeEmptyBitmap(memory_arena *Arena, int32_t Width, int32_t Height, bool32 Clear
     Result.Height = Height;
     Result.Pitch = Result.Width*BITMAP_BYTES_PER_PIXEL;
     int32_t TotalBitmapSize = Width*Height*BITMAP_BYTES_PER_PIXEL;
-    Result.Memory = PushSize(Arena, TotalBitmapSize, 16);
-    if(ClearToZero)
-    {
-        ClearBitmap(&Result);
-    }
+    Result.Memory = PushSize(Arena, TotalBitmapSize, Align(16, ClearToZero));
 
     return(Result);
 }
@@ -407,7 +393,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     if(AllResourcesPresent(RenderGroup))
     {
-        TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer);
+        TiledRenderGroupToOutput(TranState->HighPriorityQueue, RenderGroup, DrawBuffer, &TranState->TranArena);
     }
     EndRender(RenderGroup);
 
