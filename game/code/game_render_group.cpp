@@ -689,21 +689,6 @@ RenderGroupToOutput(render_group *RenderGroup, loaded_bitmap *OutputTarget,
     }
 }
 
-struct tile_sort_entry
-{
-    r32 SortKey;
-    u32 PushBufferOffset;
-};
-
-struct tile_render_work
-{
-    render_group *RenderGroup;
-    loaded_bitmap *OutputTarget;
-    rectangle2i ClipRect;
-
-    tile_sort_entry *SortSpace;
-};
-
 internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 {
     TIMED_FUNCTION();

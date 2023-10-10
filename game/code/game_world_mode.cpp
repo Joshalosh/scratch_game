@@ -327,7 +327,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
     v2 HalfDim = 0.5f*V2(Width, Height);
 
     // TODO: Decide what the pushbuffer size is.
-    render_group *RenderGroup = AllocateRenderGroup(Work->TranState->Assets, &Work->Task->Arena, 0, true);
+    render_group *RenderGroup = AllocateRenderGroup(Work->TranState->Assets, &Work->Task->Arena, Kilobytes(512), true);
     BeginRender(RenderGroup);
     Orthographic(RenderGroup, Buffer->Width, Buffer->Height, (Buffer->Width - 2) / Width);
     Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));

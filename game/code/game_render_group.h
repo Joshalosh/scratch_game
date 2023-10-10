@@ -153,5 +153,20 @@ void DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, 
                           loaded_bitmap *Texture, real32 PixelsToMetres,
                           rectangle2i ClipRect);
 
+struct tile_sort_entry
+{
+    r32 SortKey;
+    u32 PushBufferOffset;
+};
+
+struct tile_render_work
+{
+    render_group *RenderGroup;
+    loaded_bitmap *OutputTarget;
+    rectangle2i ClipRect;
+
+    tile_sort_entry *SortSpace;
+};
+
 #define GAME_RENDER_GROUP_H
 #endif
