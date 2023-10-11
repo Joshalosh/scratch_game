@@ -647,6 +647,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     CameraBoundsInMetres.Max.z =  1.0f*WorldMode->TypicalFloorHeight;
 
     // Ground chunk rendering.
+    RenderGroup->Transform.OffsetP = V3(0, 0, -0.01f); // TODO: Figure out SortKey situation and get bias
     for(uint32_t GroundBufferIndex = 0;
         GroundBufferIndex < TranState->GroundBufferCount;
         ++GroundBufferIndex)
@@ -656,6 +657,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         {
             loaded_bitmap *Bitmap = &GroundBuffer->Bitmap;
             v3 Delta = Subtract(WorldMode->World, &GroundBuffer->P, &WorldMode->CameraP);
+            r32 zBias = 0.01f;
+            Delta.z -= zBias;
 
             if((Delta.z >= -1.0f) && (Delta.z < 1.0f))
             {
@@ -669,6 +672,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             }
         }
     }
+    RenderGroup->Transform.OffsetP = V3(0, 0, 0);
 
     // This is Ground chunk updating.
     {

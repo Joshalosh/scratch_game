@@ -126,7 +126,9 @@ struct render_group
     u32 MaxPushBufferSize;
     u32 PushBufferSize;
     u8 *PushBufferBase;
+
     u32 PushBufferElementCount;
+    u32 SortEntryAt;
 
     uint32_t MissingResourceCount;
     b32 RendersInBackground;
@@ -137,8 +139,9 @@ struct render_group
 struct entity_basis_p_result
 {
     v2 P;
-    real32 Scale;
-    bool32 Valid;
+    r32 Scale;
+    b32 Valid;
+    r32 SortKey;
 };
 
 struct used_bitmap_dim
