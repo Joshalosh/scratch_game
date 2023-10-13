@@ -824,6 +824,23 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
     EndTemporaryMemory(Temp);
 }
 
+internal void
+ClearRenderValues(render_group *RenderGroup)
+{
+    RenderGroup->SortEntryAt = RenderGroup->MaxPushBufferSize;
+    RenderGroup->PushBufferSize = 0;
+    RenderGroup->PushBufferElementCount = 0;
+    RenderGroup->GenerationID = 0;
+    RenderGroup->GlobalAlpha = 1.0f;
+    RenderGroup->MissingResourceCount = 0;
+    
+    // Default Transform.
+    RenderGroup->Transform.OffsetP = V3(0.0f, 0.0f, 0.0f);
+    RenderGroup->Transform.Scale = 1.0f;
+
+    // TODO: Reset more of the transform? should it be sticky?
+}
+
 internal render_group *
 AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBufferSize,
                     b32 RendersInBackground)
@@ -836,25 +853,13 @@ AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBu
         MaxPushBufferSize = (uint32_t)GetArenaSizeRemaining(Arena);
     }
     Result->PushBufferBase = (uint8_t *)PushSize(Arena, MaxPushBufferSize, NoClear());
-    Result->SortEntryAt = MaxPushBufferSize;
-
     Result->MaxPushBufferSize = MaxPushBufferSize;
-    Result->PushBufferSize = 0;
-    Result->PushBufferElementCount = 0;
 
     Result->Assets = Assets;
-    Result->GlobalAlpha = 1.0f;
-
-    Result->GenerationID = 0;
-
-    // Default Transform.
-    Result->Transform.OffsetP = V3(0.0f, 0.0f, 0.0f);
-    Result->Transform.Scale = 1.0f;
-
-    Result->MissingResourceCount = 0;
     Result->RendersInBackground = RendersInBackground;
-
     Result->InsideRender = false;
+
+    ClearRenderValues(Result);
 
     return(Result);
 }
@@ -884,9 +889,8 @@ EndRender(render_group *Group)
         Group->InsideRender = false;
 
         EndGeneration(Group->Assets, Group->GenerationID);
-        Group->GenerationID = 0;
-        Group->PushBufferSize = 0;
-        Group->PushBufferElementCount = 0;
+
+        ClearRenderValues(Group);
     }
 }
 
