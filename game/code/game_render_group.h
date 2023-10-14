@@ -97,19 +97,23 @@ struct render_entry_coordinate_system
 };
 // }
 
-struct render_transform
+struct object_transform
 {
-    bool32 Orthographic;
+    b32 Upright;
+    v3 OffsetP;
+    r32 Scale;
+};
+
+struct camera_transform
+{
+    b32 Orthographic;
 
     // TODO: Camera parameters.
-    real32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
+    r32 MetresToPixels; // This translates metres on the monitor into pixels on the monitor.
     v2 ScreenCentre;
 
-    real32 FocalLength;
-    real32 DistanceAboveTarget;
-
-    v3 OffsetP;
-    real32 Scale;
+    r32 FocalLength;
+    r32 DistanceAboveTarget;
 };
 
 struct render_group
@@ -121,7 +125,7 @@ struct render_group
 
     v2 MonitorHalfDimInMetres;
 
-    render_transform Transform;
+    camera_transform CameraTransform;
 
     u32 MaxPushBufferSize;
     u32 PushBufferSize;
@@ -170,6 +174,28 @@ struct tile_render_work
 
     tile_sort_entry *SortSpace;
 };
+
+inline object_transform
+DefaultUprightTransform(void)
+{
+    object_transform Result = {};
+
+
+    Result.Upright = true;
+    Result.Scale = 1.0f;
+
+    return(Result);
+}
+
+inline object_transform
+DefaultFlatTransform(void)
+{
+    object_transform Result = {};
+
+    Result.Scale = 1.0f;
+
+    return(Result);
+}
 
 #define GAME_RENDER_GROUP_H
 #endif

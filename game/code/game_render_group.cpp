@@ -833,12 +833,6 @@ ClearRenderValues(render_group *RenderGroup)
     RenderGroup->GenerationID = 0;
     RenderGroup->GlobalAlpha = 1.0f;
     RenderGroup->MissingResourceCount = 0;
-    
-    // Default Transform.
-    RenderGroup->Transform.OffsetP = V3(0.0f, 0.0f, 0.0f);
-    RenderGroup->Transform.Scale = 1.0f;
-
-    // TODO: Reset more of the transform? should it be sticky?
 }
 
 internal render_group *
@@ -904,14 +898,11 @@ Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
                                            0.5f*PixelHeight*PixelsToMetres};
 
-    RenderGroup->Transform.MetresToPixels = MetresToPixels;
-    RenderGroup->Transform.FocalLength = FocalLength; // Metres the person is sitting from their monitor.
-    RenderGroup->Transform.DistanceAboveTarget = DistanceAboveTarget;
-    RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
-
-    RenderGroup->Transform.Orthographic = false;
-    RenderGroup->Transform.OffsetP = V3(0, 0, 0);
-    RenderGroup->Transform.Scale = 1.0f;
+    RenderGroup->CameraTransform.MetresToPixels = MetresToPixels;
+    RenderGroup->CameraTransform.FocalLength = FocalLength; // Metres the person is sitting from their monitor.
+    RenderGroup->CameraTransform.DistanceAboveTarget = DistanceAboveTarget;
+    RenderGroup->CameraTransform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
+    RenderGroup->CameraTransform.Orthographic = false;
 }
 
 inline void
@@ -921,35 +912,34 @@ Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
                                            0.5f*PixelHeight*PixelsToMetres};
 
-    RenderGroup->Transform.MetresToPixels = MetresToPixels;
-    RenderGroup->Transform.FocalLength = 1.0f; // Metres the person is sitting from their monitor.
-    RenderGroup->Transform.DistanceAboveTarget = 1.0f;
-    RenderGroup->Transform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
-
-    RenderGroup->Transform.Orthographic = true;
-    RenderGroup->Transform.OffsetP = V3(0, 0, 0);
-    RenderGroup->Transform.Scale = 1.0f;
+    RenderGroup->CameraTransform.MetresToPixels = MetresToPixels;
+    RenderGroup->CameraTransform.FocalLength = 1.0f; // Metres the person is sitting from their monitor.
+    RenderGroup->CameraTransform.DistanceAboveTarget = 1.0f;
+    RenderGroup->CameraTransform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
+    RenderGroup->CameraTransform.Orthographic = true;
 }
 
-inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, v3 OriginalP)
+inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransform,
+                                                   object_transform ObjectTransform,
+                                                   v3 OriginalP)
 {
     IGNORED_TIMED_FUNCTION();
 
     entity_basis_p_result Result = {};
 
-    v3 P = V3(OriginalP.xy, 0.0f) + Transform->OffsetP;
+    v3 P = V3(OriginalP.xy, 0.0f) + ObjectTransform.OffsetP;
 
-    if(Transform->Orthographic)
+    if(CameraTransform.Orthographic)
     {
-        Result.P = Transform->ScreenCentre + Transform->MetresToPixels*P.xy;
-        Result.Scale = Transform->MetresToPixels;
+        Result.P = CameraTransform.ScreenCentre + CameraTransform.MetresToPixels*P.xy;
+        Result.Scale = CameraTransform.MetresToPixels;
         Result.Valid = true;
     }
     else
     {
         real32 OffsetZ = 0.0f;
 
-        real32 DistanceAboveTarget = Transform->DistanceAboveTarget;
+        real32 DistanceAboveTarget = CameraTransform.DistanceAboveTarget;
 
         DEBUG_IF(Renderer_Camera_UseDebug)
         {
@@ -965,14 +955,14 @@ inline entity_basis_p_result GetRenderEntityBasisP(render_transform *Transform, 
 
         if(DistanceToPZ > NearClipPlane)
         {
-            v3 ProjectedXY = (1.0f / DistanceToPZ) * Transform->FocalLength*RawXY;
-            Result.Scale = Transform->MetresToPixels*ProjectedXY.z;
-            Result.P = Transform->ScreenCentre + Transform->MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
+            v3 ProjectedXY = (1.0f / DistanceToPZ) * CameraTransform.FocalLength*RawXY;
+            Result.Scale = CameraTransform.MetresToPixels*ProjectedXY.z;
+            Result.P = CameraTransform.ScreenCentre + CameraTransform.MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
             Result.Valid = true;
         }
     }
 
-    Result.SortKey = 4096.0f*P.z - P.y;
+    Result.SortKey = 4096.0f*(2.0f*P.z + 1.0f*(r32)ObjectTransform.Upright) - P.y;
 
     return(Result);
 }
@@ -1012,22 +1002,24 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 }
 
 inline used_bitmap_dim
-GetBitmapDim(render_group *Group, loaded_bitmap *Bitmap, r32 Height, v3 Offset, r32 CAlign)
+GetBitmapDim(render_group *Group, object_transform ObjectTransform,
+             loaded_bitmap *Bitmap, r32 Height, v3 Offset, r32 CAlign)
 {
     used_bitmap_dim Dim;
 
     Dim.Size = V2(Height*Bitmap->WidthOverHeight, Height);
     Dim.Align = CAlign*Hadamard(Bitmap->AlignPercentage, Dim.Size);
     Dim.P = Offset - V3(Dim.Align, 0);
-    Dim.Basis = GetRenderEntityBasisP(&Group->Transform, Dim.P);
+    Dim.Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, Dim.P);
 
     return(Dim);
 }
 
 inline void
-PushBitmap(render_group *Group, loaded_bitmap *Bitmap, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f)
+PushBitmap(render_group *Group, object_transform ObjectTransform,
+           loaded_bitmap *Bitmap, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f)
 {
-    used_bitmap_dim Dim = GetBitmapDim(Group, Bitmap, Height, Offset, CAlign);
+    used_bitmap_dim Dim = GetBitmapDim(Group, ObjectTransform, Bitmap, Height, Offset, CAlign);
     if(Dim.Basis.Valid)
     {
         render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap, Dim.Basis.SortKey);
@@ -1042,7 +1034,8 @@ PushBitmap(render_group *Group, loaded_bitmap *Bitmap, real32 Height, v3 Offset,
 }
 
 inline void
-PushBitmap(render_group *Group, bitmap_id ID, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f)
+PushBitmap(render_group *Group, object_transform ObjectTransform,
+           bitmap_id ID, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f)
 {
     loaded_bitmap *Bitmap = GetBitmap(Group->Assets, ID, Group->GenerationID);
     if(Group->RendersInBackground && !Bitmap)
@@ -1053,7 +1046,7 @@ PushBitmap(render_group *Group, bitmap_id ID, real32 Height, v3 Offset, v4 Color
 
     if(Bitmap)
     {
-        PushBitmap(Group, Bitmap, Height, Offset, Color, CAlign);
+        PushBitmap(Group, ObjectTransform, Bitmap, Height, Offset, Color, CAlign);
     }
     else
     {
@@ -1082,10 +1075,11 @@ PushFont(render_group *Group, font_id ID)
 }
 
 inline void
-PushRect(render_group *Group, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
+PushRect(render_group *Group, object_transform ObjectTransform,
+         v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
 {
     v3 P = (Offset - V3(0.5f*Dim, 0));
-    entity_basis_p_result Basis = GetRenderEntityBasisP(&Group->Transform, P);
+    entity_basis_p_result Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, P);
     if(Basis.Valid)
     {
         render_entry_rectangle *Rect = PushRenderElement(Group, render_entry_rectangle, Basis.SortKey);
@@ -1099,21 +1093,21 @@ PushRect(render_group *Group, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
 }
 
 inline void
-PushRect(render_group *Group, rectangle2 Rectangle, r32 Z, v4 Color = V4(1, 1, 1, 1))
+PushRect(render_group *Group, object_transform ObjectTransform, rectangle2 Rectangle, r32 Z, v4 Color = V4(1, 1, 1, 1))
 {
-    PushRect(Group, V3(GetCenter(Rectangle), Z), GetDim(Rectangle), Color);
+    PushRect(Group, ObjectTransform, V3(GetCenter(Rectangle), Z), GetDim(Rectangle), Color);
 }
 
 inline void
-PushRectOutline(render_group *Group, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1), real32 Thickness = 0.1f)
+PushRectOutline(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1), real32 Thickness = 0.1f)
 {
     // Top and Bottom.
-    PushRect(Group, Offset - V3(0, 0.5f*Dim.y, 0), V2(Dim.x, Thickness), Color);
-    PushRect(Group, Offset + V3(0, 0.5f*Dim.y, 0), V2(Dim.x, Thickness), Color);
+    PushRect(Group, ObjectTransform, Offset - V3(0, 0.5f*Dim.y, 0), V2(Dim.x, Thickness), Color);
+    PushRect(Group, ObjectTransform, Offset + V3(0, 0.5f*Dim.y, 0), V2(Dim.x, Thickness), Color);
 
     // Left and Right.
-    PushRect(Group, Offset - V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y), Color);
-    PushRect(Group, Offset + V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y), Color);
+    PushRect(Group, ObjectTransform, Offset - V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y), Color);
+    PushRect(Group, ObjectTransform, Offset + V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y), Color);
 }
 
 inline void
@@ -1153,23 +1147,23 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
 }
 
 inline v3
-Unproject(render_group *Group, v2 PixelsXY)
+Unproject(render_group *Group, object_transform ObjectTransform, v2 PixelsXY)
 {
-    render_transform *Transform = &Group->Transform;
+    camera_transform Transform = Group->CameraTransform;
 
     v2 UnprojectedXY;
-    if(Transform->Orthographic)
+    if(Transform.Orthographic)
     {
-        UnprojectedXY = (1.0f / Transform->MetresToPixels)*(PixelsXY - Transform->ScreenCentre);
+        UnprojectedXY = (1.0f / Transform.MetresToPixels)*(PixelsXY - Transform.ScreenCentre);
     }
     else
     {
-        v2 A = (PixelsXY - Transform->ScreenCentre) * (1.0f / Transform->MetresToPixels);
-        UnprojectedXY = ((Transform->DistanceAboveTarget - Transform->OffsetP.z)/Transform->FocalLength) * A;
+        v2 A = (PixelsXY - Transform.ScreenCentre) * (1.0f / Transform.MetresToPixels);
+        UnprojectedXY = ((Transform.DistanceAboveTarget - ObjectTransform.OffsetP.z)/Transform.FocalLength) * A;
     }
 
-    v3 Result = V3(UnprojectedXY, Transform->OffsetP.z);
-    Result -= Transform->OffsetP;
+    v3 Result = V3(UnprojectedXY, ObjectTransform.OffsetP.z);
+    Result -= ObjectTransform.OffsetP;
 
     return(Result);
 }
@@ -1177,7 +1171,7 @@ Unproject(render_group *Group, v2 PixelsXY)
 inline v2
 UnprojectOld(render_group *Group, v2 ProjectedXY, real32 AtDistanceFromCamera)
 {
-    v2 WorldXY = (AtDistanceFromCamera / Group->Transform.FocalLength)*ProjectedXY;
+    v2 WorldXY = (AtDistanceFromCamera / Group->CameraTransform.FocalLength)*ProjectedXY;
     return(WorldXY);
 }
 
@@ -1194,7 +1188,7 @@ GetCameraRectangleAtDistance(render_group *Group, real32 DistanceFromCamera)
 inline rectangle2
 GetCameraRectangleAtTarget(render_group *Group)
 {
-    rectangle2 Result = GetCameraRectangleAtDistance(Group, Group->Transform.DistanceAboveTarget);
+    rectangle2 Result = GetCameraRectangleAtDistance(Group, Group->CameraTransform.DistanceAboveTarget);
 
     return(Result);
 }
