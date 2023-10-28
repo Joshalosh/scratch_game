@@ -782,16 +782,9 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
     }
 }
 
-internal void 
-SortEntries(render_group *RenderGroup, memory_arena *TempArena)
+internal void
+BubbleSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
 {
-    temporary_memory Temp = BeginTemporaryMemory(TempArena);
-
-    u32 Count = RenderGroup->PushBufferElementCount;
-    tile_sort_entry *Entries = (tile_sort_entry *)(RenderGroup->PushBufferBase + RenderGroup->SortEntryAt);
-    tile_sort_entry *TempSpace = PushArray(TempArena, Count, tile_sort_entry);
-
-#if 0
     // NOTE: This is O(n^2) bubble sort 
     for(u32 Outer = 0; Outer < Count; ++Outer)
     {
@@ -799,7 +792,7 @@ SortEntries(render_group *RenderGroup, memory_arena *TempArena)
         // TODO: Early Out
         for(u32 Inner = 0; Inner < (Count - 1); ++Inner)
         {
-            tile_sort_entry *EntryA = Entries + Inner;
+            tile_sort_entry *EntryA = First + Inner;
             tile_sort_entry *EntryB = EntryA + 1;
 
             if(EntryA->SortKey > EntryB->SortKey)
@@ -814,12 +807,20 @@ SortEntries(render_group *RenderGroup, memory_arena *TempArena)
             break;
         }
     }
-#else
-    //
-    // NOTE: Merge sort
-    //
+}
+
+internal void 
+SortEntries(render_group *RenderGroup, memory_arena *TempArena)
+{
+    temporary_memory Temp = BeginTemporaryMemory(TempArena);
+
+    u32 Count = RenderGroup->PushBufferElementCount;
+    tile_sort_entry *Entries = (tile_sort_entry *)(RenderGroup->PushBufferBase + RenderGroup->SortEntryAt);
+    tile_sort_entry *TempSpace = PushArray(TempArena, Count, tile_sort_entry);
+
+    // BubbleSort(Count, Entries, TempSpace);
     MergeSort(Count, Entries, TempSpace);
-#endif
+    RadixSort(Count, Entries, TempSpace);
 
 #if GAME_SLOW
     for(u32 Index = 0; Index < (Count - 1); ++Index)
