@@ -809,6 +809,63 @@ BubbleSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
     }
 }
 
+inline u32
+SortKeyToU32(r32 SortKey)
+{
+    // NOTE: I need to turn our 32-bit floating point value 
+    // into some strictly ascending 32-bit unsigned integer value
+    u32 Result = *(u32 *)&SortKey;
+    if(Result & 0x80000000)
+    {
+        Result = ~Result;
+    }
+    else 
+    {
+        Result |= 0x80000000;
+    }
+    return(Result);
+}
+
+internal void
+RadixSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
+{
+    tile_sort_entry *Source = First;
+    tile_sort_entry *Dest = Temp;
+    for(u32 ByteIndex = 0; ByteIndex < 32; ByteIndex += 8)
+    {
+        u32 SortKeyOffsets[256] = {};
+
+        // NOTE: First pass - count how many of each key 
+        for(u32 Index = 0; Index < Count; ++Index)
+        {
+            u32 RadixValue = SortKeyToU32(Source[Index].SortKey);
+            u32 RadixPiece = (RadixValue >> ByteIndex) & 0xFF;
+            ++SortKeyOffsets[RadixPiece];
+        }
+
+        // NOTE: Change counts to offsets 
+        u32 Total = 0;
+        for(u32 SortKeyIndex = 0; SortKeyIndex < ArrayCount(SortKeyOffsets); ++SortKeyIndex)
+        {
+            u32 Count = SortKeyOffsets[SortKeyIndex];
+            SortKeyOffsets[SortKeyIndex] = Total;
+            Total += Count;
+        }
+
+        // NOTE: Second pass - place elements into the right location
+        for(u32 Index = 0; Index < Count; ++Index)
+        {
+            u32 RadixValue = SortKeyToU32(Source[Index].SortKey);
+            u32 RadixPiece = (RadixValue >> ByteIndex) & 0xFF;
+            Dest[SortKeyOffsets[RadixPiece]++] = Source[Index];
+        }
+
+        tile_sort_entry *SwapTemp = Dest;
+        Dest = Source;
+        Source = SwapTemp;
+    }
+}
+
 internal void 
 SortEntries(render_group *RenderGroup, memory_arena *TempArena)
 {
@@ -819,7 +876,7 @@ SortEntries(render_group *RenderGroup, memory_arena *TempArena)
     tile_sort_entry *TempSpace = PushArray(TempArena, Count, tile_sort_entry);
 
     // BubbleSort(Count, Entries, TempSpace);
-    MergeSort(Count, Entries, TempSpace);
+    // MergeSort(Count, Entries, TempSpace);
     RadixSort(Count, Entries, TempSpace);
 
 #if GAME_SLOW
