@@ -1,16 +1,14 @@
 /*
 TODO: Additional Platform Layer Code
+  - Hardware acceleration (OpenGL or Direct3D or both?)
+  - Blit speed improvements (BitBlt)
 
   - Saved game locations
   - Getting a handle to our own executable file
-  - Asset loading path
-  - Threading (launch a thread)
   - Raw Input (support for multiple keyboards)
   - ClipCursor() (for multimonitor support)
   - QueryCancelAutoplay
   - WM_ACTIVATEAPP (for when we are not the active application)
-  - Blit speed improvements (BitBlt)
-  - Hardware acceleration (OpenGL or Direct3D or both?)
   - GetKeyboardLayout (for French keyboards, internation WASD support)
     etc...
 */
@@ -22,6 +20,7 @@ TODO: Additional Platform Layer Code
 #include <malloc.h>
 #include <xinput.h>
 #include <dsound.h>
+#include <gl/gl.h>
 
 #include "win32_game.h"
 
@@ -427,6 +426,39 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
     }
 }
 
+internal void
+Win32InitOpenGL(HWND Window)
+{
+    HDC WindowDC = GetDC(Window);
+
+    PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
+    DesiredPixelFormat.nSize = sizeof(DesiredPixelFormat);
+    DesiredPixelFormat.nVersion = 1;
+    DesiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
+    DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW|PFD_DOUBLEBUFFER;
+    DesiredPixelFormat.cColorBits = 32;
+    DesiredPixelFormat.cAlphaBits = 8;
+    DesiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
+
+    int SuggestedPixelFormatIndex = ChoosePixelFormat(WindowDC, &DesiredPixelFormat);
+    PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
+    DescribePixelFormat(WindowDC, SuggestedPixelFormatIndex,
+                        sizeof(SuggestedPixelFormat), &SuggestedPixelFormat);
+    SetPixelFormat(WindowDC, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
+
+    HGLRC OpenGLRC = wglCreateContext(WindowDC);
+    if(wglMakeCurrent(WindowDC, OpenGLRC))
+    {
+        // NOTE: Success
+    }
+    else 
+    {
+        InvalidCodePath;
+        // TODO: Diagnostic
+    }
+    ReleaseDC(Window, WindowDC);
+}
+
 internal win32_window_dimension
 Win32GetWindowDimension(HWND Window)
 {
@@ -479,6 +511,7 @@ internal void
 Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
                            HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
+#if 0
     if((WindowWidth >= Buffer->Width*2) &&
        (WindowHeight >= Buffer->Height*2))
     {
@@ -511,6 +544,11 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
                       &Buffer->Info,
                       DIB_RGB_COLORS, SRCCOPY);
     }
+#endif
+    glViewport(0, 0, WindowWidth, WindowHeight);
+    glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    SwapBuffers(DeviceContext);
 }
 
 internal LRESULT CALLBACK
@@ -1662,6 +1700,7 @@ WinMain(HINSTANCE Instance,
         if(Window)
         {
             ToggleFullScreen(Window);
+            Win32InitOpenGL(Window);
 
             win32_sound_output SoundOutput = {};
 
