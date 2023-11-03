@@ -27,6 +27,12 @@
    - Lighting
    - Final Optimisation
 
+ - Hardware Rendering
+   - sRGB framebuffer and textures
+   - Vsync
+   - Background texture downloads
+   - Render-to-texture
+
  ARCHITECTURE EXPLORATION
  - Z
    - Need to make a solid concept of ground levels so the camera can

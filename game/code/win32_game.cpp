@@ -25,6 +25,7 @@ TODO: Additional Platform Layer Code
 #include <gl/gl.h>
 
 #include "win32_game.h"
+#include "game_opengl.cpp"
 
 // TODO: This is a global for now
 global_variable bool32 GlobalRunning;
@@ -554,6 +555,8 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
                       DIB_RGB_COLORS, SRCCOPY);
     }
 #endif
+
+#if 0
     glViewport(0, 0, WindowWidth, WindowHeight);
 
     glBindTexture(GL_TEXTURE_2D, GlobalBlitTextureHandle);
@@ -620,6 +623,7 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
     glVertex2f(MinP.x, MaxP.y);
 
     glEnd();
+#endif
 
     SwapBuffers(DeviceContext);
 }
@@ -1844,6 +1848,8 @@ WinMain(HINSTANCE Instance,
 
             GameMemory.PlatformAPI.AllocateMemory = Win32AllocateMemory;
             GameMemory.PlatformAPI.DeallocateMemory = Win32DeallocateMemory;
+
+            GameMemory.PlatformAPI.RenderToOpenGL = OpenGLRenderGroupToOutput;
 
 #if GAME_INTERNAL
             GameMemory.PlatformAPI.DEBUGFreeFileMemory = DEBUGPlatformFreeFileMemory;

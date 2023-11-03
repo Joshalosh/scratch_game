@@ -290,6 +290,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Immediate)
                 Bitmap->Width = Info->Dim[0];
                 Bitmap->Height = Info->Dim[1];
                 Bitmap->Pitch = Size.Section;
+                Bitmap->Handle = 0;
                 Bitmap->Memory = (Asset->Header + 1);
 
                 load_asset_work Work;

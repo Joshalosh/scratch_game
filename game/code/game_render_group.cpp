@@ -707,8 +707,8 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
     if(Count == 1)
     {
         // NOTE: Nothing to do
-    } 
-    else if (Count == 2)
+    }
+    else if(Count == 2)
     {
         tile_sort_entry *EntryA = First;
         tile_sort_entry *EntryB = First + 1;
@@ -717,7 +717,7 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
             Swap(EntryA, EntryB);
         }
     }
-    else 
+    else
     {
         u32 Half0 = Count / 2;
         u32 Half1 = Count - Half0;
@@ -729,7 +729,6 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
         tile_sort_entry *InHalf1 = First + Half0;
         tile_sort_entry *End = First + Count;
 
-
         MergeSort(Half0, InHalf0, Temp);
         MergeSort(Half1, InHalf1, Temp);
 
@@ -740,7 +739,7 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
         for(u32 Index = 0; Index < Count; ++Index)
         {
             if(ReadHalf0 == InHalf1)
-            {        
+            {
                 *Out++ = *ReadHalf1++;
             }
             else if(ReadHalf1 == End)
@@ -751,7 +750,7 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
             {
                 *Out++ = *ReadHalf0++;
             }
-            else 
+            else
             {
                 *Out++ = *ReadHalf1++;
             }
@@ -777,7 +776,6 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
         for(u32 OutIndex = 0; OutIndex < Count; ++OutIndex)
         {
         }
-        Assert(Out == (First + Count));
 #endif
     }
 }
@@ -819,7 +817,7 @@ SortKeyToU32(r32 SortKey)
     {
         Result = ~Result;
     }
-    else 
+    else
     {
         Result |= 0x80000000;
     }
@@ -866,7 +864,7 @@ RadixSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
     }
 }
 
-internal void 
+internal void
 SortEntries(render_group *RenderGroup, memory_arena *TempArena)
 {
     temporary_memory Temp = BeginTemporaryMemory(TempArena);
@@ -879,13 +877,28 @@ SortEntries(render_group *RenderGroup, memory_arena *TempArena)
     // MergeSort(Count, Entries, TempSpace);
     RadixSort(Count, Entries, TempSpace);
 
-#if GAME_SLOW
-    for(u32 Index = 0; Index < (Count - 1); ++Index)
-    {
-        tile_sort_entry *EntryA = Entries + Index;
-        tile_sort_entry *EntryB = EntryA + 1;
+    u32 ResultA = SortKeyToU32(-1.0f);
+    u32 ResultB = SortKeyToU32(-2.0f);
+    u32 ResultC = SortKeyToU32(-3.0f);
+    u32 ResultD = SortKeyToU32(-4.0f);
+    u32 ResultE = SortKeyToU32(-5.5f);
 
-        Assert(EntryA->SortKey <= EntryB->SortKey);
+    u32 ResultF = SortKeyToU32(1.0f);
+    u32 ResultG = SortKeyToU32(2.0f);
+    u32 ResultH = SortKeyToU32(3.0f);
+    u32 ResultI = SortKeyToU32(4.0f);
+    u32 ResultJ = SortKeyToU32(5.5f);
+
+#if GAME_SLOW
+    if(Count)
+    {
+        for(u32 Index = 0; Index < (Count - 1); ++Index)
+        {
+            tile_sort_entry *EntryA = Entries + Index;
+            tile_sort_entry *EntryB = EntryA + 1;
+
+            Assert(EntryA->SortKey <= EntryB->SortKey);
+        }
     }
 #endif
 
@@ -924,9 +937,6 @@ TiledRenderGroupToOutput(platform_work_queue *RenderQueue,
                          memory_arena *TempArena)
 {
     TIMED_FUNCTION();
-
-    // TODO: Don't do this twice
-    SortEntries(RenderGroup, TempArena);
 
     Assert(RenderGroup->InsideRender);
 
@@ -1363,4 +1373,22 @@ AllResourcesPresent(render_group *Group)
     bool32 Result = (Group->MissingResourceCount == 0);
 
     return(Result);
+}
+
+inline void
+RenderToOutput(platform_work_queue *RenderQueue,
+               render_group *RenderGroup, loaded_bitmap *OutputTarget,
+               memory_arena *TempArena)
+{
+    // TODO: Don't do this twice?
+    SortEntries(RenderGroup, TempArena);
+
+    if(1) //RenderGroup->IsHardware)
+    {
+        Platform.RenderToOpenGL(RenderGroup, OutputTarget);
+    }
+    else  
+    {
+        TiledRenderGroupToOutput(RenderQueue, RenderGroup, OutputTarget, TempArena);
+    }
 }
