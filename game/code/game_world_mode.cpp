@@ -317,6 +317,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 
     fill_ground_chunk_work *Work = (fill_ground_chunk_work *)Data;
 
+#if 0
     loaded_bitmap *Buffer = &Work->GroundBuffer->Bitmap;
     Buffer->AlignPercentage = V2(0.5f, 0.5f);
     Buffer->WidthOverHeight = 1.0f;
@@ -327,7 +328,8 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
     v2 HalfDim = 0.5f*V2(Width, Height);
 
     // TODO: Decide what the pushbuffer size is.
-    render_group *RenderGroup = AllocateRenderGroup(Work->TranState->Assets, &Work->Task->Arena, Kilobytes(512), true);
+    render_group = BeginRenderGroup(Work->TranState->Assets, ChunkGeneration, true);
+    render_group *RenderGroup = 
     BeginRender(RenderGroup);
     Orthographic(RenderGroup, Buffer->Width, Buffer->Height, (Buffer->Width - 2) / Width);
     Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));
@@ -399,6 +401,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
 
     RenderGroupToOutput(RenderGroup, Buffer, &Work->Task->Arena);
     EndRender(RenderGroup);
+#endif
 
     EndTaskWithMemory(Work->Task);
 }

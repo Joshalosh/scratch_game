@@ -58,7 +58,7 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
     Assert(Pitch == (Width*4));
     glViewport(0, 0, Width, Height);
 
-    glBindTexture(GL_TEXTURE_2D, GlobalBlitTextureHandle);
+    glBindTexture(GL_TEXTURE_2D, 1);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Width, Height, 0,
                  GL_BGRA_EXT, GL_UNSIGNED_BYTE, Memory);

@@ -222,7 +222,7 @@ struct debug_state
     memory_arena DebugArena;
     memory_arena PerFrameArena;
 
-    render_group *RenderGroup;
+    render_group RenderGroup;
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
 

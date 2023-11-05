@@ -331,8 +331,8 @@ typedef struct game_render_commnads
     u32 PushBufferElementCount;
     u32 SortEntryAt;
 } game_render_commands;
-#define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height, GenerationID) \
-    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, 0, MaxPushBufferSize, GenerationID};
+#define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
+    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, 0, MaxPushBufferSize};
 
 typedef struct game_sound_output_buffer
 {

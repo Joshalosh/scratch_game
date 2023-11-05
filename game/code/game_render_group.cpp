@@ -1,49 +1,25 @@
 
-internal void
-ClearRenderValues(render_group *RenderGroup)
+inline render_group
+BegineRenderGroup(game_assets *Assets, game_render_commands *Commands,
+                  u32 GenerationID, b32 RendersInBackground)
 {
-}
+    render_group Result = {};
 
-internal render_group *
-AllocateRenderGroup(game_assets *Assets, memory_arena *Arena, uint32_t MaxPushBufferSize,
-                    b32 RendersInBackground)
-{
-    render_group *Result = PushStruct(Arena, render_group);
-
-    if(MaxPushBufferSize == 0)
-    {
-        // TODO: Safe cast from memory_index to uint32_t.
-        MaxPushBufferSize = (uint32_t)GetArenaSizeRemaining(Arena);
-    }
-    Result->PushBufferBase = (uint8_t *)PushSize(Arena, MaxPushBufferSize, NoClear());
-    Result->MaxPushBufferSize = MaxPushBufferSize;
-
-    Result->Assets = Assets;
-    Result->RendersInBackground = RendersInBackground;
-    Result->InsideRender = false;
-
-    RenderGroup->SortEntryAt = RenderGroup->MaxPushBufferSize;
-    RenderGroup->PushBufferSize = 0;
-    RenderGroup->PushBufferElementCount = 0;
-    RenderGroup->GenerationID = 0;
-    RenderGroup->GlobalAlpha = 1.0f;
-    RenderGroup->MissingResourceCount = 0;
+    Result.Assets = Assets;
+    Result.RendersInBackground = RendersInBackground;
+    Result.GlobalAlpha = 1.0f;
+    Result.MissingResourceCount = 0;
+    Result.GenerationID = GenerationID;
+    Result.Commands = Commands;
 
     return(Result);
 }
 
-internal void
-EndRender(render_group *Group)
+inline void
+EndRenderGroup(render_group *RenderGroup)
 {
-    if(Group)
-    {
-        Assert(Group->InsideRender);
-        Group->InsideRender = false;
-
-        EndGeneration(Group->Assets, Group->GenerationID);
-
-        ClearRenderValues(Group);
-    }
+    // TODO: Implement
+    // RenderGroup->Commands->MissingResourceCount += RenderGroup->MissingResourceCount;
 }
 
 inline void
@@ -129,25 +105,25 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransf
 inline void *
 PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type, r32 SortKey)
 {
-    Assert(Group->InsideRender);
+    game_render_commands *Commands = Group->Commands;
 
     void *Result = 0;
 
     Size += sizeof(render_group_entry_header);
 
-    if((Group->PushBufferSize + Size) < (Group->SortEntryAt - sizeof(tile_sort_entry)))
+    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(tile_sort_entry)))
     {
-        render_group_entry_header *Header = (render_group_entry_header *)(Group->PushBufferBase + Group->PushBufferSize);
+        render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + Commands->PushBufferSize);
         Header->Type = Type;
         Result = (uint8_t *)Header + sizeof(*Header);
 
-        Group->SortEntryAt -= sizeof(tile_sort_entry);
-        tile_sort_entry *Entry = (tile_sort_entry *)(Group->PushBufferBase + Group->SortEntryAt);
+        Commands->SortEntryAt -= sizeof(tile_sort_entry);
+        tile_sort_entry *Entry = (tile_sort_entry *)(Commands->PushBufferBase + Commands->SortEntryAt);
         Entry->SortKey = SortKey;
-        Entry->PushBufferOffset = Group->PushBufferSize;
+        Entry->PushBufferOffset = Commands->PushBufferSize;
 
-        Group->PushBufferSize += Size;
-        ++Group->PushBufferElementCount;
+        Commands->PushBufferSize += Size;
+        ++Commands->PushBufferElementCount;
     }
     else
     {

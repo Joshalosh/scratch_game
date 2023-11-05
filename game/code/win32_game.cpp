@@ -524,6 +524,12 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
 {
     SortEntries(Commands);
 
+    /* TODO: Do I want to check for resources like before? Probably... yes
+    if(AllResourcesPresent(RenderGroup))
+    {
+        RenderToOutput(TranState->HighPriorityQueue, RenderGroup, &DrawBuffer, &TranState->TranArena);
+    }
+    */
     b32 InHardware = true;
     b32 DisplayViaHardware = true;
     if(InHardware)

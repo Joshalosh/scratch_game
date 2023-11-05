@@ -129,7 +129,8 @@ struct render_group
     uint32_t MissingResourceCount;
     b32 RendersInBackground;
 
-    b32 InsideRender;
+    u32 GenerationID;
+    game_render_commands *Commands;
 };
 
 struct entity_basis_p_result
