@@ -321,8 +321,8 @@ typedef struct game_offscreen_buffer
 
 typedef struct game_render_commnads
 {
-    int Width;
-    int Height;
+    u32 Width;
+    u32 Height;
 
     u32 MaxPushBufferSize;
     u32 PushBufferSize;
@@ -330,8 +330,9 @@ typedef struct game_render_commnads
 
     u32 PushBufferElementCount;
     u32 SortEntryAt;
-
 } game_render_commands;
+#define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height, GenerationID) \
+    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, 0, MaxPushBufferSize, GenerationID};
 
 typedef struct game_sound_output_buffer
 {
