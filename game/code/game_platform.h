@@ -309,7 +309,6 @@ extern struct game_memory *DebugGlobalMemory;
 
 // FOUR THINGS - timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
 
-// TODO: In the future, rendering _specifically_ will become a three-tiered abstraction
 #define BITMAP_BYTES_PER_PIXEL 4
 typedef struct game_offscreen_buffer
 {
@@ -319,6 +318,20 @@ typedef struct game_offscreen_buffer
     int Height;
     int Pitch;
 } game_offscreen_buffer;
+
+typedef struct game_render_commnads
+{
+    int Width;
+    int Height;
+
+    u32 MaxPushBufferSize;
+    u32 PushBufferSize;
+    u8 *PushBufferBase;
+
+    u32 PushBufferElementCount;
+    u32 SortEntryAt;
+
+} game_render_commands;
 
 typedef struct game_sound_output_buffer
 {
@@ -508,7 +521,7 @@ typedef struct game_memory
     platform_api PlatformAPI;
 } game_memory;
 
-#define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer)
+#define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_render_commands *RenderCommands)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 
 // At the moment, this has to be a very fast function, it cannot be

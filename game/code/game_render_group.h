@@ -128,13 +128,6 @@ struct render_group
 
     camera_transform CameraTransform;
 
-    u32 MaxPushBufferSize;
-    u32 PushBufferSize;
-    u8 *PushBufferBase;
-
-    u32 PushBufferElementCount;
-    u32 SortEntryAt;
-
     uint32_t MissingResourceCount;
     b32 RendersInBackground;
 

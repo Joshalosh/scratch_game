@@ -347,23 +347,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     //
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
 
-    loaded_bitmap DrawBuffer_ = {};
-    loaded_bitmap *DrawBuffer = &DrawBuffer_;
-    DrawBuffer->Width = Buffer->Width;
-    DrawBuffer->Height = Buffer->Height;
-    DrawBuffer->Pitch = Buffer->Pitch;
-    DrawBuffer->Memory = Buffer->Memory;
-
-    DEBUG_IF(Renderer_TestWeirdDrawBufferSize)
-    {
-        // Enable this to test weird buffer sizes in the renderer.
-        DrawBuffer->Width = 1279;
-        DrawBuffer->Height = 719;
-    }
-
     // TODO: Need to figure out what the pushbuffer size is.
     render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(4), false);
-    BeginRender(RenderGroup);
+    BeginRender(RenderGroup, PushBuffer);
 
     b32 Rerun = false;
     do

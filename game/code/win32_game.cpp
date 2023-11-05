@@ -2121,6 +2121,10 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK(GameUpdate);
 
+                    // TODO: Need to figure out what the pushbuffer size is.
+                    render_group *RenderGroup = AllocateRenderGroup(TranState->Assets, &TranState->TranArena, Megabytes(4), false);
+                    BeginRender(RenderGroup);
+
                     game_offscreen_buffer Buffer = {};
                     Buffer.Memory = GlobalBackbuffer.Memory;
                     Buffer.Width = GlobalBackbuffer.Width;
