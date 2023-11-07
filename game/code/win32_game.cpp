@@ -522,7 +522,7 @@ internal void
 Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_commands *Commands,
                            HDC DeviceContext, s32 WindowWidth, s32 WindowHeight)
 {
-    SortEntries(Commands);
+    SortEntries(Commands, SortMemory);
 
     /* TODO: Do I want to check for resources like before? Probably... yes
     if(AllResourcesPresent(RenderGroup))
