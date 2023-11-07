@@ -91,7 +91,7 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
 // TODO: Get rid of this
 global_variable u32 TextureBindCount = 0;
 internal void
-OpenGLRenderGroupToOutput(game_render_commands *Commands, s32 WindowWidth, s32 WindowHeight)
+OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 WindowHeight)
 {
     glViewport(0, 0, Commands->Width, Commands->Height);
 

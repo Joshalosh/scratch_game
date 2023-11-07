@@ -57,8 +57,6 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransf
                                                    object_transform ObjectTransform,
                                                    v3 OriginalP)
 {
-    IGNORED_TIMED_FUNCTION();
-
     entity_basis_p_result Result = {};
 
     v3 P = V3(OriginalP.xy, 0.0f) + ObjectTransform.OffsetP;

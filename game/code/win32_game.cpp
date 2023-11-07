@@ -24,6 +24,8 @@ TODO: Additional Platform Layer Code
 #include <dsound.h>
 #include <gl/gl.h>
 
+global_variable platform_api Platform;
+
 #include "win32_game.h"
 #include "game_opengl.cpp"
 #include "game_render.cpp"
@@ -520,7 +522,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 internal void
 Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_commands *Commands,
-                           HDC DeviceContext, s32 WindowWidth, s32 WindowHeight)
+                           HDC DeviceContext, s32 WindowWidth, s32 WindowHeight, void *SortMemory)
 {
     SortEntries(Commands, SortMemory);
 
@@ -530,35 +532,42 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
         RenderToOutput(TranState->HighPriorityQueue, RenderGroup, &DrawBuffer, &TranState->TranArena);
     }
     */
+
     b32 InHardware = true;
     b32 DisplayViaHardware = true;
     if(InHardware)
     {
-        RenderToOpenGL(Commands, WindowWidth, WindowHeight);
-
+        OpenGLRenderCommands(Commands, WindowWidth, WindowHeight);
         SwapBuffers(DeviceContext);
     }
     else 
     {
-        TiledRenderGroupToOutput(RenderQueue, Commands, OutputTarget);
+        loaded_bitmap OutputTarget;
+        OutputTarget.Memory = GlobalBackbuffer.Memory;
+        OutputTarget.Width = GlobalBackbuffer.Width;
+        OutputTarget.Height = GlobalBackbuffer.Height;
+        OutputTarget.Pitch = GlobalBackbuffer.Pitch;
+
+        SoftwareRenderCommands(RenderQueue, Commands, &OutputTarget);
 
         if(DisplayViaHardware)
         {
-            DisplayBitmapViaOpenGL();
+            OpenGLDisplayBitmap(GlobalBackbuffer.Width, GlobalBackbuffer.Height, GlobalBackbuffer.Memory,
+                                GlobalBackbuffer.Pitch, WindowWidth, WindowHeight);
             SwapBuffers(DeviceContext);
         }
         else 
         {
             // TODO: Am I gonna do centering or black bars?
 
-            if((WindowWidth >= Buffer->Width*2) &&
-               (WindowHeight >= Buffer->Height*2))
+            if((WindowWidth >= GlobalBackbuffer.Width*2) &&
+               (WindowHeight >= GlobalBackbuffer.Height*2))
             {
                 StretchDIBits(DeviceContext,
-                              0, 0, 2*Buffer->Width, 2*Buffer->Height,
-                              0, 0, Buffer->Width, Buffer->Height,
-                              Buffer->Memory,
-                              &Buffer->Info,
+                              0, 0, 2*GlobalBackbuffer.Width, 2*GlobalBackbuffer.Height,
+                              0, 0, GlobalBackbuffer.Width, GlobalBackbuffer.Height,
+                              GlobalBackbuffer.Memory,
+                              &GlobalBackbuffer.Info,
                               DIB_RGB_COLORS, SRCCOPY);
             }
             else
@@ -577,10 +586,10 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
 #endif
 
                 StretchDIBits(DeviceContext,
-                              OffsetX, OffsetY, Buffer->Width, Buffer->Height,
-                              0, 0, Buffer->Width, Buffer->Height,
-                              Buffer->Memory,
-                              &Buffer->Info,
+                              OffsetX, OffsetY, GlobalBackbuffer.Width, GlobalBackbuffer.Height,
+                              0, 0, GlobalBackbuffer.Width, GlobalBackbuffer.Height,
+                              GlobalBackbuffer.Memory,
+                              &GlobalBackbuffer.Info,
                               DIB_RGB_COLORS, SRCCOPY);
             }
         }
@@ -1766,6 +1775,9 @@ WinMain(HINSTANCE Instance,
 
             GlobalRunning = true;
 
+            umm CurrentSortMemorySize = Megabytes(1);
+            void *SortMemory = Win32AllocateMemory(CurrentSortMemorySize);
+
 #if 0
             // This tests the PlayCursor/WriteCursor update frequency
             // on the game machine, it was 480 samples
@@ -1810,8 +1822,6 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.AllocateMemory = Win32AllocateMemory;
             GameMemory.PlatformAPI.DeallocateMemory = Win32DeallocateMemory;
 
-            GameMemory.PlatformAPI.RenderToOpenGL = OpenGLRenderGroupToOutput;
-
 #if GAME_INTERNAL
             GameMemory.PlatformAPI.DEBUGFreeFileMemory = DEBUGPlatformFreeFileMemory;
             GameMemory.PlatformAPI.DEBUGReadEntireFile = DEBUGPlatformReadEntireFile;
@@ -1819,6 +1829,8 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.DEBUGExecuteSystemCommand = DEBUGExecuteSystemCommand;
             GameMemory.PlatformAPI.DEBUGGetProcessState = DEBUGGetProcessState;
 #endif
+
+            Platform = GameMemory.PlatformAPI;
 
             Win32State.TotalSize = (GameMemory.PermanentStorageSize + 
                                     GameMemory.TransientStorageSize + 
@@ -2085,9 +2097,9 @@ WinMain(HINSTANCE Instance,
                     // TODO: Need to figure out what the pushbuffer size is.
                     u32 PushBufferSize = MegaBytes(4);
                     void *PushBuffer = VirtualAlloc;
-                    game_render_command RenderCommands = RenderCommanStruct(PushBufferSize, PushBuffer,
-                                                                            GlobalBackBuffer.Width,
-                                                                            GlobalBackBuffer.Height);
+                    game_render_command RenderCommands = RenderCommandStruct(PushBufferSize, PushBuffer,
+                                                                            GlobalBackbuffer.Width,
+                                                                            GlobalBackbuffer.Height);
 
                     game_offscreen_buffer Buffer = {};
                     Buffer.Memory = GlobalBackbuffer.Memory;
@@ -2338,10 +2350,18 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK(FrameDisplay);
 
+                    umm NeededSortMemorySize = RenderCommands.PushBufferElementCount * sizeof(tile_sort_entry);
+                    if(CurrentSortMemorySize < NeededSortMemorySize)
+                    {
+                        Win32DeallocateMemory(SortMemory);
+                        CurrentSortMemorySize = NeededSortMemorySize;
+                        SortMemory = Win32AllocateMemory(CurrentSortMemorySize);
+                    }
+
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     HDC DeviceContext = GetDC(Window);
-                    Win32DisplayBufferInWindow(&RenderCommands, DeviceContext,
-                                               Dimension.Width, Dimension.Height);
+                    Win32DisplayBufferInWindow(&HighPriorityQueue, &RenderCommands, DeviceContext,
+                                               Dimension.Width, Dimension.Height, SortMemory);
                     ReleaseDC(Window, DeviceContext);
 
                     FlipWallClock = Win32GetWallClock();

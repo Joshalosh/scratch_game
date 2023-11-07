@@ -333,7 +333,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // if I don't use ground chunks, it's a huge waste of effort
     if(TranState->MainGenerationID)
     {
-        EndGeneration(TranState->Assets, TranState->MainGeneratrionID);
+        EndGeneration(TranState->Assets, TranState->MainGenerationID);
     }
     TranState->MainGenerationID = BeginGeneration(TranState->Assets);
 
