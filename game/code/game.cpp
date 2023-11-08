@@ -372,7 +372,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // TODO: Need to figure out what the pushbuffer size is.
     render_group RenderGroup_ = BeginRenderGroup(TranState->Assets, RenderCommands, TranState->MainGenerationID, false);
-    render_group = &RenderGroup_;
+    render_group *RenderGroup = &RenderGroup_;
 
     // TODO: Eliminate these entirely
     loaded_bitmap DrawBuffer = {};

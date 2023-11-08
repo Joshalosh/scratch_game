@@ -1247,7 +1247,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 
     tile_render_work *Work = (tile_render_work *)Data;
 
-    RenderGroupToOutput(Work->Commands, Work->OutputTarget, Work->ClipRect);
+    RenderCommandsToBitmap(Work->Commands, Work->OutputTarget, Work->ClipRect);
 }
 
 internal void

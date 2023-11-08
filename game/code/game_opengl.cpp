@@ -2,7 +2,7 @@
 #include "game_render_group.h"
 
 inline void
-OpenGLSetScreenspace(s32 Width, s32 Height);
+OpenGLSetScreenspace(s32 Width, s32 Height)
 {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -143,7 +143,7 @@ OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 Window
                     Entry->Bitmap->Handle = ++TextureBindCount;
                     glBindTexture(GL_TEXTURE_2D, Entry->Bitmap->Handle);
 
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Entry->Bitmap->Width, Entry->Bitmap->Height, 0,
+                    glTexImage2D(GL_TEXTURE_2D, 0, OpenGLDefaultInternalTextureFormat, Entry->Bitmap->Width, Entry->Bitmap->Height, 0,
                                  GL_BGRA_EXT, GL_UNSIGNED_BYTE, Entry->Bitmap->Memory);
 
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

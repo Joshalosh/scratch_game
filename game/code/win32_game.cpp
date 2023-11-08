@@ -24,21 +24,25 @@ TODO: Additional Platform Layer Code
 #include <dsound.h>
 #include <gl/gl.h>
 
-global_variable platform_api Platform;
-
 #include "win32_game.h"
-#include "game_opengl.cpp"
-#include "game_render.cpp"
+
+global_variable platform_api Platform;
 
 // TODO: This is a global for now
 global_variable bool32 GlobalRunning;
 global_variable bool32 GlobalPause;
+global_variable b32 GlobalUseSoftwareRendering;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable int64_t GlobalPerfCountFrequency;
 global_variable bool32 DEBUGGlobalShowCursor;
 global_variable WINDOWPLACEMENT GlobalWindowPosition = {sizeof(GlobalWindowPosition)};
 global_variable GLuint GlobalBlitTextureHandle;
+
+global_variable GLuint OpenGLDefaultInternalTextureFormat;
+
+#include "game_opengl.cpp"
+#include "game_render.cpp"
 
 // XInputGetState
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
@@ -62,6 +66,9 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
+typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
+global_variable wgl_swap_interval_ext *wglSwapInterval;
 
 internal void
 CatStrings(size_t SourceACount, char *SourceA,
@@ -461,8 +468,25 @@ Win32InitOpenGL(HWND Window)
     HGLRC OpenGLRC = wglCreateContext(WindowDC);
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
-        // NOTE: Success
-        glGenTextures(1, &GlobalBlitTextureHandle);
+#define GL_FRAMEBUFFER_SRGB 0x8DB9
+#define GL_SRGB8_ALPHA8    0x8C43
+        OpenGLDefaultInternalTextureFormat = GL_RGBA8;
+        // TODO: Actually check for extensions
+        //if(OpenGLExtensionIsAvailable())
+        {
+            OpenGLDefaultInternalTextureFormat = GL_SRGB8_ALPHA8;
+        }
+
+        //if(OpenGLExtensionIsAvailable())
+        {
+            glEnable(GL_FRAMEBUFFER_SRGB);
+        }
+
+        wglSwapInterval = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
+        if(wglSwapInterval)
+        {
+            wglSwapInterval(1);
+        }
     }
     else
     {
@@ -533,14 +557,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
     }
     */
 
-    b32 InHardware = true;
-    b32 DisplayViaHardware = true;
-    if(InHardware)
-    {
-        OpenGLRenderCommands(Commands, WindowWidth, WindowHeight);
-        SwapBuffers(DeviceContext);
-    }
-    else 
+    DEBUG_IF(Renderer_UseSoftware)
     {
         loaded_bitmap OutputTarget;
         OutputTarget.Memory = GlobalBackbuffer.Memory;
@@ -550,6 +567,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
 
         SoftwareRenderCommands(RenderQueue, Commands, &OutputTarget);
 
+        b32 DisplayViaHardware = true;
         if(DisplayViaHardware)
         {
             OpenGLDisplayBitmap(GlobalBackbuffer.Width, GlobalBackbuffer.Height, GlobalBackbuffer.Memory,
@@ -593,6 +611,11 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
                               DIB_RGB_COLORS, SRCCOPY);
             }
         }
+    }
+    else 
+    {
+        OpenGLRenderCommands(Commands, WindowWidth, WindowHeight);
+        SwapBuffers(DeviceContext);
     }
 }
 
@@ -1778,6 +1801,10 @@ WinMain(HINSTANCE Instance,
             umm CurrentSortMemorySize = Megabytes(1);
             void *SortMemory = Win32AllocateMemory(CurrentSortMemorySize);
 
+            // TODO: Need to figure out what the pushbuffer size is.
+            u32 PushBufferSize = Megabytes(4);
+            void *PushBuffer = Win32AllocateMemory(CurrentSortMemorySize);
+
 #if 0
             // This tests the PlayCursor/WriteCursor update frequency
             // on the game machine, it was 480 samples
@@ -2094,10 +2121,7 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK(GameUpdate);
 
-                    // TODO: Need to figure out what the pushbuffer size is.
-                    u32 PushBufferSize = MegaBytes(4);
-                    void *PushBuffer = VirtualAlloc;
-                    game_render_command RenderCommands = RenderCommandStruct(PushBufferSize, PushBuffer,
+                    game_render_commands RenderCommands = RenderCommandStruct(PushBufferSize, PushBuffer,
                                                                             GlobalBackbuffer.Width,
                                                                             GlobalBackbuffer.Height);
 

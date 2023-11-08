@@ -10,4 +10,5 @@
 #define GlobalConstants_Particles_Test 0
 #define GlobalConstants_Particles_ShowGrid 0
 #define GlobalConstants_Simulation_UseSpaceOutlines 0
+#define GlobalConstants_Renderer_UseSoftware 0
 

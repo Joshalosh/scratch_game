@@ -1,6 +1,6 @@
 
 inline render_group
-BegineRenderGroup(game_assets *Assets, game_render_commands *Commands,
+BeginRenderGroup(game_assets *Assets, game_render_commands *Commands,
                   u32 GenerationID, b32 RendersInBackground)
 {
     render_group Result = {};
