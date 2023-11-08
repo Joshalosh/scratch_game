@@ -126,7 +126,7 @@ global_variable scene_layer IntroLayers3[] =
 
 global_variable scene_layer IntroLayers4[] =
 {
-    {{0.0f, 0.0f, -4.0f}, 6.0f},
+    {{0.0f, 0.0f, -4.1f}, 6.0f},
     {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {0.0f, 0.5f}},
     {{-1.2f, -0.2f, -4.0f}, 4.0f, SceneLayerFlag_Transient, {0.5f, 1.0f}},
     {{2.25f, -1.5f, -3.0f}, 2.0f},
