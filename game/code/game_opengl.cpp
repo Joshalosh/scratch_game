@@ -1,6 +1,8 @@
 
 #include "game_render_group.h"
 
+#define GL_FRAMEBUFFER_SRGB 0x8DB9
+#define GL_SRGB8_ALPHA8     0x8C43
 inline void
 OpenGLSetScreenspace(s32 Width, s32 Height)
 {

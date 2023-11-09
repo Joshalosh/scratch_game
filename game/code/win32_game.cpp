@@ -1,8 +1,5 @@
 /*
 TODO: Additional Platform Layer Code
-  - Hardware acceleration (OpenGL or Direct3D or both?)
-  - Blit speed improvements (BitBlt)
-
   - Saved game locations
   - Getting a handle to our own executable file
   - Raw Input (support for multiple keyboards)
@@ -468,8 +465,6 @@ Win32InitOpenGL(HWND Window)
     HGLRC OpenGLRC = wglCreateContext(WindowDC);
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
-#define GL_FRAMEBUFFER_SRGB 0x8DB9
-#define GL_SRGB8_ALPHA8    0x8C43
         OpenGLDefaultInternalTextureFormat = GL_RGBA8;
         // TODO: Actually check for extensions
         //if(OpenGLExtensionIsAvailable())
