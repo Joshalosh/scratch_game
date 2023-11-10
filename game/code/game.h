@@ -85,8 +85,7 @@
 */
 
 #include "game_platform.h"
-#include "game_intrinsics.h"
-#include "game_math.h"
+#include "game_shared.h"
 #include "game_random.h"
 #include "game_file_formats.h"
 #include "game_meta.h"
@@ -127,49 +126,6 @@ struct temporary_memory
 #define Minimum(A, B) ((A < B) ? (A) : (B))
 #define Maximum(A, B) ((A > B) ? (A) : (B))
 
-inline b32
-StringsAreEqual(char *A, char *B)
-{
-    b32 Result = (A == B);
-
-    if(A && B)
-    {
-        while(*A && *B && (*A == *B))
-        {
-            ++A;
-            ++B;
-        }
-        
-        Result = ((*A == 0) && (*B == 0));
-    }
-
-    return(Result);
-}
-
-inline b32
-StringsAreEqual(memory_index ALength, char *A, memory_index BLength, char *B)
-{
-    b32 Result = (ALength == BLength);
-
-    if(Result)
-    {
-        Result = true;
-        for(u32 Index = 0; Index < ALength; ++Index)
-        {
-            if(A[Index] != B[Index])
-            {
-                Result = false;
-                break;
-            }
-        }
-    }
-
-    return(Result);
-}
-
-//
-//
-//
 
 #define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))
 #define ZeroArray(Count, Pointer) ZeroSize(Count*sizeof((Pointer)[0]), Pointer)

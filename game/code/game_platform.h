@@ -81,7 +81,7 @@ typedef uint64_t u64;
 typedef real32 r32;
 typedef real64 r64;
 
-typedef u64 umm;
+typedef uintptr_t umm;
 
 #define PointerToU32(Pointer) ((u32)(memory_index)(Pointer))
 

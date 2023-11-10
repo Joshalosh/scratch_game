@@ -11,8 +11,7 @@ TODO: Additional Platform Layer Code
 */
 
 #include "game_platform.h"
-#include "game_intrinsics.h"
-#include "game_math.h"
+#include "game_shared.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -26,13 +25,13 @@ TODO: Additional Platform Layer Code
 global_variable platform_api Platform;
 
 // TODO: This is a global for now
-global_variable bool32 GlobalRunning;
-global_variable bool32 GlobalPause;
+global_variable b32 GlobalRunning;
+global_variable b32 GlobalPause;
 global_variable b32 GlobalUseSoftwareRendering;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
-global_variable int64_t GlobalPerfCountFrequency;
-global_variable bool32 DEBUGGlobalShowCursor;
+global_variable s64 GlobalPerfCountFrequency;
+global_variable b32 DEBUGGlobalShowCursor;
 global_variable WINDOWPLACEMENT GlobalWindowPosition = {sizeof(GlobalWindowPosition)};
 global_variable GLuint GlobalBlitTextureHandle;
 
@@ -66,6 +65,8 @@ typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
 typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
 global_variable wgl_swap_interval_ext *wglSwapInterval;
+
+typedef HGLRC WINAPI wgl_create_context_attribts_arb(HDC hDC, HGLRC hShareContext, const int *attribList);
 
 internal void
 CatStrings(size_t SourceACount, char *SourceA,
@@ -465,17 +466,43 @@ Win32InitOpenGL(HWND Window)
     HGLRC OpenGLRC = wglCreateContext(WindowDC);
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
-        OpenGLDefaultInternalTextureFormat = GL_RGBA8;
-        // TODO: Actually check for extensions
-        //if(OpenGLExtensionIsAvailable())
+        b32 ModernContext = false;
+
+        wgl_create_context_attribts_arb *wglCreateContextAttribsARB =
+        (wgl_create_context_attribts_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
+        if(wglCreateContextAttribsARB)
         {
-            OpenGLDefaultInternalTextureFormat = GL_SRGB8_ALPHA8;
+            // NOTE: This is a modern version of OpenGL
+            int Attribs[] =
+            {
+                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+                WGL_CONTEXT_MINOR_VERSION_ARB, 0,
+                WGL_CONTEXT_FLAGS_ARB, 0 // NOTE: Enable for testing WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
+#if GAME_INTERNAL
+                |WGL_CONTEXT_DEBUG_BIT_ARB
+#endif
+                ,
+                WGL_CONTEXT_PROFILE_MASK_ARB,
+            };
+
+            HGLRC ShareContext = 0;
+            HGLRC ModernGLRC = wglCreateContextAttribsARB(WindowDC, ShareContext, Attribs);
+            if(ModernGLRC)
+            {
+                if(wglMakeCurrent(WindowDC, ModernGLRC))
+                {
+                    ModernContext = true;
+                    wglDeleteContext(OpenGLRC);
+                    OpenGLRC = ModernGLRC;
+                }
+            }
+        }
+        else 
+        {
+            // NOTE: This is an antiquated version of OpenGL
         }
 
-        //if(OpenGLExtensionIsAvailable())
-        {
-            glEnable(GL_FRAMEBUFFER_SRGB);
-        }
+        OpenGLInit(ModernContext);
 
         wglSwapInterval = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
         if(wglSwapInterval)
