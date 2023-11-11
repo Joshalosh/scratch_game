@@ -23,11 +23,20 @@ enum asset_state
     AssetState_Loaded,
 };
 
+enum asset_header_type
+{
+    AssetType_None,
+    AssetType_Bitmap,
+    AssetType_Sound,
+    AssetType_Font,
+};
+
 struct asset_memory_header
 {
     asset_memory_header *Next;
     asset_memory_header *Prev;
 
+    u32 AssetType;
     u32 AssetIndex;
     u32 TotalSize;
     u32 GenerationID;

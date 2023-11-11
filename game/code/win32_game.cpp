@@ -35,6 +35,12 @@ global_variable b32 DEBUGGlobalShowCursor;
 global_variable WINDOWPLACEMENT GlobalWindowPosition = {sizeof(GlobalWindowPosition)};
 global_variable GLuint GlobalBlitTextureHandle;
 
+typedef HGLRC WINAPI wgl_create_context_attribts_arb(HDC hDC, HGLRC hShareContext, const int *attribList);
+
+global_variable HGLRC GlobalOpenGLRC;
+global_variable HDC GlobalDC;
+global_variable wgl_create_context_attribts_arb *wglCreateContextAttribsARB;
+
 global_variable GLuint OpenGLDefaultInternalTextureFormat;
 
 #include "game_opengl.cpp"
@@ -65,8 +71,6 @@ typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
 typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
 global_variable wgl_swap_interval_ext *wglSwapInterval;
-
-typedef HGLRC WINAPI wgl_create_context_attribts_arb(HDC hDC, HGLRC hShareContext, const int *attribList);
 
 internal void
 CatStrings(size_t SourceACount, char *SourceA,
@@ -438,6 +442,35 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
     }
 }
 
+int Win32OpenGLAttribs[] =
+{
+    WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+    WGL_CONTEXT_MINOR_VERSION_ARB, 0,
+    WGL_CONTEXT_FLAGS_ARB, 0 // NOTE: Enable for testing WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
+#if GAME_INTERNAL
+    |WGL_CONTEXT_DEBUG_BIT_ARB
+#endif
+    ,
+    WGL_CONTEXT_PROFILE_MASK_ARB,
+};
+internal void
+Win32CreateOpenGLContextForWorkerThread()
+{
+    if(wglCreateContextAttribsARB)
+    {
+        HDC WindowDC = GlobalDC;
+        HGLRC ShareContext = GlobalOpenGLRC;
+        HGLRC ModernGLRC = wglCreateContextAttribsARB(WindowDC, ShareContext, Win32OpenGLAttribs);
+        if(ModernGLRC)
+        {
+            if(wglMakeCurrent(WindowDC, ModernGLRC))
+            {
+                // TODO: Fatal error
+            }
+        }
+    }
+}
+
 internal void
 Win32InitOpenGL(HWND Window)
 {
@@ -468,25 +501,13 @@ Win32InitOpenGL(HWND Window)
     {
         b32 ModernContext = false;
 
-        wgl_create_context_attribts_arb *wglCreateContextAttribsARB =
-        (wgl_create_context_attribts_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
+        wglCreateContextAttribsARB =
+            (wgl_create_context_attribts_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
         if(wglCreateContextAttribsARB)
         {
             // NOTE: This is a modern version of OpenGL
-            int Attribs[] =
-            {
-                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-                WGL_CONTEXT_MINOR_VERSION_ARB, 0,
-                WGL_CONTEXT_FLAGS_ARB, 0 // NOTE: Enable for testing WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
-#if GAME_INTERNAL
-                |WGL_CONTEXT_DEBUG_BIT_ARB
-#endif
-                ,
-                WGL_CONTEXT_PROFILE_MASK_ARB,
-            };
-
             HGLRC ShareContext = 0;
-            HGLRC ModernGLRC = wglCreateContextAttribsARB(WindowDC, ShareContext, Attribs);
+            HGLRC ModernGLRC = wglCreateContextAttribsARB(WindowDC, ShareContext, Win32OpenGLAttribs);
             if(ModernGLRC)
             {
                 if(wglMakeCurrent(WindowDC, ModernGLRC))
@@ -494,6 +515,7 @@ Win32InitOpenGL(HWND Window)
                     ModernContext = true;
                     wglDeleteContext(OpenGLRC);
                     OpenGLRC = ModernGLRC;
+                    GlobalOpenGLRC = OpenGLRC;
                 }
             }
         }
@@ -515,7 +537,8 @@ Win32InitOpenGL(HWND Window)
         InvalidCodePath;
         // TODO: Diagnostic
     }
-    ReleaseDC(Window, WindowDC);
+
+    GlobalDC = WindowDC;
 }
 
 internal win32_window_dimension
@@ -1277,6 +1300,8 @@ struct platform_work_queue
     HANDLE SemaphoreHandle;
 
     platform_work_queue_entry Entries[256];
+
+    b32 NeedsOpenGL;
 };
 
 internal void
@@ -1340,6 +1365,11 @@ ThreadProc(LPVOID lpParameter)
 
     u32 TestThreadID = GetThreadID();
     Assert(TestThreadID == GetCurrentThreadId());
+
+    if(Queue->NeedsOpenGL)
+    {
+        Win32CreateOpenGLContextForWorkerThread();
+    }
 
     for(;;)
     {
@@ -1696,38 +1726,6 @@ WinMain(HINSTANCE Instance,
 {
     win32_state Win32State = {};
 
-    platform_work_queue HighPriorityQueue = {};
-    Win32MakeQueue(&HighPriorityQueue, 6);
-
-    platform_work_queue LowPriorityQueue = {};
-    Win32MakeQueue(&LowPriorityQueue, 2);
-
-#if 0
-    Win32AddEntry(&Queue, DoWorkerWork, "String A0");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A1");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A2");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A3");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A4");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A5");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A6");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A7");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A8");
-    Win32AddEntry(&Queue, DoWorkerWork, "String A9");
-
-    Win32AddEntry(&Queue, DoWorkerWork, "String B0");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B1");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B2");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B3");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B4");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B5");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B6");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B7");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B8");
-    Win32AddEntry(&Queue, DoWorkerWork, "String B9");
-
-    Win32CompleteAllWork(&Queue);
-#endif
-
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
     GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
@@ -1793,6 +1791,13 @@ WinMain(HINSTANCE Instance,
         {
             ToggleFullScreen(Window);
             Win32InitOpenGL(Window);
+
+            platform_work_queue HighPriorityQueue = {};
+            Win32MakeQueue(&HighPriorityQueue, 6);
+
+            platform_work_queue LowPriorityQueue = {};
+            LowPriorityQueue.NeedsOpenGL = true;
+            Win32MakeQueue(&LowPriorityQueue, 2);
 
             win32_sound_output SoundOutput = {};
 
