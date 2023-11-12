@@ -46,7 +46,7 @@ OpenGLGetInfo(b32 ModernContext)
     {
         Result.ShadingLanguageVersion = (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
     }
-    else 
+    else
     {
         Result.ShadingLanguageVersion = "(none)";
     }
@@ -54,7 +54,6 @@ OpenGLGetInfo(b32 ModernContext)
     Result.Extensions = (char *)glGetString(GL_EXTENSIONS);
 
     char *At = Result.Extensions;
-
     while(*At)
     {
         while(IsWhitespace(*At)) {++At;}
@@ -108,7 +107,6 @@ OpenGLSetScreenspace(s32 Width, s32 Height)
     };
     glLoadMatrixf(Proj);
 }
-
 
 inline void
 OpenGLRectangle(v2 MinP, v2 MaxP, v4 Color)
@@ -224,6 +222,8 @@ OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 Window
                 v2 MaxP = MinP + Entry->Size.x*XAxis + Entry->Size.y*YAxis;
 
                 // TODO: Hold the frame if it is not ready with the texture?
+#pragma warning(push)
+#pragma warning(disable : 4312 4311 4302)
                 glBindTexture(GL_TEXTURE_2D, (GLuint)Entry->Bitmap->TextureHandle);
                 OpenGLRectangle(Entry->P, MaxP, Entry->Color);
             } break;
@@ -272,5 +272,6 @@ PLATFORM_DEALLOCATE_TEXTURE(Win32DeallocateTexture)
 {
     GLuint Handle = (GLuint)Texture;
     glDeleteTextures(1, &Handle);
+#pragma warning(pop)
 }
 

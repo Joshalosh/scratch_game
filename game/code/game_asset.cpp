@@ -313,7 +313,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Immediate)
                 Work.Offset = Asset->GA.DataOffset;
                 Work.Size = Size.Data;
                 Work.Destination = Bitmap->Memory;
-                Work.FinaliseOperation = FinaliseAsset_None;
+                Work.FinaliseOperation = FinaliseAsset_Bitmap;
                 Work.FinalState = AssetState_Loaded;
                 if(Task)
                 {
