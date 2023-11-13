@@ -4,22 +4,22 @@
 #include "game_math.h"
 
 inline b32
-IsEndOfLine(char c)
+IsEndOfLine(char C)
 {
-    b32 Result = ((c == '\n') ||
-                  (c == '\r'));
+    b32 Result = ((C == '\n') ||
+                  (C == '\r'));
 
     return(Result);
 }
 
 inline b32
-IsWhitespace(char c) 
+IsWhitespace(char C)
 {
-    b32 Result = ((c == ' ') ||
-                  (c == '\t') ||
-                  (c == '\v') ||
-                  (c == '\f') ||
-                  IsEndOfLine(c));
+    b32 Result = ((C == ' ') ||
+                  (C == '\t') ||
+                  (C == '\v') ||
+                  (C == '\f') ||
+                  IsEndOfLine(C));
 
     return(Result);
 }
@@ -36,7 +36,7 @@ StringsAreEqual(char *A, char *B)
             ++A;
             ++B;
         }
-        
+
         Result = ((*A == 0) && (*B == 0));
     }
 
@@ -54,7 +54,7 @@ StringsAreEqual(umm ALength, char *A, char *B)
             return(false);
         }
     }
-    
+
     b32 Result = (*At == 0);
     return(Result);
 }

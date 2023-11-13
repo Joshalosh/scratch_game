@@ -593,7 +593,6 @@ DrawMatte(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
     }
 }
 
-
 #if 0
 #include <iacaMarks.h>
 #else
@@ -947,6 +946,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
         }
     }
 }
+
 inline void
 Swap(tile_sort_entry *A, tile_sort_entry *B)
 {
