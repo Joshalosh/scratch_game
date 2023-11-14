@@ -67,10 +67,13 @@ typedef BOOL WINAPI wgl_choose_pixel_format_arb(HDC hdc,
         int *piFormats,
         UINT *nNumFormats);
 
+typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
+
 global_variable HGLRC GlobalOpenGLRC;
 global_variable HDC GlobalDC;
 global_variable wgl_create_context_attribs_arb *wglCreateContextAttribsARB;
-
+global_variable wgl_choose_pixel_format_arb *wglChoosePixelFormatARB;
+global_variable wgl_swap_interval_ext *wglSwapInterval;
 global_variable GLuint OpenGLDefaultInternalTextureFormat;
 
 #include "game_opengl.cpp"
@@ -98,9 +101,6 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
-
-typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
-global_variable wgl_swap_interval_ext *wglSwapInterval;
 
 internal void
 CatStrings(size_t SourceACount, char *SourceA,
@@ -484,7 +484,7 @@ int Win32OpenGLAttribs[] =
     WGL_CONTEXT_PROFILE_MASK_ARB,
 };
 internal void
-Win32CreateOpenGLContextForWorkerThread(void)
+Win32CreateOpenGLContextForWorkerThread()
 {
     if(wglCreateContextAttribsARB)
     {
@@ -505,24 +505,144 @@ Win32CreateOpenGLContextForWorkerThread(void)
     }
 }
 
+internal void
+Win32SetPixelFormat(HDC WindowDC, wgl_choose_pixel_format_arb *wglChoosePixelFormatARB)
+{
+    int SuggestedPixelFormatIndex = 0;
+    GLuint ExtendedPick = 0;
+    if(wglChoosePixelFormatARB)
+    {
+        int IntAttribList[] =
+        {
+            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+            WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+            0,
+        };
+
+        float FloatAttribList[] = {0};
+
+        wglChoosePixelFormatARB(WindowDC, IntAttribList, FloatAttribList, 1,
+                                &SuggestedPixelFormatIndex, &ExtendedPick);
+    }
+
+    if(!ExtendedPick)
+    {
+        PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
+        DesiredPixelFormat.nSize = sizeof(DesiredPixelFormat);
+        DesiredPixelFormat.nVersion = 1;
+        DesiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
+#if GAME_STREAMING
+        // NOTE: PFD_DOUBLEBUFFER appears to prevent OBS from reliably streaming the window
+        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW;
+#else
+        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW|PFD_DOUBLEBUFFER;
+#endif
+        DesiredPixelFormat.cColorBits = 32;
+        DesiredPixelFormat.cAlphaBits = 8;
+        DesiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
+
+        SuggestedPixelFormatIndex = ChoosePixelFormat(WindowDC, &DesiredPixelFormat);
+    }
+
+    PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
+    DescribePixelFormat(WindowDC, SuggestedPixelFormatIndex,
+                        sizeof(SuggestedPixelFormat), &SuggestedPixelFormat);
+    SetPixelFormat(WindowDC, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
+}
+
+internal void
+Win32LoadWGLExtensions()
+{
+    WNDCLASSA WindowClass = {};
+
+    WindowClass.lpfnWndProc = DefWindowProcA;
+    WindowClass.hInstance = GetModuleHandle(0);
+    WindowClass.lpszClassName = "GameWGLLoader";
+
+    if(RegisterClassA(&WindowClass))
+    {
+        HWND Window = CreateWindowEXA(
+                0,
+                WindowClass.lpszClassName,
+                "Game",
+                0,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                0,
+                0,
+                Instance,
+                0);
+
+        HDC WindowDC = GetDC(Window);
+        Win32SetPixelFormat(WindowDC);
+        HGLRC OpenGLRC = wglCreateContext(WindowDC);
+        if(wglMakeCurrent(WindowDC, OpenGLRC))
+        {
+           wglChoosePixelFormatARB =
+               (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
+           wglCreateContextAttribsARB =
+               (wgl_create_context_attribs_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
+           wglSwapInterval = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
+
+           wglMakeCurrent(0, 0);
+        }
+
+        wglDestroyContext(OpenGLRC);
+        ReleaseDC(Window, WindowDC);
+        DestroyWindow(Window);
+    }
+}
+
 internal HGLRC
 Win32InitOpenGL(HDC WindowDC)
 {
-    PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
-    DesiredPixelFormat.nSize = sizeof(DesiredPixelFormat);
-    DesiredPixelFormat.nVersion = 1;
-    DesiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
-#if GAME_STREAMING
-    // NOTE: PFD_DOUBLEBUFFER appears to prevent OBS from reliably streaming the window
-    DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW;
-#else
-    DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW|PFD_DOUBLEBUFFER;
-#endif
-    DesiredPixelFormat.cColorBits = 32;
-    DesiredPixelFormat.cAlphaBits = 8;
-    DesiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
+    int SuggestedPixelFormatIndex = 0;
+    GLuint ExtendedPick = 0;
 
-    int SuggestedPixelFormatIndex = ChoosePixelFormat(WindowDC, &DesiredPixelFormat);
+    // TODO: This needs to happen after I create the initial OpenGL context, But 
+    // how do I do that given that the DC needs to be in the correct format, 
+    // first? Do I just wglMakeCurrent back to zero and then re set the pixel format?
+    wgl_choose_pixel_format_arb *wglChoosePixelFormatARB =
+        (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
+    if(wglChoosePixelFormatARB)
+    {
+        int IntAttribList[] =
+        {
+            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+            WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+            0,
+        };
+        float FloatAttribList[] = {0};
+        wglChoosePixelFormatARB(WindowDC, IntAttribList, FloatAttribList, 1, 
+                                &SuggestedPixelFormatIndex, &ExtendedPick);
+    }
+
+    if(ExtendedPick == 0)
+    {
+        PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
+        DesiredPixelFormat.nSize = sizeof(DesiredPixelFormat);
+        DesiredPixelFormat.nVersion = 1;
+        DesiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
+#if GAME_STREAMING
+        // NOTE: PFD_DOUBLEBUFFER appears to prevent OBS from reliably streaming the window
+        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW;
+#else
+        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW|PFD_DOUBLEBUFFER;
+#endif
+        DesiredPixelFormat.cColorBits = 32;
+        DesiredPixelFormat.cAlphaBits = 8;
+        DesiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
+
+        SuggestedPixelFormatIndex = ChoosePixelFormat(WindowDC, &DesiredPixelFormat);
+    }
 
     PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
     DescribePixelFormat(WindowDC, SuggestedPixelFormatIndex,
@@ -532,40 +652,6 @@ Win32InitOpenGL(HDC WindowDC)
     HGLRC OpenGLRC = wglCreateContext(WindowDC);
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
-        // TODO: This needs to happen after I create the initial OpenGL context, But 
-        // how do I do that given that the DC needs to be in the correct format, 
-        // first? Do I just wglMakeCurrent back to zero and then re set the pixel format?
-        GLuint ExtendedPick = 0;
-        wgl_choose_pixel_format_arb *wglChoosePixelFormatARB =
-            (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
-        if(wglChoosePixelFormatARB)
-        {
-            int IntAttribList[] =
-            {
-                WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-                WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-                WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-                WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-                WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-                0,
-            };
-            float FloatAttribList[] = {0};
-            wglChoosePixelFormatARB(WindowDC, IntAttribList, FloatAttribList, 1, 
-                                    &SuggestedPixelFormatIndex, &ExtendedPick);
-
-            if(ExtendedPick)
-            {
-                wglMakeCurrent(0, 0);
-                wglDeleteContext(OpenGLRC);
-
-                PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
-                DescribePixelFormat(WindowDC, SuggestedPixelFormatIndex,
-                                    sizeof(SuggestedPixelFormat), &SuggestedPixelFormat);
-                SetPixelFormat(WindowDC, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
-            }
-
-        }
-
         b32 ModernContext = false;
 
         wglCreateContextAttribsARB =
