@@ -35,14 +35,16 @@ global_variable b32 DEBUGGlobalShowCursor;
 global_variable WINDOWPLACEMENT GlobalWindowPosition = {sizeof(GlobalWindowPosition)};
 global_variable GLuint GlobalBlitTextureHandle;
 
-#define WGL_DRAW_TO_WINDOW_ARB     0x2001
-#define WGL_ACCELERATION_ARB       0x2003
-#define WGL_SUPPORT_OPENGL_ARB     0x2010
-#define WGL_DOUBLE_BUFFER_ARB      0x2011
-#define WGL_PIXEL_TYPE_ARB         0x2013
+#define WGL_DRAW_TO_WINDOW_ARB           0x2001
+#define WGL_ACCELERATION_ARB             0x2003
+#define WGL_SUPPORT_OPENGL_ARB           0x2010
+#define WGL_DOUBLE_BUFFER_ARB            0x2011
+#define WGL_PIXEL_TYPE_ARB               0x2013
 
-#define WGL_TYPE_RGBA_ARB          0x202B
-#define WGL_FULL_ACCELERATION_ARB  0x2027
+#define WGL_TYPE_RGBA_ARB                0x202B
+#define WGL_FULL_ACCELERATION_ARB        0x2027
+
+#define WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB 0x20A9
 
 typedef HGLRC WINAPI wgl_create_context_attribs_arb(HDC hDC, HGLRC hShareContext, const int *attribList);
 
@@ -517,8 +519,13 @@ Win32SetPixelFormat(HDC WindowDC)
             WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
             WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
             WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+#if GAME_STREAMING
+            WGL_DOUBLE_BUFFER_ARB, GL_FALSE,
+#else
             WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+#endif
             WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+            WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, GL_TRUE,
             0,
         };
 
@@ -554,7 +561,7 @@ Win32SetPixelFormat(HDC WindowDC)
 }
 
 internal void
-Win32InitOpenGL(HDC WindowDC)
+Win32LoadWGLExtensions()
 {
     WNDCLASSA WindowClass = {};
 
@@ -596,12 +603,18 @@ Win32InitOpenGL(HDC WindowDC)
         ReleaseDC(Window, WindowDC);
         DestroyWindow(Window);
     }
+}
+
+internal HGLRC
+Win32InitOpenGL(HDC WindowDC)
+{
     Win32LoadWGLExtensions();
 
     b32 ModernContext = true;
     HGLRC OpenGLRC = 0;
     if(wglCreateContextAttribsARB)
     {
+        Win32SetPixelFormat(WindowDC);
         OpenGLRC = wglCreateContextAttribsARB(WindowDC, 0, Win32OpenGLAttribs);
     }
 
