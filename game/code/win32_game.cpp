@@ -71,8 +71,6 @@ typedef BOOL WINAPI wgl_choose_pixel_format_arb(HDC hdc,
 
 typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
 
-global_variable HGLRC GlobalOpenGLRC;
-global_variable HDC GlobalDC;
 global_variable wgl_create_context_attribs_arb *wglCreateContextAttribsARB;
 global_variable wgl_choose_pixel_format_arb *wglChoosePixelFormatARB;
 global_variable wgl_swap_interval_ext *wglSwapInterval;
@@ -485,26 +483,19 @@ int Win32OpenGLAttribs[] =
     ,
     WGL_CONTEXT_PROFILE_MASK_ARB,
 };
-internal void
-Win32CreateOpenGLContextForWorkerThread()
+
+internal win32_thread_startup
+Win32GetThreadStartupForGL(HDC OpenGLDC, HGLRC ShareContext)
 {
+    win32_thread_startup Result = {};
+
+    Result.OpenGLDC = OpenGLDC;
     if(wglCreateContextAttribsARB)
     {
-        HDC WindowDC = GlobalDC;
-        HGLRC ShareContext = GlobalOpenGLRC;
-        HGLRC ModernGLRC = wglCreateContextAttribsARB(WindowDC, ShareContext, Win32OpenGLAttribs);
-        if(ModernGLRC)
-        {
-            if(wglMakeCurrent(WindowDC, ModernGLRC))
-            {
-                // TODO: Fatal error
-            }
-            else
-            {
-                Assert(!"Unable to create texture download context");
-            }
-        }
+        Result.OpenGLRC = wglCreateContextAttribsARB(OpenGLDC, ShareContext, Win32OpenGLAttribs);
     }
+
+    return(Result);
 }
 
 internal void
@@ -1379,26 +1370,6 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
 
 #endif
 
-struct platform_work_queue_entry
-{
-    platform_work_queue_callback *Callback;
-    void *Data;
-};
-
-struct platform_work_queue
-{
-    uint32_t volatile CompletionGoal;
-    uint32_t volatile CompletionCount;
-
-    uint32_t volatile NextEntryToWrite;
-    uint32_t volatile NextEntryToRead;
-    HANDLE SemaphoreHandle;
-
-    platform_work_queue_entry Entries[256];
-
-    b32 NeedsOpenGL;
-};
-
 internal void
 Win32AddEntry(platform_work_queue *Queue, platform_work_queue_callback *Callback, void *Data)
 {
@@ -1456,14 +1427,15 @@ Win32CompleteAllWork(platform_work_queue *Queue)
 DWORD WINAPI
 ThreadProc(LPVOID lpParameter)
 {
-    platform_work_queue *Queue = (platform_work_queue *)lpParameter;
+    win32_thread_startup *Thread = (win32_thread_startup *)lpParameter;
+    platform_work_queue *Queue = Thread->Queue;
 
     u32 TestThreadID = GetThreadID();
     Assert(TestThreadID == GetCurrentThreadId());
 
-    if(Queue->NeedsOpenGL)
+    if(Thread->OpenGLRC)
     {
-        Win32CreateOpenGLContextForWorkerThread();
+        wglMakeCurrent(Thread->OpenGLDC, Thread->OpenGLRC);
     }
 
     for(;;)
@@ -1485,7 +1457,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoWorkerWork)
 }
 
 internal void
-Win32MakeQueue(platform_work_queue *Queue, uint32_t ThreadCount)
+Win32MakeQueue(platform_work_queue *Queue, uint32_t ThreadCount, win32_thread_startup *Startups)
 {
     Queue->CompletionGoal = 0;
     Queue->CompletionCount = 0;
@@ -1498,8 +1470,11 @@ Win32MakeQueue(platform_work_queue *Queue, uint32_t ThreadCount)
 
     for(uint32_t ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
     {
+        win32_thread_startup *Startup = Startups + ThreadIndex;
+        Startup->Queue = Queue;
+
         DWORD ThreadID;
-        HANDLE ThreadHandle = CreateThread(0, 0, ThreadProc, Queue, 0, &ThreadID);
+        HANDLE ThreadHandle = CreateThread(0, 0, ThreadProc, Startup, 0, &ThreadID);
         CloseHandle(ThreadHandle);
     }
 }
@@ -1885,15 +1860,18 @@ WinMain(HINSTANCE Instance,
         if(Window)
         {
             ToggleFullScreen(Window);
-            GlobalDC = GetDC(Window);
-            GlobalOpenGLRC = Win32InitOpenGL(GlobalDC);
+            HDC OpenGLDC = GetDC(Window);
+            HGLRC OpenGLRC = Win32InitOpenGL(OpenGLDC);
 
+            win32_thread_startup HighPriStartups[6] = {};
             platform_work_queue HighPriorityQueue = {};
-            Win32MakeQueue(&HighPriorityQueue, 6);
+            Win32MakeQueue(&HighPriorityQueue, ArrayCount(HighPriStartups), HighPriStartups);
 
+            win32_thread_startup LowPriStartups[2] = {};
+            LowPriStartups[0] = Win32GetThreadStartupForGL(OpenGLDC, OpenGLRC);
+            LowPriStartups[1] = Win32GetThreadStartupForGL(OpenGLDC, OpenGLRC);
             platform_work_queue LowPriorityQueue = {};
-            LowPriorityQueue.NeedsOpenGL = true;
-            Win32MakeQueue(&LowPriorityQueue, 2);
+            Win32MakeQueue(&LowPriorityQueue, ArrayCount(LowPriStartups), LowPriStartups);
 
             win32_sound_output SoundOutput = {};
 
