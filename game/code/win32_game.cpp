@@ -506,7 +506,7 @@ Win32CreateOpenGLContextForWorkerThread()
 }
 
 internal void
-Win32SetPixelFormat(HDC WindowDC, wgl_choose_pixel_format_arb *wglChoosePixelFormatARB)
+Win32SetPixelFormat(HDC WindowDC)
 {
     int SuggestedPixelFormatIndex = 0;
     GLuint ExtendedPick = 0;
@@ -554,7 +554,7 @@ Win32SetPixelFormat(HDC WindowDC, wgl_choose_pixel_format_arb *wglChoosePixelFor
 }
 
 internal void
-Win32LoadWGLExtensions()
+Win32InitOpenGL(HDC WindowDC)
 {
     WNDCLASSA WindowClass = {};
 
@@ -564,7 +564,7 @@ Win32LoadWGLExtensions()
 
     if(RegisterClassA(&WindowClass))
     {
-        HWND Window = CreateWindowEXA(
+        HWND Window = CreateWindowExA(
                 0,
                 WindowClass.lpszClassName,
                 "Game",
@@ -575,7 +575,7 @@ Win32LoadWGLExtensions()
                 CW_USEDEFAULT,
                 0,
                 0,
-                Instance,
+                WindowClass.hInstance,
                 0);
 
         HDC WindowDC = GetDC(Window);
@@ -592,102 +592,32 @@ Win32LoadWGLExtensions()
            wglMakeCurrent(0, 0);
         }
 
-        wglDestroyContext(OpenGLRC);
+        wglDeleteContext(OpenGLRC);
         ReleaseDC(Window, WindowDC);
         DestroyWindow(Window);
     }
-}
+    Win32LoadWGLExtensions();
 
-internal HGLRC
-Win32InitOpenGL(HDC WindowDC)
-{
-    int SuggestedPixelFormatIndex = 0;
-    GLuint ExtendedPick = 0;
-
-    // TODO: This needs to happen after I create the initial OpenGL context, But 
-    // how do I do that given that the DC needs to be in the correct format, 
-    // first? Do I just wglMakeCurrent back to zero and then re set the pixel format?
-    wgl_choose_pixel_format_arb *wglChoosePixelFormatARB =
-        (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
-    if(wglChoosePixelFormatARB)
+    b32 ModernContext = true;
+    HGLRC OpenGLRC = 0;
+    if(wglCreateContextAttribsARB)
     {
-        int IntAttribList[] =
-        {
-            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-            WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-            0,
-        };
-        float FloatAttribList[] = {0};
-        wglChoosePixelFormatARB(WindowDC, IntAttribList, FloatAttribList, 1, 
-                                &SuggestedPixelFormatIndex, &ExtendedPick);
+        OpenGLRC = wglCreateContextAttribsARB(WindowDC, 0, Win32OpenGLAttribs);
     }
 
-    if(ExtendedPick == 0)
+    if(!OpenGLRC)
     {
-        PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
-        DesiredPixelFormat.nSize = sizeof(DesiredPixelFormat);
-        DesiredPixelFormat.nVersion = 1;
-        DesiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
-#if GAME_STREAMING
-        // NOTE: PFD_DOUBLEBUFFER appears to prevent OBS from reliably streaming the window
-        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW;
-#else
-        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW|PFD_DOUBLEBUFFER;
-#endif
-        DesiredPixelFormat.cColorBits = 32;
-        DesiredPixelFormat.cAlphaBits = 8;
-        DesiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
-
-        SuggestedPixelFormatIndex = ChoosePixelFormat(WindowDC, &DesiredPixelFormat);
+        ModernContext = false;
+        OpenGLRC = wglCreateContext(WindowDC);
     }
 
-    PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
-    DescribePixelFormat(WindowDC, SuggestedPixelFormatIndex,
-                        sizeof(SuggestedPixelFormat), &SuggestedPixelFormat);
-    SetPixelFormat(WindowDC, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
-
-    HGLRC OpenGLRC = wglCreateContext(WindowDC);
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
-        b32 ModernContext = false;
-
-        wglCreateContextAttribsARB =
-            (wgl_create_context_attribs_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
-        if(wglCreateContextAttribsARB)
-        {
-            // NOTE: This is a modern version of OpenGL
-            HGLRC ShareContext = 0;
-            HGLRC ModernGLRC = wglCreateContextAttribsARB(WindowDC, ShareContext, Win32OpenGLAttribs);
-            if(ModernGLRC)
-            {
-                if(wglMakeCurrent(WindowDC, ModernGLRC))
-                {
-                    ModernContext = true;
-                    wglDeleteContext(OpenGLRC);
-                    OpenGLRC = ModernGLRC;
-                }
-            }
-        }
-        else
-        {
-            // NOTE: This is an antiquated version of OpenGL
-        }
-
         OpenGLInit(ModernContext);
-
-        wglSwapInterval = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
         if(wglSwapInterval)
         {
             wglSwapInterval(1);
         }
-    }
-    else
-    {
-        InvalidCodePath;
-        // TODO: Diagnostic
     }
 
     return(OpenGLRC);
