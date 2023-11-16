@@ -3,21 +3,18 @@
 /*
  TODO
 
- - Flush all thread queues before loading DLL.
-
  - Debug code
-   - Fonts
    - Logging
    - Diagramming
    - A little GUI, switches / sliders / etc.
    - Draw tile chunks so we can verify that things are aligned /
      in the chunks we want them to be in
+   - Thread visualisation
 
  - Audio
    - Fix the clicking bug at the end of samples.
 
  - Rendering
-   - Get rid of "even" scan line notion.
    - Real projections with solid concept of project/unproject
    - Straighten out all of the coordinate systems.
      - Screen
@@ -26,12 +23,9 @@
    - Particle systems
    - Lighting
    - Final Optimisation
-
- - Hardware Rendering
-   - sRGB framebuffer and textures
-   - Vsync
-   - Background texture downloads
-   - Render-to-texture
+   - Hardware Rendering
+     - Shaders
+     - Render-to-texture
 
  ARCHITECTURE EXPLORATION
  - Z

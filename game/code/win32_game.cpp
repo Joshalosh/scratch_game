@@ -70,10 +70,13 @@ typedef BOOL WINAPI wgl_choose_pixel_format_arb(HDC hdc,
         UINT *nNumFormats);
 
 typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
+typedef const char * WINAPI wgl_get_extensions_string_ext(void);
 
 global_variable wgl_create_context_attribs_arb *wglCreateContextAttribsARB;
 global_variable wgl_choose_pixel_format_arb *wglChoosePixelFormatARB;
-global_variable wgl_swap_interval_ext *wglSwapInterval;
+global_variable wgl_swap_interval_ext *wglSwapIntervalEXT;
+global_variable wgl_get_extensions_string_ext *wglGetExtensionsStringEXT;
+global_variable b32 OpenGLSupportsSRGBFramebuffer;
 global_variable GLuint OpenGLDefaultInternalTextureFormat;
 
 #include "game_opengl.cpp"
@@ -520,9 +523,13 @@ Win32SetPixelFormat(HDC WindowDC)
             0,
         };
 
-        float FloatAttribList[] = {0};
+        if(!OpenGLSupportsSRGBFramebuffer)
+        {
+            IntAttribList[10] = 0;
+        }
 
-        wglChoosePixelFormatARB(WindowDC, IntAttribList, FloatAttribList, 1,
+
+        wglChoosePixelFormatARB(WindowDC, IntAttribList, 0, 1,
                                 &SuggestedPixelFormatIndex, &ExtendedPick);
     }
 
@@ -585,7 +592,27 @@ Win32LoadWGLExtensions()
                (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
            wglCreateContextAttribsARB =
                (wgl_create_context_attribs_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
-           wglSwapInterval = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
+           wglSwapIntervalEXT = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
+           wglGetExtensionsStringEXT = (wgl_get_extensions_string_ext *)wglGetProcAddress("wglGetExtensionsStringEXT");
+
+           if(wglGetExtensionsStringEXT)
+           {
+               char *Extensions = (char *)wglGetExtensionsStringEXT();
+               char *At = Extensions;
+               while(*At)
+               {
+                   while(IsWhitespace(*At)) {++At;}
+                   char *End = At;
+                   while(*End && !IsWhitespace(*End)) {++End;}
+
+                   umm Count = End - At;
+
+                   if(0) {}
+                   else if(StringsAreEqual(Count, At, "WGL_EXT_framebuffer_sRGB")) {OpenGLSupportsSRGBFramebuffer = true;}
+
+                   At = End;
+               }
+           }
 
            wglMakeCurrent(0, 0);
         }
@@ -618,9 +645,9 @@ Win32InitOpenGL(HDC WindowDC)
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
         OpenGLInit(ModernContext);
-        if(wglSwapInterval)
+        if(wglSwapIntervalEXT)
         {
-            wglSwapInterval(1);
+            wglSwapIntervalEXT(1);
         }
     }
 
