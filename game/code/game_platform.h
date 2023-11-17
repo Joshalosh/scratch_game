@@ -4,8 +4,6 @@
 #define introspect(IGNORED)
 #define counted_pointer(IGNORED)
 
-#include "game_config.h"
-
 /*
   GAME_INTERNAL:
     0 - Build for public release.

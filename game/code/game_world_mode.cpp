@@ -682,7 +682,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
             real32 GroundSideInMetres = World->ChunkDimInMeters.x;
             PushBitmap(RenderGroup, Transform, Bitmap, 1.0f*GroundSideInMetres, V3(0, 0, 0));
-            DEBUG_IF(GroundChunks_Outlines)
+            if(Global_GroundChunks_Outlines)
             {
                 PushRectOutline(RenderGroup, Transform, Delta, V2(GroundSideInMetres, GroundSideInMetres),
                                 V4(1.0f, 1.0f, 0.0f, 1.0f));
@@ -951,7 +951,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     sim_entity *ClosestHero = 0;
                     real32 ClosestHeroDSq = Square(10.0f);
 
-                    DEBUG_IF(AI_Familiar_FollowsHero)
+                    if(Global_AI_Familiar_FollowsHero)
                     {
                         sim_entity *TestEntity = SimRegion->Entities;
                         for(uint32_t TestEntityIndex = 0;
@@ -1007,7 +1007,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
                     DrawHitPoints(Entity, RenderGroup, EntityTransform);
 
-                    DEBUG_IF(Particles_Test)
+                    if(Global_Particles_Test)
                     {
                         for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 3; ++ParticleSpawnIndex)
                         {
@@ -1066,7 +1066,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             Cel->VelocityTimesDensity += Density*Particle->dP;
                         }
 
-                        DEBUG_IF(Particles_ShowGrid)
+                        if(Global_Particles_ShowGrid)
                         {
                             for(u32 Y = 0; Y < PARTICLE_CEL_DIM; ++Y)
                             {
@@ -1184,7 +1184,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 case EntityType_Space:
                 {
-                    DEBUG_IF(Simulation_UseSpaceOutlines)
+                    if(Global_Simulation_UseSpaceOutlines)
                     {
                         for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                         {

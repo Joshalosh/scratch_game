@@ -79,6 +79,7 @@
 */
 
 #include "game_platform.h"
+#include "game_config.h"
 #include "game_shared.h"
 #include "game_random.h"
 #include "game_file_formats.h"

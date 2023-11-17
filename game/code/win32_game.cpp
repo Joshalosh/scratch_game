@@ -25,9 +25,15 @@ TODO: Additional Platform Layer Code
 global_variable platform_api Platform;
 
 // TODO: This is a global for now
+enum win32_rendering_type
+{
+    Win32RenderType_RenderOpenGL_DisplayOpenGL,
+    Win32RenderType_RenderSoftware_DisplayOpenGL,
+    Win32RenderType_RenderSoftware_DisplayGDI,
+};
+global_variable win32_rendering_type GlobalRenderingType;
 global_variable b32 GlobalRunning;
 global_variable b32 GlobalPause;
-global_variable b32 GlobalUseSoftwareRendering;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable s64 GlobalPerfCountFrequency;
@@ -715,7 +721,12 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
     }
     */
 
-    DEBUG_IF(Renderer_UseSoftware)
+    if(GlobalRenderingType == Win32RenderType_RenderOpenGL_DisplayOpenGL)
+    {
+        OpenGLRenderCommands(Commands, WindowWidth, WindowHeight);
+        SwapBuffers(DeviceContext);
+    }
+    else
     {
         loaded_bitmap OutputTarget;
         OutputTarget.Memory = GlobalBackbuffer.Memory;
@@ -725,8 +736,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
 
         SoftwareRenderCommands(RenderQueue, Commands, &OutputTarget);
 
-        b32 DisplayViaHardware = true;
-        if(DisplayViaHardware)
+        if(GlobalRenderingType == Win32RenderType_RenderSoftware_DisplayOpenGL)
         {
             OpenGLDisplayBitmap(GlobalBackbuffer.Width, GlobalBackbuffer.Height, GlobalBackbuffer.Memory,
                                 GlobalBackbuffer.Pitch, WindowWidth, WindowHeight);
@@ -734,6 +744,8 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
         }
         else
         {
+            Assert(GlobalRenderingType == Win32RenderType_RenderSoftware_DisplayGDI);
+
             // TODO: Am I gonna do centering or black bars?
 
             if((WindowWidth >= GlobalBackbuffer.Width*2) &&
@@ -769,11 +781,6 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
                               DIB_RGB_COLORS, SRCCOPY);
             }
         }
-    }
-    else
-    {
-        OpenGLRenderCommands(Commands, WindowWidth, WindowHeight);
-        SwapBuffers(DeviceContext);
     }
 }
 
@@ -2048,6 +2055,11 @@ WinMain(HINSTANCE Instance,
                                                          GameCodeLockFullPath);
                 while(GlobalRunning)
                 {
+                    DEBUG_BEGIN_DATA_BLOCK(Platform_Controls, DEBUG_POINTER_ID(&DebugTimeMarkerIndex));
+                    DEBUG_VALUE(GlobalPause);
+                    DEBUG_VALUE(GlobalRenderingType);
+                    DEBUG_END_DATA_BLOCK();
+
                     //
                     //
                     //

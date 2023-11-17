@@ -342,7 +342,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         PlayIntroCutscene(GameState, TranState);
     }
 
-    DEBUG_IF(GroundChunks_RecomputeOnEXEChange)
+    if(Global_GroundChunks_RecomputeOnEXEChange)
     {
         if(Memory->ExecutableReloaded)
         {
