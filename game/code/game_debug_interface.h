@@ -20,7 +20,7 @@ enum debug_type
     DebugType_OpenDataBlock,
     DebugType_CloseDataBlock,
 
-    DebugType_MarkDebugValue,
+//    DebugType_MarkDebugValue,
 
     DebugType_b32,
     DebugType_r32,
@@ -81,10 +81,10 @@ struct debug_table
 extern debug_table *GlobalDebugTable;
 
 // Casey normally has another level of macro indirection here but it's probably unnecessary
-#define UniqueFileCounterString_(A, B, C) A "(" #B ")." #C
-#define UniqueFileCounterString() UniqueFileCounterString_(__FILE__, __LINE__, __COUNTER__)
+#define UniqueFileCounterString_(A, B, C, Name) A "(" #B ")." #C ": " Name
+#define UniqueFileCounterString(Name) UniqueFileCounterString_(__FILE__, __LINE__, __COUNTER__, Name)
 
-#define RecordDebugEvent(EventType, Block)                                                      \
+#define RecordDebugEvent(EventType, Block, GUID)                                                \
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1); \
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
     Assert(EventIndex < ArrayCount(GlobalDebugTable->Events[0]));                               \
@@ -93,8 +93,7 @@ extern debug_table *GlobalDebugTable;
     Event->Type = (u8)EventType;                                                                \
     Event->CoreIndex = 0;                                                                       \
     Event->ThreadID = (u16)GetThreadID();                                                       \
-    Event->GUID = UniqueFileCounterString();                                                    \
-    Event->BlockName = Block;                                                                   \
+    Event->Name = Name;                                                                         \
 
 #define FRAME_MARKER(SecondsElapsedInit)                               \
      {                                                                 \
@@ -110,9 +109,9 @@ extern debug_table *GlobalDebugTable;
 
 #define BEGIN_BLOCK_(Counter, FilenameInit, LineNumberInit, BlockNameInit) \
     {RecordDebugEvent(DebugType_BeginBlock, BlockNameInit);}
-#define END_BLOCK_(Counter)                            \
-{                                                      \
-    RecordDebugEvent(DebugType_EndBlock, "End Block"); \
+#define END_BLOCK_(Counter, GUID)                            \
+{                                                            \
+    RecordDebugEvent(DebugType_EndBlock, "End Block", GUID); \
 }
 
 #define BEGIN_BLOCK(Name)                                   \
@@ -247,16 +246,21 @@ DEBUGValueSetEventData(debug_event *Event, font_id Value)
     Event->Value_font_id = Value;
 }
 
-#define DEBUG_BEGIN_DATA_BLOCK(Name, ID)                                                \
-{                                                                                       \
-    RecordDebugEvent(DebugType_OpenDataBlock, #Name);                                   \
-    Event->DebugID = ID;                                                                \
-}
+struct debug_data_block 
+{
+    debug_data_block(char *Name)
+    {
+        RecordDebugEvent(DebugType_OpenDataBlock, #Name);
+        Event->DebugID = ID;
+    }
 
-#define DEBUG_END_DATA_BLOCK()                                                          \
-{                                                                                       \
-    RecordDebugEvent(DebugType_CloseDataBlock, "End Data Block");                       \
-}
+    ~debug_data_block(void)
+    {
+        RecordDebugEvent(DebugType_CloseDataBlock, "End Data Block");
+    }
+};
+
+#define DEBUG_DATA_BLOCK(Name) debug_data_block DataBlock__(Name)
 
 #define DEBUG_VALUE(Value)                                                              \
 {                                                                                       \
@@ -264,7 +268,7 @@ DEBUGValueSetEventData(debug_event *Event, font_id Value)
     DEBUGValueSetEventData(Event, Value);                                               \
 }
 
-#define DEBUG_PROFILE(FuinctionName)                                                    \
+#define DEBUG_PROFILE(FunctionName)                                                     \
 {                                                                                       \
     RecordDebugEvent(DebugType_CounterFunctionList, #FunctionName);                     \
 }
@@ -289,8 +293,7 @@ internal b32 DEBUG_REQUESTED(debug_id ID);
 
 inline debug_id DEBUG_POINTER_ID(void *Pointer) {debug_id NullID = {}; return(NullID);}
 
-#define DEBUG_BEGIN_DATA_BLOCK(...)
-#define DEBUG_END_DATA_BLOCK(...)
+#define DEBUG_DATA_BLOCK(...)
 #define DEBUG_VALUE(...)
 #define DEBUG_BEGIN_ARRAY(...)
 #define DEBUG_END_ARRAY(...)

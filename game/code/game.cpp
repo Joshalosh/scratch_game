@@ -248,20 +248,33 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #if GAME_INTERNAL
     DebugGlobalMemory = Memory;
 
-    DEBUG_BEGIN_DATA_BLOCK(Game, DEBUG_POINTER_ID(Memory));
-    DEBUG_VALUE(Global_Renderer_Camera_UseDebug);
-    DEBUG_VALUE(Global_Renderer_Camera_DebugDistance);
-    DEBUG_VALUE(Global_Renderer_Camera_RoomBased);
-    DEBUG_VALUE(Global_GroundChunks_Checkerboards);
-    DEBUG_VALUE(Global_GroundChunks_RecomputeOnEXEChange);
-    DEBUG_VALUE(Global_Renderer_TestWeirdDrawBufferSize);
-    DEBUG_VALUE(Global_GroundChunks_Outlines);
-    DEBUG_VALUE(Global_AI_Familiar_FollowsHero);
-    DEBUG_VALUE(Global_Particles_Test);
-    DEBUG_VALUE(Global_Particles_ShowGrid);
-    DEBUG_VALUE(Global_Simulation_UseSpaceOutlines);
-    DEBUG_PROFILE(GameUpdateAndRender);
-    DEBUG_END_DATA_BLOCK();
+    {DEBUG_DATA_BLOCK("Renderer");
+        DEBUG_VALUE(Global_Renderer_TestWeirdDrawBufferSize);
+        {DEBUG_DATA_BLOCK("Renderer/Camera");
+            DEBUG_VALUE(Global_Renderer_Camera_UseDebug);
+            DEBUG_VALUE(Global_Renderer_Camera_DebugDistance);
+            DEBUG_VALUE(Global_Renderer_Camera_RoomBased);
+        }
+    }
+    {DEBUG_DATA_BLOCK("GroundChunks");
+        DEBUG_VALUE(Global_GroundChunks_Checkerboards);
+        DEBUG_VALUE(Global_GroundChunks_RecomputeOnEXEChange);
+        DEBUG_VALUE(Global_GroundChunks_Outlines);
+    }
+    {DEBUG_DATA_BLOCK("AI/Familiar");
+        DEBUG_VALUE(Global_AI_Familiar_FollowsHero);
+    }
+    {DEBUG_DATA_BLOCK("Particles");
+        DEBUG_VALUE(Global_Particles_Test);
+        DEBUG_VALUE(Global_Particles_ShowGrid);
+    }
+    {DEBUG_DATA_BLOCK("Simulation");
+        DEBUG_VALUE(Global_Simulation_UseSpaceOutlines);
+    }
+    {DEBUG_DATA_BLOCK("Profile");
+        DEBUG_PROFILE(GameUpdateAndRender);
+    }
+
 #endif
     TIMED_FUNCTION();
 
