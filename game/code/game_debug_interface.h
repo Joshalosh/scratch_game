@@ -36,7 +36,7 @@ enum debug_type
     DebugType_font_id,
 
     DebugType_CounterThreadList,
-    // DebugType_CounterFunctionLost,
+    DebugType_CounterFunctionList,
 };
 struct debug_event
 {
@@ -262,6 +262,11 @@ DEBUGValueSetEventData(debug_event *Event, font_id Value)
 {                                                                                       \
     RecordDebugEvent(DebugType_Unknown, #Value);                                        \
     DEBUGValueSetEventData(Event, Value);                                               \
+}
+
+#define DEBUG_PROFILE(FuinctionName)                                                    \
+{                                                                                       \
+    RecordDebugEvent(DebugType_CounterFunctionList, #FunctionName);                     \
 }
 
 #define DEBUG_BEGIN_ARRAY(...)

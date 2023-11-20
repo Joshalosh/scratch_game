@@ -260,7 +260,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DEBUG_VALUE(Global_Particles_Test);
     DEBUG_VALUE(Global_Particles_ShowGrid);
     DEBUG_VALUE(Global_Simulation_UseSpaceOutlines);
-    // TODO: DEBUG_PROFILER put it back in
+    DEBUG_PROFILE(GameUpdateAndRender);
     DEBUG_END_DATA_BLOCK();
 #endif
     TIMED_FUNCTION();
