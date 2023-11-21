@@ -42,7 +42,6 @@ struct debug_event
 {
     u64 Clock;
     char *GUID;
-    char *BlockName; // TODO: Should I remove block name altogether?
     u16 ThreadID;
     u16 CoreIndex;
     u8 Type;
@@ -82,9 +81,9 @@ extern debug_table *GlobalDebugTable;
 
 // Casey normally has another level of macro indirection here but it's probably unnecessary
 #define UniqueFileCounterString_(A, B, C, Name) A "(" #B ")." #C ": " Name
-#define UniqueFileCounterString(Name) UniqueFileCounterString_(__FILE__, __LINE__, __COUNTER__, Name)
+#define DEBUG_NAME(Name) UniqueFileCounterString_(__FILE__, __LINE__, __COUNTER__, Name)
 
-#define RecordDebugEvent(EventType, Block, GUID)                                                \
+#define RecordDebugEvent(EventType, GUID)                                                \
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, 1); \
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
     Assert(EventIndex < ArrayCount(GlobalDebugTable->Events[0]));                               \
@@ -93,14 +92,11 @@ extern debug_table *GlobalDebugTable;
     Event->Type = (u8)EventType;                                                                \
     Event->CoreIndex = 0;                                                                       \
     Event->ThreadID = (u16)GetThreadID();                                                       \
-    Event->Name = Name;                                                                         \
+    Event->GUID = GUID;                                                                         \
 
 #define FRAME_MARKER(SecondsElapsedInit)                               \
-     {                                                                 \
-     int Counter = __COUNTER__;                                        \
-     RecordDebugEvent(DebugType_FrameMarker, "Frame Marker");          \
-     Event->Value_r32 = SecondsElapsedInit;                            \
-    }
+{RecordDebugEvent(DebugType_FrameMarker, DEBUG_NAME("Frame Marker"));          \
+     Event->Value_r32 = SecondsElapsedInit;}
 
 #define TIMED_BLOCK__(BlockName, Number, ...) timed_block TimedBlock_##Number(__COUNTER__, __FILE__, __LINE__, BlockName, ## __VA_ARGS__)
 #define TIMED_BLOCK_(BlockName, Number, ...) TIMED_BLOCK__(BlockName, Number, ## __VA_ARGS__)
