@@ -2055,10 +2055,10 @@ WinMain(HINSTANCE Instance,
                                                          GameCodeLockFullPath);
                 while(GlobalRunning)
                 {
-                    DEBUG_BEGIN_DATA_BLOCK(Platform_Controls, DEBUG_POINTER_ID(&DebugTimeMarkerIndex));
-                    DEBUG_VALUE(GlobalPause);
-                    DEBUG_VALUE(GlobalRenderingType);
-                    DEBUG_END_DATA_BLOCK();
+                    {DEBUG_DATA_BLOCK(Platform_Controls, DEBUG_POINTER_ID(&DebugTimeMarkerIndex));
+                        DEBUG_VALUE(GlobalPause);
+                        DEBUG_VALUE(GlobalRenderingType);
+                    }
 
                     //
                     //
