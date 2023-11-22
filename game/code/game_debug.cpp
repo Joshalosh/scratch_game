@@ -288,7 +288,7 @@ DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
     // This is a really good example of how to add flag parameters to a function.
     // the corresponding enums are in game_debug.h.
     char *At = Buffer;
-    char *Name = Event->BlockName;
+    char *Name = Event->GUID;
 
     if(Flags & DEBUGVarToText_AddDebugUI)
     {
@@ -399,19 +399,14 @@ DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
 
             case DebugType_CounterThreadList:
             case DebugType_bitmap_id:
-            {
-            } break;
-
             case DebugType_OpenDataBlock:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "UNHANDLED: %s", Event->BlockName);
             } break;
 
             default:
             {
                 At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "UNHANDLED: %s", Event->BlockName);
+                                  "UNHANDLED: %s", Event->GUID);
             } break;
         }
     }
@@ -1678,7 +1673,7 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
         Result->OldestEvent = Result->MostRecentEvent = 0;
 
         debug_variable_group *ParentGroup =
-            GetGroupForHierarchicalName(DebugState, DebugState->RootGroup, Event->BlockName);
+            GetGroupForHierarchicalName(DebugState, DebugState->RootGroup, Event->GUID);
         AddElementToGroup(DebugState, ParentGroup, Result);
     }
 
@@ -1764,7 +1759,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                             if(MatchingBlock->StartingFrameIndex == FrameIndex)
                             {
                                 char *MatchName =
-                                    MatchingBlock->Parent ? MatchingBlock->Parent->OpeningEvent->BlockName : 0;
+                                    MatchingBlock->Parent ? MatchingBlock->Parent->OpeningEvent->GUID : 0;
                                 if(MatchName == DebugState->ScopeToRecord)
                                 {
 #if 0
@@ -2113,7 +2108,7 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
     {
         if(HotEvent)
         {
-            DebugState->ScopeToRecord = HotEvent->BlockName;
+            DebugState->ScopeToRecord = HotEvent->GUID;
         }
         else
         {

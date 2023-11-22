@@ -2055,7 +2055,7 @@ WinMain(HINSTANCE Instance,
                                                          GameCodeLockFullPath);
                 while(GlobalRunning)
                 {
-                    {DEBUG_DATA_BLOCK(Platform_Controls, DEBUG_POINTER_ID(&DebugTimeMarkerIndex));
+                    {DEBUG_DATA_BLOCK("Platform/Controls");
                         DEBUG_VALUE(GlobalPause);
                         DEBUG_VALUE(GlobalRenderingType);
                     }
@@ -2064,7 +2064,7 @@ WinMain(HINSTANCE Instance,
                     //
                     //
 
-                    BEGIN_BLOCK(ExecutableRefresh);
+                    BEGIN_BLOCK("Exectable Refresh");
                     NewInput->dtForFrame = TargetSecondsPerFrame;
 
                     if(UpdateFade(&Fader, NewInput->dtForFrame, Window) == Win32Fade_WaitingForClose)
@@ -2088,13 +2088,13 @@ WinMain(HINSTANCE Instance,
                                                  GameCodeLockFullPath);
                         GameMemory.ExecutableReloaded = true;
                     }
-                    END_BLOCK(ExecutableRefresh);
+                    END_BLOCK();
 
                     //
                     //
                     //
 
-                    BEGIN_BLOCK(InputProcessing);
+                    BEGIN_BLOCK("Input Processing");
 
                     // TODO: Zeroing macro
                     // TODO: We can't zero everything because the up/down state will be
@@ -2256,13 +2256,13 @@ WinMain(HINSTANCE Instance,
                             }
                         }
                     }
-                    END_BLOCK(InputProcessing);
+                    END_BLOCK();
 
                     //
                     //
                     //
 
-                    BEGIN_BLOCK(GameUpdate);
+                    BEGIN_BLOCK("Game Update");
 
                     game_render_commands RenderCommands = RenderCommandStruct(PushBufferSize, PushBuffer,
                                                                               GlobalBackbuffer.Width,
@@ -2305,13 +2305,13 @@ WinMain(HINSTANCE Instance,
                         }
                     }
 
-                    END_BLOCK(GameUpdate);
+                    END_BLOCK();
 
                     //
                     //
                     //
 
-                    BEGIN_BLOCK(AudioUpdate);
+                    BEGIN_BLOCK("Audio Update");
 
                     if(!GlobalPause)
                     {
@@ -2443,14 +2443,14 @@ WinMain(HINSTANCE Instance,
                         }
                     }
 
-                    END_BLOCK(AudioUpdate);
+                    END_BLOCK();
 
                     //
                     //
                     //
 
 #if GAME_INTERNAL
-                    BEGIN_BLOCK(DebugCollation);
+                    BEGIN_BLOCK("Debug Collation");
 
                     if(Game.DEBUGFrameEnd)
                     {
@@ -2458,7 +2458,7 @@ WinMain(HINSTANCE Instance,
                     }
                     GlobalDebugTable_.EventArrayIndex_EventIndex = 0;
 
-                    END_BLOCK(DebugCollation);
+                    END_BLOCK();
 #endif
 
                     //
@@ -2515,7 +2515,7 @@ WinMain(HINSTANCE Instance,
                     //
                     //
 
-                    BEGIN_BLOCK(FrameDisplay);
+                    BEGIN_BLOCK("Frame Display");
 
                     umm NeededSortMemorySize = RenderCommands.PushBufferElementCount * sizeof(tile_sort_entry);
                     if(CurrentSortMemorySize < NeededSortMemorySize)
@@ -2538,7 +2538,7 @@ WinMain(HINSTANCE Instance,
                     OldInput = Temp;
                     // TODO: Should I clear these here?
 
-                    END_BLOCK(FrameDisplay);
+                    END_BLOCK();
 
                     LARGE_INTEGER EndCounter = Win32GetWallClock();
                     FRAME_MARKER(Win32GetSecondsElapsed(LastCounter, EndCounter));
