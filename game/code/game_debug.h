@@ -62,14 +62,26 @@ struct debug_stored_event
     debug_event Event;
 };
 
+struct debug_string
+{
+    u32 Length;
+    char *Value;
+};
+
 struct debug_element
 {
     char *GUID;
+    u32 FilenameCount;
+    u32 LineNumber;
+    u32 NameStartsAt;
+
     debug_element *NextInHash;
 
     debug_stored_event *OldestEvent;
     debug_stored_event *MostRecentEvent;
 };
+inline char *GetName(debug_element *Element) {char *Result = Element->GUID + Element->NameStartsAt; return(Result);}
+inline debug_string GetFileName(debug_element *Element) {debug_string Result = {Element->FilenameCount, Element->GUID}; return(Result);}
 
 struct debug_variable_group;
 struct debug_variable_link
@@ -219,17 +231,12 @@ struct debug_state
 {
     b32 Initialised;
 
-    platform_work_queue *HighPriorityQueue;
-
     memory_arena DebugArena;
     memory_arena PerFrameArena;
 
     render_group RenderGroup;
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
-
-    b32 Compiling;
-    debug_executing_process Compiler;
 
     v2 MenuP;
     b32 MenuActive;

@@ -80,7 +80,7 @@ struct debug_table
 extern debug_table *GlobalDebugTable;
 
 // Casey normally has another level of macro indirection here but it's probably unnecessary
-#define UniqueFileCounterString_(A, B, C, D) A "(" #B ")." #C ": " D
+#define UniqueFileCounterString_(A, B, C, D) A "|" #B "|" #C "|" D
 #define DEBUG_NAME(Name) UniqueFileCounterString_(__FILE__, __LINE__, __COUNTER__, Name)
 
 #define RecordDebugEvent(EventType, GUIDInit)                                                \

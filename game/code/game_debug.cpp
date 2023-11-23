@@ -1,6 +1,7 @@
 
 // TODO: Stop using stdio
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "game_debug.h"
 
@@ -1647,15 +1648,41 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
 {
     Assert(Event->GUID);
 
-    u32 HashValue = (u32)((memory_index)Event->GUID >> 2);
-    // TODO: Verify this turns into an AND (not a mod)
+    //TODO: Better hash function
+    u32 HashValue = 0;
+    u32 FilenameCount = 0;
+    u32 NameStartsAt = 0;
+    u32 LineNumber = 0;
+    u32 PipeCount = 0;
+    for(char *Scan = Event->GUID; *Scan; ++Scan)
+    {
+        if(*Scan == '|')
+        {
+            if(PipeCount == 0)
+            {
+                FilenameCount = (u32)(Scan - Event->GUID);
+                LineNumber = atoi(Scan + 1);
+            }
+            else if(PipeCount == 1)
+            {
+            }
+            else 
+            {
+                NameStartsAt = (u32)(Scan - Event->GUID + 1);
+            }
+             ++PipeCount;
+        }
+
+        HashValue += *Scan;
+    }
+
     u32 Index = (HashValue % ArrayCount(DebugState->ElementHash));
 
     debug_element *Result = 0;
 
     for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
     {
-        if(Chain->GUID == Event->GUID)
+        if(StringsAreEqual(Chain->GUID, Event->GUID))
         {
             Result = Chain;
             break;
@@ -1666,14 +1693,18 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
     {
         Result = PushStruct(&DebugState->DebugArena, debug_element);
 
-        Result->GUID = Event->GUID;
+        Result->GUID = PushString(&DebugState->DebugArena, Event->GUID);
+        Result->FilenameCount = FilenameCount;
+        Result->LineNumber = LineNumber;
+        Result->NameStartsAt = NameStartsAt;
+
         Result->NextInHash = DebugState->ElementHash[Index];
         DebugState->ElementHash[Index] = Result;
 
         Result->OldestEvent = Result->MostRecentEvent = 0;
 
         debug_variable_group *ParentGroup =
-            GetGroupForHierarchicalName(DebugState, DebugState->RootGroup, Event->GUID);
+            GetGroupForHierarchicalName(DebugState, DebugState->RootGroup, GetName(Result));
         AddElementToGroup(DebugState, ParentGroup, Result);
     }
 
@@ -1846,7 +1877,6 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
         DebugState->OldestFrame = DebugState->MostRecentFrame = DebugState->FirstFreeFrame = 0;
         DebugState->CollationFrame = 0;
 
-        DebugState->HighPriorityQueue = DebugGlobalMemory->HighPriorityQueue;
         DebugState->TreeSentinel.Next = &DebugState->TreeSentinel;
         DebugState->TreeSentinel.Prev = &DebugState->TreeSentinel;
         DebugState->TreeSentinel.Group = 0;
@@ -2013,19 +2043,6 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
     v2 MouseP = Unproject(RenderGroup, DefaultFlatTransform(), V2(Input->MouseX, Input->MouseY)).xy;
     DEBUGDrawMainMenu(DebugState, RenderGroup, MouseP);
     DEBUGInteract(DebugState, Input, MouseP);
-
-    if(DebugState->Compiling)
-    {
-        debug_process_state State = Platform.DEBUGGetProcessState(DebugState->Compiler);
-        if(State.IsRunning)
-        {
-            DEBUGTextLine("COMPILING");
-        }
-        else
-        {
-            DebugState->Compiling = false;
-        }
-    }
 
     loaded_font *Font = DebugState->DebugFont;
     ga_font *Info = DebugState->DebugFontInfo;
