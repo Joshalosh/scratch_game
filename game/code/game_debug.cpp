@@ -300,11 +300,11 @@ DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
     if(Flags & DEBUGVarToText_AddName)
     {
         char *UseName = Name;
-        if(Flags & DEBUGVarToText_StartAtLastUnderscore)
+        if(Flags & DEBUGVarToText_StartAtLastSlash)
         {
             for(char *Scan = Name; *Scan; ++Scan)
             {
-                if((Scan[0] == '_') &&
+                if((Scan[0] == '/') &&
                    (Scan[1] != 0))
                 {
                     UseName = Scan + 1;
@@ -935,7 +935,7 @@ DEBUGDrawEvent(layout *Layout, debug_stored_event *StoredEvent, debug_id DebugID
                                  DEBUGVarToText_NullTerminator|
                                  DEBUGVarToText_Colon|
                                  DEBUGVarToText_PrettyBools|
-                                 DEBUGVarToText_StartAtLastUnderscore);
+                                 DEBUGVarToText_StartAtLastSlash);
 
                 rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
                 v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
@@ -1468,20 +1468,20 @@ GetGroupForHierarchicalName(debug_state *DebugState, debug_variable_group *Paren
 {
     debug_variable_group *Result = Parent;
 
-    char *FirstUnderscore = 0;
+    char *FirstSeparator = 0;
     for(char *Scan = Name; *Scan; ++Scan)
     {
         if(*Scan == '_')
         {
-            FirstUnderscore = Scan;
+            FirstSeparator = Scan;
             break;
         }
     }
 
-    if(FirstUnderscore)
+    if(FirstSeparator)
     {
-        debug_variable_group *SubGroup = GetOrCreateGroupWithName(DebugState, Parent, (u32)(FirstUnderscore - Name), Name);
-        Result = GetGroupForHierarchicalName(DebugState, SubGroup, FirstUnderscore + 1);
+        debug_variable_group *SubGroup = GetOrCreateGroupWithName(DebugState, Parent, (u32)(FirstSeparator - Name), Name);
+        Result = GetGroupForHierarchicalName(DebugState, SubGroup, FirstSeparator + 1);
     }
 
     return(Result);
@@ -1630,6 +1630,7 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
     Result->Next = 0;
     Result->FrameIndex = DebugState->CollationFrame->FrameIndex;
     Result->Event = *Event;
+    Result->Event.GUID = GetName(Element);
 
     if(Element->MostRecentEvent)
     {
@@ -1648,7 +1649,6 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
 {
     Assert(Event->GUID);
 
-    //TODO: Better hash function
     u32 HashValue = 0;
     u32 FilenameCount = 0;
     u32 NameStartsAt = 0;
@@ -1673,7 +1673,8 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
              ++PipeCount;
         }
 
-        HashValue += *Scan;
+    //TODO: Better hash function
+        HashValue = 65599*HashValue + *Scan;
     }
 
     u32 Index = (HashValue % ArrayCount(DebugState->ElementHash));

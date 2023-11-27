@@ -11,7 +11,7 @@ enum debug_variable_to_text_flag
     DEBUGVarToText_NullTerminator = 0x10,
     DEBUGVarToText_Colon = 0x20,
     DEBUGVarToText_PrettyBools = 0x40,
-    DEBUGVarToText_StartAtLastUnderscore = 0x80,
+    DEBUGVarToText_StartAtLastSlash = 0x80,
     DEBUGVarToText_AddValue = 0x100,
 };
 
