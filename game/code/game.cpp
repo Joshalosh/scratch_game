@@ -249,11 +249,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DebugGlobalMemory = Memory;
 
     {DEBUG_DATA_BLOCK("Renderer");
-        DEBUG_VALUE(Global_Renderer_TestWeirdDrawBufferSize);
-        {DEBUG_DATA_BLOCK("Renderer/Camera");
-            DEBUG_VALUE(Global_Renderer_Camera_UseDebug);
+        DEBUG_B32(Global_Renderer_TestWeirdDrawBufferSize);
+        {DEBUG_DATA_BLOCK("Camera");
+            DEBUG_B32(Global_Renderer_Camera_UseDebug);
             DEBUG_VALUE(Global_Renderer_Camera_DebugDistance);
-            DEBUG_VALUE(Global_Renderer_Camera_RoomBased);
+            DEBUG_B32(Global_Renderer_Camera_RoomBased);
         }
     }
     {DEBUG_DATA_BLOCK("GroundChunks");

@@ -918,14 +918,6 @@ DEBUGDrawEvent(layout *Layout, debug_stored_event *StoredEvent, debug_id DebugID
                 DrawProfileIn(DebugState, Element.Bounds, Layout->MouseP);
             } break;
 
-            case DebugType_OpenDataBlock:
-            {
-            } break;
-            
-            case DebugType_CloseDataBlock:
-            {
-            } break;
-
             default:
             {
                 char Text[256];
@@ -971,51 +963,6 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                 EndElement(&Element);
 
                 DrawProfileIn(DebugState, Element.Bounds, Layout->MouseP);
-            } break;
-
-            case DebugType_OpenDataBlock:
-            {
-                debug_stored_event *LastOpenBlock = OldestEvent;
-                for(debug_stored_event *Event = OldestEvent; Event; Event = Event->Next)
-                {
-                    if(Event->Event.Type == DebugType_OpenDataBlock)
-                    {
-                        LastOpenBlock = Event;
-                    }
-                }
-
-                debug_interaction ItemInteraction = DebugIDInteraction(DebugInteraction_ToggleExpansion, DebugID);
-
-                char Text[256];
-                DEBUGEventToText(Text, Text + sizeof(Text), &LastOpenBlock->Event,
-                                 DEBUGVarToText_AddName|
-                                 DEBUGVarToText_NullTerminator|
-                                 DEBUGVarToText_Colon|
-                                 DEBUGVarToText_PrettyBools);
-
-                rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
-                v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
-
-                layout_element Element = BeginElementRectangle(Layout, &Dim);
-                DefaultInteraction(&Element, ItemInteraction);
-                EndElement(&Element);
-
-                b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
-                v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
-                DEBUGTextOutAt(V2(GetMinCorner(Element.Bounds).x,
-                                  GetMaxCorner(Element.Bounds).y - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
-                               Text, ItemColor);
-
-                if(View->Collapsible.ExpandedAlways)
-                {
-                    ++Layout->Depth;
-                    for(debug_stored_event *Event = LastOpenBlock; Event; Event = Event->Next)
-                    {
-                        debug_id NewID = DebugIDFromGUID(Tree, Event->Event.GUID);
-                        DEBUGDrawEvent(Layout, Event, NewID);
-                    }
-                    --Layout->Depth;
-                }
             } break;
 
             default:
@@ -1464,12 +1411,13 @@ GetOrCreateGroupWithName(debug_state *DebugState, debug_variable_group *Parent, 
 }
 
 internal debug_variable_group *
-GetGroupForHierarchicalName(debug_state *DebugState, debug_variable_group *Parent, char *Name)
+GetGroupForHierarchicalName(debug_state *DebugState, debug_variable_group *Parent, char *Name, b32 CreateTerminal)
 {
     debug_variable_group *Result = Parent;
 
     char *FirstSeparator = 0;
-    for(char *Scan = Name; *Scan; ++Scan)
+    char *Scan = Name;
+    for(; *Scan; ++Scan)
     {
         if(*Scan == '_')
         {
@@ -1478,10 +1426,23 @@ GetGroupForHierarchicalName(debug_state *DebugState, debug_variable_group *Paren
         }
     }
 
-    if(FirstSeparator)
+    if(FirstSeparator || CreateTerminal)
     {
-        debug_variable_group *SubGroup = GetOrCreateGroupWithName(DebugState, Parent, (u32)(FirstSeparator - Name), Name);
-        Result = GetGroupForHierarchicalName(DebugState, SubGroup, FirstSeparator + 1);
+        u32 NameLength = 0;
+        if(FirstSeparator)
+        {
+            NameLength = (u32)(FirstSeparator - Name);
+        }
+        else 
+        {
+            NameLength = (u32)(Scan - Name);
+        }
+
+        Result = GetOrCreateGroupWithName(DebugState, Parent, NameLength, Name);
+        if(FirstSeparator)
+        {
+            Result = GetGroupForHierarchicalName(DebugState, Result, FirstSeparator + 1, CreateTerminal);
+        }
     }
 
     return(Result);
@@ -1731,7 +1692,7 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_
         Result->OldestEvent = Result->MostRecentEvent = 0;
 
         debug_variable_group *ParentGroup =
-            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result));
+            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result), false);
         AddElementToGroup(DebugState, ParentGroup, Result);
     }
 
@@ -1797,6 +1758,12 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
             u64 RelativeClock = Event->Clock - DebugState->CollationFrame->BeginClock;
 
+            debug_variable_group *DefaultParentGroup = DebugState->RootGroup;
+            if(Thread->FirstOpenDataBlock)
+            {
+                DefaultParentGroup = Thread->FirstOpenDataBlock->Group;
+            }
+
             switch(Event->Type)
             {
                 case DebugType_BeginBlock:
@@ -1853,21 +1820,17 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
 
                 case DebugType_OpenDataBlock:
                 {
-                    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
-                    debug_variable_group *ParentGroup =
-                        GetGroupForHierarchicalName(DebugState, DebugState->RootGroup, ParsedName.Name);
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
                         DebugState, 0, FrameIndex, Event, &Thread->FirstOpenDataBlock);
-                    DebugBlock->Group = GetOrCreateGroupWithName(DebugState, ParentGroup, ParsedName.NameLength, ParsedName.Name);
-                    StoreEvent(DebugState, Element, Event);
+
+                    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
+                    DebugBlock->Group = GetGroupForHierarchicalName(DebugState, DefaultParentGroup, ParsedName.Name, true);
                 } break;
 
                 case DebugType_CloseDataBlock:
                 {
                     if(Thread->FirstOpenDataBlock)
                     {
-                        StoreEvent(DebugState, Thread->FirstOpenDataBlock->Element, Event);
-
                         open_debug_block *MatchingBlock = Thread->FirstOpenDataBlock;
                         debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
                         if(EventsMatch(*OpeningEvent, *Event))
@@ -1879,13 +1842,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
 
                 default:
                 {
-                    debug_variable_group *Parent = 0;
-                    if(Thread->FirstOpenDataBlock)
-                    {
-                        Parent = Thread->FirstOpenDataBlock->Group;
-                    }
-
-                    debug_element *Element = GetElementFromEvent(DebugState, Event, Parent);
+                    debug_element *Element = GetElementFromEvent(DebugState, Event, DefaultParentGroup);
                     StoreEvent(DebugState, Element, Event);
                 } break;
             }
