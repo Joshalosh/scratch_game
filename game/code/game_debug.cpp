@@ -1630,7 +1630,7 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
     Result->Next = 0;
     Result->FrameIndex = DebugState->CollationFrame->FrameIndex;
     Result->Event = *Event;
-    Result->Event.GUID = GetName(Element);
+    //Result->Event.GUID = GetName(Element);
 
     if(Element->MostRecentEvent)
     {
@@ -1644,40 +1644,66 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
     return(Result);
 }
 
-internal debug_element *
-GetElementFromEvent(debug_state *DebugState, debug_event *Event)
+struct debug_parsed_name
 {
-    Assert(Event->GUID);
+    u32 HashValue;
+    u32 FilenameCount;
+    u32 NameStartsAt;
+    u32 LineNumber;
 
-    u32 HashValue = 0;
-    u32 FilenameCount = 0;
-    u32 NameStartsAt = 0;
-    u32 LineNumber = 0;
+    u32 NameLength;
+    char *Name;
+};
+inline debug_parsed_name
+DebugParseName(char *GUID)
+{
+    debug_parsed_name Result = {};
+
     u32 PipeCount = 0;
-    for(char *Scan = Event->GUID; *Scan; ++Scan)
+    char *Scan = GUID;
+    for(; *Scan; ++Scan)
     {
         if(*Scan == '|')
         {
             if(PipeCount == 0)
             {
-                FilenameCount = (u32)(Scan - Event->GUID);
-                LineNumber = atoi(Scan + 1);
+                Result.FilenameCount = (u32)(Scan - GUID);
+                Result.LineNumber = atoi(Scan + 1);
             }
             else if(PipeCount == 1)
             {
             }
             else 
             {
-                NameStartsAt = (u32)(Scan - Event->GUID + 1);
+                Result.NameStartsAt = (u32)(Scan - GUID + 1);
             }
              ++PipeCount;
         }
 
     //TODO: Better hash function
-        HashValue = 65599*HashValue + *Scan;
+        Result.HashValue = 65599*Result.HashValue + *Scan;
     }
 
-    u32 Index = (HashValue % ArrayCount(DebugState->ElementHash));
+    Result.NameLength = (u32)(Scan - GUID) - Result.NameStartsAt;
+    Result.Name = GUID + Result.NameStartsAt;
+
+    return(Result);
+
+}
+
+internal debug_element *
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent = 0)
+{
+    Assert(Event->GUID);
+
+    if(!Parent)
+    {
+        Parent = DebugState->RootGroup;
+    }
+
+    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
+
+    u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
 
     debug_element *Result = 0;
 
@@ -1695,9 +1721,9 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
         Result = PushStruct(&DebugState->DebugArena, debug_element);
 
         Result->GUID = PushString(&DebugState->DebugArena, Event->GUID);
-        Result->FilenameCount = FilenameCount;
-        Result->LineNumber = LineNumber;
-        Result->NameStartsAt = NameStartsAt;
+        Result->FilenameCount = ParsedName.FilenameCount;
+        Result->LineNumber = ParsedName.LineNumber;
+        Result->NameStartsAt = ParsedName.NameStartsAt;
 
         Result->NextInHash = DebugState->ElementHash[Index];
         DebugState->ElementHash[Index] = Result;
@@ -1705,7 +1731,7 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event)
         Result->OldestEvent = Result->MostRecentEvent = 0;
 
         debug_variable_group *ParentGroup =
-            GetGroupForHierarchicalName(DebugState, DebugState->RootGroup, GetName(Result));
+            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result));
         AddElementToGroup(DebugState, ParentGroup, Result);
     }
 
@@ -1718,7 +1744,6 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
     for(u32 EventIndex = 0; EventIndex < EventCount; ++EventIndex)
     {
         debug_event *Event = EventArray + EventIndex;
-        debug_element *Element = GetElementFromEvent(DebugState, Event);
 
         if(!DebugState->CollationFrame)
         {
@@ -1776,6 +1801,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             {
                 case DebugType_BeginBlock:
                 {
+                    debug_element *Element = GetElementFromEvent(DebugState, Event);
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
                         DebugState, Element, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
                 } break;
@@ -1827,8 +1853,12 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
 
                 case DebugType_OpenDataBlock:
                 {
+                    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
+                    debug_variable_group *ParentGroup =
+                        GetGroupForHierarchicalName(DebugState, DebugState->RootGroup, ParsedName.Name);
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
-                        DebugState, Element, FrameIndex, Event, &Thread->FirstOpenDataBlock);
+                        DebugState, 0, FrameIndex, Event, &Thread->FirstOpenDataBlock);
+                    DebugBlock->Group = GetOrCreateGroupWithName(DebugState, ParentGroup, ParsedName.NameLength, ParsedName.Name);
                     StoreEvent(DebugState, Element, Event);
                 } break;
 
@@ -1849,12 +1879,14 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
 
                 default:
                 {
-                    debug_element *StorageElement = Element;
+                    debug_variable_group *Parent = 0;
                     if(Thread->FirstOpenDataBlock)
                     {
-                        StorageElement = Thread->FirstOpenDataBlock->Element;
+                        Parent = Thread->FirstOpenDataBlock->Group;
                     }
-                    StoreEvent(DebugState, StorageElement, Event);
+
+                    debug_element *Element = GetElementFromEvent(DebugState, Event, Parent);
+                    StoreEvent(DebugState, Element, Event);
                 } break;
             }
         }
