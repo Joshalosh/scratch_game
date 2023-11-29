@@ -731,6 +731,61 @@ EndElement(layout_element *Element)
     Layout->At.y = GetMinCorner(TotalBounds).y - SpacingY;
 }
 
+inline debug_element *
+GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
+{
+    debug_element *Result = 0;
+
+    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
+    {
+        if(StringsAreEqual(Chain->GUID, GUID))
+        {
+            Result = Chain;
+            break;
+        }
+    }
+
+    return (Result);
+}
+
+internal debug_element *
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent = 0)
+{
+    Assert(Event->GUID);
+
+    if(!Parent)
+    {
+        Parent = DebugState->RootGroup;
+    }
+
+    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
+    u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
+
+    debug_element *Result = GetElementFromEvent(DebugState, Index, Event->GUID);
+    if(!Result)
+    {
+        Result = PushStruct(&DebugState->DebugArena, debug_element);
+
+        Result->GUID = PushString(&DebugState->DebugArena, Event->GUID);
+        Result->FilenameCount = ParsedName.FilenameCount;
+        Result->LineNumber = ParsedName.LineNumber;
+        Result->NameStartsAt = ParsedName.NameStartsAt;
+
+        Result->NextInHash = DebugState->ElementHash[Index];
+        DebugState->ElementHash[Index] = Result;
+
+        Result->OldestEvent = Result->MostRecentEvent = 0;
+
+        debug_variable_group *ParentGroup =
+            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result), false);
+        AddElementToGroup(DebugState, ParentGroup, Result);
+    }
+
+    Result->OriginalGUID = Event->GUID;
+
+    return(Result);
+}
+
 internal debug_view *
 GetOrCreateDebugViewFor(debug_state *DebugState, debug_id ID)
 {
@@ -1199,6 +1254,8 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
                 case DebugType_b32:
                 {
                     Event->Value_b32 = !Event->Value_b32;
+                    GlobalDebugTable->EditEvent = *Event;
+                    GlobalDebugTable->EditEvent.GUID = GetElementFromEvent(DebugState, Event)->OriginalGUID;
                 } break;
             }
         } break;
@@ -1650,59 +1707,6 @@ DebugParseName(char *GUID)
 
     return(Result);
 
-}
-
-inline debug_element *
-GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
-{
-    debug_element *Result = 0;
-
-    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
-    {
-        if(StringsAreEqual(Chain->GUID, GUID))
-        {
-            Result = Chain;
-            break;
-        }
-    }
-
-    return (Result);
-}
-
-internal debug_element *
-GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent = 0)
-{
-    Assert(Event->GUID);
-
-    if(!Parent)
-    {
-        Parent = DebugState->RootGroup;
-    }
-
-    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
-    u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
-
-    debug_element *Result = GetElementFromEvent(DebugState, Index, Event->GUID);
-    if(!Result)
-    {
-        Result = PushStruct(&DebugState->DebugArena, debug_element);
-
-        Result->GUID = PushString(&DebugState->DebugArena, Event->GUID);
-        Result->FilenameCount = ParsedName.FilenameCount;
-        Result->LineNumber = ParsedName.LineNumber;
-        Result->NameStartsAt = ParsedName.NameStartsAt;
-
-        Result->NextInHash = DebugState->ElementHash[Index];
-        DebugState->ElementHash[Index] = Result;
-
-        Result->OldestEvent = Result->MostRecentEvent = 0;
-
-        debug_variable_group *ParentGroup =
-            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result), false);
-        AddElementToGroup(DebugState, ParentGroup, Result);
-    }
-
-    return(Result);
 }
 
 internal void

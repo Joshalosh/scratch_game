@@ -70,6 +70,7 @@ struct debug_string
 
 struct debug_element
 {
+    char *OriginalGUID; // NOTE: Can never be printed because it might point into unloaded DLL
     char *GUID;
     u32 FilenameCount;
     u32 LineNumber;
