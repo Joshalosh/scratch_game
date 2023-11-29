@@ -75,6 +75,8 @@ struct debug_element
     u32 LineNumber;
     u32 NameStartsAt;
 
+    b32 ValueWasEdited;
+
     debug_element *NextInHash;
 
     debug_stored_event *OldestEvent;

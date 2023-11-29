@@ -1652,6 +1652,23 @@ DebugParseName(char *GUID)
 
 }
 
+inline debug_element *
+GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
+{
+    debug_element *Result = 0;
+
+    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
+    {
+        if(StringsAreEqual(Chain->GUID, GUID))
+        {
+            Result = Chain;
+            break;
+        }
+    }
+
+    return (Result);
+}
+
 internal debug_element *
 GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent = 0)
 {
@@ -1663,20 +1680,9 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_
     }
 
     debug_parsed_name ParsedName = DebugParseName(Event->GUID);
-
     u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
 
-    debug_element *Result = 0;
-
-    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
-    {
-        if(StringsAreEqual(Chain->GUID, Event->GUID))
-        {
-            Result = Chain;
-            break;
-        }
-    }
-
+    debug_element *Result = GetElementFromEvent(DebugState, Index, Event->GUID);
     if(!Result)
     {
         Result = PushStruct(&DebugState->DebugArena, debug_element);

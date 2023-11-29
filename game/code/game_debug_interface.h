@@ -162,9 +162,9 @@ DEBUGValueSetEventData(debug_event *Event, r32 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, r32 Value)
+DEBUGValueGetEventData(debug_event *Event, r32 Ignored, void *Value)
 {
-   *Value = Event->Value_r32;
+   *(r32 *)Value = Event->Value_r32;
 }
 
 inline void
@@ -175,9 +175,9 @@ DEBUGValueSetEventData(debug_event *Event, u32 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, u32 Value)
+DEBUGValueGetEventData(debug_event *Event, u32 Ignored, void *Value)
 {
-   *Value = Event->Value_u32;
+   *(u32 *)Value = Event->Value_u32;
 }
 
 inline void
@@ -188,9 +188,9 @@ DEBUGValueSetEventData(debug_event *Event, s32 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, s32 Value)
+DEBUGValueGetEventData(debug_event *Event, s32 Ignored, void *Value)
 {
-   *Value = Event->Value_s32;
+   *(s32 *)Value = Event->Value_s32;
 }
 
 inline void
@@ -201,9 +201,9 @@ DEBUGValueSetEventData(debug_event *Event, v2 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, v2 Value)
+DEBUGValueGetEventData(debug_event *Event, v2 Ignored, void *Value)
 {
-   *Value = Event->Value_v2;
+   *(v2 *)Value = Event->Value_v2;
 }
 
 inline void
@@ -214,9 +214,9 @@ DEBUGValueSetEventData(debug_event *Event, v3 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, v3 Value)
+DEBUGValueGetEventData(debug_event *Event, v3 Ignored, void *Value)
 {
-   *Value = Event->Value_v3;
+   *(v3 *)Value = Event->Value_v3;
 }
 
 inline void
@@ -227,9 +227,9 @@ DEBUGValueSetEventData(debug_event *Event, v4 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, v4 Value)
+DEBUGValueGetEventData(debug_event *Event, v4 Ignored, void *Value)
 {
-   *Value = Event->Value_v4;
+   *(v4 *)Value = Event->Value_v4;
 }
 
 inline void
@@ -240,9 +240,9 @@ DEBUGValueSetEventData(debug_event *Event, rectangle2 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, rectangle2 Value)
+DEBUGValueGetEventData(debug_event *Event, rectangle2 Ignored, void *Value)
 {
-   *Value = Event->Value_rectangle2;
+   *(rectangle2 *)Value = Event->Value_rectangle2;
 }
 
 inline void
@@ -253,9 +253,9 @@ DEBUGValueSetEventData(debug_event *Event, rectangle3 Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, rectangle3 Value)
+DEBUGValueGetEventData(debug_event *Event, rectangle3 Ignored, void *Value)
 {
-   *Value = Event->Value_rectangle3;
+   *(rectangle3 *)Value = Event->Value_rectangle3;
 }
 
 inline void
@@ -266,9 +266,9 @@ DEBUGValueSetEventData(debug_event *Event, bitmap_id Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, bitmap_id Value)
+DEBUGValueGetEventData(debug_event *Event, bitmap_id Ignored, void *Value)
 {
-   *Value = Event->Value_bitmap_id;
+   *(bitmap_id *)Value = Event->Value_bitmap_id;
 }
 
 inline void
@@ -279,9 +279,9 @@ DEBUGValueSetEventData(debug_event *Event, sound_id Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, sound_id Value)
+DEBUGValueGetEventData(debug_event *Event, sound_id Ignored, void *Value)
 {
-   *Value = Event->Value_sound_id;
+   *(sound_id *)Value = Event->Value_sound_id;
 }
 
 inline void
@@ -292,9 +292,9 @@ DEBUGValueSetEventData(debug_event *Event, font_id Value)
 }
 
 inline void
-DEBUGValueGetEventData(debug_event *Event, font_id Value)
+DEBUGValueGetEventData(debug_event *Event, font_id Ignored, void *Value)
 {
-   *Value = Event->Value_font_id;
+   *(font_id *)Value = Event->Value_font_id;
 }
 
 struct debug_data_block 
@@ -313,21 +313,23 @@ struct debug_data_block
 
 #define DEBUG_DATA_BLOCK(Name) debug_data_block DataBlock__(DEBUG_NAME(Name))
 
+internal void DEBUGEditEventData(char *GUID, debug_event *Event);
+
 #define DEBUG_VALUE(Value)                                                              \
 {                                                                                       \
-    RecordDebugEvent(DebugType_Unknown, GUID);                                          \
-    DEBUGValueSetEventData(Event, Value);                                               \
-    DEBUGValueGetEventData(Event, &Value);                                              \
+    char *GUID = DEBUG_NAME(#Value); \
+    RecordDebugEvent(DebugType_Unknown, GUID);                                         \
+    DEBUGValueSetEventData(Event, Value, (void *)&Value);                               \
 }
 
 #define DEBUG_B32(Value)                                                                \
 {                                                                                       \
-    RecordDebugEvent(DebugType_Unknown, DEBUG_NAME(#Value));                            \
+    char *GUID = DEBUG_NAME(#Value); \
+    RecordDebugEvent(DebugType_Unknown, GUID);                            \
     Event->Type = DebugType_b32;                                                        \
     Event->Value_b32 = Value;                                                           \
-    Value = Event->Value_b32;                                                           \
+    DEBUGEditEventData(GUID, Event, &Value); \
 }
-    //DEBUGHandleValueEdit(Event, &Value);                                                       \
 
 #define DEBUG_PROFILE(FunctionName)                                                     \
 {                                                                                       \
