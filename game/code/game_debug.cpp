@@ -731,61 +731,6 @@ EndElement(layout_element *Element)
     Layout->At.y = GetMinCorner(TotalBounds).y - SpacingY;
 }
 
-inline debug_element *
-GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
-{
-    debug_element *Result = 0;
-
-    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
-    {
-        if(StringsAreEqual(Chain->GUID, GUID))
-        {
-            Result = Chain;
-            break;
-        }
-    }
-
-    return (Result);
-}
-
-internal debug_element *
-GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent = 0)
-{
-    Assert(Event->GUID);
-
-    if(!Parent)
-    {
-        Parent = DebugState->RootGroup;
-    }
-
-    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
-    u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
-
-    debug_element *Result = GetElementFromEvent(DebugState, Index, Event->GUID);
-    if(!Result)
-    {
-        Result = PushStruct(&DebugState->DebugArena, debug_element);
-
-        Result->GUID = PushString(&DebugState->DebugArena, Event->GUID);
-        Result->FilenameCount = ParsedName.FilenameCount;
-        Result->LineNumber = ParsedName.LineNumber;
-        Result->NameStartsAt = ParsedName.NameStartsAt;
-
-        Result->NextInHash = DebugState->ElementHash[Index];
-        DebugState->ElementHash[Index] = Result;
-
-        Result->OldestEvent = Result->MostRecentEvent = 0;
-
-        debug_variable_group *ParentGroup =
-            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result), false);
-        AddElementToGroup(DebugState, ParentGroup, Result);
-    }
-
-    Result->OriginalGUID = Event->GUID;
-
-    return(Result);
-}
-
 internal debug_view *
 GetOrCreateDebugViewFor(debug_state *DebugState, debug_id ID)
 {
@@ -1234,6 +1179,8 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
     }
 }
 
+internal debug_element *
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Paren = 0);
 internal void
 DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 {
@@ -1648,7 +1595,6 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
     Result->Next = 0;
     Result->FrameIndex = DebugState->CollationFrame->FrameIndex;
     Result->Event = *Event;
-    //Result->Event.GUID = GetName(Element);
 
     if(Element->MostRecentEvent)
     {
@@ -1707,6 +1653,60 @@ DebugParseName(char *GUID)
 
     return(Result);
 
+}
+
+inline debug_element *
+GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
+{
+    debug_element *Result = 0;
+
+    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
+    {
+        if(StringsAreEqual(Chain->GUID, GUID))
+        {
+            Result = Chain;
+            break;
+        }
+    }
+
+    return (Result);
+}
+
+internal debug_element *
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent)
+{
+    Assert(Event->GUID);
+
+    if(!Parent)
+    {
+        Parent = DebugState->RootGroup;
+    }
+
+    debug_parsed_name ParsedName = DebugParseName(Event->GUID);
+    u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
+
+    debug_element *Result = GetElementFromEvent(DebugState, Index, Event->GUID);
+    if(!Result)
+    {
+        Result = PushStruct(&DebugState->DebugArena, debug_element);
+
+        Result->OriginalGUID = Event->GUID;
+        Result->GUID = PushString(&DebugState->DebugArena, Event->GUID);
+        Result->FilenameCount = ParsedName.FilenameCount;
+        Result->LineNumber = ParsedName.LineNumber;
+        Result->NameStartsAt = ParsedName.NameStartsAt;
+
+        Result->NextInHash = DebugState->ElementHash[Index];
+        DebugState->ElementHash[Index] = Result;
+
+        Result->OldestEvent = Result->MostRecentEvent = 0;
+
+        debug_variable_group *ParentGroup =
+            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result), false);
+        AddElementToGroup(DebugState, ParentGroup, Result);
+    }
+
+    return(Result);
 }
 
 internal void
@@ -1853,6 +1853,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                 default:
                 {
                     debug_element *Element = GetElementFromEvent(DebugState, Event, DefaultParentGroup);
+                    Element->OriginalGUID = Event->GUID;
                     StoreEvent(DebugState, Element, Event);
                 } break;
             }
@@ -2141,6 +2142,8 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
 
 extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 {
+    ZeroStruct(GlobalDebugTable->EditEvent);
+
     GlobalDebugTable->CurrentEventArrayIndex = !GlobalDebugTable->CurrentEventArrayIndex;
     u64 ArrayIndex_EventIndex = AtomicExchangeU64(&GlobalDebugTable->EventArrayIndex_EventIndex,
                                                   (u64)GlobalDebugTable->CurrentEventArrayIndex << 32);

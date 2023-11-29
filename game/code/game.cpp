@@ -257,19 +257,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
     {DEBUG_DATA_BLOCK("GroundChunks");
-        DEBUG_VALUE(Global_GroundChunks_Checkerboards);
-        DEBUG_VALUE(Global_GroundChunks_RecomputeOnEXEChange);
-        DEBUG_VALUE(Global_GroundChunks_Outlines);
+        DEBUG_B32(Global_GroundChunks_Checkerboards);
+        DEBUG_B32(Global_GroundChunks_RecomputeOnEXEChange);
+        DEBUG_B32(Global_GroundChunks_Outlines);
     }
     {DEBUG_DATA_BLOCK("AI/Familiar");
-        DEBUG_VALUE(Global_AI_Familiar_FollowsHero);
+        DEBUG_B32(Global_AI_Familiar_FollowsHero);
     }
     {DEBUG_DATA_BLOCK("Particles");
-        DEBUG_VALUE(Global_Particles_Test);
-        DEBUG_VALUE(Global_Particles_ShowGrid);
+        DEBUG_B32(Global_Particles_Test);
+        DEBUG_B32(Global_Particles_ShowGrid);
     }
     {DEBUG_DATA_BLOCK("Simulation");
-        DEBUG_VALUE(Global_Simulation_UseSpaceOutlines);
+        DEBUG_B32(Global_Simulation_UseSpaceOutlines);
     }
     {DEBUG_DATA_BLOCK("Profile");
         DEBUG_PROFILE(GameUpdateAndRender);
