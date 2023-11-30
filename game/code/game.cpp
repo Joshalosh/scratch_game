@@ -260,6 +260,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DEBUG_B32(Global_GroundChunks_Checkerboards);
         DEBUG_B32(Global_GroundChunks_RecomputeOnEXEChange);
         DEBUG_B32(Global_GroundChunks_Outlines);
+        DEBUG_B32(Global_GroundChunksOn);
     }
     {DEBUG_DATA_BLOCK("AI/Familiar");
         DEBUG_B32(Global_AI_Familiar_FollowsHero);

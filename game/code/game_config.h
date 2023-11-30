@@ -9,4 +9,5 @@ global_variable b32 Global_AI_Familiar_FollowsHero = false;
 global_variable b32 Global_Particles_Test = false;
 global_variable b32 Global_Particles_ShowGrid = false;
 global_variable b32 Global_Simulation_UseSpaceOutlines = false;
+global_variable b32 Global_GroundChunksOn = true;
 

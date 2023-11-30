@@ -31,7 +31,7 @@ enum win32_rendering_type
     Win32RenderType_RenderSoftware_DisplayOpenGL,
     Win32RenderType_RenderSoftware_DisplayGDI,
 };
-global_variable win32_rendering_type GlobalRenderingType; //= Win32RenderType_RenderSoftware_DisplayGDI;
+global_variable win32_rendering_type GlobalRenderingType; // = Win32RenderType_RenderSoftware_DisplayGDI;
 global_variable b32 GlobalRunning;
 global_variable b32 GlobalPause;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
