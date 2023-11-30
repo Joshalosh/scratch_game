@@ -226,6 +226,7 @@ struct debug_interaction
         void *Generic;
         debug_element *Element;
         debug_tree *Tree;
+        debug_variable_link *Link;
         v2 *P;
     };
 };
@@ -253,6 +254,7 @@ struct debug_state
     debug_tree TreeSentinel;
 
     v2 LastMouseP;
+    b32 AltUI;
     debug_interaction Interaction;
     debug_interaction HotInteraction;
     debug_interaction NextHotInteraction;
@@ -284,6 +286,9 @@ struct debug_state
     debug_stored_event *FirstFreeStoredEvent;
     debug_frame *FirstFreeFrame;
 };
+
+internal debug_variable_group *CreateVariableGroup(debug_state *DebugState, u32 NameLength, char *Name);
+internal debug_variable_group *CloneVariableGroup(debug_state *DebugState, debug_variable_link *First);
 
 #define GAME_DEBUG_H
 #endif
