@@ -300,11 +300,11 @@ DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
     if(Flags & DEBUGVarToText_AddName)
     {
         char *UseName = Name;
-        if(Flags & DEBUGVarToText_StartAtLastSlash)
+        if(!(Flags & DEBUGVarToText_ShowEntireGUID))
         {
             for(char *Scan = Name; *Scan; ++Scan)
             {
-                if((Scan[0] == '/') &&
+                if((Scan[0] == '|') &&
                    (Scan[1] != 0))
                 {
                     UseName = Scan + 1;
@@ -764,12 +764,12 @@ GetOrCreateDebugViewFor(debug_state *DebugState, debug_id ID)
 }
 
 inline debug_interaction
-EventInteraction(debug_state *DebugState, debug_id DebugID, debug_interaction_type Type, debug_event *Event)
+ElementInteraction(debug_state *DebugState, debug_id DebugID, debug_interaction_type Type, debug_element *Element)
 {
     debug_interaction ItemInteraction = {};
     ItemInteraction.ID = DebugID;
     ItemInteraction.Type = Type;
-    ItemInteraction.Event = Event;
+    ItemInteraction.Element = Element;
 
     return(ItemInteraction);
 }
@@ -867,7 +867,7 @@ DEBUG_REQUESTED(debug_id ID)
 }
 
 internal void
-DEBUGDrawEvent(layout *Layout, debug_stored_event *StoredEvent, debug_id DebugID)
+DEBUGDrawEvent(layout *Layout, debug_element *InElement, debug_stored_event *StoredEvent, debug_id DebugID)
 {
     object_transform NoTransform = DefaultFlatTransform();
     debug_state *DebugState = Layout->DebugState;
@@ -877,7 +877,7 @@ DEBUGDrawEvent(layout *Layout, debug_stored_event *StoredEvent, debug_id DebugID
     {
         debug_event *Event = &StoredEvent->Event;
         debug_interaction ItemInteraction =
-            EventInteraction(DebugState, DebugID, DebugInteraction_AutoModifyVariable, Event);
+            ElementInteraction(DebugState, DebugID, DebugInteraction_AutoModifyVariable, InElement);
 
         b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
         v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
@@ -896,7 +896,7 @@ DEBUGDrawEvent(layout *Layout, debug_stored_event *StoredEvent, debug_id DebugID
                 }
 
                 debug_interaction TearInteraction =
-                    EventInteraction(DebugState, DebugID, DebugInteraction_TearValue, Event);
+                    ElementInteraction(DebugState, DebugID, DebugInteraction_TearValue, InElement);
 
                 layout_element Element = BeginElementRectangle(Layout, &View->InlineBlock.Dim);
                 MakeElementSizable(&Element);
@@ -926,8 +926,7 @@ DEBUGDrawEvent(layout *Layout, debug_stored_event *StoredEvent, debug_id DebugID
                                     DEBUGVarToText_AddValue|
                                  DEBUGVarToText_NullTerminator|
                                  DEBUGVarToText_Colon|
-                                 DEBUGVarToText_PrettyBools|
-                                 DEBUGVarToText_StartAtLastSlash);
+                                 DEBUGVarToText_PrettyBools);
 
                 rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
                 v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
@@ -968,7 +967,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             default:
             {
                 debug_stored_event *Event = Element->MostRecentEvent;
-                DEBUGDrawEvent(Layout, Event, DebugID);
+                DEBUGDrawEvent(Layout, Element, Event, DebugID);
             } break;
         }
     }
@@ -1123,7 +1122,7 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP, b32 Al
     {
         if(DebugState->HotInteraction.Type == DebugInteraction_AutoModifyVariable)
         {
-            switch(DebugState->HotInteraction.Event->Type)
+            switch(DebugState->HotInteraction.Element->MostRecentEvent->Event.Type)
             {
                 case DebugType_b32:
                 {
@@ -1194,17 +1193,16 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 
         case DebugInteraction_ToggleValue:
         {
-            debug_event *Event = DebugState->Interaction.Event;
+            debug_event *Event = &DebugState->Interaction.Element->MostRecentEvent->Event;
             Assert(Event);
             switch(Event->Type)
             {
                 case DebugType_b32:
                 {
                     Event->Value_b32 = !Event->Value_b32;
-                    GlobalDebugTable->EditEvent = *Event;
-                    GlobalDebugTable->EditEvent.GUID = GetElementFromEvent(DebugState, Event)->OriginalGUID;
                 } break;
             }
+            DEBUGMarkEdittedEvent(Event);
         } break;
     }
 
@@ -1230,7 +1228,8 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 */
     if(DebugState->Interaction.Type)
     {
-        debug_event *Event = DebugState->Interaction.Event;
+        debug_event *Event = DebugState->Interaction.Element ?
+            &DebugState->Interaction.Element->MostRecentEvent->Event : 0;
         debug_tree *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
         
