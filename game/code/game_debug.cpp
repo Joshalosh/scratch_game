@@ -500,40 +500,26 @@ WriteGameConfig(debug_state *DebugState)
 internal void
 DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP)
 {
-    PushRect(&DebugState->RenderGroup, DefaultFlatTransform(), ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
+    object_transform NoTransform = DefaultFlatTransform();
+    PushRect(&DebugState->RenderGroup, NoTransform, ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
 
-    r32 BarSpacing = 4.0f;
-    r32 LaneHeight = 0.0f;
+    debug_frame *Frame = DebugState->MostRecentFrame;
+
+    r32 FrameSpan = (r32)(Frame->EndClock - Frame->BeginClock);
+    r32 PixelSpan = GetDim(ProfileRect).x;
+
+    r32 Scale = 0.0f;
+    if(FrameSpan > 0)
+    {
+        Scale = PixelSpan / FrameSpan;
+    }
+
     u32 LaneCount = DebugState->FrameBarLaneCount;
-    r32 FrameBarScale = FLT_MAX;
-    for(debug_frame *Frame = DebugState->OldestFrame; Frame; Frame = Frame->Next)
+    r32 LaneHeight = 0.0f;
+    if(LaneCount > 0)
     {
-        if(FrameBarScale < Frame->FrameBarScale)
-        {
-            FrameBarScale = Frame->FrameBarScale;
-        }
+        LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
     }
-
-    u32 MaxFrame = DebugState->FrameCount;
-    if(MaxFrame > 10)
-    {
-        MaxFrame = 10;
-    }
-
-    if((LaneCount > 0) && (MaxFrame > 0))
-    {
-        r32 PixelsPerFramePlusSpacing = GetDim(ProfileRect).y / (r32)MaxFrame;
-        r32 PixelsPerFrame = PixelsPerFramePlusSpacing - BarSpacing;
-        LaneHeight = PixelsPerFrame / (r32)LaneCount;
-    }
-
-    r32 BarHeight = LaneHeight*LaneCount;
-    r32 BarsPlusSpacing = BarHeight + BarSpacing;
-    r32 ChartLeft = ProfileRect.Min.x;
-    r32 ChartHeight = BarsPlusSpacing*(r32)MaxFrame;
-    r32 ChartWidth = GetDim(ProfileRect).x;
-    r32 ChartTop = ProfileRect.Max.y;
-    r32 Scale = ChartWidth*FrameBarScale;
 
     v3 Colors[] =
     {
@@ -551,48 +537,57 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP)
         {0, 0.5f, 1},
     };
 
-#if 0
-    u32 FrameIndex = 0;
-    for(debug_frame *Frame = DebugState->OldestFrame; Frame; Frame = Frame->Next, ++FrameIndex)
+    for(debug_variable_link *Link = DebugState->ProfileGroup->Sentinel.Next;
+        Link != &DebugState->ProfileGroup->Sentinel; Link = Link->Next)
     {
-        r32 StackX = ChartLeft;
-        r32 StackY = ChartTop - BarsPlusSpacing*(r32)FrameIndex;
-        for(u32 RegionIndex = 0; RegionIndex < Frame->RegionCount; ++RegionIndex)
+        debug_element *Element = Link->Element;
+        Assert(Element);
+#if 0
+        debug_event *OpenEvent = 0;
+        for(debug_stored_event *Event = Element->OldestEvent; Event; Event = Event->Next)
         {
-            debug_frame_region *Region = Frame->Regions + RegionIndex;
-
-//                    v3 Color = Colors[RegionIndex%ArrayCount(Colors)];
-            v3 Color = Colors[Region->ColorIndex%ArrayCount(Colors)];
-            r32 ThisMinX = StackX + Scale*Region->MinT;
-            r32 ThisMaxX = StackX + Scale*Region->MaxT;
-
-            rectangle2 RegionRect = RectMinMax(V2(ThisMinX, StackY - LaneHeight*(Region->LaneIndex + 1)),
-                                               V2(ThisMaxX, StackY - LaneHeight*Region->LaneIndex));
-
-            PushRect(DebugState->RenderGroup, RegionRect, 0.0f, V4(Color, 1));
-
-            if(IsInRectangle(RegionRect, MouseP))
+            // TODO: Replace ThreadID with a well-formed ordinal
+            // at collation time
+            if(Event->FrameIndex == Frame->FrameIndex)
             {
-                debug_event *Record = Region->Event;
-                char TextBuffer[256];
-                _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                            "%s: %10ucy [%s(%d)]",
-                            Record->BlockName,
-                            (u32)Region->CycleCount,
-                            Record->Filename,
-                            Record->LineNumber);
-                DEBUGTextOutAt(MouseP + V2(0.0f, 10.0f), TextBuffer);
+                if(Event->Event.Type == DebugType_BeginBlock)
+                {
+                    OpenEvent = &Event->Event;
+                }
 
-//                HotRecord = Record;
+                if(OpenEvent && (Event->Event.Type == DebugType_EndBlock))
+                {
+                    debug_event *CloseEvent = &Event->Event;
+
+                    v3 Color = Colors[PointerToU32(CloseEvent->GUID)%ArrayCount(Colors)];
+                    r32 ThisMinX = ProfileRect.Min.x + Scale*(r32)(OpenEvent->Clock - Frame->BeginClock);
+                    r32 ThisMaxX = ProfileRect.Min.x + Scale*(r32)(CloseEvent->Clock - Frame->BeginClock);
+
+                    u32 LaneIndex = 0;
+                    rectangle2 RegionRect = RectMinMax(V2(ThisMinX, ProfileRect.Max.y - LaneHeight*(LaneIndex + 1)),
+                                                       V2(ThisMaxX, ProfileRect.Max.y - LaneHeight*(LaneIndex + 0)));
+
+                    PushRect(&DebugState->RenderGroup, NoTransform, RegionRect, 0.0f, V4(Color, 1));
+
+                    if(IsInRectangle(RegionRect, MouseP))
+                    {
+                        debug_event *Record = OpenEvent;
+#if 0
+                        char TextBuffer[256];
+                        _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                                    "%s: %10ucy [%s(%d)]",
+                                    Record->BlockName,
+                                    (u32)Region->CycleCount,
+                                    Record->Filename,
+                                    Record->LineNumber);
+                        DEBUGTextOutAt(MouseP + V2(0.0f, 10.0f), TextBuffer);
+#endif
+                    }
+                }
             }
         }
+#endif
     }
-#endif
-
-#if 0
-    PushRect(RenderGroup, V3(ChartLeft + 0.5f*ChartWidth, ChartMinY + ChartHeight, 0.0f),
-             V2(ChartWidth, 1.0f), V4(1, 1, 1, 1));
-#endif
 }
 
 inline b32
@@ -1150,7 +1145,8 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 }
 
 internal debug_element *
-GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Paren = 0);
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Paren = 0,
+                    b32 CreateHierarchy = true);
 internal void
 DEBUGMarkEditedEvent(debug_state *DebugState, debug_event *Event)
 {
@@ -1174,7 +1170,7 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 
         case DebugInteraction_ToggleValue:
         {
-            debug_event *Event = &DebugState->Interaction.Element->MostRecentEvent->Event;
+            debug_event *Event = &DebugState->Interaction.  Element->MostRecentEvent->Event;
             Assert(Event);
             switch(Event->Type)
             {
@@ -1679,7 +1675,8 @@ GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
 }
 
 internal debug_element *
-GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent)
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent, 
+                    b32 CreateHierarchy)
 {
     Assert(Event->GUID);
 
@@ -1707,8 +1704,11 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_
 
         Result->OldestEvent = Result->MostRecentEvent = 0;
 
-        debug_variable_group *ParentGroup =
-            GetGroupForHierarchicalName(DebugState, Parent, GetName(Result), false);
+        debug_variable_group *ParentGroup = Parent;
+        if(CreateHierarchy)
+        {
+            ParentGroup = GetGroupForHierarchicalName(DebugState, Parent, GetName(Result), false);
+        }
         AddElementToGroup(DebugState, ParentGroup, Result);
     }
 
@@ -1784,7 +1784,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             {
                 case DebugType_BeginBlock:
                 {
-                    debug_element *Element = GetElementFromEvent(DebugState, Event);
+                    debug_element *Element = GetElementFromEvent(DebugState, Event, DebugState->ProfileGroup, false);
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
                         DebugState, Element, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
                     StoreEvent(DebugState, Element, Event);
@@ -1832,7 +1832,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
 
                 default:
                 {
-                    debug_element *Element = GetElementFromEvent(DebugState, Event, DefaultParentGroup);
+                    debug_element *Element = GetElementFromEvent(DebugState, Event, DefaultParentGroup, true);
                     Element->OriginalGUID = Event->GUID;
                     StoreEvent(DebugState, Element, Event);
                 } break;
@@ -1872,6 +1872,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
 #endif
 
         DebugState->RootGroup = CreateVariableGroup(DebugState, 4, "Root");
+        DebugState->ProfileGroup = CreateVariableGroup(DebugState, 7, "Profile");
 
 #if 0
         debug_variable_definition_context Context = {};
