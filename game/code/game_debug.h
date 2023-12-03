@@ -60,6 +60,7 @@ struct debug_stored_event
 
     u32 FrameIndex;
     debug_event Event;
+    // TODO: Potentially call attribution data here
 };
 
 struct debug_string

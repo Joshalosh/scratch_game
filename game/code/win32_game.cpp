@@ -1969,7 +1969,7 @@ WinMain(HINSTANCE Instance,
             game_memory GameMemory = {};
             GameMemory.PermanentStorageSize = Megabytes(256);
             GameMemory.TransientStorageSize = Gigabytes(1);
-            GameMemory.DebugStorageSize = Megabytes(64);
+            GameMemory.DebugStorageSize = Megabytes(256);
             GameMemory.HighPriorityQueue = &HighPriorityQueue;
             GameMemory.LowPriorityQueue = &LowPriorityQueue;
             GameMemory.PlatformAPI.AddEntry = Win32AddEntry;

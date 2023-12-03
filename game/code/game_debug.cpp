@@ -398,9 +398,7 @@ DEBUGEventToText(char *Buffer, char *End, debug_event *Event, u32 Flags)
                                   Event->Value_rectangle3.Max.z);
             } break;
 
-            case DebugType_CounterThreadList:
             case DebugType_bitmap_id:
-            case DebugType_OpenDataBlock:
             {
             } break;
 
@@ -877,17 +875,18 @@ DEBUG_REQUESTED(debug_id ID)
 }
 
 internal void
-DEBUGDrawEvent(layout *Layout, debug_element *InElement, debug_stored_event *StoredEvent, debug_id DebugID)
+DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug_id DebugID)
 {
     object_transform NoTransform = DefaultFlatTransform();
     debug_state *DebugState = Layout->DebugState;
     render_group *RenderGroup = &DebugState->RenderGroup;
+    debug_stored_event *StoredEvent = Element->MostRecentEvent;
 
     if(StoredEvent)
     {
         debug_event *Event = &StoredEvent->Event;
         debug_interaction ItemInteraction =
-            ElementInteraction(DebugState, DebugID, DebugInteraction_AutoModifyVariable, InElement);
+            ElementInteraction(DebugState, DebugID, DebugInteraction_AutoModifyVariable, Element);
 
         b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
         v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
@@ -915,7 +914,7 @@ DEBUGDrawEvent(layout *Layout, debug_element *InElement, debug_stored_event *Sto
                            V3(GetMinCorner(Element.Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
             } break;
 
-            case DebugType_CounterFunctionList:
+            case DebugType_ThreadIntervalGraph:
             {
                 layout_element Element = BeginElementRectangle(Layout, &View->InlineBlock.Dim);
                 MakeElementSizable(&Element);
@@ -945,36 +944,6 @@ DEBUGDrawEvent(layout *Layout, debug_element *InElement, debug_stored_event *Sto
                 DEBUGTextOutAt(V2(GetMinCorner(Element.Bounds).x,
                                   GetMaxCorner(Element.Bounds).y - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
                                Text, ItemColor);
-            } break;
-        }
-    }
-}
-
-internal void
-DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug_id DebugID)
-{
-    debug_state *DebugState = Layout->DebugState;
-
-    debug_stored_event *OldestEvent = Element->OldestEvent;
-    if(OldestEvent)
-    {
-        debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugID);
-        switch(OldestEvent->Event.Type)
-        {
-            case DebugType_CounterThreadList:
-            {
-                layout_element Element = BeginElementRectangle(Layout, &View->InlineBlock.Dim);
-                MakeElementSizable(&Element);
-                //DefaultInteraction(&Element, ItemInteraction);
-                EndElement(&Element);
-
-                DrawProfileIn(DebugState, Element.Bounds, Layout->MouseP);
-            } break;
-
-            default:
-            {
-                debug_stored_event *Event = Element->MostRecentEvent;
-                DEBUGDrawEvent(Layout, Element, Event, DebugID);
             } break;
         }
     }
@@ -1818,6 +1787,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                     debug_element *Element = GetElementFromEvent(DebugState, Event);
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
                         DebugState, Element, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
+                    StoreEvent(DebugState, Element, Event);
                 } break;
 
                 case DebugType_EndBlock:
@@ -1828,34 +1798,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
                         if(EventsMatch(*OpeningEvent, *Event))
                         {
-                            if(MatchingBlock->StartingFrameIndex == FrameIndex)
-                            {
-                                char *MatchName =
-                                    MatchingBlock->Parent ? MatchingBlock->Parent->OpeningEvent->GUID : 0;
-                                if(MatchName == DebugState->ScopeToRecord)
-                                {
-#if 0
-                                    r32 MinT = (r32)(OpeningEvent->Clock - DebugState->CollationFrame->BeginClock);
-                                    r32 MaxT = (r32)(Event->Clock - DebugState->CollationFrame->BeginClock);
-                                    r32 ThresholdT = 0.01f;
-                                    if((MaxT - MinT) > ThresholdT)
-                                    {
-                                        debug_frame_region *Region = AddRegion(DebugState, DebugState->CollationFrame);
-                                        Region->Event = OpeningEvent;
-                                        Region->CycleCount = (Event->Clock - OpeningEvent->Clock);
-                                        Region->LaneIndex = (u16)Thread->LaneIndex;
-                                        Region->MinT = MinT;
-                                        Region->MaxT = MaxT;
-                                        Region->ColorIndex = (u16)PointerToU32(OpeningEvent->BlockName);
-                                    }
-#endif
-                                }
-                            }
-                            else
-                            {
-                                // TODO: Record all frames in between and begin/end spans.
-                            }
-
+                            StoreEvent(DebugState, MatchingBlock->Element, Event);
                             DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
                         }
                         else
