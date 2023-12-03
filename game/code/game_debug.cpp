@@ -1156,9 +1156,7 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         {
             case DebugInteraction_TearValue:
             {
-                char Name[] = "Something";
-                debug_variable_group *RootGroup = CreateVariableGroup(DebugState, sizeof(Name)-1, Name);
-                //CloneVariableGroup();
+                debug_variable_group *RootGroup = CloneVariableGroup(DebugState, DebugState->HotInteraction.Link);
                 debug_tree *Tree = AddTree(DebugState, RootGroup, MouseP);
                 DebugState->HotInteraction.Type = DebugInteraction_Move;
                 DebugState->HotInteraction.P = &Tree->UIP;
@@ -1402,6 +1400,33 @@ CreateVariableGroup(debug_state *DebugState, u32 NameLength, char *Name)
     Group->Name = Name;
 
     return(Group);
+}
+
+internal debug_variable_link *
+CloneVariableLink(debug_state *DebugState, debug_variable_group *DestGroup, debug_variable_link *Source)
+{
+    debug_variable_link *Dest = AddElementToGroup(DebugState, DestGroup, Source->Element);
+    if(Source->Children)
+    {
+        Dest->Children = CreateVariableGroup(DebugState, Source->Children->NameLength, Source->Children->Name);
+        for(debug_variable_link *Child =  Source->Children->Sentinel.Next;
+            Child != &Source->Children->Sentinel;
+            Child = Child->Next)
+        {
+            CloneVariableLink(DebugState, Dest->Children, Child);
+        }
+    }
+
+    return(Dest);
+}
+
+internal debug_variable_group *
+CloneVariableGroup(debug_state *DebugState, debug_variable_link *Source)
+{
+    char *Name = PushString(&DebugState->DebugArena, "Cloned");
+    debug_variable_group *Result = CreateVariableGroup(DebugState, StringLength(Name), Name);
+    CloneVariableLink(DebugState, Result, Source);
+    return(Result);
 }
 
 internal debug_variable_group *
