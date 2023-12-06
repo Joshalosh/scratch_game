@@ -1719,6 +1719,13 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             Assert(DebugState->CollationFrame);
 
             DebugState->CollationFrame->EndClock = Event->Clock;
+            if(DebugState->CollationFrame->RootProfileNode)
+            {
+                DebugState->CollationFrame->RootProfileNode->ProfileNode.Duration = 
+                    (u32)(DebugState->CollationFrame->EndClock -
+                          DebugState->CollationFrame->BeginClock);
+            }
+
             DebugState->CollationFrame->WallSecondsElapsed = Event->Value_r32;
 
             r32 ClockRange = (r32)(DebugState->CollationFrame->EndClock - DebugState->CollationFrame->BeginClock);
@@ -1790,8 +1797,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         Node->FirstChild = 0;
                         Node->NextSameParent = 0;
                         Node->ParentRelativeClock = 0;
-                        Node->Duration = (u32)(DebugState->CollationFrame->EndClock - 
-                                DebugState->CollationFrame->BeginClock);
+                        Node->Duration = 0;
                         Node->AggregateCount = 0;
                         Node->ThreadOrdinal = 0;
                         Node->CoreIndex = 0;
