@@ -147,7 +147,7 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
 
     glBindTexture(GL_TEXTURE_2D, 1);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Width, Height, 0,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, Width, Height, 0,
                  GL_BGRA_EXT, GL_UNSIGNED_BYTE, Memory);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
