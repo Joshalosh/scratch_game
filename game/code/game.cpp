@@ -6,7 +6,6 @@
 #include "game_sim_region.cpp"
 #include "game_entity.cpp"
 #include "game_world_mode.cpp"
-#include "game_meta.cpp"
 #include "game_cutscene.cpp"
 
 internal task_with_memory *

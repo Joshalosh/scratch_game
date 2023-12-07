@@ -544,7 +544,7 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_
         debug_element *Element = Node->Element;
         Assert(Element);
 
-        v3 Color = Colors[PointerToU32(Element->GUID)%ArrayCount(Colors)];
+        v3 Color = Colors[U32FromPointer(Element->GUID)%ArrayCount(Colors)];
         r32 ThisMinX = ProfileRect.Min.x + Scale*(r32)(Node->ParentRelativeClock);
         r32 ThisMaxX = ThisMinX + Scale*(r32)(Node->Duration);
 
@@ -705,7 +705,7 @@ GetOrCreateDebugViewFor(debug_state *DebugState, debug_id ID)
     // I might actually probably want to shift down by 4 instead of 2. I was type casting
     // to u32 originally but picking up compiler warning so I've now changed it to u64
     // But I think that would also mean shifting down by an extra 2 spots. Watch this space!
-    u32 HashIndex = ((PointerToU32(ID.Value[0]) >> 2) + (PointerToU32(ID.Value[1]) >> 2)) % ArrayCount(DebugState->ViewHash);
+    u32 HashIndex = ((U32FromPointer(ID.Value[0]) >> 2) + (U32FromPointer(ID.Value[1]) >> 2)) % ArrayCount(DebugState->ViewHash);
     debug_view **HashSlot = DebugState->ViewHash + HashIndex;
 
     debug_view *Result = 0;
@@ -1973,83 +1973,6 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->ShadowTransform.SortBias = 200000.0f;
     DebugState->TextTransform.SortBias = 300000.0f;
 
-}
-
-internal void
-DEBUGDumpStruct(u32 MemberCount, member_definition *MemberDefs, void *StructPtr, u32 IndentLevel = 0)
-{
-    for(u32 MemberIndex = 0; MemberIndex < MemberCount; ++MemberIndex)
-    {
-        char TextBufferBase[256];
-        char *TextBuffer = TextBufferBase;
-        for(u32 Indent = 0; Indent < IndentLevel; ++Indent)
-        {
-            *TextBuffer++ = ' ';
-            *TextBuffer++ = ' ';
-            *TextBuffer++ = ' ';
-            *TextBuffer++ = ' ';
-        }
-        TextBuffer[0] = 0;
-        size_t TextBufferLeft = (TextBufferBase + sizeof(TextBufferBase)) - TextBuffer;
-
-        member_definition *Member = MemberDefs + MemberIndex;
-
-        void *MemberPtr = (((u8 *)StructPtr) + Member->Offset);
-        if(Member->Flags & MetaMemberFlag_IsPointer)
-        {
-            MemberPtr = *(void **)MemberPtr;
-        }
-
-        if(MemberPtr)
-        {
-            switch(Member->Type)
-            {
-                case MetaType_u32:
-                {
-                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %u", Member->Name, *(u32 *)MemberPtr);
-                } break;
-
-                case MetaType_b32:
-                {
-                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %u", Member->Name, *(b32 *)MemberPtr);
-                } break;
-
-                case MetaType_s32:
-                {
-                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %d", Member->Name, *(s32 *)MemberPtr);
-                } break;
-
-                case MetaType_r32:
-                {
-                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: %f", Member->Name, *(r32 *)MemberPtr);
-                } break;
-
-                case MetaType_v2:
-                {
-                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: {%f,%f}",
-                                Member->Name,
-                                ((v2 *)MemberPtr)->x,
-                                ((v2 *)MemberPtr)->y);
-                } break;
-
-                case MetaType_v3:
-                {
-                    _snprintf_s(TextBuffer, TextBufferLeft, TextBufferLeft, "%s: {%f,%f,%f}",
-                                Member->Name,
-                                ((v3 *)MemberPtr)->x,
-                                ((v3 *)MemberPtr)->y,
-                                ((v3 *)MemberPtr)->z);
-                } break;
-
-                META_HANDLE_TYPE_DUMP(MemberPtr, IndentLevel + 1);
-            }
-        }
-
-        if(TextBuffer[0])
-        {
-            DEBUGTextLine(TextBufferBase);
-        }
-    }
 }
 
 internal void

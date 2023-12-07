@@ -140,12 +140,12 @@ OpenGLRectangle(v2 MinP, v2 MaxP, v4 Color)
 
 inline void
 OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
-                    s32 WindowWidth, s32 WindowHeight)
+                    s32 WindowWidth, s32 WindowHeight, GLuint BlitTexture)
 {
     Assert(Pitch == (Width*4));
     glViewport(0, 0, Width, Height);
 
-    glBindTexture(GL_TEXTURE_2D, 1);
+    glBindTexture(GL_TEXTURE_2D, BlitTexture);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, Width, Height, 0,
                  GL_BGRA_EXT, GL_UNSIGNED_BYTE, Memory);
@@ -173,6 +173,8 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
     v4 Color = {1, 1, 1, 1};
 
     OpenGLRectangle(MinP, MaxP, Color);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 // TODO: Get rid of this
@@ -224,7 +226,7 @@ OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 Window
                 // TODO: Hold the frame if it is not ready with the texture?
 #pragma warning(push)
 #pragma warning(disable : 4312 4311 4302)
-                glBindTexture(GL_TEXTURE_2D, (GLuint)Entry->Bitmap->TextureHandle);
+                glBindTexture(GL_TEXTURE_2D, (GLuint)U32FromPointer(Entry->Bitmap->TextureHandle));
                 OpenGLRectangle(Entry->P, MaxP, Entry->Color);
             } break;
 
@@ -246,7 +248,7 @@ OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 Window
     }
 }
 
-PLATFORM_ALLOCATE_TEXTURE(Win32AllocateTexture)
+PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
 {
     GLuint Handle;
     glGenTextures(1, &Handle);
@@ -267,12 +269,12 @@ PLATFORM_ALLOCATE_TEXTURE(Win32AllocateTexture)
     glFlush();
 
     Assert(sizeof(Handle) <= sizeof(void *));
-    return((void *)Handle);
+    return(PointerFromU32(void, Handle));
 }
 
-PLATFORM_DEALLOCATE_TEXTURE(Win32DeallocateTexture)
+PLATFORM_DEALLOCATE_TEXTURE(DeallocateTexture)
 {
-    GLuint Handle = (GLuint)Texture;
+    GLuint Handle = U32FromPointer(Texture);
     glDeleteTextures(1, &Handle);
 #pragma warning(pop)
 }

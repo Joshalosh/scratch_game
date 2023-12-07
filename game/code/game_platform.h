@@ -81,7 +81,8 @@ typedef real64 r64;
 
 typedef uintptr_t umm;
 
-#define PointerToU32(Pointer) ((u32)(memory_index)(Pointer))
+#define U32FromPointer(Pointer) ((u32)(memory_index)(Pointer))
+#define PointerFromU32(type, Value) (type *)((memory_index)Value)
 
 #pragma pack(push, 1)
 struct bitmap_id

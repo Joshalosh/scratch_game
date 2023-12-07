@@ -83,7 +83,6 @@
 #include "game_shared.h"
 #include "game_random.h"
 #include "game_file_formats.h"
-#include "game_meta.h"
 #include "game_cutscene.h"
 
 
