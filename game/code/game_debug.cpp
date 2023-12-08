@@ -972,10 +972,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
                             ItemInteraction = DebugLinkInteraction(DebugInteraction_TearValue, Link);
                         }
 
-                        char Text[256];
-                        Assert((Link->Children->NameLength + 1) < ArrayCount(Text));
-                        Copy(Link->Children->NameLength, Link->Children->Name, Text);
-                        Text[Link->Children->NameLength] = 0;
+                        char *Text = Link->Children->Name;
 
                         rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
                         v2 Dim = {GetDim(TextBounds).x, Layout.LineAdvance};
@@ -1340,8 +1337,7 @@ CreateVariableGroup(debug_state *DebugState, u32 NameLength, char *Name)
     debug_variable_group *Group = PushStruct(&DebugState->DebugArena, debug_variable_group);
     DLIST_INIT(&Group->Sentinel);
 
-    Group->NameLength = NameLength;
-    Group->Name = Name;
+    Group->Name = PushAndNullTerminate(&DebugState->DebugArena, NameLength, Name);
 
     return(Group);
 }
@@ -1352,7 +1348,9 @@ CloneVariableLink(debug_state *DebugState, debug_variable_group *DestGroup, debu
     debug_variable_link *Dest = AddElementToGroup(DebugState, DestGroup, Source->Element);
     if(Source->Children)
     {
-        Dest->Children = CreateVariableGroup(DebugState, Source->Children->NameLength, Source->Children->Name);
+        Dest->Children = PushStruct(&DebugState->DebugArena, debug_variable_group);
+        DLIST_INIT(&Dest->Children->Sentinel);
+        Dest->Children->Name = Source->Children->Name;
         for(debug_variable_link *Child =  Source->Children->Sentinel.Next;
             Child != &Source->Children->Sentinel;
             Child = Child->Next)
@@ -1379,8 +1377,7 @@ GetOrCreateGroupWithName(debug_state *DebugState, debug_variable_group *Parent, 
     debug_variable_group *Result = 0;
     for(debug_variable_link *Link = Parent->Sentinel.Next; Link != &Parent->Sentinel; Link = Link->Next)
     {
-        if(Link->Children && StringsAreEqual(Link->Children->NameLength, Link->Children->Name,
-                                             NameLength, Name))
+        if(Link->Children && StringsAreEqual(NameLength, Name, Link->Children->Name))
         {
             Result = Link->Children;
         }

@@ -282,6 +282,19 @@ PushString(memory_arena *Arena, char *Source)
     return(Dest);
 }
 
+inline char *
+PushAndNullTerminate(memory_arena *Arena, u32 Length, char *Source)
+{
+    char *Dest = (char *)PushSize_(Arena, Length + 1, NoClear());
+    for(u32 CharIndex = 0; CharIndex < Length; ++CharIndex)
+    {
+        Dest[CharIndex] = Source[CharIndex];
+    }
+    Dest[Length] = 0;
+
+    return(Dest);
+}
+
 inline temporary_memory
 BeginTemporaryMemory(memory_arena *Arena)
 {

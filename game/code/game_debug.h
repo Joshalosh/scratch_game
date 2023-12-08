@@ -124,7 +124,6 @@ struct debug_tree
 
 struct debug_variable_group
 {
-    u32 NameLength;
     char *Name;
     debug_variable_link Sentinel;
 };
