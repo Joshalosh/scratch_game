@@ -1249,9 +1249,6 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     DebugState->LastMouseP = MouseP;
 }
 
-global_variable debug_table GlobalDebugTable_;
-debug_table *GlobalDebugTable = &GlobalDebugTable_;
-
 inline u32
 GetLaneFromThreadIndex(debug_state *DebugState, u32 ThreadIndex)
 {
@@ -1439,7 +1436,7 @@ AllocateOpenDebugBlock(debug_state *DebugState, debug_element *Element,
     FREELIST_ALLOCATE(Result, DebugState->FirstFreeBlock, PushStruct(&DebugState->DebugArena, open_debug_block));
 
     Result->StartingFrameIndex = FrameIndex;
-    Result->OpeningEvent = Event;
+    Result->BeginClock = Event->Clock;
     Result->Element = Element;
     Result->NextFree = 0;
 
@@ -1777,7 +1774,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                     if(Thread->FirstOpenCodeBlock)
                     {
                         ParentEvent = Thread->FirstOpenCodeBlock->Node;
-                        ClockBasis = Thread->FirstOpenCodeBlock->OpeningEvent->Clock;
+                        ClockBasis = Thread->FirstOpenCodeBlock->BeginClock;
                     }
                     else if(!ParentEvent)
                     {
@@ -1820,17 +1817,11 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                     if(Thread->FirstOpenCodeBlock)
                     {
                         open_debug_block *MatchingBlock = Thread->FirstOpenCodeBlock;
-                        debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
-                        if(EventsMatch(*OpeningEvent, *Event))
-                        {
-                            debug_profile_node *Node = &MatchingBlock->Node->ProfileNode;
-                            Node->Duration = (u32)(Event->Clock - OpeningEvent->Clock);
-                            DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
-                        }
-                        else
-                        {
-                            // TODO: Record span that goes to the beginning of the frame series.
-                        }
+                        Assert(Thread->ID == Event->ThreadID);
+
+                        debug_profile_node *Node = &MatchingBlock->Node->ProfileNode;
+                        Node->Duration = (u32)(Event->Clock - MatchingBlock->BeginClock);
+                        DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
                     }
                 } break;
 
@@ -1849,11 +1840,8 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                     if(Thread->FirstOpenDataBlock)
                     {
                         open_debug_block *MatchingBlock = Thread->FirstOpenDataBlock;
-                        debug_event *OpeningEvent = MatchingBlock->OpeningEvent;
-                        if(EventsMatch(*OpeningEvent, *Event))
-                        {
-                            DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenDataBlock);
-                        }
+                        Assert(Thread->ID == Event->ThreadID);
+                        DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenDataBlock);
                     }
                 } break;
 
@@ -2105,6 +2093,4 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
         CollateDebugRecords(DebugState, EventCount, GlobalDebugTable->Events[EventArrayIndex]);
         DEBUGEnd(DebugState, Input);
     }
-
-    return(GlobalDebugTable);
 }

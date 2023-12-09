@@ -198,9 +198,8 @@ struct open_debug_block
     };
 
     u32 StartingFrameIndex;
-    debug_event *OpeningEvent;
     debug_element *Element;
-
+    u64 BeginClock;
     debug_stored_event *Node;
 
     // Only for data block I think?

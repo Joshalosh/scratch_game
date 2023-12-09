@@ -520,6 +520,10 @@ typedef struct game_memory
     uint64_t DebugStorageSize;
     void *DebugStorage; // Required to be cleared to zero at startup
 
+#if GAME_INTERNAL
+    struct debug_table *DebugTable;
+#endif
+
     platform_work_queue *HighPriorityQueue;
     platform_work_queue *LowPriorityQueue;
 

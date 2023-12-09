@@ -1826,6 +1826,9 @@ WinMain(HINSTANCE Instance,
             GameMemory.PermanentStorageSize = Megabytes(256);
             GameMemory.TransientStorageSize = Gigabytes(1);
             GameMemory.DebugStorageSize = Megabytes(256);
+#if GAME_INTERNAL
+            GameMemory.DebugTable = GlobalDebugTable;
+#endif
             GameMemory.HighPriorityQueue = &HighPriorityQueue;
             GameMemory.LowPriorityQueue = &LowPriorityQueue;
             GameMemory.PlatformAPI.AddEntry = Win32AddEntry;
@@ -2327,9 +2330,15 @@ WinMain(HINSTANCE Instance,
 
                     if(Game.DEBUGFrameEnd)
                     {
-                        GlobalDebugTable = Game.DEBUGFrameEnd(&GameMemory, NewInput, &RenderCommands);
+                        Game.DEBUGFrameEnd(&GameMemory, NewInput, &RenderCommands);
                     }
-                    GlobalDebugTable_.EventArrayIndex_EventIndex = 0;
+                    else 
+                    {
+                        // TODO: If for some reason the game didn't load 
+                        // I need to make sure I clear the event array so that 
+                        // it doesn't pile up on itself
+                        GlobalDebugTable_.EventArrayIndex_EventIndex = 0;
+                    }
 
                     END_BLOCK();
 #endif

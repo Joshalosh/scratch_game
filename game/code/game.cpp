@@ -238,6 +238,7 @@ SetGameMode(game_state *GameState, transient_state *TranState, game_mode GameMod
 }
 
 #if GAME_INTERNAL
+debug_table *GlobalDebugTable;
 game_memory *DebugGlobalMemory;
 #endif
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -245,6 +246,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     Platform = Memory->PlatformAPI;
 
 #if GAME_INTERNAL
+    GlobalDebugTable = Memory->DebugTable;
     DebugGlobalMemory = Memory;
 
     {DEBUG_DATA_BLOCK("Renderer");
