@@ -22,6 +22,39 @@ struct tile_render_work
     rectangle2i ClipRect;
 };
 
+// NOTE: I went ahead and tried to fix the OpenGL multiple contexts 
+// asset streaming bug, this means that when render tile work inevitably 
+// gets moved into it's own render.h file, I need to make sure I move these 
+// texture structs along with it
+struct texture_op_allocate
+{
+    u32 Width;
+    u32 Height;
+    void *Data;
+
+    void **ResultHandle;
+};
+struct texture_op_deallocate
+{
+    void *Handle;
+};
+struct texture_op 
+{
+    texture_op *Next;
+    b32 IsAllocate;
+    union
+    {
+        texture_op_allocate Allocate;
+        texture_op_deallocate Deallocate;
+    };
+};
+
+#define PLATFORM_ALLOCATE_TEXTURE(name) void *name(u32 Width, u32 Height, void *Data)
+typedef PLATFORM_ALLOCATE_TEXTURE(platform_allocate_texture);
+
+#define PLATFORM_DEALLOCATE_TEXTURE(name) void name(void *Texture)
+typedef PLATFORM_DEALLOCATE_TEXTURE(platform_deallocate_texture);
+
 inline v4
 Unpack4x8(uint32_t Packed)
 {

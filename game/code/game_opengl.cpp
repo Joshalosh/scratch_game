@@ -256,15 +256,14 @@ OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 Window
     }
 }
 
-PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
+internal void *
+OpenGLAllocateTexture(u32 Width, u32 Height, void *Data)
 {
     GLuint Handle;
     glGenTextures(1, &Handle);
     glBindTexture(GL_TEXTURE_2D, Handle);
-    glTexImage2D(GL_TEXTURE_2D, 0,
-            OpenGLDefaultInternalTextureFormat,
-            Width, Height, 0,
-            GL_BGRA_EXT, GL_UNSIGNED_BYTE, Data);
+    glTexImage2D(GL_TEXTURE_2D, 0, OpenGLDefaultInternalTextureFormat,
+                 Width, Height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, Data);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -274,16 +273,26 @@ PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    glFlush();
-
     Assert(sizeof(Handle) <= sizeof(void *));
-    return(PointerFromU32(void, Handle));
+    void *Result = PointerFromU32(void, Handle);
+    return(Result);
 }
 
-PLATFORM_DEALLOCATE_TEXTURE(DeallocateTexture)
+internal void
+OpenGLManageTextures(texture_op *First)
 {
-    GLuint Handle = U32FromPointer(Texture);
-    glDeleteTextures(1, &Handle);
+    for(texture_op *Op = First; Op; Op = Op->Next)
+    {
+        if(Op->IsAllocate)
+        {
+            *Op->ResultHandle = AllocateTexture(Op->Width, Op->Height, Op->Data);
+        }
+        else 
+        {
+            GLuint Handle = U32FromPointer(Op->Texture);
+            glDeleteTextures(1, &Handle);
 #pragma warning(pop)
+        }
+    }
 }
 
