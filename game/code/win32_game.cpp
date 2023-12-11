@@ -651,7 +651,7 @@ Win32InitOpenGL(HDC WindowDC)
 
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
-        OpenGLInit(ModernContext);
+        OpenGLInit(ModernContext, OpenGLSupportsSRGBFramebuffer);
         if(wglSwapIntervalEXT)
         {
             wglSwapIntervalEXT(1);
@@ -1757,7 +1757,7 @@ WinMain(HINSTANCE Instance,
 
             win32_thread_startup HighPriStartups[6] = {};
             platform_work_queue HighPriorityQueue = {};
-            Win32MakeQueue(&HighPriorityQueue, 0/*ArrayCount(HighPriStartups)*/, HighPriStartups);
+            Win32MakeQueue(&HighPriorityQueue, ArrayCount(HighPriStartups), HighPriStartups);
 
             win32_thread_startup LowPriStartups[2] = {};
             LowPriStartups[0] = Win32GetThreadStartupForGL(OpenGLDC, OpenGLRC);

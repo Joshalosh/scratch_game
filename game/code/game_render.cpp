@@ -90,6 +90,7 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i Cli
 #else
     // Premultiply color up front
     Color.rgb *= Color.a;
+    Color *= 255.0f;
 
     Color.r = 1.0f;
     Color.g = 0.0f;
@@ -180,9 +181,9 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i Cli
                     __m128 Desta = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 24), MaskFF));
 
                     // This modulates by the incoming colour.
-                    __m128 Texelr = Colorr_4x;
-                    __m128 Texelg = Colorg_4x;
-                    __m128 Texelb = Colorb_4x;
+                    __m128 Texelr = mmSquare(Colorr_4x);
+                    __m128 Texelg = mmSquare(Colorg_4x);
+                    __m128 Texelb = mmSquare(Colorb_4x);
                     __m128 Texela = Colora_4x;
 
                     Texelr = _mm_min_ps(_mm_max_ps(Texelr, Zero), MaxColorValue);
