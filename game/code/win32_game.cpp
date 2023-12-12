@@ -491,7 +491,8 @@ int Win32OpenGLAttribs[] =
     |WGL_CONTEXT_DEBUG_BIT_ARB
 #endif
     ,
-    WGL_CONTEXT_PROFILE_MASK_ARB,
+    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+    0,
 };
 
 internal win32_thread_startup
@@ -577,51 +578,51 @@ Win32LoadWGLExtensions()
     if(RegisterClassA(&WindowClass))
     {
         HWND Window = CreateWindowExA(
-                0,
-                WindowClass.lpszClassName,
-                "Game",
-                0,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                0,
-                0,
-                WindowClass.hInstance,
-                0);
+            0,
+            WindowClass.lpszClassName,
+            "Game",
+            0,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            0,
+            0,
+            WindowClass.hInstance,
+            0);
 
         HDC WindowDC = GetDC(Window);
         Win32SetPixelFormat(WindowDC);
         HGLRC OpenGLRC = wglCreateContext(WindowDC);
         if(wglMakeCurrent(WindowDC, OpenGLRC))
         {
-           wglChoosePixelFormatARB =
-               (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
-           wglCreateContextAttribsARB =
-               (wgl_create_context_attribs_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
-           wglSwapIntervalEXT = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
-           wglGetExtensionsStringEXT = (wgl_get_extensions_string_ext *)wglGetProcAddress("wglGetExtensionsStringEXT");
+            wglChoosePixelFormatARB =
+                (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
+            wglCreateContextAttribsARB =
+                (wgl_create_context_attribs_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
+            wglSwapIntervalEXT = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
+            wglGetExtensionsStringEXT = (wgl_get_extensions_string_ext *)wglGetProcAddress("wglGetExtensionsStringEXT");
 
-           if(wglGetExtensionsStringEXT)
-           {
-               char *Extensions = (char *)wglGetExtensionsStringEXT();
-               char *At = Extensions;
-               while(*At)
-               {
-                   while(IsWhitespace(*At)) {++At;}
-                   char *End = At;
-                   while(*End && !IsWhitespace(*End)) {++End;}
+            if(wglGetExtensionsStringEXT)
+            {
+                char *Extensions = (char *)wglGetExtensionsStringEXT();
+                char *At = Extensions;
+                while(*At)
+                {
+                    while(IsWhitespace(*At)) {++At;}
+                    char *End = At;
+                    while(*End && !IsWhitespace(*End)) {++End;}
 
-                   umm Count = End - At;
+                    umm Count = End - At;
 
-                   if(0) {}
-                   else if(StringsAreEqual(Count, At, "WGL_EXT_framebuffer_sRGB")) {OpenGLSupportsSRGBFramebuffer = true;}
+                    if(0) {}
+                    else if(StringsAreEqual(Count, At, "WGL_EXT_framebuffer_sRGB")) {OpenGLSupportsSRGBFramebuffer = true;}
 
-                   At = End;
-               }
-           }
+                    At = End;
+                }
+            }
 
-           wglMakeCurrent(0, 0);
+            wglMakeCurrent(0, 0);
         }
 
         wglDeleteContext(OpenGLRC);
@@ -1314,7 +1315,7 @@ Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
     {
         Bottom = Backbuffer->Height;
     }
-    
+
     if((X >= 0) && (X < Backbuffer->Width))
     {
         uint8_t *Pixel = ((uint8_t *)Backbuffer->Memory +
@@ -2322,7 +2323,6 @@ WinMain(HINSTANCE Instance,
                         Win32CompleteAllWork(&LowPriorityQueue);
                         DEBUGSetEventRecording(false);
                     }
-
 
                     if(Game.DEBUGFrameEnd)
                     {
