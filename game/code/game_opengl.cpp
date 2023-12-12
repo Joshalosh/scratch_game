@@ -179,29 +179,80 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
 }
 
 // TODO: Get rid of this
+// TODO: Need to fix up OpenGLrenderCommands with day 324 and get it all compiling
 global_variable u32 TextureBindCount = 0;
 internal void
-OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 WindowHeight)
+OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, 
+                     rectangle2i DrawRegion, u32 WindowWidth, u32 WindowHeight)
 {
-    glViewport(0, 0, Commands->Width, Commands->Height);
-
     glEnable(GL_TEXTURE_2D);
+    glEnable(GL_SCISSOR_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
     glMatrixMode(GL_TEXTURE);
     glLoadIdentity();
 
-    OpenGLSetScreenspace(Commands->Width, Commands->Height);
+    b32 UseRenderTargets = (glBindFramebuffer != 0);
 
-    u32 SortEntryCount = Commands->PushBufferElementCount;
-    tile_sort_entry *SortEntries = (tile_sort_entry *)(Commands->PushBufferBase + Commands->SortEntryAt);
-
-    tile_sort_entry *Entry = SortEntries;
-    for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
+    u32 MaxRenderTargetIndex = UseRenderTargets ? Commands->MaxRenderTargetIndex : 0;
+    if(MaxRenderTargetIndex >= GlobalFrameBufferCount)
     {
+        u32 NewFramebufferCount = Commands->MaxRenderTargetIndex + 1;
+        Assert(NewFramebufferCount < ArrayCount(GlobalFramebufferHandles)); 
+        u32 NewCount = NewFramebufferCount - GlobalFramebufferCount;
+        glGenFramebuffers(NewCount, GlobalFramebufferHandles + GlobalFramebufferCount);
+        for(u32 TargetIndex = GlobalFramebufferCount; TargetIndex <= NewFramebufferCount; ++TargetIndex)
+        {
+            GLuint TextureHandle = U32FromPointer(OpenGLAllocateTexture(GetWidth(DrawRegion), GetHeight(DrawRegion), 0));
+            GlobalFramebufferTextures[TargetIndex] = TextureHandle;
+            glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   GL_TEXTURE_2D, TextureHandle, 0);
+            GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            Assert(Status == GL_FRAMEBUFFER_COMPLETE);
+        }
+
+        GlobalFramebufferCount = NewFramebufferCount;
+    }
+
+    for(u32 TargetIndex = 0; TargetIndex <= MaxRenderTargetIndex; ++TargetIndex)
+    {
+        if(UseRenderTargets)
+        {
+            OpenGLBindFramebuffer(TargetIndex, DrawRegion);
+        }
+
+        if(TargetIndex == 0)
+        {
+            glScissor(0, 0, WindowWidth, WindowHeight);
+        }
+        else 
+        {
+            glScissor(0, 0, GetWidth(DrawRegion), GetHeight(DrawRegion));
+        }
+        glClearColor(Commands->ClearColor.r, Commands->ClearColor.g,
+                     Commands->ClearColor.b, Commands->ClearColor.a);
+        glClear(GL_COLOR_BUFFER_BIT);
+                
+    }
+
+    OpenGLSetScreenSpace(Commands->Width, Commands->Height);
+
+    u32 ClipRectIndex = 0xFFFFFFFF;
+    u32 CurrentRenmderTargetIndex = 0xFFFFFFFF;
+    u32 *Entry = Prep->SortedIndices;
+    for(u32 SortEntryIndex = 0; SortEntryIndex < Prep->SortedIndexCount; ++SortEntryIndex, ++Entry)
+    {
+        u32 HeaderOffset = *Entry;
+
         render_group_entry_header *Header = (render_group_entry_header *)
-            (Commands->PushBufferBase + Entry->PushBufferOffset);
+            (Commands->PushBufferBase + HeaderOffset);
+        if(UseRenderTargets ||
+           (Prep->ClipRects[Header->ClipRectsIndex].RenderTargetIndex <= MaxRenderTargetIndex))
+        {
+        }
+
 
         void *Data = (uint8_t *)Header + sizeof(*Header);
         switch(Header->Type)
