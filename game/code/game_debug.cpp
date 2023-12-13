@@ -5,8 +5,6 @@
 
 #include "game_debug.h"
 
-internal void FreeFrame(debug_state *DebugState, debug_frame *Frame);
-
 inline b32
 DebugIDsAreEqual(debug_id A, debug_id B)
 {
@@ -27,7 +25,7 @@ DebugIDFromLink(debug_tree *Tree, debug_variable_link *Link)
     return(Result);
 }
 
-inline debug_id 
+inline debug_id
 DebugIDFromGUID(debug_tree *Tree, char *GUID)
 {
     debug_id Result = {};
@@ -430,74 +428,6 @@ struct debug_variable_iterator
 };
 
 internal void
-WriteGameConfig(debug_state *DebugState)
-{
-#if 0
-    char Temp[4096];
-    char *At = Temp;
-    char *End = Temp + sizeof(Temp);
-
-    u32 Depth = 0;
-    debug_variable_iterator Stack[DEBUG_MAX_VARIABLE_STACK_DEPTH];
-
-    Stack[Depth].Link = DebugState->RootGroup->VarGroup.Next;
-    Stack[Depth].Sentinel = &DebugState->RootGroup->VarGroup;
-    ++Depth;
-    while(Depth > 0)
-    {
-        debug_variable_iterator *Iter = Stack + (Depth - 1);
-        if(Iter->Link == Iter->Sentinel)
-        {
-            --Depth;
-        }
-        else
-        {
-            debug_variable *Var = Iter->Link->Var;
-            Iter->Link = Iter->Link->Next;
-
-            if(DEBUGShouldBeWritten(Var->Type))
-            {
-                // TODO: Other variable types.
-                for(u32 Indent = 0; Indent < Depth; ++Indent)
-                {
-                    *At++ = ' ';
-                    *At++ = ' ';
-                    *At++ = ' ';
-                    *At++ = ' ';
-                }
-
-                if(Var->Type == DebugType_OpenDataBlock)
-                {
-                    At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                      "// ");
-                }
-                At += DEBUGVariableToText(At, End, Var,
-                                          DEBUGVarToText_AddDebugUI|
-                                          DEBUGVarToText_AddName|
-                                          DEBUGVarToText_LineFeedEnd|
-                                          DEBUGVarToText_FloatSuffix);
-            }
-
-            if(Var->Type == DebugType_OpenDataBlock)
-            {
-                Iter = Stack + Depth;
-                Iter->Link = Var->VarGroup.Next;
-                Iter->Sentinel = &Var->VarGroup;
-                ++Depth;
-            }
-        }
-    }
-    Platform.DEBUGWriteEntireFile("../code/game_config.h", (u32)(At - Temp), Temp);
-
-    if(!DebugState->Compiling)
-    {
-        DebugState->Compiling = true;
-        DebugState->Compiler = Platform.DEBUGExecuteSystemCommand("..\\code", "c:\\windows\\system32\\cmd.exe", "/C build.bat");
-    }
-#endif
-}
-
-internal void
 DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_stored_event *RootEvent)
 {
     debug_profile_node *RootNode = &RootEvent->ProfileNode;
@@ -536,8 +466,8 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_
         //{0, 0.5f, 1},
     };
 
-    for(debug_stored_event *StoredEvent = RootNode->FirstChild; 
-        StoredEvent; 
+    for(debug_stored_event *StoredEvent = RootNode->FirstChild;
+        StoredEvent;
         StoredEvent = StoredEvent->ProfileNode.NextSameParent)
     {
         debug_profile_node *Node = &StoredEvent->ProfileNode;
@@ -847,6 +777,7 @@ internal void
 DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug_id DebugID)
 {
     object_transform NoTransform = DefaultFlatTransform();
+
     debug_state *DebugState = Layout->DebugState;
     render_group *RenderGroup = &DebugState->RenderGroup;
     debug_stored_event *StoredEvent = Element->MostRecentEvent;
@@ -895,7 +826,6 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                 {
                     DrawProfileIn(DebugState, Element.Bounds, Layout->MouseP, Frame->RootProfileNode);
                 }
-
             } break;
 
             default:
@@ -903,7 +833,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                 char Text[256];
                 DEBUGEventToText(Text, Text + sizeof(Text), Event,
                                  DEBUGVarToText_AddName|
-                                    DEBUGVarToText_AddValue|
+                                 DEBUGVarToText_AddValue|
                                  DEBUGVarToText_NullTerminator|
                                  DEBUGVarToText_Colon|
                                  DEBUGVarToText_PrettyBools);
@@ -1146,7 +1076,7 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 
         case DebugInteraction_ToggleValue:
         {
-            debug_event *Event = &DebugState->Interaction.  Element->MostRecentEvent->Event;
+            debug_event *Event = &DebugState->Interaction.Element->MostRecentEvent->Event;
             Assert(Event);
             switch(Event->Type)
             {
@@ -1348,7 +1278,7 @@ CloneVariableLink(debug_state *DebugState, debug_variable_group *DestGroup, debu
         Dest->Children = PushStruct(&DebugState->DebugArena, debug_variable_group);
         DLIST_INIT(&Dest->Children->Sentinel);
         Dest->Children->Name = Source->Children->Name;
-        for(debug_variable_link *Child =  Source->Children->Sentinel.Next;
+        for(debug_variable_link *Child = Source->Children->Sentinel.Next;
             Child != &Source->Children->Sentinel;
             Child = Child->Next)
         {
@@ -1398,7 +1328,7 @@ GetGroupForHierarchicalName(debug_state *DebugState, debug_variable_group *Paren
     char *Scan = Name;
     for(; *Scan; ++Scan)
     {
-        if(*Scan == '_')
+        if(*Scan == '/')
         {
             FirstSeparator = Scan;
             break;
@@ -1412,7 +1342,7 @@ GetGroupForHierarchicalName(debug_state *DebugState, debug_variable_group *Paren
         {
             NameLength = (u32)(FirstSeparator - Name);
         }
-        else 
+        else
         {
             NameLength = (u32)(Scan - Name);
         }
@@ -1614,14 +1544,15 @@ DebugParseName(char *GUID)
             else if(PipeCount == 1)
             {
             }
-            else 
+            else
             {
                 Result.NameStartsAt = (u32)(Scan - GUID + 1);
             }
-             ++PipeCount;
+
+            ++PipeCount;
         }
 
-    //TODO: Better hash function
+        //TODO: Better hash function
         Result.HashValue = 65599*Result.HashValue + *Scan;
     }
 
@@ -1629,7 +1560,6 @@ DebugParseName(char *GUID)
     Result.Name = GUID + Result.NameStartsAt;
 
     return(Result);
-
 }
 
 inline debug_element *
@@ -1646,11 +1576,11 @@ GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
         }
     }
 
-    return (Result);
+    return(Result);
 }
 
 internal debug_element *
-GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent, 
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent,
                     b32 CreateHierarchy)
 {
     Assert(Event->GUID);
@@ -1709,7 +1639,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             DebugState->CollationFrame->EndClock = Event->Clock;
             if(DebugState->CollationFrame->RootProfileNode)
             {
-                DebugState->CollationFrame->RootProfileNode->ProfileNode.Duration = 
+                DebugState->CollationFrame->RootProfileNode->ProfileNode.Duration =
                     (u32)(DebugState->CollationFrame->EndClock -
                           DebugState->CollationFrame->BeginClock);
             }
@@ -1959,7 +1889,6 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->ShadowTransform.SortBias = 200000.0f;
     DebugState->UITransform.SortBias = 300000.0f;
     DebugState->TextTransform.SortBias = 400000.0f;
-
 }
 
 internal void
