@@ -87,7 +87,7 @@ extern debug_table *GlobalDebugTable;
 
 #define DEBUGSetEventRecording(Enabled) (GlobalDebugTable->RecordIncrement = (Enabled) ? 1 : 0)
 
-#define RecordDebugEvent(EventType, GUIDInit)                                                \
+#define RecordDebugEvent(EventType, GUIDInit)                                                   \
     u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, GlobalDebugTable->RecordIncrement); \
     u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
     Assert(EventIndex < ArrayCount(GlobalDebugTable->Events[0]));                               \
@@ -96,9 +96,9 @@ extern debug_table *GlobalDebugTable;
     Event->Type = (u8)EventType;                                                                \
     Event->CoreIndex = 0;                                                                       \
     Event->ThreadID = (u16)GetThreadID();                                                       \
-    Event->GUID = GUIDInit;                                                                         \
+    Event->GUID = GUIDInit;                                                                     \
 
-#define FRAME_MARKER(SecondsElapsedInit)                               \
+#define FRAME_MARKER(SecondsElapsedInit)                                       \
 {RecordDebugEvent(DebugType_FrameMarker, DEBUG_NAME("Frame Marker"));          \
      Event->Value_r32 = SecondsElapsedInit;}
 

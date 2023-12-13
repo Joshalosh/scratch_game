@@ -667,6 +667,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             if(IsValid(GroundBuffer->P))
             {
                 loaded_bitmap *Bitmap = &GroundBuffer->Bitmap;
+
                 v3 Delta = Subtract(WorldMode->World, &GroundBuffer->P, &WorldMode->CameraP);
 
                 RenderGroup->GlobalAlpha = 1.0f;
@@ -1091,9 +1092,9 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             s32 Y = TruncateReal32ToInt32(P.y);
 
                             if(X < 1) {X = 1;}
-                            if(X > PARTICLE_CEL_DIM - 2) {X = (PARTICLE_CEL_DIM - 2);}
+                            if(X > (PARTICLE_CEL_DIM - 2)) {X = (PARTICLE_CEL_DIM - 2);}
                             if(Y < 1) {Y = 1;}
-                            if(Y > PARTICLE_CEL_DIM - 2) {Y = (PARTICLE_CEL_DIM - 2);}
+                            if(Y > (PARTICLE_CEL_DIM - 2)) {Y = (PARTICLE_CEL_DIM - 2);}
 
                             particle_cel *CelCentre = &WorldMode->ParticleCels[Y][X];
                             particle_cel *CelLeft = &WorldMode->ParticleCels[Y][X - 1];

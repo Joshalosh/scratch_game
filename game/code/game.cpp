@@ -309,7 +309,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                         (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
 
         TranState->HighPriorityQueue = Memory->HighPriorityQueue;
-        TranState->LowPriorityQueue  = Memory->LowPriorityQueue;
+        TranState->LowPriorityQueue = Memory->LowPriorityQueue;
         for(uint32_t TaskIndex = 0; TaskIndex < ArrayCount(TranState->Tasks); ++TaskIndex)
         {
             task_with_memory *Task = TranState->Tasks + TaskIndex;

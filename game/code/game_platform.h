@@ -320,7 +320,7 @@ typedef struct game_offscreen_buffer
     int Pitch;
 } game_offscreen_buffer;
 
-typedef struct game_render_commnads
+typedef struct game_render_commands
 {
     u32 Width;
     u32 Height;

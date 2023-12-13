@@ -68,7 +68,6 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i Cli
     FillRect = Intersect(ClipRect, FillRect);
 
 #if 0
-    FillRect = Intersect(FillRect, ClipRect);
     uint32_t Color32 = ((RoundReal32ToUInt32(A * 255.0f) << 24) |
                         (RoundReal32ToUInt32(R * 255.0f) << 16) |
                         (RoundReal32ToUInt32(G * 255.0f) << 8) |

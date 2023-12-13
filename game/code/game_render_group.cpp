@@ -1,7 +1,7 @@
 
 inline render_group
 BeginRenderGroup(game_assets *Assets, game_render_commands *Commands,
-                  u32 GenerationID, b32 RendersInBackground)
+                 u32 GenerationID, b32 RendersInBackground)
 {
     render_group Result = {};
 
@@ -204,8 +204,7 @@ PushFont(render_group *Group, font_id ID)
 }
 
 inline void
-PushRect(render_group *Group, object_transform ObjectTransform,
-         v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
+PushRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
 {
     v3 P = (Offset - V3(0.5f*Dim, 0));
     entity_basis_p_result Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, P);

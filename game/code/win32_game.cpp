@@ -2332,7 +2332,7 @@ WinMain(HINSTANCE Instance,
                     if(ExecutableNeedsToBeReloaded)
                     {
                         Win32UnloadGameCode(&Game);
-                        for(u32 LoadTryIndex = 0; !Game.IsValid && LoadTryIndex < 100; ++LoadTryIndex)
+                        for(u32 LoadTryIndex = 0; !Game.IsValid && (LoadTryIndex < 100); ++LoadTryIndex)
                         {
                             Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                      TempGameCodeDLLFullPath,

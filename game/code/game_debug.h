@@ -72,7 +72,7 @@ struct debug_stored_event
 
     u32 FrameIndex;
     
-    union 
+    union
     {
         debug_event Event;
         debug_profile_node ProfileNode;
