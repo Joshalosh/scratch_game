@@ -751,7 +751,7 @@ DEBUG_HIGHLIGHTED(debug_id ID, v4 *Colour)
         if(DebugIDsAreEqual(DebugState->HotInteraction.ID, ID))
         {
             *Colour = V4(1, 1, 0, 1);
-            Result = true;
+            Result  = true;
         }
     }
 
