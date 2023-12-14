@@ -324,13 +324,13 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName, char *LockFilename)
         Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);
 
         CopyFile(SourceDLLName, TempDLLName, FALSE);
-    
+
         Result.GameCodeDLL = LoadLibraryA(TempDLLName);
         if(Result.GameCodeDLL)
         {
             Result.UpdateAndRender = (game_update_and_render *)
                 GetProcAddress(Result.GameCodeDLL, "GameUpdateAndRender");
-        
+
             Result.GetSoundSamples = (game_get_sound_samples *)
                 GetProcAddress(Result.GameCodeDLL, "GameGetSoundSamples");
 
@@ -381,7 +381,7 @@ Win32LoadXInput(void)
         // TODO: Diagnostic
         XInputLibrary = LoadLibraryA("xinput1_3.dll");
     }
-    
+
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
