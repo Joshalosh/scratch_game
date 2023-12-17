@@ -751,7 +751,7 @@ DEBUG_HIGHLIGHTED(debug_id ID, v4 *Colour)
         if(DebugIDsAreEqual(DebugState->HotInteraction.ID, ID))
         {
             *Colour = V4(1, 1, 0, 1);
-            Result  = true;
+            Result = true;
         }
     }
 
@@ -1051,9 +1051,9 @@ DEBUGBeginInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
 }
 
 internal debug_element *
-GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Paren = 0,
+GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent = 0,
                     b32 CreateHierarchy = true);
-internal void
+void
 DEBUGMarkEditedEvent(debug_state *DebugState, debug_event *Event)
 {
     if(Event)

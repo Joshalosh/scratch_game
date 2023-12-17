@@ -88,15 +88,15 @@ extern debug_table *GlobalDebugTable;
 #define DEBUGSetEventRecording(Enabled) (GlobalDebugTable->RecordIncrement = (Enabled) ? 1 : 0)
 
 #define RecordDebugEvent(EventType, GUIDInit)                                                   \
-    u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, GlobalDebugTable->RecordIncrement); \
-    u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
-    Assert(EventIndex < ArrayCount(GlobalDebugTable->Events[0]));                               \
-    debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;    \
-    Event->Clock = __rdtsc();                                                                   \
-    Event->Type = (u8)EventType;                                                                \
-    Event->CoreIndex = 0;                                                                       \
-    Event->ThreadID = (u16)GetThreadID();                                                       \
-    Event->GUID = GUIDInit;                                                                     \
+u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_EventIndex, GlobalDebugTable->RecordIncrement); \
+        u32 EventIndex = ArrayIndex_EventIndex & 0xFFFFFFFF;                                        \
+        Assert(EventIndex < ArrayCount(GlobalDebugTable->Events[0]));                               \
+        debug_event *Event = GlobalDebugTable->Events[ArrayIndex_EventIndex >> 32] + EventIndex;    \
+        Event->Clock = __rdtsc();                                                                   \
+        Event->Type = (u8)EventType;                                                                \
+        Event->CoreIndex = 0;                                                                       \
+        Event->ThreadID = (u16)GetThreadID();                                                       \
+        Event->GUID = GUIDInit;
 
 #define FRAME_MARKER(SecondsElapsedInit)                                       \
 {RecordDebugEvent(DebugType_FrameMarker, DEBUG_NAME("Frame Marker"));          \
@@ -203,10 +203,10 @@ struct debug_data_block
 
 internal void DEBUGEditEventData(char *GUID, debug_event *Event);
 
-#define DEBUG_VALUE(Value)                                                              \
-{                                                                                       \
-    RecordDebugEvent(DebugType_Unknown, DEBUG_NAME(#Value));                            \
-    DEBUGValueSetEventData(Event, Value, (void *)&Value);                               \
+#define DEBUG_VALUE(Value)                                                                   \
+{                                                                                            \
+         RecordDebugEvent(DebugType_Unknown, DEBUG_NAME(#Value));                            \
+         DEBUGValueSetEventData(Event, Value, (void *)&Value);                               \
 }
 
 #define DEBUG_B32(Value)                                                                \

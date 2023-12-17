@@ -485,9 +485,9 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
     {
 #if 1
-        uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 4); 
+        uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 4);
 #else
-        uint32_t DoorDirection = RandomChoice(&Series, 2); 
+        uint32_t DoorDirection = RandomChoice(&Series, 2);
 #endif
 
 //            DoorDirection = 3;
@@ -649,7 +649,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     rectangle2 ScreenBounds = GetCameraRectangleAtTarget(RenderGroup);
     rectangle3 CameraBoundsInMetres = RectMinMax(V3(ScreenBounds.Min, 0.0f), V3(ScreenBounds.Max, 0.0f));
     CameraBoundsInMetres.Min.z = -3.0f*WorldMode->TypicalFloorHeight;
-    CameraBoundsInMetres.Max.z =  1.0f*WorldMode->TypicalFloorHeight;
+    CameraBoundsInMetres.Max.z = 1.0f*WorldMode->TypicalFloorHeight;
 
     real32 FadeTopEndZ = 0.75f*WorldMode->TypicalFloorHeight;
     real32 FadeTopStartZ = 0.5f*WorldMode->TypicalFloorHeight;

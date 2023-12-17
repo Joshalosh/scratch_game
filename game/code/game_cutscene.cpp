@@ -56,6 +56,7 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
             if(RenderGroup)
             {
                 object_transform Transform = DefaultFlatTransform();
+
                 v3 P = Layer.P;
                 if(Layer.Flags & SceneLayerFlag_AtInfinity)
                 {
@@ -302,7 +303,6 @@ UpdateAndRenderTitleScreen(game_state *GameState, transient_state *TranState, re
                            game_input *Input, game_mode_title_screen *TitleScreen)
 {
     game_assets *Assets = TranState->Assets;
-
     b32 Result = CheckForMetaInput(GameState, TranState, Input);
     if(!Result)
     {

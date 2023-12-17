@@ -1749,7 +1749,6 @@ WinMain(HINSTANCE Instance,
             ToggleFullScreen(Window);
             HDC OpenGLDC = GetDC(Window);
             HGLRC OpenGLRC = 0;
-
 #if 1
             OpenGLRC = Win32InitOpenGL(OpenGLDC);
 #else
@@ -1797,7 +1796,7 @@ WinMain(HINSTANCE Instance,
 
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(4);
-            void *PushBuffer = Win32AllocateMemory(CurrentSortMemorySize);
+            void *PushBuffer = Win32AllocateMemory(PushBufferSize);
 
 #if 0
             // This tests the PlayCursor/WriteCursor update frequency
