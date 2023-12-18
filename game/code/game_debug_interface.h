@@ -82,7 +82,8 @@ struct debug_table
 
 extern debug_table *GlobalDebugTable;
 
-#define UniqueFileCounterString_(A, B, C, D) A "|" #B "|" #C "|" D
+#define UniqueFileCounterString__(A, B, C, D) A "|" #B "|" #C "|" D
+#define UniqueFileCounterString_(A, B, C, D) UniqueFileCounterString__(A, B, C, D)
 #define DEBUG_NAME(Name) UniqueFileCounterString_(__FILE__, __LINE__, __COUNTER__, Name)
 
 #define DEBUGSetEventRecording(Enabled) (GlobalDebugTable->RecordIncrement = (Enabled) ? 1 : 0)
@@ -100,7 +101,7 @@ u64 ArrayIndex_EventIndex = AtomicAddU64(&GlobalDebugTable->EventArrayIndex_Even
 
 #define FRAME_MARKER(SecondsElapsedInit)                                       \
 {RecordDebugEvent(DebugType_FrameMarker, DEBUG_NAME("Frame Marker"));          \
-     Event->Value_r32 = SecondsElapsedInit;}
+    Event->Value_r32 = SecondsElapsedInit;}
 
 #define TIMED_BLOCK__(GUID, Number, ...) timed_block TimedBlock_##Number(GUID, ## __VA_ARGS__)
 #define TIMED_BLOCK_(GUID, Number, ...) TIMED_BLOCK__(GUID, Number, ## __VA_ARGS__)

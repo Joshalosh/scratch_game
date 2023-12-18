@@ -1762,7 +1762,8 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         DebugState, 0, FrameIndex, Event, &Thread->FirstOpenDataBlock);
 
                     debug_parsed_name ParsedName = DebugParseName(Event->GUID);
-                    DebugBlock->Group = GetGroupForHierarchicalName(DebugState, DefaultParentGroup, ParsedName.Name, true);
+                    DebugBlock->Group =
+                        GetGroupForHierarchicalName(DebugState, DefaultParentGroup, ParsedName.Name, true);
                 } break;
 
                 case DebugType_CloseDataBlock:
