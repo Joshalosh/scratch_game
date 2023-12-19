@@ -165,7 +165,6 @@ DefaultUprightTransform(void)
 {
     object_transform Result = {};
 
-
     Result.Upright = true;
     Result.Scale = 1.0f;
 

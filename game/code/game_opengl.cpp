@@ -260,10 +260,8 @@ PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
     GLuint Handle;
     glGenTextures(1, &Handle);
     glBindTexture(GL_TEXTURE_2D, Handle);
-    glTexImage2D(GL_TEXTURE_2D, 0,
-            OpenGLDefaultInternalTextureFormat,
-            Width, Height, 0,
-            GL_BGRA_EXT, GL_UNSIGNED_BYTE, Data);
+    glTexImage2D(GL_TEXTURE_2D, 0, OpenGLDefaultInternalTextureFormat,
+                 Width, Height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, Data);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

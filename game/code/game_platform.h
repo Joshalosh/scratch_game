@@ -498,7 +498,7 @@ typedef struct platform_api
 
     platform_allocate_memory *AllocateMemory;
     platform_deallocate_memory *DeallocateMemory;
-        
+    
 #if GAME_INTERNAL
     debug_platform_free_file_memory *DEBUGFreeFileMemory;
     debug_platform_read_entire_file *DEBUGReadEntireFile;

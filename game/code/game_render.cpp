@@ -1186,11 +1186,22 @@ MergeSort(u32 Count, tile_sort_entry *First, tile_sort_entry *Temp)
         tile_sort_entry *ReadHalf1 = First + Half0;
         tile_sort_entry *End = First + Count;
 
-        u32 Half0StackCount = 0;
-
-        tile_sort_entry *Out = First;
-        for(u32 OutIndex = 0; OutIndex < Count; ++OutIndex)
+        // NOTE: Step 1 - Find the first out of order pair
+        while((ReadHalf0 != ReadHalf1) && (ReadHalf0->SortKey < ReadHalf1->SortKey))
         {
+            ++ReadHalf0;
+        }
+
+        // NOTE: Step 2 - Swap as many Half1 items as needed
+        if(ReadHalf0 != ReadHalf1)
+        {
+            tile_sort_entry CompareWith = *ReadHalf0;
+            while((ReadHalf1 != End) && (ReadHalf1->SortKey < CompareWith.SortKey))
+            {
+                Swap(ReadHalf0++, ReadHalf1++);
+            }
+
+            ReadHalf1 = InHalf1;
         }
 #endif
     }

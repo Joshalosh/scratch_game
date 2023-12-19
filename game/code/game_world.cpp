@@ -26,6 +26,7 @@ IsCanonical(real32 ChunkDim, real32 TileRel)
     real32 Epsilon = 0.01f;
     bool32 Result = ((TileRel >= -(0.5f*ChunkDim + Epsilon)) &&
                      (TileRel <= (0.5f*ChunkDim + Epsilon)));
+
     return(Result);
 }
 

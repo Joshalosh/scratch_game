@@ -310,8 +310,7 @@ CanCollide(game_mode_world *WorldMode, sim_entity *A, sim_entity *B)
             B = Temp;
         }
 
-        if(IsSet(A, EntityFlag_Collides) &&
-           IsSet(B, EntityFlag_Collides))
+        if(IsSet(A, EntityFlag_Collides) && IsSet(B, EntityFlag_Collides))
         {
             if(!IsSet(A, EntityFlag_Nonspatial) &&
                !IsSet(B, EntityFlag_Nonspatial))
@@ -580,8 +579,7 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, sim_entity *Entity
                                                 real32 Y = Wall->RelY + tResult*Wall->DeltaY;
                                                 if((tResult >= 0.0f) && (tMaxTest < tResult))
                                                 {
-                                                    if((Y >= Wall->MinY) &&
-                                                       (Y <= Wall->MaxY))
+                                                    if((Y >= Wall->MinY) && (Y <= Wall->MaxY))
                                                     {
                                                         tMaxTest = Maximum(0.0f, tResult - tEpsilon);
                                                         TestWallNormal = Wall->Normal;
@@ -615,8 +613,7 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, sim_entity *Entity
                                                 real32 Y = Wall->RelY + tResult*Wall->DeltaY;
                                                 if((tResult >= 0.0f) && (tMinTest > tResult))
                                                 {
-                                                    if((Y >= Wall->MinY) &&
-                                                       (Y <= Wall->MaxY))
+                                                    if((Y >= Wall->MinY) && (Y <= Wall->MaxY))
                                                     {
                                                         tMinTest = Maximum(0.0f, tResult - tEpsilon);
                                                         TestWallNormal = Wall->Normal;
