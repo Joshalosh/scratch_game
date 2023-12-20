@@ -1199,7 +1199,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 default:
                 {
-                    //InvalidCodePath;
+                    // InvalidCodePath;
                 } break;
             }
 

@@ -890,7 +890,7 @@ Win32MainWindowCallback(HWND Window,
             Result = DefWindowProcA(Window, Message, WParam, LParam);
         } break;
     }
-    
+
     return(Result);
 }
 
@@ -1813,6 +1813,7 @@ WinMain(HINSTANCE Instance,
                 OutputDebugStringA(TextBuffer);
             }
 #endif
+
             // TODO: Probably remove MaxPossibleOverrun.
             u32 MaxPossibleOverrun = 2*8*sizeof(u16); 
             int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize + MaxPossibleOverrun,
