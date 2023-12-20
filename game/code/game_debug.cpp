@@ -5,6 +5,86 @@
 
 #include "game_debug.h"
 
+struct debug_parsed_name
+{
+    u32 HashValue;
+    u32 FilenameCount;
+    u32 NameStartsAt;
+    u32 LineNumber;
+
+    u32 NameLength;
+    char *Name;
+};
+inline debug_parsed_name
+DebugParseName(char *GUID)
+{
+    debug_parsed_name Result = {};
+
+    u32 PipeCount = 0;
+    char *Scan = GUID;
+    for(; *Scan; ++Scan)
+    {
+        if(*Scan == '|')
+        {
+            if(PipeCount == 0)
+            {
+                Result.FilenameCount = (u32)(Scan - GUID);
+                Result.LineNumber = atoi(Scan + 1);
+            }
+            else if(PipeCount == 1)
+            {
+            }
+            else
+            {
+                Result.NameStartsAt = (u32)(Scan - GUID + 1);
+            }
+
+            ++PipeCount;
+        }
+
+        //TODO: Better hash function
+        Result.HashValue = 65599*Result.HashValue + *Scan;
+    }
+
+    Result.NameLength = (u32)(Scan - GUID) - Result.NameStartsAt;
+    Result.Name = GUID + Result.NameStartsAt;
+
+    return(Result);
+}
+
+inline debug_element *
+GetElementFromGUID(debug_state *DebugState, u32 Index, char *GUID)
+{
+    debug_element *Result = 0;
+
+    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
+    {
+        if(StringsAreEqual(Chain->GUID, GUID))
+        {
+            Result = Chain;
+            break;
+        }
+    }
+
+    return(Result);
+}
+
+inline debug_element *
+GetElementFromGUID(debug_state *DebugState, char *GUID)
+{
+    debug_element *Result = 0;
+
+    if(GUID)
+    {
+        debug_parsed_name ParsedName = DebugParseName(GUID);
+        u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
+
+        Result = GetElementFromGUID(DebugState, Index, GUID);
+    }
+
+    return(Result);
+}
+
 inline b32
 DebugIDsAreEqual(debug_id A, debug_id B)
 {
@@ -428,88 +508,6 @@ struct debug_variable_iterator
     debug_variable_link *Sentinel;
 };
 
-internal void
-DrawProfileBars(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP,
-                debug_profile_node *RootNode, r32 LaneStride, r32 LaneHeight)
-{
-    r32 FrameSpan = (r32)(RootNode->Duration);
-    r32 PixelSpan = GetDim(ProfileRect).x;
-
-    r32 Scale = 0.0f;
-    if(FrameSpan > 0)
-    {
-        Scale = PixelSpan / FrameSpan;
-    }
-
-    v3 Colors[] =
-    {
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1},
-        {1, 1, 0},
-        {0, 1, 1},
-        {1, 0, 1},
-        {1, 0.5f, 0},
-        {1, 0, 0.5f},
-        {0.5f, 1, 0},
-        {0, 1, 0.5f},
-        {0.5f, 0, 1},
-        //{0, 0.5f, 1},
-    };
-
-    for(debug_stored_event *StoredEvent = RootNode->FirstChild;
-        StoredEvent;
-        StoredEvent = StoredEvent->ProfileNode.NextSameParent)
-    {
-        debug_profile_node *Node = &StoredEvent->ProfileNode;
-        debug_element *Element = Node->Element;
-        Assert(Element);
-
-        v3 Color = Colors[U32FromPointer(Element->GUID)%ArrayCount(Colors)];
-        r32 ThisMinX = ProfileRect.Min.x + Scale*(r32)(Node->ParentRelativeClock);
-        r32 ThisMaxX = ThisMinX + Scale*(r32)(Node->Duration);
-
-        u32 LaneIndex = Node->ThreadOrdinal;
-        r32 LaneY = ProfileRect.Max.y - LaneStride*LaneIndex;
-        rectangle2 RegionRect = RectMinMax(V2(ThisMinX, LaneY - LaneHeight),
-                                           V2(ThisMaxX, LaneY));
-
-        PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
-                        0.0f, V4(Color, 1), 2.0f);
-
-        if(IsInRectangle(RegionRect, MouseP))
-        {
-            char TextBuffer[256];
-            _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "%s: %10ucy",
-                        Element->GUID, Node->Duration);
-            DEBUGTextOutAt(MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
-            DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
-        }
-
-        DrawProfileBars(DebugState, RegionRect, MouseP, Node, 0, LaneHeight/2);
-    }
-}
-
-internal void
-DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_stored_event *RootEvent)
-{
-    DebugState->MouseTextStackY = 10.0f;
-
-    debug_profile_node *RootNode = &RootEvent->ProfileNode;
-    object_transform NoTransform = DefaultFlatTransform();
-    PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
-
-    u32 LaneCount = DebugState->FrameBarLaneCount;
-    r32 LaneHeight = 0.0f;
-    if(LaneCount > 0)
-    {
-        LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
-    }
-
-    DrawProfileBars(DebugState, ProfileRect, MouseP, RootNode, LaneHeight, LaneHeight);
-}
-
 inline b32
 InteractionsAreEqual(debug_interaction A, debug_interaction B)
 {
@@ -789,6 +787,94 @@ DEBUG_REQUESTED(debug_id ID)
 }
 
 internal void
+DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP,
+                debug_profile_node *RootNode, r32 LaneStride, r32 LaneHeight)
+{
+    r32 FrameSpan = (r32)(RootNode->Duration);
+    r32 PixelSpan = GetDim(ProfileRect).x;
+
+    r32 Scale = 0.0f;
+    if(FrameSpan > 0)
+    {
+        Scale = PixelSpan / FrameSpan;
+    }
+
+    v3 Colors[] =
+    {
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1},
+        {1, 1, 0},
+        {0, 1, 1},
+        {1, 0, 1},
+        {1, 0.5f, 0},
+        {1, 0, 0.5f},
+        {0.5f, 1, 0},
+        {0, 1, 0.5f},
+        {0.5f, 0, 1},
+        //{0, 0.5f, 1},
+    };
+
+    for(debug_stored_event *StoredEvent = RootNode->FirstChild;
+        StoredEvent;
+        StoredEvent = StoredEvent->ProfileNode.NextSameParent)
+    {
+        debug_profile_node *Node = &StoredEvent->ProfileNode;
+        debug_element *Element = Node->Element;
+        Assert(Element);
+
+        v3 Color = Colors[U32FromPointer(Element->GUID)%ArrayCount(Colors)];
+        r32 ThisMinX = ProfileRect.Min.x + Scale*(r32)(Node->ParentRelativeClock);
+        r32 ThisMaxX = ThisMinX + Scale*(r32)(Node->Duration);
+
+        u32 LaneIndex = Node->ThreadOrdinal;
+        r32 LaneY = ProfileRect.Max.y - LaneStride*LaneIndex;
+        rectangle2 RegionRect = RectMinMax(V2(ThisMinX, LaneY - LaneHeight),
+                                           V2(ThisMaxX, LaneY));
+
+        PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+                        0.0f, V4(Color, 1), 2.0f);
+
+        if(IsInRectangle(RegionRect, MouseP))
+        {
+            char TextBuffer[256];
+            _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                        "%s: %10ucy",
+                        Element->GUID, Node->Duration);
+            DEBUGTextOutAt(MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
+            DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
+
+            debug_interaction ZoomInteraction = {};
+            ZoomInteraction.ID = GraphID;
+            ZoomInteraction.Type = DebugInteraction_SetProfileGraphRoot;
+            ZoomInteraction.Element = Element;
+            DebugState->NextHotInteraction = ZoomInteraction;
+        }
+
+        DrawProfileBars(DebugState, RegionRect, MouseP, Node, 0, LaneHeight/2);
+    }
+}
+
+internal void
+DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_stored_event *RootEvent)
+{
+    DebugState->MouseTextStackY = 10.0f;
+
+    debug_profile_node *RootNode = &RootEvent->ProfileNode;
+    object_transform NoTransform = DefaultFlatTransform();
+    PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
+
+    u32 LaneCount = DebugState->FrameBarLaneCount;
+    r32 LaneHeight = 0.0f;
+    if(LaneCount > 0)
+    {
+        LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
+    }
+
+    DrawProfileBars(DebugState, ProfileRect, MouseP, RootNode, LaneHeight, LaneHeight);
+}
+
+internal void
 DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug_id DebugID)
 {
     object_transform NoTransform = DefaultFlatTransform();
@@ -831,15 +917,30 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
             case DebugType_ThreadIntervalGraph:
             {
-                layout_element Element = BeginElementRectangle(Layout, &View->InlineBlock.Dim);
+                layout_element Element = BeginElementRectangle(Layout, &View->ProfileGraph.Block.Dim);
                 MakeElementSizable(&Element);
                 //DefaultInteraction(&Element, ItemInteraction);
                 EndElement(&Element);
 
-                debug_frame *Frame = DebugState->MostRecentFrame;
-                if(Frame && Frame->RootProfileNode)
+                debug_stored_event *RootNode = 0;
+                debug_element *ViewingElement = GetElementFromGUID(DebugState, View->ProfileGraph.GUID);
+                if(ViewingElement)
                 {
-                    DrawProfileIn(DebugState, Element.Bounds, Layout->MouseP, Frame->RootProfileNode);
+                    RootNode = ViewingElement->MostRecentEvent;
+                }
+
+                if(!RootNode)
+                {
+                    debug_frame *Frame = DebugState->MostRecentFrame;
+                    if(Frame)
+                    {
+                        RootNode = Frame->RootProfileNode;
+                    }
+                }
+
+                if(RootNode)
+                {
+                    DrawProfileIn(DebugState, Element.Bounds, Layout->MouseP, RootNode);
                 }
             } break;
 
@@ -1087,6 +1188,12 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         {
             debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugState->Interaction.ID);
             View->Collapsible.ExpandedAlways = !View->Collapsible.ExpandedAlways;
+        } break;
+
+        case DebugInteraction_SetProfileGraphRoot:
+        {
+            debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugState->Interaction.ID);
+            View->ProfileGraph.GUID = DebugState->Interaction.Element->GUID;
         } break;
 
         case DebugInteraction_ToggleValue:
@@ -1530,70 +1637,6 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
     return(Result);
 }
 
-struct debug_parsed_name
-{
-    u32 HashValue;
-    u32 FilenameCount;
-    u32 NameStartsAt;
-    u32 LineNumber;
-
-    u32 NameLength;
-    char *Name;
-};
-inline debug_parsed_name
-DebugParseName(char *GUID)
-{
-    debug_parsed_name Result = {};
-
-    u32 PipeCount = 0;
-    char *Scan = GUID;
-    for(; *Scan; ++Scan)
-    {
-        if(*Scan == '|')
-        {
-            if(PipeCount == 0)
-            {
-                Result.FilenameCount = (u32)(Scan - GUID);
-                Result.LineNumber = atoi(Scan + 1);
-            }
-            else if(PipeCount == 1)
-            {
-            }
-            else
-            {
-                Result.NameStartsAt = (u32)(Scan - GUID + 1);
-            }
-
-            ++PipeCount;
-        }
-
-        //TODO: Better hash function
-        Result.HashValue = 65599*Result.HashValue + *Scan;
-    }
-
-    Result.NameLength = (u32)(Scan - GUID) - Result.NameStartsAt;
-    Result.Name = GUID + Result.NameStartsAt;
-
-    return(Result);
-}
-
-inline debug_element *
-GetElementFromEvent(debug_state *DebugState, u32 Index, char *GUID)
-{
-    debug_element *Result = 0;
-
-    for(debug_element *Chain = DebugState->ElementHash[Index]; Chain; Chain = Chain->NextInHash)
-    {
-        if(StringsAreEqual(Chain->GUID, GUID))
-        {
-            Result = Chain;
-            break;
-        }
-    }
-
-    return(Result);
-}
-
 internal debug_element *
 GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_group *Parent,
                     b32 CreateHierarchy)
@@ -1608,7 +1651,7 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_
     debug_parsed_name ParsedName = DebugParseName(Event->GUID);
     u32 Index = (ParsedName.HashValue % ArrayCount(DebugState->ElementHash));
 
-    debug_element *Result = GetElementFromEvent(DebugState, Index, Event->GUID);
+    debug_element *Result = GetElementFromGUID(DebugState, Index, Event->GUID);
     if(!Result)
     {
         Result = PushStruct(&DebugState->DebugArena, debug_element);
