@@ -212,6 +212,13 @@ DEBUGGetTextSize(debug_state *DebugState, char *String)
     return(Result);
 }
 
+inline r32
+GetLineAdvance(debug_state *DebugState)
+{
+    r32 Result = GetLineAdvanceFor(DebugState->DebugFontInfo)*DebugState->FontScale;
+    return(Result);
+}
+
 internal void
 DEBUGTextLine(char *String)
 {
@@ -220,16 +227,10 @@ DEBUGTextLine(char *String)
     {
         render_group *RenderGroup = &DebugState->RenderGroup;
 
-        loaded_font *Font = PushFont(RenderGroup, DebugState->FontID);
-        if(Font)
-        {
-            ga_font *Info = GetFontInfo(RenderGroup->Assets, DebugState->FontID);
+        DEBUGTextOutAt(V2(DebugState->LeftEdge,
+                          DebugState->AtY - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)), String);
 
-            DEBUGTextOutAt(V2(DebugState->LeftEdge,
-                              DebugState->AtY - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)), String);
-
-            DebugState->AtY -= GetLineAdvanceFor(Info)*DebugState->FontScale;
-        }
+        DebugState->AtY -= GetLineAdvance(DebugState);
     }
 }
 
@@ -428,12 +429,9 @@ struct debug_variable_iterator
 };
 
 internal void
-DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_stored_event *RootEvent)
+DrawProfileBars(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP,
+                debug_profile_node *RootNode, r32 LaneStride, r32 LaneHeight)
 {
-    debug_profile_node *RootNode = &RootEvent->ProfileNode;
-    object_transform NoTransform = DefaultFlatTransform();
-    PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
-
     r32 FrameSpan = (r32)(RootNode->Duration);
     r32 PixelSpan = GetDim(ProfileRect).x;
 
@@ -441,13 +439,6 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_
     if(FrameSpan > 0)
     {
         Scale = PixelSpan / FrameSpan;
-    }
-
-    u32 LaneCount = DebugState->FrameBarLaneCount;
-    r32 LaneHeight = 0.0f;
-    if(LaneCount > 0)
-    {
-        LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
     }
 
     v3 Colors[] =
@@ -479,10 +470,12 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_
         r32 ThisMaxX = ThisMinX + Scale*(r32)(Node->Duration);
 
         u32 LaneIndex = Node->ThreadOrdinal;
-        rectangle2 RegionRect = RectMinMax(V2(ThisMinX, ProfileRect.Max.y - LaneHeight*(LaneIndex + 1)),
-                                           V2(ThisMaxX, ProfileRect.Max.y - LaneHeight*(LaneIndex + 0)));
+        r32 LaneY = ProfileRect.Max.y - LaneStride*LaneIndex;
+        rectangle2 RegionRect = RectMinMax(V2(ThisMinX, LaneY - LaneHeight),
+                                           V2(ThisMaxX, LaneY));
 
-        PushRect(&DebugState->RenderGroup, DebugState->UITransform, RegionRect, 0.0f, V4(Color, 1));
+        PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+                        0.0f, V4(Color, 1), 2.0f);
 
         if(IsInRectangle(RegionRect, MouseP))
         {
@@ -490,9 +483,31 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
                         "%s: %10ucy",
                         Element->GUID, Node->Duration);
-            DEBUGTextOutAt(MouseP + V2(0.0f, 10.0f), TextBuffer);
+            DEBUGTextOutAt(MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
+            DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
         }
+
+        DrawProfileBars(DebugState, RegionRect, MouseP, Node, 0, LaneHeight/2);
     }
+}
+
+internal void
+DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_stored_event *RootEvent)
+{
+    DebugState->MouseTextStackY = 10.0f;
+
+    debug_profile_node *RootNode = &RootEvent->ProfileNode;
+    object_transform NoTransform = DefaultFlatTransform();
+    PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
+
+    u32 LaneCount = DebugState->FrameBarLaneCount;
+    r32 LaneHeight = 0.0f;
+    if(LaneCount > 0)
+    {
+        LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
+    }
+
+    DrawProfileBars(DebugState, ProfileRect, MouseP, RootNode, LaneHeight, LaneHeight);
 }
 
 inline b32

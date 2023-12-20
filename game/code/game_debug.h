@@ -297,6 +297,8 @@ struct debug_state
     r32 GlobalWidth;
     r32 GlobalHeight;
 
+    r32 MouseTextStackY;
+
     char *ScopeToRecord;
 
     u32 TotalFrameCount;
