@@ -851,12 +851,13 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
             DebugState->NextHotInteraction = ZoomInteraction;
         }
 
-        DrawProfileBars(DebugState, RegionRect, MouseP, Node, 0, LaneHeight/2);
+        DrawProfileBars(DebugState, GraphID, RegionRect, MouseP, Node, 0, LaneHeight/2);
     }
 }
 
 internal void
-DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_stored_event *RootEvent)
+DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP, 
+              debug_stored_event *RootEvent)
 {
     DebugState->MouseTextStackY = 10.0f;
 
@@ -871,7 +872,7 @@ DrawProfileIn(debug_state *DebugState, rectangle2 ProfileRect, v2 MouseP, debug_
         LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
     }
 
-    DrawProfileBars(DebugState, ProfileRect, MouseP, RootNode, LaneHeight, LaneHeight);
+    DrawProfileBars(DebugState, GraphID, ProfileRect, MouseP, RootNode, LaneHeight, LaneHeight);
 }
 
 internal void
@@ -923,16 +924,27 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                 EndElement(&Element);
 
                 debug_stored_event *RootNode = 0;
-                debug_element *ViewingElement = GetElementFromGUID(DebugState, View->ProfileGraph.GUID);
-                if(ViewingElement)
-                {
-                    RootNode = ViewingElement->MostRecentEvent;
-                }
 
-                if(!RootNode)
+                // TODO: Need to figure out how to get specific frames less
+                // slowly than linear search
+                debug_frame *Frame = DebugState->MostRecentFrame;
+                if(Frame)
                 {
-                    debug_frame *Frame = DebugState->MostRecentFrame;
-                    if(Frame)
+                    debug_element *ViewingElement = GetElementFromGUID(DebugState, View->ProfileGraph.GUID);
+                    if(ViewingElement)
+                    {
+                        for(debug_stored_event *Search = ViewingElement->OldestEvent;
+                            Search;
+                            Search = Search->Next)
+                        {
+                            if(Search->FrameIndex == Frame->FrameIndex)
+                            {
+                                RootNode = Search;
+                            }
+                        }
+                    }
+
+                    if(!RootNode)
                     {
                         RootNode = Frame->RootProfileNode;
                     }
@@ -940,7 +952,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
                 if(RootNode)
                 {
-                    DrawProfileIn(DebugState, Element.Bounds, Layout->MouseP, RootNode);
+                    DrawProfileIn(DebugState, DebugID, Element.Bounds, Layout->MouseP, RootNode);
                 }
             } break;
 
