@@ -307,6 +307,8 @@ struct debug_state
     u32 OldestFrameOrdinal;
     debug_frame Frames[DEBUG_FRAME_COUNT];
 
+    debug_element *RootProfileElement;
+
     u32 FrameBarLaneCount;
     debug_thread *FirstThread;
     debug_thread *FirstFreeThread;
