@@ -802,6 +802,18 @@ global_variable v3 DebugColorTable[] =
     //{0, 0.5f, 1},
 };
 
+internal u64
+GetTotalClocks(debug_element_frame *Frame)
+{
+    u64 Result = 0;
+    for(debug_stored_event *Event = Frame->OldestEvent; Event; Event = Event->Next)
+    {
+        Result += Event->ProfileNode.Duration;
+    }
+
+    return(Result);
+}
+
 internal void
 DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP,
                 debug_profile_node *RootNode, r32 LaneStride, r32 LaneHeight)
@@ -840,7 +852,7 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
             char TextBuffer[256];
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
                         "%s: %10ucy",
-                        Element->GUID, Node->Duration);
+                        Element->GUID, (u32)Node->Duration);
             DEBUGTextOutAt(MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
             DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
 
@@ -857,11 +869,9 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
 
 internal void
 DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP, 
-              debug_stored_event *RootEvent)
+              debug_element *RootElement)
 {
     DebugState->MouseTextStackY = 10.0f;
-
-    debug_profile_node *RootNode = &RootEvent->ProfileNode;
     object_transform NoTransform = DefaultFlatTransform();
     PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, ProfileRect, 0.0f, V4(0, 0, 0, 0.25f));
 
@@ -872,7 +882,23 @@ DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
         LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
     }
 
-    DrawProfileBars(DebugState, GraphID, ProfileRect, MouseP, RootNode, LaneHeight, LaneHeight);
+    debug_element_frame *RootFrame = RootElement->Frames + DebugState->MostRecentFrameOrdinal;
+    r32 NextX = ProfileRect.Min.x;
+    u64 TotalClock = GetTotalClocks(RootFrame);
+    u64 RelativeClock = 0;
+    for(debug_stored_event *Event = RootFrame->OldestEvent; Event; Event = Event->Next)
+    {
+        debug_profile_node *Node = &Event->ProfileNode;
+        rectangle2 EventRect = ProfileRect;
+
+        RelativeClock += Node->Duration;
+        r32 t = (r32)((r64)RelativeClock / (r64)TotalClock);
+        EventRect.Min.x = NextX;
+        EventRect.Max.x = (1.0f - t)*ProfileRect.Min.x + t*ProfileRect.Max.x;
+        NextX = EventRect.Max.x;
+
+        DrawProfileBars(DebugState, GraphID, EventRect, MouseP, Node, LaneHeight, LaneHeight);
+    }
 }
 
 internal void
@@ -927,7 +953,7 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
                         char TextBuffer[256];
                         _snprintf_s(TextBuffer, sizeof(TextBuffer),
                                     "%s: %10ucy",
-                                    Element->GUID, Node->Duration);
+                                    Element->GUID, (u32)Node->Duration);
                         DEBUGTextOutAt(MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
                         DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
 
@@ -1011,8 +1037,8 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                     ViewingElement = DebugState->RootProfileElement;
                 }
 
-                //DrawProfileIn(DebugState, DebugID, Element.Bounds, Layout->MouseP, RootNode);
-                DrawFrameBars(DebugState, DebugID, Element.Bounds, Layout->MouseP, ViewingElement);
+                DrawProfileIn(DebugState, DebugID, Element.Bounds, Layout->MouseP, ViewingElement);
+                //DrawFrameBars(DebugState, DebugID, Element.Bounds, Layout->MouseP, ViewingElement);
             } break;
 
             default:
@@ -1755,8 +1781,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             if(CollationFrame->RootProfileNode)
             {
                CollationFrame->RootProfileNode->ProfileNode.Duration =
-                    (u32)(CollationFrame->EndClock -
-                          CollationFrame->BeginClock);
+                    (CollationFrame->EndClock - CollationFrame->BeginClock);
             }
 
             CollationFrame->WallSecondsElapsed = Event->Value_r32;
@@ -1811,7 +1836,6 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         Node->NextSameParent = 0;
                         Node->ParentRelativeClock = 0;
                         Node->Duration = 0;
-                        Node->AggregateCount = 0;
                         Node->ThreadOrdinal = 0;
                         Node->CoreIndex = 0;
 
@@ -1823,9 +1847,8 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                     debug_profile_node *Node = &StoredEvent->ProfileNode;
                     Node->Element = Element;
                     Node->FirstChild = 0;
-                    Node->ParentRelativeClock = (u32)(Event->Clock - ClockBasis);
+                    Node->ParentRelativeClock = Event->Clock - ClockBasis;
                     Node->Duration = 0;
-                    Node->AggregateCount = 0;
                     Node->ThreadOrdinal = (u16)Thread->LaneIndex;
                     Node->CoreIndex = Event->CoreIndex;
 
@@ -1845,7 +1868,8 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         Assert(Thread->ID == Event->ThreadID);
 
                         debug_profile_node *Node = &MatchingBlock->Node->ProfileNode;
-                        Node->Duration = (u32)(Event->Clock - MatchingBlock->BeginClock);
+                        Node->Duration = Event->Clock - MatchingBlock->BeginClock;
+
                         DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
                     }
                 } break;

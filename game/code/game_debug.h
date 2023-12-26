@@ -63,9 +63,9 @@ struct debug_profile_node
     struct debug_element *Element;
     struct debug_stored_event *FirstChild;
     struct debug_stored_event *NextSameParent;
-    u32 ParentRelativeClock;
-    u32 Duration;
-    u32 AggregateCount;
+    u64 Duration;
+    u64 ParentRelativeClock;
+    u32 Reserved;
     u16 ThreadOrdinal;
     u16 CoreIndex;
 };
@@ -95,7 +95,6 @@ struct debug_string
 
 struct debug_element_frame
 {
-    u64 TotalClocks;
     debug_stored_event *OldestEvent;
     debug_stored_event *MostRecentEvent;
 };
