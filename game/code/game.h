@@ -91,6 +91,11 @@
     (Element)->Prev = (Sentinel);           \
     (Element)->Next->Prev = (Element);      \
     (Element)->Prev->Next = (Element);
+#define DLIST_INSERT_AS_LAST(Sentinel, Element) \
+    (Element)->Next = (Sentinel);               \
+    (Element)->Prev = (Sentinel)->Prev;         \
+    (Element)->Next->Prev = (Element);          \
+    (Element)->Prev->Next = (Element);
 
 #define DLIST_INIT(Sentinel)       \
     (Sentinel)->Next = (Sentinel); \

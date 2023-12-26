@@ -309,7 +309,6 @@ DEBUGTextLine(char *String)
 
         DEBUGTextOutAt(V2(DebugState->LeftEdge,
                           DebugState->AtY - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)), String);
-
         DebugState->AtY -= GetLineAdvance(DebugState);
     }
 }
@@ -810,7 +809,6 @@ GetTotalClocks(debug_element_frame *Frame)
     {
         Result += Event->ProfileNode.Duration;
     }
-
     return(Result);
 }
 
@@ -868,7 +866,7 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
 }
 
 internal void
-DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP, 
+DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP,
               debug_element *RootElement)
 {
     DebugState->MouseTextStackY = 10.0f;
@@ -882,7 +880,7 @@ DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
         LaneHeight = GetDim(ProfileRect).y / (r32)LaneCount;
     }
 
-    debug_element_frame *RootFrame = RootElement->Frames + DebugState->MostRecentFrameOrdinal;
+    debug_element_frame *RootFrame = RootElement->Frames + DebugState->ViewingFrameOrdinal;
     r32 NextX = ProfileRect.Min.x;
     u64 TotalClock = GetTotalClocks(RootFrame);
     u64 RelativeClock = 0;
@@ -915,8 +913,8 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
 
         r32 BarWidth = (GetDim(ProfileRect).x / (r32)FrameCount);
         r32 AtX = ProfileRect.Min.x;
-        for(u32 FrameIndex = 0; 
-            FrameIndex < FrameCount; 
+        for(u32 FrameIndex = 0;
+            FrameIndex < FrameCount;
             ++FrameIndex)
         {
             debug_stored_event *RootEvent = RootElement->Frames[FrameIndex].MostRecentEvent;
@@ -931,8 +929,8 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
                     Scale = PixelSpan / FrameSpan;
                 }
                 
-                for(debug_stored_event *StoredEvent = RootNode->FirstChild; 
-                    StoredEvent; 
+                for(debug_stored_event *StoredEvent = RootNode->FirstChild;
+                    StoredEvent;
                     StoredEvent = StoredEvent->ProfileNode.NextSameParent)
                 {
                     debug_profile_node *Node = &StoredEvent->ProfileNode;
@@ -945,7 +943,7 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
 
                     rectangle2 RegionRect = RectMinMax(V2(AtX, ThisMinY), V2(AtX + BarWidth, ThisMaxY));
 
-                    PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect, 
+                    PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
                                     0.0f, V4(Color, 1), 2.0f);
 
                     if(IsInRectangle(RegionRect, MouseP))
@@ -970,7 +968,92 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
         }
     }
 }
-        
+
+internal void
+DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect, v2 MouseP,
+                debug_element *RootElement)
+{
+    u32 FrameCount = ArrayCount(RootElement->Frames);
+    if(FrameCount > 0)
+    {
+        object_transform NoTransform = DefaultFlatTransform();
+        PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, TotalRect, 0.0f, V4(0, 0, 0, 0.25f));
+
+        r32 BarWidth = (GetDim(TotalRect).x / (r32)FrameCount);
+        r32 AtX = TotalRect.Min.x;
+        r32 ThisMinY = TotalRect.Min.y;
+        r32 ThisMaxY = TotalRect.Max.y;
+        for(u32 FrameIndex = 0; FrameIndex < FrameCount; ++FrameIndex)
+        {
+            rectangle2 RegionRect = RectMinMax(V2(AtX, ThisMinY), V2(AtX + BarWidth, ThisMaxY));
+            v4 HiColor = V4(1, 1, 1, 1);
+            b32 Highlight = false;
+            if(FrameIndex == DebugState->ViewingFrameOrdinal)
+            {
+                HiColor = V4(1, 1, 0, 1);
+                Highlight = true;
+            }
+
+            if(FrameIndex == DebugState->MostRecentFrameOrdinal)
+            {
+                HiColor = V4(0, 1, 0, 1);
+                Highlight = true;
+            }
+
+            if(FrameIndex == DebugState->CollationFrameOrdinal)
+            {
+                HiColor = V4(1, 0, 0, 1);
+                Highlight = true;
+            }
+
+            if(FrameIndex == DebugState->OldestFrameOrdinal)
+            {
+                HiColor = V4(0, 0.5f, 0, 1);
+                Highlight = true;
+            }
+
+            if(Highlight)
+            {
+                PushRect(&DebugState->RenderGroup, DebugState->UITransform, RegionRect, 0.0f, HiColor);
+            }
+            PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+                            1.0f, V4(0.5f,0.5f,0.5f, 1), 2.0f);
+
+            if(IsInRectangle(RegionRect, MouseP))
+            {
+                char TextBuffer[256];
+                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%u", FrameIndex);
+                DEBUGTextOutAt(MouseP + V2(0.0f, 10.0f), TextBuffer);
+
+                debug_interaction Interaction = {};
+                Interaction.ID = SliderID;
+                Interaction.Type = DebugInteraction_SetViewFrameOrdinal;
+                Interaction.UInt32 = FrameIndex;
+                DebugState->NextHotInteraction = Interaction;
+            }
+
+            AtX += BarWidth;
+        }
+    }
+}
+
+internal void
+BasicTextElement(layout *Layout, char *Text, debug_interaction ItemInteraction, v4 ItemColor = V4(1, 1, 1, 1))
+{
+    debug_state *DebugState = Layout->DebugState;
+
+    rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
+    v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
+
+    layout_element Element = BeginElementRectangle(Layout, &Dim);
+    DefaultInteraction(&Element, ItemInteraction);
+    EndElement(&Element);
+
+    DEBUGTextOutAt(V2(GetMinCorner(Element.Bounds).x,
+                      GetMaxCorner(Element.Bounds).y - 
+                      DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
+                   Text, ItemColor);
+}
 
 internal void
 DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug_id DebugID, u32 FrameOrdinal)
@@ -1030,7 +1113,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
                 debug_stored_event *RootNode = 0;
 
-                u32 MostRecentFrameOrdinal = DebugState->MostRecentFrameOrdinal;
+                u32 ViewingFrameOrdinal = DebugState->ViewingFrameOrdinal;
                 debug_element *ViewingElement = GetElementFromGUID(DebugState, View->ProfileGraph.GUID);
                 if(!ViewingElement)
                 {
@@ -1039,6 +1122,39 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
                 DrawProfileIn(DebugState, DebugID, Element.Bounds, Layout->MouseP, ViewingElement);
                 //DrawFrameBars(DebugState, DebugID, Element.Bounds, Layout->MouseP, ViewingElement);
+            } break;
+
+            case DebugType_FrameSlider:
+            {
+                v2 Dim = {1800, 32};
+                layout_element LayoutElement = BeginElementRectangle(Layout, &Dim);
+                EndElement(&LayoutElement);
+
+                DrawFrameSlider(DebugState, DebugID, LayoutElement.Bounds, Layout->MouseP, Element);
+            } break;
+
+            case DebugType_LastFrameInfo:
+            {
+                debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
+                char Text[256];
+                _snprintf_s(Text, sizeof(Text),
+                            "Viewing frame time: %.02fms %de %dp %dd",
+                            MostRecentFrame->WallSecondsElapsed * 1000.0f,
+                            MostRecentFrame->StoredEventCount,
+                            MostRecentFrame->ProfileBlockCount,
+                            MostRecentFrame->DataBlockCount);
+
+                BasicTextElement(Layout, Text, ItemInteraction);
+            } break;
+
+            case DebugType_DebugMemoryInfo:
+            {
+                char Text[256];
+                _snprintf_s(Text, sizeof(Text),
+                            "Per-frame arena space remaining: %ukb",
+                            (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, AlignNoClear(1)) / 1024));
+
+                BasicTextElement(Layout, Text, ItemInteraction);
             } break;
 
             default:
@@ -1051,16 +1167,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                                  DEBUGVarToText_Colon|
                                  DEBUGVarToText_PrettyBools);
 
-                rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
-                v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
-
-                layout_element Element = BeginElementRectangle(Layout, &Dim);
-                DefaultInteraction(&Element, ItemInteraction);
-                EndElement(&Element);
-
-                DEBUGTextOutAt(V2(GetMinCorner(Element.Bounds).x,
-                                  GetMaxCorner(Element.Bounds).y - DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
-                               Text, ItemColor);
+                BasicTextElement(Layout, Text, ItemInteraction);
             } break;
         }
     }
@@ -1071,7 +1178,7 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
 {
     object_transform NoTransform = DefaultFlatTransform();
 
-    u32 FrameOrdinal = DebugState->MostRecentFrameOrdinal;
+    u32 FrameOrdinal = DebugState->ViewingFrameOrdinal;
     for(debug_tree *Tree = DebugState->TreeSentinel.Next;
         Tree != &DebugState->TreeSentinel;
         Tree = Tree->Next)
@@ -1296,6 +1403,12 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
             View->ProfileGraph.GUID = DebugState->Interaction.Element->GUID;
         } break;
 
+        case DebugInteraction_SetViewFrameOrdinal:
+        {
+            DebugState->ViewingFrameOrdinal = DebugState->Interaction.UInt32;
+            DebugState->Paused = true;
+        } break;
+
         case DebugInteraction_ToggleValue:
         {
             debug_event *Event = &DebugState->Interaction.Element->Frames[FrameOrdinal].MostRecentEvent->Event;
@@ -1334,8 +1447,6 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
     if(DebugState->Interaction.Type)
     {
         u32 FrameOrdinal = DebugState->MostRecentFrameOrdinal;
-        debug_event *Event = DebugState->Interaction.Element ?
-            &DebugState->Interaction.Element->Frames[FrameOrdinal].MostRecentEvent->Event : 0;
         debug_tree *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
         
@@ -1344,6 +1455,8 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         {
             case DebugInteraction_DragValue:
             {
+                debug_event *Event = DebugState->Interaction.Element ?
+                    &DebugState->Interaction.Element->Frames[FrameOrdinal].MostRecentEvent->Event : 0;
                 switch(Event->Type)
                 {
                     case DebugType_r32:
@@ -1462,7 +1575,7 @@ AddElementToGroup(debug_state *DebugState, debug_variable_group *Parent, debug_e
 {
     debug_variable_link *Link = PushStruct(&DebugState->DebugArena, debug_variable_link);
 
-    DLIST_INSERT(&Parent->Sentinel, Link);
+    DLIST_INSERT_AS_LAST(&Parent->Sentinel, Link);
     Link->Children = 0;
     Link->Element = Element;
 
@@ -1474,7 +1587,7 @@ AddGroupToGroup(debug_state *DebugState, debug_variable_group *Parent, debug_var
 {
     debug_variable_link *Link = PushStruct(&DebugState->DebugArena, debug_variable_link);
 
-    DLIST_INSERT(&Parent->Sentinel, Link);
+    DLIST_INSERT_AS_LAST(&Parent->Sentinel, Link);
     Link->Children = Group;
     Link->Element = 0;
 
@@ -1645,12 +1758,13 @@ FreeFrame(debug_state *DebugState, u32 FrameOrdinal)
 
     debug_frame *Frame = DebugState->Frames + FrameOrdinal;
     Assert(Frame->StoredEventCount == FreedEventCount);
+
+    ZeroStruct(*Frame);
 }
 
 internal void
 InitFrame(debug_state *DebugState, u64 BeginClock, debug_frame *Result)
 {
-    ZeroStruct(*Result);
     Result->FrameIndex = DebugState->TotalFrameCount++;
     Result->FrameBarScale = 1.0f;
     Result->BeginClock = BeginClock;
@@ -1707,7 +1821,6 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
     }
 
     debug_frame *CollationFrame = GetCollationFrame(DebugState);
-
 
     Result->Next = 0;
     Result->FrameIndex = CollationFrame->FrameIndex;
@@ -1780,7 +1893,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             CollationFrame->EndClock = Event->Clock;
             if(CollationFrame->RootProfileNode)
             {
-               CollationFrame->RootProfileNode->ProfileNode.Duration =
+                CollationFrame->RootProfileNode->ProfileNode.Duration =
                     (CollationFrame->EndClock - CollationFrame->BeginClock);
             }
 
@@ -1789,18 +1902,27 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
             r32 ClockRange = (r32)(CollationFrame->EndClock - CollationFrame->BeginClock);
             ++DebugState->TotalFrameCount;
 
-            DebugState->MostRecentFrameOrdinal = DebugState->CollationFrameOrdinal;
-            IncrementFrameOrdinal(&DebugState->CollationFrameOrdinal);
-            if(DebugState->CollationFrameOrdinal == DebugState->OldestFrameOrdinal)
+            if(DebugState->Paused)
             {
-                FreeOldestFrame(DebugState);
+                FreeFrame(DebugState, DebugState->CollationFrameOrdinal);
             }
-            CollationFrame = GetCollationFrame(DebugState);
+            else
+            {
+                DebugState->MostRecentFrameOrdinal = DebugState->CollationFrameOrdinal;
+                IncrementFrameOrdinal(&DebugState->CollationFrameOrdinal);
+                if(DebugState->CollationFrameOrdinal == DebugState->OldestFrameOrdinal)
+                {
+                    FreeOldestFrame(DebugState);
+                }
+                CollationFrame = GetCollationFrame(DebugState);
+            }
             InitFrame(DebugState, Event->Clock, CollationFrame);
         }
         else
         {
             debug_frame *CollationFrame = GetCollationFrame(DebugState);
+
+            Assert(CollationFrame);
 
             u32 FrameIndex = DebugState->TotalFrameCount - 1;
             debug_thread *Thread = GetDebugThread(DebugState, Event->ThreadID);
@@ -1817,7 +1939,8 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                 case DebugType_BeginBlock:
                 {
                     ++CollationFrame->ProfileBlockCount;
-                    debug_element *Element = GetElementFromEvent(DebugState, Event, DebugState->ProfileGroup, false);
+                    debug_element *Element = 
+                        GetElementFromEvent(DebugState, Event, DebugState->ProfileGroup, false);
 
                     debug_stored_event *ParentEvent = CollationFrame->RootProfileNode;
                     u64 ClockBasis = CollationFrame->BeginClock;
@@ -1856,7 +1979,8 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                     ParentEvent->ProfileNode.FirstChild = StoredEvent;
 
                     open_debug_block *DebugBlock = AllocateOpenDebugBlock(
-                        DebugState, Element, FrameIndex, Event, &Thread->FirstOpenCodeBlock);
+                        DebugState, Element, FrameIndex, Event, 
+                        &Thread->FirstOpenCodeBlock);
                     DebugBlock->Node = StoredEvent;
                 } break;
 
@@ -1929,11 +2053,11 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
 
         memory_index TotalMemorySize = DebugGlobalMemory->DebugStorageSize - sizeof(debug_state);
         InitialiseArena(&DebugState->DebugArena, TotalMemorySize, DebugState + 1);
-#if 1
+#if 0
         SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, (TotalMemorySize / 2));
 #else
         // This is the stress-testing case to make sure the memory recycling works
-        SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, 128*1024);
+        SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, 8*1024*1024);
 #endif
 
         DebugState->RootGroup = CreateVariableGroup(DebugState, 4, "Root");
@@ -2013,6 +2137,11 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->ShadowTransform.SortBias = 200000.0f;
     DebugState->UITransform.SortBias = 300000.0f;
     DebugState->TextTransform.SortBias = 400000.0f;
+
+    if(!DebugState->Paused)
+    {
+        DebugState->ViewingFrameOrdinal = DebugState->MostRecentFrameOrdinal;
+    }
 }
 
 internal void
@@ -2090,21 +2219,6 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
             }
         }
 #endif
-
-        debug_frame *MostRecentFrame = DebugState->Frames + DebugState->MostRecentFrameOrdinal;
-        char TextBuffer[256];
-        _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                    "Last frame time: %.02fms %de %dp %dd",
-                    MostRecentFrame->WallSecondsElapsed * 1000.0f,
-                    MostRecentFrame->StoredEventCount,
-                    MostRecentFrame->ProfileBlockCount,
-                    MostRecentFrame->DataBlockCount);
-        DEBUGTextLine(TextBuffer);
-
-        _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                    "Per-frame arena space remaining: %ukb",
-                    (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, AlignNoClear(1)) / 1024));
-        DEBUGTextLine(TextBuffer);
     }
 
     if(WasPressed(Input->MouseButtons[PlatformMouseButton_Left]))

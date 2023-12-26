@@ -236,6 +236,7 @@ enum debug_interaction_type
     DebugInteraction_ToggleExpansion,
 
     DebugInteraction_SetProfileGraphRoot,
+    DebugInteraction_SetViewFrameOrdinal,
 };
 
 struct debug_interaction
@@ -245,6 +246,7 @@ struct debug_interaction
     union
     {
         void *Generic;
+        u32 UInt32;
         debug_element *Element;
         debug_tree *Tree;
         debug_variable_link *Link;
@@ -300,6 +302,8 @@ struct debug_state
     char *ScopeToRecord;
 
     u32 TotalFrameCount;
+
+    u32 ViewingFrameOrdinal;
 
     u32 MostRecentFrameOrdinal;
     u32 CollationFrameOrdinal;
