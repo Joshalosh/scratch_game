@@ -1064,100 +1064,123 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
     render_group *RenderGroup = &DebugState->RenderGroup;
     debug_stored_event *StoredEvent = Element->Frames[FrameOrdinal].MostRecentEvent;
 
-    if(StoredEvent)
+    debug_event *Event = &StoredEvent->Event;
+    debug_interaction ItemInteraction =
+        ElementInteraction(DebugState, DebugID, DebugInteraction_AutoModifyVariable, Element);
+
+    b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
+    v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
+
+    debug_stored_event *OldestStoredEvent = Element->Frames[DebugState->ViewingFrameOrdinal].OldestEvent;
+
+    debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugID);
+    switch(Element->Type)
     {
-        debug_event *Event = &StoredEvent->Event;
-        debug_interaction ItemInteraction =
-            ElementInteraction(DebugState, DebugID, DebugInteraction_AutoModifyVariable, Element);
-
-        b32 IsHot = InteractionIsHot(DebugState, ItemInteraction);
-        v4 ItemColor = IsHot ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1);
-
-        debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugID);
-        switch(Event->Type)
+        case DebugType_bitmap_id:
         {
-            case DebugType_bitmap_id:
+            debug_event *Event = OldestStoredEvent ? &OldestStoredEvent->Event : 0;
+            loaded_bitmap *Bitmap = 0;
+            r32 BitmapScale = View->InlineBlock.Dim.y;
+            if(Event)
             {
-                loaded_bitmap *Bitmap = GetBitmap(RenderGroup->Assets, Event->Value_bitmap_id, RenderGroup->GenerationID);
-                r32 BitmapScale = View->InlineBlock.Dim.y;
+                Bitmap = GetBitmap(RenderGroup->Assets, Event->Value_bitmap_id, RenderGroup->GenerationID);
                 if(Bitmap)
                 {
                     used_bitmap_dim Dim = GetBitmapDim(RenderGroup, NoTransform, Bitmap, BitmapScale, V3(0.0f, 0.0f, 0.0f), 1.0f);
                     View->InlineBlock.Dim.x = Dim.Size.x;
                 }
 
-                layout_element Element = BeginElementRectangle(Layout, &View->InlineBlock.Dim);
-                MakeElementSizable(&Element);
-                DefaultInteraction(&Element, ItemInteraction);
-                EndElement(&Element);
+            }
 
-                PushRect(&DebugState->RenderGroup, NoTransform, Element.Bounds, 0.0f, V4(0, 0, 0, 1.0f));
+            layout_element LayEl = BeginElementRectangle(Layout, &View->InlineBlock.Dim);
+            MakeElementSizable(&LayEl);
+            DefaultInteraction(&LayEl, ItemInteraction);
+            EndElement(&LayEl);
+            PushRect(&DebugState->RenderGroup, NoTransform, LayEl.Bounds, 0.0f, V4(0, 0, 0, 1.0f));
+            
+            if(Bitmap)
+            {
                 PushBitmap(&DebugState->RenderGroup, NoTransform, Event->Value_bitmap_id, BitmapScale,
-                           V3(GetMinCorner(Element.Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
-            } break;
+                           V3(GetMinCorner(LayEl.Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
+            }
+        } break;
 
-            case DebugType_ThreadIntervalGraph:
+        case DebugType_ThreadIntervalGraph:
+        case DebugType_FrameBarGraph:
+        {
+            debug_view_profile_graph *Graph = &View->ProfileGraph;
+
+            layout_element LayEl = BeginElementRectangle(Layout, &Graph->Block.Dim);
+            if((Graph->Block.Dim.x == 0) && (Graph->Block.Dim.y == 0))
             {
-                debug_view_profile_graph *Graph = &View->ProfileGraph;
+                Graph->Block.Dim.x = 1800;
+                Graph->Block.Dim.y = 480;
+            }
 
-                layout_element Element = BeginElementRectangle(Layout, &Graph->Block.Dim);
-                if((Graph->Block.Dim.x == 0) && (Graph->Block.Dim.y == 0))
+            MakeElementSizable(&LayEl);
+            //DefaultInteraction(&LayEl, ItemInteraction);
+            EndElement(&LayEl);
+
+            debug_stored_event *RootNode = 0;
+
+            u32 ViewingFrameOrdinal = DebugState->ViewingFrameOrdinal;
+            debug_element *ViewingElement = GetElementFromGUID(DebugState, View->ProfileGraph.GUID);
+            if(!ViewingElement)
+            {
+                ViewingElement = DebugState->RootProfileElement;
+            }
+
+            switch(Element->Type)
+            {
+                case DebugType_ThreadIntervalGraph:
                 {
-                    Graph->Block.Dim.x = 1800;
-                    Graph->Block.Dim.y = 480;
-                }
+                    DrawProfileIn(DebugState, DebugID, LayEl.Bounds, Layout->MouseP, ViewingElement);
+                } break;
 
-                MakeElementSizable(&Element);
-                //DefaultInteraction(&Element, ItemInteraction);
-                EndElement(&Element);
-
-                debug_stored_event *RootNode = 0;
-
-                u32 ViewingFrameOrdinal = DebugState->ViewingFrameOrdinal;
-                debug_element *ViewingElement = GetElementFromGUID(DebugState, View->ProfileGraph.GUID);
-                if(!ViewingElement)
+                case DebugType_FrameBarGraph:
                 {
-                    ViewingElement = DebugState->RootProfileElement;
-                }
+                    DrawFrameBars(DebugState, DebugID, LayEl.Bounds, Layout->MouseP, ViewingElement);
+                } break;
+            }
+        } break;
 
-                DrawProfileIn(DebugState, DebugID, Element.Bounds, Layout->MouseP, ViewingElement);
-                //DrawFrameBars(DebugState, DebugID, Element.Bounds, Layout->MouseP, ViewingElement);
-            } break;
+        case DebugType_FrameSlider:
+        {
+            v2 Dim = {1800, 32};
+            layout_element LayEl = BeginElementRectangle(Layout, &Dim);
+            EndElement(&LayEl);
 
-            case DebugType_FrameSlider:
-            {
-                v2 Dim = {1800, 32};
-                layout_element LayoutElement = BeginElementRectangle(Layout, &Dim);
-                EndElement(&LayoutElement);
+            DrawFrameSlider(DebugState, DebugID, LayEl.Bounds, Layout->MouseP, Element);
+        } break;
 
-                DrawFrameSlider(DebugState, DebugID, LayoutElement.Bounds, Layout->MouseP, Element);
-            } break;
+        case DebugType_LastFrameInfo:
+        {
+            debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
+            char Text[256];
+            _snprintf_s(Text, sizeof(Text),
+                        "Viewing frame time: %.02fms %de %dp %dd",
+                        MostRecentFrame->WallSecondsElapsed * 1000.0f,
+                        MostRecentFrame->StoredEventCount,
+                        MostRecentFrame->ProfileBlockCount,
+                        MostRecentFrame->DataBlockCount);
 
-            case DebugType_LastFrameInfo:
-            {
-                debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
-                char Text[256];
-                _snprintf_s(Text, sizeof(Text),
-                            "Viewing frame time: %.02fms %de %dp %dd",
-                            MostRecentFrame->WallSecondsElapsed * 1000.0f,
-                            MostRecentFrame->StoredEventCount,
-                            MostRecentFrame->ProfileBlockCount,
-                            MostRecentFrame->DataBlockCount);
+            BasicTextElement(Layout, Text, ItemInteraction);
+        } break;
 
-                BasicTextElement(Layout, Text, ItemInteraction);
-            } break;
+        case DebugType_DebugMemoryInfo:
+        {
+            char Text[256];
+            _snprintf_s(Text, sizeof(Text),
+                        "Per-frame arena space remaining: %ukb",
+                        (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, AlignNoClear(1)) / 1024));
 
-            case DebugType_DebugMemoryInfo:
-            {
-                char Text[256];
-                _snprintf_s(Text, sizeof(Text),
-                            "Per-frame arena space remaining: %ukb",
-                            (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, AlignNoClear(1)) / 1024));
+            BasicTextElement(Layout, Text, ItemInteraction);
+        } break;
 
-                BasicTextElement(Layout, Text, ItemInteraction);
-            } break;
-
-            default:
+        default:
+        {
+            debug_event *Event = OldestStoredEvent ? &OldestStoredEvent->Event : 0;
+            if(Event)
             {
                 char Text[256];
                 DEBUGEventToText(Text, Text + sizeof(Text), Event,
@@ -1168,8 +1191,8 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                                  DEBUGVarToText_PrettyBools);
 
                 BasicTextElement(Layout, Text, ItemInteraction);
-            } break;
-        }
+            }
+        } break;
     }
 }
 
@@ -1865,6 +1888,7 @@ GetElementFromEvent(debug_state *DebugState, debug_event *Event, debug_variable_
         Result->FilenameCount = ParsedName.FilenameCount;
         Result->LineNumber = ParsedName.LineNumber;
         Result->NameStartsAt = ParsedName.NameStartsAt;
+        Result->Type = (debug_type)Event->Type;
 
         Result->NextInHash = DebugState->ElementHash[Index];
         DebugState->ElementHash[Index] = Result;

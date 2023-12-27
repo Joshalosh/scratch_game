@@ -36,6 +36,7 @@ enum debug_type
     DebugType_font_id,
 
     DebugType_ThreadIntervalGraph,
+    DebugType_FrameBarGraph,
 //    DebugType_CounterFunctionList,
     DebugType_LastFrameInfo,
     DebugType_DebugMemoryInfo,

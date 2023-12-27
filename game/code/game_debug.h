@@ -107,6 +107,8 @@ struct debug_element
     u32 LineNumber;
     u32 NameStartsAt;
 
+    debug_type Type;
+
     b32 ValueWasEdited;
 
     debug_element_frame Frames[DEBUG_FRAME_COUNT];
