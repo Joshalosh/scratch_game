@@ -237,10 +237,8 @@ enum debug_interaction_type
 
     DebugInteraction_ToggleExpansion,
 
-    DebugInteraction_SetProfileGraphRoot,
-    DebugInteraction_SetViewFrameOrdinal,
-
-    DebugInteraction_SetElementType,
+    DebugInteraction_SetUInt32,
+    DebugInteraction_SetPointer,
 };
 
 struct debug_interaction
@@ -248,17 +246,17 @@ struct debug_interaction
     debug_id ID;
     debug_interaction_type Type;
 
-    debug_element *Element;
-
+    void *Target;
     union
     {
         void *Generic;
+        void *Pointer;
         u32 UInt32;
-        debug_element *Element;
         debug_tree *Tree;
         debug_variable_link *Link;
         debug_type DebugType;
         v2 *P;
+        debug_element *Element;
     };
 };
 

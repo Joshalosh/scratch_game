@@ -512,7 +512,7 @@ InteractionsAreEqual(debug_interaction A, debug_interaction B)
 {
     b32 Result = (DebugIDsAreEqual(A.ID, B.ID) &&
                   (A.Type == B.Type) &&
-                  (A.Element == B.Element) &&
+                  (A.Target == B.Target) &&
                   (A.Generic == B.Generic));
 
     return(Result);
@@ -527,6 +527,30 @@ InteractionIsHot(debug_state *DebugState, debug_interaction B)
     {
         Result = false;
     }
+
+    return(Result);
+}
+
+inline debug_interaction
+SetPointerInteraction(debug_id DebugID, void **Target, void *Value)
+{
+    debug_interaction Result = {};
+    Result.ID = DebugID;
+    Result.Type = DebugInteraction_SetPointer;
+    Result.Target = Target;
+    Result.Pointer = Value;
+
+    return(Result);
+}
+
+inline debug_interaction
+SetUInt32Interaction(debug_id DebugID, u32 *Target, u32 Value)
+{
+    debug_interaction Result = {};
+    Result.ID = DebugID;
+    Result.Type = DebugInteraction_SetUInt32;
+    Result.Target = Target;
+    Result.UInt32 = Value;
 
     return(Result);
 }
@@ -890,6 +914,7 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
         PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
                         0.0f, V4(Color, 1), 2.0f);
 
+        // TODO: Pull this out so all profilers share it
         if(IsInRectangle(RegionRect, MouseP))
         {
             char TextBuffer[256];
@@ -899,11 +924,10 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
             DEBUGTextOutAt(MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
             DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
 
-            debug_interaction ZoomInteraction = {};
-            ZoomInteraction.ID = GraphID;
-            ZoomInteraction.Type = DebugInteraction_SetProfileGraphRoot;
-            ZoomInteraction.Element = Element;
-            DebugState->NextHotInteraction = ZoomInteraction;
+            // TODO: It would be better to generate a graph+element debug ID here
+            debug_view *View = GetOrCreateDebugViewFor(DebugState, GraphID);
+            DebugState->NextHotInteraction = 
+                SetPointerInteraction(GraphID, (void **)&View->ProfileGraph.GUID, Element->GUID);
         }
 
         //DrawProfileBars(DebugState, GraphID, RegionRect, MouseP, Node, 0, LaneHeight/2);
@@ -1000,11 +1024,9 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
                         DEBUGTextOutAt(MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
                         DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
 
-                        debug_interaction ZoomInteraction = {};
-                        ZoomInteraction.ID = GraphID;
-                        ZoomInteraction.Type = DebugInteraction_SetProfileGraphRoot;
-                        ZoomInteraction.Element = Element;
-                        DebugState->NextHotInteraction = ZoomInteraction;
+                        debug_view *View = GetOrCreateDebugViewFor(DebugState, GraphID);
+                        DebugState->NextHotInteraction =
+                            SetPointerInteraction(GraphID, (void **)&View->ProfileGraph.GUID, Element->GUID);
                     }
                 }
 
@@ -1070,28 +1092,13 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
                 _snprintf_s(TextBuffer, sizeof(TextBuffer), "%u", FrameIndex);
                 DEBUGTextOutAt(MouseP + V2(0.0f, 10.0f), TextBuffer);
 
-                debug_interaction Interaction = {};
-                Interaction.ID = SliderID;
-                Interaction.Type = DebugInteraction_SetViewFrameOrdinal;
-                Interaction.UInt32 = FrameIndex;
-                DebugState->NextHotInteraction = Interaction;
+                DebugState->NextHotInteraction = 
+                    SetUInt32Interaction(SliderID, &DebugState->ViewingFrameOrdinal, FrameIndex);
             }
 
             AtX += BarWidth;
         }
     }
-}
-
-inline debug_interaction
-SetElementTypeInteraction(debug_id DebugID, debug_element *Element, debug_type Type)
-{
-    debug_interaction Result = {};
-    Result.ID = DebugID;
-    Result.Type = DebugInteraction_SetElementType;
-    Result.Element = Element;
-    Result.DebugType = Type;
-
-    return(Result);
 }
 
 internal void
@@ -1149,17 +1156,12 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
         {
             debug_view_profile_graph *Graph = &View->ProfileGraph;
 
-            debug_interaction ZoomRootInteraction = {};
-            ZoomRootInteraction.ID = DebugID;
-            ZoomRootInteraction.Type = DebugInteraction_SetProfileGraphRoot;
-            ZoomRootInteraction.Element = 0;
-
             BeginRow(Layout);
-            ActionButton(Layout, "Root", ZoomRootInteraction);
+            ActionButton(Layout, "Root", SetPointerInteraction(DebugID, (void **)&Graph->GUID, 0));
             BooleanButton(Layout, "Threads", (Element->Type == DebugType_ThreadIntervalGraph),
-                          SetElementTypeInteraction(DebugID, Element, DebugType_ThreadIntervalGraph));
+                          SetUInt32Interaction(DebugID, (u32 *)&Element->Type, DebugType_ThreadIntervalGraph));
             BooleanButton(Layout, "Frames", (Element->Type == DebugType_FrameBarGraph),
-                          SetElementTypeInteraction(DebugID, Element, DebugType_FrameBarGraph));
+                          SetUInt32Interaction(DebugID, (u32 *)&Element->Type, DebugType_FrameBarGraph));
             EndRow(Layout);
 
             layout_element LayEl = BeginElementRectangle(Layout, &Graph->Block.Dim);
@@ -1201,6 +1203,17 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             v2 Dim = {1800, 32};
             layout_element LayEl = BeginElementRectangle(Layout, &Dim);
             EndElement(&LayEl);
+
+            BeginRow(Layout);
+            BooleanButton(Layout, "Pause", DebugState->Paused,
+                    SetUInt32Interaction(DebugID, (u32 *)&DebugState->Paused, !DebugState->Paused));
+            ActionButton(Layout, "Oldest", 
+                    SetUInt32Interaction(DebugID, &DebugState->ViewingFrameOrdinal, 
+                                         DebugState->OldestFrameOrdinal));
+            ActionButton(Layout, "Most Recent",
+                    SetUInt32Interaction(DebugID, &DebugState->ViewingFrameOrdinal, 
+                                         DebugState->MostRecentFrameOrdinal));
+            EndRow(Layout);
 
             DrawFrameSlider(DebugState, DebugID, LayEl.Bounds, Layout->MouseP, Element);
         } break;
@@ -1474,21 +1487,14 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
             View->Collapsible.ExpandedAlways = !View->Collapsible.ExpandedAlways;
         } break;
 
-        case DebugInteraction_SetProfileGraphRoot:
+        case DebugInteraction_SetUInt32:
         {
-            debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugState->Interaction.ID);
-            View->ProfileGraph.GUID = DebugState->Interaction.Element ? DebugState->Interaction.Element->GUID : 0;
+            *(u32 *)DebugState->Interaction.Target = DebugState->Interaction.UInt32;
         } break;
 
-        case DebugInteraction_SetElementType:
+        case DebugInteraction_SetPointer:
         {
-            DebugState->Interaction.Element->Type = DebugState->Interaction.DebugType;
-        } break;
-
-        case DebugInteraction_SetViewFrameOrdinal:
-        {
-            DebugState->ViewingFrameOrdinal = DebugState->Interaction.UInt32;
-            DebugState->Paused = true;
+            *(void **)DebugState->Interaction.Target = DebugState->Interaction.Pointer;
         } break;
 
         case DebugInteraction_ToggleValue:
