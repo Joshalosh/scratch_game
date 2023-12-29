@@ -512,6 +512,7 @@ InteractionsAreEqual(debug_interaction A, debug_interaction B)
 {
     b32 Result = (DebugIDsAreEqual(A.ID, B.ID) &&
                   (A.Type == B.Type) &&
+                  (A.Element == B.Element) &&
                   (A.Generic == B.Generic));
 
     return(Result);
@@ -522,30 +523,13 @@ InteractionIsHot(debug_state *DebugState, debug_interaction B)
 {
     b32 Result = InteractionsAreEqual(DebugState->HotInteraction, B);
 
+    if(B.Type == DebugInteraction_None)
+    {
+        Result = false;
+    }
+
     return(Result);
 }
-
-struct layout
-{
-    debug_state *DebugState;
-    v2 MouseP;
-    v2 At;
-    u32 Depth;
-    real32 LineAdvance;
-    r32 SpacingY;
-};
-
-struct layout_element
-{
-    // Storage
-    layout *Layout;
-    v2 *Dim;
-    v2 *Size;
-    debug_interaction Interaction;
-
-    // Out
-    rectangle2 Bounds;
-};
 
 inline layout_element
 BeginElementRectangle(layout *Layout, v2 *Dim)
@@ -571,6 +555,24 @@ DefaultInteraction(layout_element *Element, debug_interaction Interaction)
 }
 
 inline void
+AdvanceElement(layout *Layout, rectangle2 ElRect)
+{
+    Layout->NextYDelta = Minimum(Layout->NextYDelta, GetMinCorner(ElRect).y - Layout->At.y);
+
+    if(Layout->NoLineFeed)
+    {
+        Layout->At.x = GetMaxCorner(ElRect).x + Layout->SpacingX;
+    }
+    else 
+    {
+        Layout->At.y += Layout->NextYDelta - Layout->SpacingY;
+        Layout->At.x = Layout->BaseCorner.x + Layout->Depth*2.0f*Layout->LineAdvance;
+
+        Layout->NextYDelta = 0.0f;
+    }
+}
+
+inline void
 EndElement(layout_element *Element)
 {
     layout *Layout = Element->Layout;
@@ -588,7 +590,7 @@ EndElement(layout_element *Element)
 
     v2 TotalDim = *Element->Dim + 2.0f*Frame;
 
-    v2 TotalMinCorner = V2(Layout->At.x + Layout->Depth*2.0f*Layout->LineAdvance,
+    v2 TotalMinCorner = V2(Layout->At.x,
                            Layout->At.y - TotalDim.y);
     v2 TotalMaxCorner = TotalMinCorner + TotalDim;
 
@@ -632,12 +634,55 @@ EndElement(layout_element *Element)
         }
     }
 
-    r32 SpacingY = Layout->SpacingY;
-    if(0)
-    {
-        SpacingY = 0.0f;
-    }
-    Layout->At.y = GetMinCorner(TotalBounds).y - SpacingY;
+    AdvanceElement(Layout, TotalBounds);
+}
+
+internal void
+BasicTextElement(layout *Layout, char *Text, debug_interaction ItemInteraction, 
+                 v4 ItemColor = V4(0.8f, 0.8f, 0.8f, 1), v4 HotColor = V4(1, 1, 1, 1))
+{
+    debug_state *DebugState = Layout->DebugState;
+
+    rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
+    v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
+
+    layout_element Element = BeginElementRectangle(Layout, &Dim);
+    DefaultInteraction(&Element, ItemInteraction);
+    EndElement(&Element);
+
+    b32 IsHot = InteractionIsHot(Layout->DebugState, ItemInteraction);
+
+    DEBUGTextOutAt(V2(GetMinCorner(Element.Bounds).x,
+                      GetMaxCorner(Element.Bounds).y - 
+                      DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
+                   Text, IsHot ? HotColor : ItemColor);
+}
+
+internal void
+BeginRow(layout *Layout)
+{
+    ++Layout->NoLineFeed;
+}
+
+internal void
+ActionButton(layout *Layout, char *Name, debug_interaction Interaction)
+{
+    BasicTextElement(Layout, Name, Interaction);
+}
+
+internal void
+BooleanButton(layout *Layout, char *Name, b32 Highlight, debug_interaction Interaction)
+{
+    BasicTextElement(Layout, Name, Interaction, Highlight ? V4(1, 1, 1, 1) : V4(0.5f, 0.5f, 0.5f, 1.0f));
+}
+
+internal void
+EndRow(layout *Layout)
+{
+    Assert(Layout->NoLineFeed > 0);
+    --Layout->NoLineFeed;
+
+    AdvanceElement(Layout, RectMinMax(Layout->At, Layout->At));
 }
 
 internal debug_view *
@@ -1037,22 +1082,16 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
     }
 }
 
-internal void
-BasicTextElement(layout *Layout, char *Text, debug_interaction ItemInteraction, v4 ItemColor = V4(1, 1, 1, 1))
+inline debug_interaction
+SetElementTypeInteraction(debug_id DebugID, debug_element *Element, debug_type Type)
 {
-    debug_state *DebugState = Layout->DebugState;
+    debug_interaction Result = {};
+    Result.ID = DebugID;
+    Result.Type = DebugInteraction_SetElementType;
+    Result.Element = Element;
+    Result.DebugType = Type;
 
-    rectangle2 TextBounds = DEBUGGetTextSize(DebugState, Text);
-    v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
-
-    layout_element Element = BeginElementRectangle(Layout, &Dim);
-    DefaultInteraction(&Element, ItemInteraction);
-    EndElement(&Element);
-
-    DEBUGTextOutAt(V2(GetMinCorner(Element.Bounds).x,
-                      GetMaxCorner(Element.Bounds).y - 
-                      DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
-                   Text, ItemColor);
+    return(Result);
 }
 
 internal void
@@ -1109,6 +1148,19 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
         case DebugType_FrameBarGraph:
         {
             debug_view_profile_graph *Graph = &View->ProfileGraph;
+
+            debug_interaction ZoomRootInteraction = {};
+            ZoomRootInteraction.ID = DebugID;
+            ZoomRootInteraction.Type = DebugInteraction_SetProfileGraphRoot;
+            ZoomRootInteraction.Element = 0;
+
+            BeginRow(Layout);
+            ActionButton(Layout, "Root", ZoomRootInteraction);
+            BooleanButton(Layout, "Threads", (Element->Type == DebugType_ThreadIntervalGraph),
+                          SetElementTypeInteraction(DebugID, Element, DebugType_ThreadIntervalGraph));
+            BooleanButton(Layout, "Frames", (Element->Type == DebugType_FrameBarGraph),
+                          SetElementTypeInteraction(DebugID, Element, DebugType_FrameBarGraph));
+            EndRow(Layout);
 
             layout_element LayEl = BeginElementRectangle(Layout, &Graph->Block.Dim);
             if((Graph->Block.Dim.x == 0) && (Graph->Block.Dim.y == 0))
@@ -1179,19 +1231,20 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
         default:
         {
-            debug_event *Event = OldestStoredEvent ? &OldestStoredEvent->Event : 0;
-            if(Event)
-            {
-                char Text[256];
-                DEBUGEventToText(Text, Text + sizeof(Text), Event,
-                                 DEBUGVarToText_AddName|
-                                 DEBUGVarToText_AddValue|
-                                 DEBUGVarToText_NullTerminator|
-                                 DEBUGVarToText_Colon|
-                                 DEBUGVarToText_PrettyBools);
+            debug_event NullEvent = {};
+            NullEvent.GUID = Element->GUID;
+            NullEvent.Type = (u8)Element->Type;
 
-                BasicTextElement(Layout, Text, ItemInteraction);
-            }
+            debug_event *Event = OldestStoredEvent ? &OldestStoredEvent->Event : &NullEvent;
+            char Text[256];
+            DEBUGEventToText(Text, Text + sizeof(Text), Event,
+                             DEBUGVarToText_AddName|
+                             DEBUGVarToText_AddValue|
+                             DEBUGVarToText_NullTerminator|
+                             DEBUGVarToText_Colon|
+                             DEBUGVarToText_PrettyBools);
+
+            BasicTextElement(Layout, Text, ItemInteraction);
         } break;
     }
 }
@@ -1209,9 +1262,10 @@ DEBUGDrawMainMenu(debug_state *DebugState, render_group *RenderGroup, v2 MouseP)
         layout Layout = {};
         Layout.DebugState = DebugState;
         Layout.MouseP = MouseP;
-        Layout.At = Tree->UIP;
+        Layout.BaseCorner = Layout.At = Tree->UIP;
         Layout.LineAdvance = DebugState->FontScale*GetLineAdvanceFor(DebugState->DebugFontInfo);
         Layout.SpacingY = 4.0f;
+        Layout.SpacingX = 4.0f;
 
         u32 Depth = 0;
         debug_variable_iterator Stack[DEBUG_MAX_VARIABLE_STACK_DEPTH];
@@ -1423,7 +1477,12 @@ DEBUGEndInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         case DebugInteraction_SetProfileGraphRoot:
         {
             debug_view *View = GetOrCreateDebugViewFor(DebugState, DebugState->Interaction.ID);
-            View->ProfileGraph.GUID = DebugState->Interaction.Element->GUID;
+            View->ProfileGraph.GUID = DebugState->Interaction.Element ? DebugState->Interaction.Element->GUID : 0;
+        } break;
+
+        case DebugInteraction_SetElementType:
+        {
+            DebugState->Interaction.Element->Type = DebugState->Interaction.DebugType;
         } break;
 
         case DebugInteraction_SetViewFrameOrdinal:
