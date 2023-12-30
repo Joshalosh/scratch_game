@@ -1,4 +1,5 @@
 #include "game.h"
+#include "game_sort.cpp"
 #include "game_render_group.cpp"
 #include "game_asset.cpp"
 #include "game_audio.cpp"
@@ -280,6 +281,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DEBUG_UI_ELEMENT(DebugType_LastFrameInfo, LastFrame);
         DEBUG_UI_ELEMENT(DebugType_DebugMemoryInfo, DebugMemory);
         DEBUG_UI_ELEMENT(DebugType_ThreadIntervalGraph, GameUpdateAndRender);
+        DEBUG_UI_ELEMENT(DebugType_FrameBarGraph, GameUpdateAndRender);
     }
 
 #endif

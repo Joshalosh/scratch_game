@@ -86,6 +86,7 @@ global_variable b32 OpenGLSupportsSRGBFramebuffer;
 global_variable GLuint OpenGLDefaultInternalTextureFormat;
 global_variable GLuint OpenGLReservedBlitTexture;
 
+#include "game_sort.cpp"
 #include "game_opengl.cpp"
 #include "game_render.cpp"
 
@@ -2404,7 +2405,7 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK("Frame Display");
 
-                    umm NeededSortMemorySize = RenderCommands.PushBufferElementCount * sizeof(tile_sort_entry);
+                    umm NeededSortMemorySize = RenderCommands.PushBufferElementCount * sizeof(sort_entry);
                     if(CurrentSortMemorySize < NeededSortMemorySize)
                     {
                         Win32DeallocateMemory(SortMemory);

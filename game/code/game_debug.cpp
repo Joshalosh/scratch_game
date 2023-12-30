@@ -660,6 +660,35 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
 }
 
 internal void
+DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP,
+                  debug_element *RootElement)
+{
+    v2 At = ProfileRect.Min - V2(0, GetBaseline(DebugState));
+    for(debug_variable_link *Link = DebugState->ProfileGroup->Sentinel.Next;
+        Link != &DebugState->ProfileGroup->Sentinel;
+        Link = Link->Next)
+    {
+        Assert(Link->Children);
+        debug_element *Element = Link->Element;
+
+        u64 TotalClocks = 0;
+        for(debug_stored_event *Event = Element->Frames[DebugState->ViewingFrameOrdinal].OldestEvent;
+            Event;
+            Event = Event->Next)
+        {
+            TotalClocks += Event->ProfileNode.Duration;
+        }
+
+        char TextBuffer[256];
+        _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                    "%s: %10ucy",
+                    Element->GUID, (u32)TotalClocks);
+        TextOutAt(DebugState, At, TextBuffer);
+        At.y -= GetLineAdvance(DebugState);
+    }
+}
+
+internal void
 DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect, v2 MouseP,
                 debug_element *RootElement)
 {
@@ -776,6 +805,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
         case DebugType_ThreadIntervalGraph:
         case DebugType_FrameBarGraph:
+        case DebugType_TopClocksList:
         {
             debug_view_profile_graph *Graph = &View->ProfileGraph;
 
@@ -785,13 +815,15 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                           SetUInt32Interaction(DebugID, (u32 *)&Element->Type, DebugType_ThreadIntervalGraph));
             BooleanButton(Layout, "Frames", (Element->Type == DebugType_FrameBarGraph),
                           SetUInt32Interaction(DebugID, (u32 *)&Element->Type, DebugType_FrameBarGraph));
+            BooleanButton(Layout, "Clocks", (Element->Type == DebugType_TopClocksList),
+                          SetUInt32Interaction(DebugID, (u32 *)&Element->Type, DebugType_TopClocksList));
             EndRow(Layout);
 
             layout_element LayEl = BeginElementRectangle(Layout, &Graph->Block.Dim);
             if((Graph->Block.Dim.x == 0) && (Graph->Block.Dim.y == 0))
             {
                 Graph->Block.Dim.x = 1400;
-                Graph->Block.Dim.y = 480;
+                Graph->Block.Dim.y = 280;
             }
 
             MakeElementSizable(&LayEl);
@@ -818,6 +850,12 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                 {
                     DrawFrameBars(DebugState, DebugID, LayEl.Bounds, Layout->MouseP, ViewingElement);
                 } break;
+
+                case DebugType_TopClocksList:
+                {
+                    DrawTopClocksList(DebugState, DebugID, LayEl.Bounds, Layout->MouseP, ViewingElement);
+                } break;
+
             }
         } break;
 

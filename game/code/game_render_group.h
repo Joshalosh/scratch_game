@@ -154,12 +154,6 @@ void DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, 
                           loaded_bitmap *Texture, real32 PixelsToMetres,
                           rectangle2i ClipRect);
 
-struct tile_sort_entry
-{
-    r32 SortKey;
-    u32 PushBufferOffset;
-};
-
 inline object_transform
 DefaultUprightTransform(void)
 {

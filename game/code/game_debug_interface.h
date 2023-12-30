@@ -41,6 +41,7 @@ enum debug_type
     DebugType_LastFrameInfo,
     DebugType_DebugMemoryInfo,
     DebugType_FrameSlider,
+    DebugType_TopClocksList,
 };
 struct debug_event
 {
