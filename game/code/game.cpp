@@ -280,8 +280,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {DEBUG_DATA_BLOCK("Profile");
         DEBUG_UI_ELEMENT(DebugType_LastFrameInfo, LastFrame);
         DEBUG_UI_ELEMENT(DebugType_DebugMemoryInfo, DebugMemory);
-        DEBUG_UI_ELEMENT(DebugType_ThreadIntervalGraph, GameUpdateAndRender);
-        DEBUG_UI_ELEMENT(DebugType_FrameBarGraph, GameUpdateAndRender);
+        DEBUG_UI_ELEMENT(DebugType_TopClocksList, GameUpdateAndRender);
     }
 
 #endif
