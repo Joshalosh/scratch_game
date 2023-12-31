@@ -1127,8 +1127,19 @@ internal void
 Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardController)
 {
     MSG Message;
-    while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
+    for(;;)
     {
+        BOOL GotMessage = FALSE;
+        {
+            TIMED_BLOCK("PeekMessage");
+            GotMessage = PeekMessage(&Message, 0, 0, 0, PM_REMOVE);
+        }
+
+        if(!GotMessage)
+        {
+            break;
+        } 
+
         switch(Message.message)
         {
             case WM_QUIT:
@@ -1692,6 +1703,14 @@ WinMain(HINSTANCE Instance,
     GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 
     Win32GetEXEFilename(&Win32State);
+
+    char Win32EXEFullPath[WIN32_STATE_FILE_NAME_COUNT];
+    Win32BuildEXEPathFilename(&Win32State, "win32_game.exe",
+                              sizeof(Win32EXEFullPath), Win32EXEFullPath);
+
+    char TempWin32EXEFullPath[WIN32_STATE_FILE_NAME_COUNT];
+    Win32BuildEXEPathFilename(&Win32State, "win32_game_temp.exe",
+                              sizeof(TempWin32EXEFullPath), TempWin32EXEFullPath);
 
     char SourceGameCodeDLLFullPath[WIN32_STATE_FILE_NAME_COUNT];
     Win32BuildEXEPathFilename(&Win32State, "game.dll",
@@ -2316,6 +2335,15 @@ WinMain(HINSTANCE Instance,
                     FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);
                     b32 ExecutableNeedsToBeReloaded =
                         (CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime) != 0);
+
+                    FILETIME NewEXETime = Win32GetLastWriteTime(Win32EXEFullPath);
+                    FILETIME OldEXETime = Win32GetLastWriteTime(TempWin32EXEFullPath);
+                    b32 Win32NeedsToBeReloaded = (CompareFileTime(&NewEXETime, &OldEXETime) != 0);
+                    // TODO: Compare file contents here
+                    if(Win32NeedsToBeReloaded)
+                    {
+                        Win32FullRestart(TempWin32EXEFullPath, Win32EXEFullPath);
+                    }
 
                     GameMemory.ExecutableReloaded = false;
                     if(ExecutableNeedsToBeReloaded)

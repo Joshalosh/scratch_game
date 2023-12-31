@@ -726,7 +726,7 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
 
         char TextBuffer[256];
         _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                    "%10ucy %.02f%% %4d %s",
+                    "%10ucy %02.02f%% %4d %s",
                     (u32)Stats->Sum, (PC*Stats->Sum), Stats->Count, 
                     Element->GUID + Element->NameStartsAt);
         TextOutAt(DebugState, At, TextBuffer);
