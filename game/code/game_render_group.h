@@ -50,7 +50,8 @@ enum render_group_entry_type
 };
 struct render_group_entry_header
 {
-    render_group_entry_type Type;
+    u16 Type;
+    u16 ClipRectIndex;
 };
 
 struct render_entry_clear

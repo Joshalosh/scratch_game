@@ -158,6 +158,7 @@ PushBitmap(render_group *Group, object_transform ObjectTransform,
             Entry->P = Dim.Basis.P;
             Entry->Color = Group->GlobalAlpha*Color;
             Entry->Size = Dim.Basis.Scale*Dim.Size;
+            Entry->UVOffset = V2(0, 0);
         }
     }
 }

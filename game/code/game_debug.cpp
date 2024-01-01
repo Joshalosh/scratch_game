@@ -682,7 +682,6 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
     sort_entry *SortB = PushArray(Temp.Arena, LinkCount, sort_entry, NoClear());
 
     r64 TotalTime = 0.0f;
-    v2 At = V2(ProfileRect.Min.x, ProfileRect.Max.y - GetBaseline(DebugState));
     u32 Index = 0;
     for(debug_variable_link *Link = DebugState->ProfileGroup->Sentinel.Next;
         Link != &DebugState->ProfileGroup->Sentinel;
@@ -701,7 +700,9 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
             Event;
             Event = Event->Next)
         {
-            AccumulateDebugStatistic(&Entry->Stats, (r64)Event->ProfileNode.Duration);
+            u64 ClocksWithChildren = Event->ProfileNode.Duration;
+            u64 ClocksWithoutChildren = ClocksWithChildren - Event->ProfileNode.DurationOfChildren;
+            AccumulateDebugStatistic(&Entry->Stats, (r64)ClocksWithoutChildren);
         }
         EndDebugStatistic(&Entry->Stats);
         TotalTime += Entry->Stats.Sum;
@@ -718,6 +719,7 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
         PC = 100.0f / TotalTime;
     }
 
+    v2 At = V2(ProfileRect.Min.x, ProfileRect.Max.y - GetBaseline(DebugState));
     for(Index = 0; Index < LinkCount; ++Index)
     {
         debug_clock_entry *Entry = Entries + SortA[Index].Index;
@@ -730,7 +732,15 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
                     (u32)Stats->Sum, (PC*Stats->Sum), Stats->Count, 
                     Element->GUID + Element->NameStartsAt);
         TextOutAt(DebugState, At, TextBuffer);
-        At.y -= GetLineAdvance(DebugState);
+
+        if(At.y < ProfileRect.Min.y)
+        {
+            break;
+        }
+        else
+        {
+            At.y -= GetLineAdvance(DebugState);
+        }
     }
 
     EndTemporaryMemory(Temp);
@@ -1758,6 +1768,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         Node->NextSameParent = 0;
                         Node->ParentRelativeClock = 0;
                         Node->Duration = 0;
+                        Node->DurationOfChildren = 0;
                         Node->ThreadOrdinal = 0;
                         Node->CoreIndex = 0;
 
@@ -1771,6 +1782,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                     Node->FirstChild = 0;
                     Node->ParentRelativeClock = Event->Clock - ClockBasis;
                     Node->Duration = 0;
+                    Node->DurationOfChildren = 0;
                     Node->ThreadOrdinal = (u16)Thread->LaneIndex;
                     Node->CoreIndex = Event->CoreIndex;
 
@@ -1794,6 +1806,12 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
                         Node->Duration = Event->Clock - MatchingBlock->BeginClock;
 
                         DeallocateOpenDebugBlock(DebugState, &Thread->FirstOpenCodeBlock);
+
+                        if(Thread->FirstOpenCodeBlock)
+                        {
+                            debug_profile_node *ParentNode = &Thread->FirstOpenCodeBlock->Node->ProfileNode;
+                            ParentNode->DurationOfChildren += Node->Duration;
+                        }
                     }
                 } break;
 
