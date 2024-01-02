@@ -257,7 +257,8 @@ struct debug_state
     r32 GlobalWidth;
     r32 GlobalHeight;
 
-    r32 MouseTextStackY;
+    layout MouseTextLayout;
+
     u32 TotalFrameCount;
 
     u32 ViewingFrameOrdinal;

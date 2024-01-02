@@ -501,10 +501,12 @@ global_variable v3 DebugColorTable[] =
 
 internal void
 DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP,
-                debug_profile_node *RootNode, r32 LaneStride, r32 LaneHeight)
+                debug_profile_node *RootNode, r32 LaneStride, r32 LaneHeight, u32 DepthRemaining)
 {
     r32 FrameSpan = (r32)(RootNode->Duration);
     r32 PixelSpan = GetDim(ProfileRect).x;
+
+    r32 BaseZ = 100.0f - 10.0f*(r32)DepthRemaining;
 
     r32 Scale = 0.0f;
     if(FrameSpan > 0)
@@ -529,8 +531,10 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
         rectangle2 RegionRect = RectMinMax(V2(ThisMinX, LaneY - LaneHeight),
                                            V2(ThisMaxX, LaneY));
 
+        PushRect(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+                 BaseZ, V4(Color, 1));
         PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
-                        0.0f, V4(Color, 1), 2.0f);
+                        BaseZ+1.0f, V4(0, 0, 0, 1), 2.0f);
 
         // TODO: Pull this out so all profilers share it
         if(IsInRectangle(RegionRect, MouseP))
@@ -539,8 +543,7 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
             _snprintf_s(TextBuffer, sizeof(TextBuffer),
                         "%s: %10ucy",
                         Element->GUID, (u32)Node->Duration);
-            TextOutAt(DebugState, MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
-            DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
+            AddTooltip(DebugState, TextBuffer);
 
             // TODO: It would be better to generate a graph+element debug ID here
             debug_view *View = GetOrCreateDebugViewFor(DebugState, GraphID);
@@ -548,7 +551,10 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
                 SetPointerInteraction(GraphID, (void **)&View->ProfileGraph.GUID, Element->GUID);
         }
 
-        //DrawProfileBars(DebugState, GraphID, RegionRect, MouseP, Node, 0, LaneHeight/2);
+        if(DepthRemaining > 0)
+        {
+            DrawProfileBars(DebugState, GraphID, RegionRect, MouseP, Node, 0, LaneHeight/2, DepthRemaining - 1);
+        }
     }
 }
 
@@ -556,7 +562,6 @@ internal void
 DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP,
               debug_element *RootElement)
 {
-    DebugState->MouseTextStackY = 10.0f;
     object_transform NoTransform = DefaultFlatTransform();
 
     u32 LaneCount = DebugState->FrameBarLaneCount;
@@ -581,7 +586,7 @@ DrawProfileIn(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
         EventRect.Max.x = (1.0f - t)*ProfileRect.Min.x + t*ProfileRect.Max.x;
         NextX = EventRect.Max.x;
 
-        DrawProfileBars(DebugState, GraphID, EventRect, MouseP, Node, LaneHeight, LaneHeight);
+        DrawProfileBars(DebugState, GraphID, EventRect, MouseP, Node, LaneHeight, LaneHeight, 1);
     }
 }
 
@@ -592,8 +597,6 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
     u32 FrameCount = ArrayCount(RootElement->Frames);
     if(FrameCount > 0)
     {
-        DebugState->MouseTextStackY = 10.0f;
-        
         object_transform NoTransform = DefaultFlatTransform();
 
         r32 BarWidth = (GetDim(ProfileRect).x / (r32)FrameCount);
@@ -613,7 +616,10 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
                 {
                     Scale = PixelSpan / FrameSpan;
                 }
-                
+
+                b32 Highlight = (FrameIndex == DebugState->ViewingFrameOrdinal);
+                r32 HighDim = Highlight ? 1.0f : 0.5f;
+
                 for(debug_stored_event *StoredEvent = RootNode->FirstChild;
                     StoredEvent;
                     StoredEvent = StoredEvent->ProfileNode.NextSameParent)
@@ -628,8 +634,10 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
 
                     rectangle2 RegionRect = RectMinMax(V2(AtX, ThisMinY), V2(AtX + BarWidth, ThisMaxY));
 
+                    PushRect(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+                             0.0f, V4(HighDim*Color, 1));
                     PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
-                                    0.0f, V4(Color, 1), 2.0f);
+                                    1.0f, V4(0, 0, 0, 1), 2.0f);
 
                     if(IsInRectangle(RegionRect, MouseP))
                     {
@@ -637,8 +645,7 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
                         _snprintf_s(TextBuffer, sizeof(TextBuffer),
                                     "%s: %10ucy",
                                     Element->GUID, (u32)Node->Duration);
-                        TextOutAt(DebugState, MouseP + V2(0.0f, DebugState->MouseTextStackY), TextBuffer);
-                        DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
+                        AddTooltip(DebugState, TextBuffer);
 
                         debug_view *View = GetOrCreateDebugViewFor(DebugState, GraphID);
                         DebugState->NextHotInteraction =
@@ -794,7 +801,7 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
             {
                 char TextBuffer[256];
                 _snprintf_s(TextBuffer, sizeof(TextBuffer), "%u", FrameIndex);
-                TextOutAt(DebugState, MouseP + V2(0.0f, 10.0f), TextBuffer);
+                AddTooltip(DebugState, TextBuffer);
 
                 DebugState->NextHotInteraction = 
                     SetUInt32Interaction(SliderID, &DebugState->ViewingFrameOrdinal, FrameIndex);
@@ -1939,7 +1946,9 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
 
     DebugState->AltUI = Input->MouseButtons[PlatformMouseButton_Right].EndedDown;
     v2 MouseP = Unproject(RenderGroup, DefaultFlatTransform(), V2(Input->MouseX, Input->MouseY)).xy;
+    DebugState->MouseTextLayout = BeginLayout(DebugState, MouseP, MouseP);
     DrawTrees(DebugState, MouseP);
+    EndLayout(&DebugState->MouseTextLayout);
     DEBUGInteract(DebugState, Input, MouseP);
 
     EndRenderGroup(&DebugState->RenderGroup);

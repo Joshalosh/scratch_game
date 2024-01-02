@@ -50,7 +50,8 @@ GetHex(char Char)
 }
 
     internal rectangle2
-TextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String, v4 Color = V4(1, 1, 1, 1))
+TextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String, v4 Color = V4(1, 1, 1, 1),
+       r32 AtZ = 0.0f)
 {
     rectangle2 Result = InvertedInfinityRectangle2();
     if(DebugState && DebugState->DebugFont)
@@ -111,7 +112,7 @@ TextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String, v4 Color =
                     ga_bitmap *Info = GetBitmapInfo(RenderGroup->Assets, BitmapID);
 
                     r32 BitmapScale = CharScale*(r32)Info->Dim[1];
-                    v3 BitmapOffset = V3(AtX, AtY, 0);
+                    v3 BitmapOffset = V3(AtX, AtY, AtZ);
                     if(Op == DEBUGTextOp_DrawText)
                     {
                         PushBitmap(RenderGroup, DebugState->TextTransform, BitmapID, BitmapScale,
@@ -387,3 +388,11 @@ EndRow(layout *Layout)
     AdvanceElement(Layout, RectMinMax(Layout->At, Layout->At));
 }
 
+internal void
+AddTooltip(debug_state *DebugState, char *String)
+{
+#if 0
+    TextOutAt(DebugState, MouseP + V2(0.0f, DebugState->MouseTextStackY), String);
+    DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
+#endif
+}
