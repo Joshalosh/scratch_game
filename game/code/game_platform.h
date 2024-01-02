@@ -255,6 +255,15 @@ SafeTruncateUInt64(uint64_t Value)
     return(Result);
 }
 
+inline u16
+SafeTruncateToU16(u32 Value)
+{
+    // TODO: Defines for maximum values
+    Assert(Value <= 0xFFFF);
+    u16 Result = (u16)Value;
+    return(Result);
+}
+
 /*
   Services that the platform layer provides to the game
 */
@@ -331,6 +340,12 @@ typedef struct game_render_commands
 
     u32 PushBufferElementCount;
     u32 SortEntryAt;
+
+    u32 ClipRectCount;
+    struct render_entry_cliprect *ClipRects;
+
+    render_entry_cliprect *FirstRect;
+    render_entry_cliprect *LastRect;
 } game_render_commands;
 #define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
     {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, 0, MaxPushBufferSize};

@@ -46,12 +46,19 @@ enum render_group_entry_type
     RenderGroupEntryType_render_entry_clear,
     RenderGroupEntryType_render_entry_bitmap,
     RenderGroupEntryType_render_entry_rectangle,
+    RenderGroupEntryType_render_entry_cliprect,
     RenderGroupEntryType_render_entry_coordinate_system,
 };
-struct render_group_entry_header
+struct render_group_entry_header // TODO: Don't store type here, perhaps better to store in sort index
 {
     u16 Type;
     u16 ClipRectIndex;
+};
+
+struct render_entry_cliprect
+{
+    render_entry_cliprect *Next;
+    rectangle2i Rect;
 };
 
 struct render_entry_clear
@@ -130,6 +137,8 @@ struct render_group
 
     uint32_t MissingResourceCount;
     b32 RendersInBackground;
+
+    u32 CurrentClipRectIndex;
 
     u32 GenerationID;
     game_render_commands *Commands;

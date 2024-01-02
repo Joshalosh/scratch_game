@@ -4,17 +4,15 @@
  TODO
 
  - Debug code
-   - Logging
    - Diagramming
-   - A little GUI, switches / sliders / etc.
    - Draw tile chunks so we can verify that things are aligned /
      in the chunks we want them to be in
-   - Thread visualisation
 
  - Audio
    - Fix the clicking bug at the end of samples.
 
  - Rendering
+   - What's up with the 18,000 rectangle draws?
    - Real projections with solid concept of project/unproject
    - Straighten out all of the coordinate systems.
      - Screen

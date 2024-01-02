@@ -722,9 +722,11 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 internal void
 Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_commands *Commands,
-                           HDC DeviceContext, s32 WindowWidth, s32 WindowHeight, void *SortMemory)
+                           HDC DeviceContext, s32 WindowWidth, s32 WindowHeight, 
+                           void *SortMemory, void *ClipRectMemory)
 {
     SortEntries(Commands, SortMemory);
+    LineariseClipRects(Commands, ClipRectMemory);
 
     /* TODO: Do I want to check for resources like before? Probably... yes
     if(AllResourcesPresent(RenderGroup))
@@ -1858,6 +1860,8 @@ WinMain(HINSTANCE Instance,
 
             umm CurrentSortMemorySize = Megabytes(1);
             void *SortMemory = Win32AllocateMemory(CurrentSortMemorySize);
+            umm CurrentClipMemorySize = Megabytes(1);
+            void *ClipMemory = Win32AllocateMemory(CurrentClipMemorySize);
 
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(64);
@@ -2492,11 +2496,20 @@ WinMain(HINSTANCE Instance,
                         CurrentSortMemorySize = NeededSortMemorySize;
                         SortMemory = Win32AllocateMemory(CurrentSortMemorySize);
                     }
+                    
+                    // TODO: Collapse this with the above
+                    umm NeededClipMemorySize = RenderCommands.PushBufferElementCount * sizeof(render_entry_cliprect);
+                    if(CurrentClipMemorySize < NeededClipMemorySize)
+                    {
+                        Win32DeallocateMemory(ClipMemory);
+                        CurrentClipMemorySize = NeededClipMemorySize;
+                        ClipMemory = Win32AllocateMemory(CurrentClipMemorySize);
+                    }
 
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     HDC DeviceContext = GetDC(Window);
                     Win32DisplayBufferInWindow(&HighPriorityQueue, &RenderCommands, DeviceContext,
-                                               Dimension.Width, Dimension.Height, SortMemory);
+                                               Dimension.Width, Dimension.Height, SortMemory, ClipMemory);
                     ReleaseDC(Window, DeviceContext);
 
                     FlipWallClock = Win32GetWallClock();

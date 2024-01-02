@@ -1,6 +1,6 @@
 
-#define IGNORED_TIMED_FUNCTION TIMED_FUNCTION
-#define IGNORED_TIMED_BLOCK TIMED_BLOCK
+#define IGNORED_TIMED_FUNCTION(...)
+#define IGNORED_TIMED_BLOCK(...)
 
 #if 0
 #include <iacaMarks.h>
@@ -52,7 +52,7 @@ UnscaleAndBiasNormal(v4 Normal)
 internal void
 DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i ClipRect)
 {
-    TIMED_FUNCTION();
+    IGNORED_TIMED_FUNCTION();
 
     real32 R = Color.r;
     real32 G = Color.g;
@@ -414,7 +414,7 @@ DrawRectangleSlowly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Col
 
     uint8_t *Row = ((uint8_t *)Buffer->Memory + XMin*BITMAP_BYTES_PER_PIXEL + YMin*Buffer->Pitch);
 
-    TIMED_BLOCK("Pixel Fill", (XMax - XMin + 1)*(YMax - YMin + 1));
+    IGNORED_TIMED_BLOCK("Pixel Fill", (XMax - XMin + 1)*(YMax - YMin + 1));
     for(int Y = YMin; Y <= YMax; ++Y)
     {
         uint32_t *Pixel = (uint32_t *)Row;
@@ -1134,7 +1134,18 @@ SortEntries(game_render_commands *Commands, void *SortMemory)
 }
 
 internal void
-RenderCommandsToBitmap(game_render_commands *Commands, loaded_bitmap *OutputTarget, rectangle2i ClipRect)
+LineariseClipRects(game_render_commands *Commands, void *ClipMemory)
+{
+    render_entry_cliprect *Out = (render_entry_cliprect *)ClipMemory;
+    for(render_entry_cliprect *Rect = Commands->FirstRect; Rect; Rect = Rect->Next)
+    {
+        *Out++ = *Rect;
+    }
+    Commands->ClipRects = (render_entry_cliprect *)ClipMemory;
+}
+
+internal void
+RenderCommandsToBitmap(game_render_commands *Commands, loaded_bitmap *OutputTarget, rectangle2i BaseClipRect)
 {
     IGNORED_TIMED_FUNCTION();
 
@@ -1143,11 +1154,22 @@ RenderCommandsToBitmap(game_render_commands *Commands, loaded_bitmap *OutputTarg
 
     real32 NullPixelsToMetres = 1.0f;
 
+    u32 ClipRectIndex = 0xFFFFFFFF;
+    rectangle2i ClipRect = BaseClipRect;
+
     sort_entry *Entry = SortEntries;
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
         render_group_entry_header *Header = (render_group_entry_header *)
             (Commands->PushBufferBase + Entry->Index);
+        if(ClipRectIndex != Header->ClipRectIndex)
+        {
+            ClipRectIndex = Header->ClipRectIndex;
+            Assert(ClipRectIndex < Commands->ClipRectCount);
+
+            render_entry_cliprect *Clip = Commands->ClipRects + ClipRectIndex;
+            ClipRect = Intersect(BaseClipRect, Clip->Rect);
+        }
 
         void *Data = (uint8_t *)Header + sizeof(*Header);
         switch(Header->Type)
