@@ -206,6 +206,8 @@ struct debug_data_block
 };
 
 #define DEBUG_DATA_BLOCK(Name) debug_data_block DataBlock__(DEBUG_NAME(Name))
+#define DEBUG_BEGIN_DATA_BLOCK(Name) RecordDebugEvent(DebugType_OpenDataBlock, DEBUG_NAME(Name))
+#define DEBUG_END_DATA_BLOCK(Name) RecordDebugEvent(DebugType_CloseDataBlock, DEBUG_NAME("End Data Block"))
 
 internal void DEBUGEditEventData(char *GUID, debug_event *Event);
 

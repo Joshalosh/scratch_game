@@ -858,7 +858,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             if(Bitmap)
             {
                 PushBitmap(&DebugState->RenderGroup, NoTransform, Event->Value_bitmap_id, BitmapScale,
-                           V3(GetMinCorner(LayEl.Bounds), 0.0f), V4(1, 1, 1, 1), 0.0f);
+                           V3(GetMinCorner(LayEl.Bounds), 1.0f), V4(1, 1, 1, 1), 0.0f);
             }
         } break;
 
@@ -954,8 +954,9 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
         case DebugType_LastFrameInfo:
         {
-            debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
             char Text[256];
+
+            debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
             _snprintf_s(Text, sizeof(Text),
                         "Viewing frame time: %.02fms %de %dp %dd",
                         MostRecentFrame->WallSecondsElapsed * 1000.0f,
@@ -1855,6 +1856,10 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
 #endif
 
         DebugState->RootGroup = CreateVariableLink(DebugState, 4, "Root");
+        DebugState->RootInfoSize = 256;
+        DebugState->RootGroup->Name = 
+            DebugState->RootInfo = (char *)PushSize(&DebugState->DebugArena, DebugState->RootInfoSize);
+
         DebugState->ProfileGroup = CreateVariableLink(DebugState, 7, "Profile");
 
 #if 0
@@ -1929,6 +1934,8 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->UITransform.SortBias = 300000.0f;
     DebugState->TextTransform.SortBias = 400000.0f;
 
+    DebugState->DefaultClipRect = DebugState->RenderGroup.CurrentClipRectIndex;
+
     if(!DebugState->Paused)
     {
         DebugState->ViewingFrameOrdinal = DebugState->MostRecentFrameOrdinal;
@@ -1943,6 +1950,14 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
     render_group *RenderGroup = &DebugState->RenderGroup;
 
     debug_event *HotEvent = 0;
+
+    debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
+    _snprintf_s(DebugState->RootInfo, DebugState->RootInfoSize, DebugState->RootInfoSize, 
+                "%.02fms %de %dp %dd",
+                MostRecentFrame->WallSecondsElapsed * 1000.0f,
+                MostRecentFrame->StoredEventCount,
+                MostRecentFrame->ProfileBlockCount,
+                MostRecentFrame->DataBlockCount);
 
     DebugState->AltUI = Input->MouseButtons[PlatformMouseButton_Right].EndedDown;
     v2 MouseP = Unproject(RenderGroup, DefaultFlatTransform(), V2(Input->MouseX, Input->MouseY)).xy;

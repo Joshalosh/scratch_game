@@ -145,10 +145,11 @@ TextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String, v4 Color =
 }
 
 inline void
-TextOutAt(debug_state *DebugState, v2 P, char *String, v4 Color = V4(1, 1, 1, 1))
+TextOutAt(debug_state *DebugState, v2 P, char *String, v4 Color = V4(1, 1, 1, 1), r32 AtZ = 0.0f)
 {
     render_group *RenderGroup = &DebugState->RenderGroup;
-    TextOp(DebugState, DEBUGTextOp_DrawText, P, String, Color);
+
+    TextOp(DebugState, DEBUGTextOp_DrawText, P, String, Color, AtZ);
 }
 
 inline rectangle2
@@ -389,10 +390,24 @@ EndRow(layout *Layout)
 }
 
 internal void
-AddTooltip(debug_state *DebugState, char *String)
+AddTooltip(debug_state *DebugState, char *Text)
 {
-#if 0
-    TextOutAt(DebugState, MouseP + V2(0.0f, DebugState->MouseTextStackY), String);
-    DebugState->MouseTextStackY -= GetLineAdvance(DebugState);
-#endif
+    render_group *RenderGroup = &DebugState->RenderGroup;
+    u32 OldClipRect = RenderGroup->CurrentClipRectIndex;
+    RenderGroup->CurrentClipRectIndex = DebugState->DefaultClipRect;
+
+    layout *Layout = &DebugState->MouseTextLayout;
+
+    rectangle2 TextBounds = GetTextSize(DebugState, Text);
+    v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
+
+    layout_element Element = BeginElementRectangle(Layout, &Dim);
+    EndElement(&Element);
+
+    TextOutAt(DebugState, V2(GetMinCorner(Element.Bounds).x,
+                             GetMaxCorner(Element.Bounds).y - 
+                             DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
+              Text, V4(1, 1, 1, 1), 10000.0f);
+
+    RenderGroup->CurrentClipRectIndex = OldClipRect;
 }

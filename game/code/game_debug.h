@@ -222,6 +222,7 @@ struct debug_state
     memory_arena DebugArena;
     memory_arena PerFrameArena;
 
+    u32 DefaultClipRect;
     render_group RenderGroup;
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
@@ -277,6 +278,9 @@ struct debug_state
 
     // Per-frame storage management
     debug_stored_event *FirstFreeStoredEvent;
+
+    u32 RootInfoSize;
+    char *RootInfo;
 };
 
 struct debug_statistic
