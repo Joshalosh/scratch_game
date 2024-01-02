@@ -920,8 +920,15 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
         case DebugType_FrameSlider:
         {
-            v2 Dim = {1400, 32};
-            layout_element LayEl = BeginElementRectangle(Layout, &Dim);
+            v2 *Dim = &View->InlineBlock.Dim;
+            if((Dim->x == 0) && (Dim->y == 0))
+            {
+                Dim->x = 1400;
+                Dim->y = 32;
+            }
+
+            layout_element LayEl = BeginElementRectangle(Layout, Dim);
+            MakeElementSizable(&LayEl);
             EndElement(&LayEl);
 
             BeginRow(Layout);
@@ -1050,12 +1057,7 @@ DrawTrees(debug_state *DebugState, v2 MouseP)
         debug_variable_link *Group = Tree->Group;
         if(Group)
         {
-            for(debug_variable_link *SubLink = Group->FirstChild;
-                SubLink != GetSentinel(Group);
-                SubLink = SubLink->Next)
-            {
-                DrawTreeLink(DebugState, &Layout, Tree, SubLink);
-            }
+            DrawTreeLink(DebugState, &Layout, Tree, Group);
         }
 
         debug_interaction MoveInteraction = {};
