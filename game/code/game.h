@@ -434,8 +434,6 @@ struct transient_state
     game_assets *Assets;
     u32 MainGenerationID;
 
-    uint32_t GroundBufferCount;
-    ground_buffer *GroundBuffers;
     platform_work_queue *HighPriorityQueue;
     platform_work_queue *LowPriorityQueue;
 

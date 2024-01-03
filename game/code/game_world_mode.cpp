@@ -59,12 +59,19 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
 }
 
 internal add_low_entity_result
-AddStandardRoom(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ)
 {
-    world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
-    add_low_entity_result Entity = AddGroundedEntity(WorldMode, EntityType_Space, P,
-                                                     WorldMode->StandardRoomCollision);
-    AddFlags(&Entity.Low->Sim, EntityFlag_Traversable);
+    for(s32 OffsetY = -4; OffsetY <= 4; ++OffsetX)
+    {
+        for(s32 OffsetX = -8; OffsetX <= 8; ++OffsetX)
+        {
+            world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
+                                                             AbsTileY + Offset, AbsTileZ);
+            add_low_entity_result Entity = AddGroundedEntity(WorldMode, EntityType_Floor, P,
+                                                             WorldMode->StandardFloorCollision);
+            AddFlags(&Entity.Low->Sim, EntityFlag_Traversable);
+        }
+    }
 
     return(Entity);
 }
@@ -297,130 +304,6 @@ MakeNullCollision(game_mode_world *WorldMode)
     Group->TotalVolume.Dim = V3(0, 0, 0);
 
     return(Group);
-}
-
-// TODO: fill_ground_chunk_work will cause a crash if the mode goes 
-// away before the task finishes - this must be shut down properly 
-// if I ship it
-struct fill_ground_chunk_work
-{
-    transient_state *TranState;
-    game_mode_world *WorldMode;
-    ground_buffer *GroundBuffer;
-    world_position ChunkP;
-
-    task_with_memory *Task;
-};
-internal PLATFORM_WORK_QUEUE_CALLBACK(FillGroundChunkWork)
-{
-    TIMED_FUNCTION();
-
-    fill_ground_chunk_work *Work = (fill_ground_chunk_work *)Data;
-
-#if 0
-    loaded_bitmap *Buffer = &Work->GroundBuffer->Bitmap;
-    Buffer->AlignPercentage = V2(0.5f, 0.5f);
-    Buffer->WidthOverHeight = 1.0f;
-
-    real32 Width = Work->WorldMode->World->ChunkDimInMeters.x;
-    real32 Height = Work->WorldMode->World->ChunkDimInMeters.y;
-    Assert(Width == Height);
-    v2 HalfDim = 0.5f*V2(Width, Height);
-
-    // TODO: Decide what the pushbuffer size is.
-    render_group = BeginRenderGroup(Work->TranState->Assets, ChunkGeneration, true);
-    render_group *RenderGroup = 
-    BeginRender(RenderGroup);
-    Orthographic(RenderGroup, Buffer->Width, Buffer->Height, (Buffer->Width - 2) / Width);
-    Clear(RenderGroup, V4(1.0f, 0.0f, 1.0f, 1.0f));
-
-    object_transform NoTransform = DefaultFlatTransform();
-
-    for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
-    {
-        for(int32_t ChunkOffsetX = -1; ChunkOffsetX <= 1; ++ChunkOffsetX)
-        {
-            int32_t ChunkX = Work->ChunkP.ChunkX + ChunkOffsetX;
-            int32_t ChunkY = Work->ChunkP.ChunkY + ChunkOffsetY;
-            int32_t ChunkZ = Work->ChunkP.ChunkZ;
-    
-            // TODO Make random number generation more systemic.
-            // Looks into wang hashing or some other spatial seed generation thing.
-            random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
-
-            v4 Color;
-            DEBUG_IF(GroundChunks_Checkerboards)
-            {
-                Color = V4(1, 0, 0, 1);
-                if((ChunkX % 2) == (ChunkY % 2))
-                {
-                    Color = V4(0, 0, 1, 1);
-                }
-            }
-            else
-            {
-                Color = {1, 1, 1, 1};
-            }
-
-            v2 Centre = V2(ChunkOffsetX*Width, ChunkOffsetY*Height);
-
-            for(uint32_t GrassIndex = 0; GrassIndex < 100; ++GrassIndex)
-            {
-                bitmap_id Stamp = GetRandomBitmapFrom(Work->TranState->Assets,
-                                                      RandomChoice(&Series, 2) ? Asset_Grass : Asset_Stone,
-                                                      &Series);
-
-                v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
-                PushBitmap(RenderGroup, NoTransform, Stamp, 2.0f, V3(P, 0.0f), Color);
-            }
-        }
-    }
-
-    for(int32_t ChunkOffsetY = -1; ChunkOffsetY <= 1; ++ChunkOffsetY)
-    {
-        for(int32_t ChunkOffsetX = -1; ChunkOffsetX <= 1; ++ChunkOffsetX)
-        {
-            int32_t ChunkX = Work->ChunkP.ChunkX + ChunkOffsetX;
-            int32_t ChunkY = Work->ChunkP.ChunkY + ChunkOffsetY;
-            int32_t ChunkZ = Work->ChunkP.ChunkZ;
-
-            random_series Series = RandomSeed(139*ChunkX + 593*ChunkY + 329*ChunkZ);
-
-            v2 Centre = V2(ChunkOffsetX*Width, ChunkOffsetY*Height);
-
-            for(uint32_t GrassIndex = 0; GrassIndex < 50; ++GrassIndex)
-            {
-                bitmap_id Stamp = GetRandomBitmapFrom(Work->TranState->Assets, Asset_Tuft, &Series);
-                v2 P = Centre + Hadamard(HalfDim, V2(RandomBilateral(&Series), RandomBilateral(&Series)));
-                PushBitmap(RenderGroup, NoTransform, Stamp, 0.1f, V3(P, 0.0f));
-            }
-        }
-    }
-
-    Assert(AllResourcesPresent(RenderGroup));
-
-    RenderGroupToOutput(RenderGroup, Buffer, &Work->Task->Arena);
-    EndRender(RenderGroup);
-#endif
-
-    EndTaskWithMemory(Work->Task);
-}
-
-internal void
-FillGroundChunk(transient_state *TranState, game_mode_world *WorldMode, ground_buffer *GroundBuffer, world_position *ChunkP)
-{
-    task_with_memory *Task = BeginTaskWithMemory(TranState, true);
-    if(Task)
-    {
-        fill_ground_chunk_work *Work = PushStruct(&Task->Arena, fill_ground_chunk_work);
-        Work->Task = Task;
-        Work->TranState = TranState;
-        Work->WorldMode = WorldMode;
-        Work->GroundBuffer = GroundBuffer;
-        Work->ChunkP = *ChunkP;
-        GroundBuffer->P = *ChunkP;
-        Platform.AddEntry(TranState->LowPriorityQueue, FillGroundChunkWork, Work);
-    }
 }
 
 internal void
