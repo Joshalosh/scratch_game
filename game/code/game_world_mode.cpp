@@ -1164,7 +1164,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         bitmap_id BID = GetFirstBitmapFrom(TranState->Assets, Asset_Tree);
                         if(DEBUG_REQUESTED(EntityDebugID))
                         {
-                            DEBUG_VALUE(BID);
+                            DEBUG_NAMED_VALUE(BID);
                         }
 
                         PushBitmap(RenderGroup, EntityTransform, BID, 2.5f, V3(0, 0, 0));
@@ -1188,7 +1188,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         bitmap_id BID = HeroBitmaps.Head;
                         if(DEBUG_REQUESTED(EntityDebugID))
                         {
-                            DEBUG_VALUE(BID);
+                            DEBUG_NAMED_VALUE(BID);
                         }
 
                         Entity->tBob += dt;

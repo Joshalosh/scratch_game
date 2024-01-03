@@ -29,6 +29,11 @@ struct debug_view_profile_graph
     char *GUID;
 };
 
+struct debug_view_arena_graph
+{
+    debug_view_inline_block Block;
+};
+
 struct debug_view_collapsible
 {
     b32 ExpandedAlways;
@@ -55,6 +60,7 @@ struct debug_view
         debug_view_inline_block InlineBlock;
         debug_view_profile_graph ProfileGraph;
         debug_view_collapsible Collapsible;
+        debug_view_arena_graph ArenaGraph;
     };
 };
 

@@ -365,6 +365,13 @@ BeginRow(layout *Layout)
 }
 
 internal void
+Label(layout *Layout, char *Name)
+{
+    debug_interaction NullInteraction = {};
+    BasicTextElement(Layout, Name, NullInteraction, V4(1, 1, 1, 1), V4(1, 1, 1, 1));
+}
+
+internal void
 ActionButton(layout *Layout, char *Name, debug_interaction Interaction)
 {
     BasicTextElement(Layout, Name, Interaction,
