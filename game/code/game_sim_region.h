@@ -41,19 +41,22 @@ enum sim_entity_flags
     EntityFlag_Collides = (1 << 0),
     EntityFlag_Nonspatial = (1 << 1),
     EntityFlag_Moveable = (1 << 2),
-    EntityFlag_ZSupported = (1 << 3),
-    EntityFlag_Traversable = (1 << 4),
 
     EntityFlag_Simming = (1 << 30),
 };
 
-introspect(category:"sim_region") struct sim_entity_collision_volume
+struct sim_entity_collision_volume
 {
     v3 OffsetP;
     v3 Dim;
 };
 
-introspect(category:"sim_region") struct sim_entity_collision_volume_group
+struct sim_entity_traversable_point
+{
+    v3 P;
+};
+
+struct sim_entity_collision_volume_group
 {
     sim_entity_collision_volume TotalVolume;
 
@@ -63,9 +66,12 @@ introspect(category:"sim_region") struct sim_entity_collision_volume_group
     // used as the only collision volume for the entity.
     u32 VolumeCount;
     sim_entity_collision_volume *Volumes;
+
+    u32 TraversableCount;
+    sim_entity_traversable_point *Traversables;
 };
 
-introspect(category:"regular butter") struct sim_entity
+struct sim_entity
 {
     // Note: These are only for the sim region.
     world_chunk *OldChunk;
@@ -103,7 +109,7 @@ struct sim_entity_hash
     uint32_t Index;
 };
 
-introspect(category:"regular butter") struct sim_region
+struct sim_region
 {
     world *World;
     r32 MaxEntityRadius;

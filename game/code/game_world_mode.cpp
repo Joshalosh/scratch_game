@@ -58,22 +58,19 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
     return(Result);
 }
 
-internal add_low_entity_result
+internal void
 AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ)
 {
-    for(s32 OffsetY = -4; OffsetY <= 4; ++OffsetX)
+    for(s32 OffsetY = -4; OffsetY <= 4; ++OffsetY)
     {
         for(s32 OffsetX = -8; OffsetX <= 8; ++OffsetX)
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
-                                                             AbsTileY + Offset, AbsTileZ);
+                                                             AbsTileY + OffsetY, AbsTileZ);
             add_low_entity_result Entity = AddGroundedEntity(WorldMode, EntityType_Floor, P,
-                                                             WorldMode->StandardFloorCollision);
-            AddFlags(&Entity.Low->Sim, EntityFlag_Traversable);
+                                                             WorldMode->FloorCollision);
         }
     }
-
-    return(Entity);
 }
 
 internal add_low_entity_result
@@ -280,15 +277,16 @@ AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t St
 }
 
 sim_entity_collision_volume_group *
-MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ)
+MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ)
 {
     // TODO Change to using the fundamental types arena, etc.
     sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
-    Group->VolumeCount = 1;
-    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, sim_entity_collision_volume);
-    Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ);
+    Group->VolumeCount = 0;
+    Group->TraversableCount = 1;
+    Group->Traversables = PushArray(&WorldMode->World->Arena, Group->TraversableCount, sim_entity_traversable_point);
+    Group->TotalVolume.OffsetP = V3(0, 0, 0);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
-    Group->Volumes[0] = Group->TotalVolume;
+    Group->Traversables[0].P = V3(0, 0, 0);
 
     return(Group);
 }
@@ -333,22 +331,22 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     real32 TileDepthInMeters = WorldMode->TypicalFloorHeight;
 
     WorldMode->NullCollision = MakeNullCollision(WorldMode);
-    WorldMode->SwordCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.1f);
-    WorldMode->StairCollision = MakeSimpleGroundedCollision(WorldMode,
+    WorldMode->SwordCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 0.1f);
+    WorldMode->StairCollision = MakeSimpleFloorCollision(WorldMode,
                                                             TileSideInMeters,
                                                             2.0f*TileSideInMeters,
                                                             1.1f*TileDepthInMeters);
-    WorldMode->PlayerCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 1.2f);
-    WorldMode->MonsterCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
-    WorldMode->FamiliarCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
-    WorldMode->WallCollision = MakeSimpleGroundedCollision(WorldMode,
-                                                           TileSideInMeters,
-                                                           TileSideInMeters,
-                                                           TileDepthInMeters);
-    WorldMode->StandardRoomCollision = MakeSimpleGroundedCollision(WorldMode,
-                                                                   TilesPerWidth*TileSideInMeters,
-                                                                   TilesPerHeight*TileSideInMeters,
-                                                                   0.9f*TileDepthInMeters);
+    WorldMode->PlayerCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 1.2f);
+    WorldMode->MonsterCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 0.5f);
+    WorldMode->FamiliarCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 0.5f);
+    WorldMode->WallCollision = MakeSimpleFloorCollision(WorldMode,
+                                                        TileSideInMeters,
+                                                        TileSideInMeters,
+                                                        TileDepthInMeters);
+    WorldMode->FloorCollision = MakeSimpleFloorCollision(WorldMode,
+                                                        TileSideInMeters,
+                                                        TileSideInMeters,
+                                                        0.9f*TileDepthInMeters);
 
     random_series Series = RandomSeed(1234);
 
@@ -365,7 +363,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorBottom = false;
     bool32 DoorUp = false;
     bool32 DoorDown = false;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 2000; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 1; ScreenIndex < 2000; ++ScreenIndex)
     {
 #if 1
         uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -541,103 +539,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     real32 FadeBottomStartZ = -2.0f*WorldMode->TypicalFloorHeight;
     real32 FadeBottomEndZ = -2.25f*WorldMode->TypicalFloorHeight;
 
-    // Ground chunk rendering.
-#if 0
-    if(Global_GroundChunksOn)
-    {
-        TIMED_BLOCK("GroundChunksOn");
-        for(uint32_t GroundBufferIndex = 0;
-            GroundBufferIndex < TranState->GroundBufferCount;
-            ++GroundBufferIndex)
-        {
-            ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
-            if(IsValid(GroundBuffer->P))
-            {
-                loaded_bitmap *Bitmap = &GroundBuffer->Bitmap;
-
-                v3 Delta = Subtract(WorldMode->World, &GroundBuffer->P, &WorldMode->CameraP);
-
-                RenderGroup->GlobalAlpha = 1.0f;
-                if(Delta.z > FadeTopStartZ)
-                {
-                    RenderGroup->GlobalAlpha = Clamp01MapToRange(FadeTopEndZ, Delta.z, FadeTopStartZ);
-                }
-                else if(Delta.z < FadeBottomStartZ)
-                {
-                    RenderGroup->GlobalAlpha = Clamp01MapToRange(FadeBottomEndZ, Delta.z, FadeBottomStartZ);
-                }
-
-                object_transform Transform = DefaultFlatTransform();
-                Transform.OffsetP = Delta;
-
-                real32 GroundSideInMetres = World->ChunkDimInMeters.x;
-                PushBitmap(RenderGroup, Transform, Bitmap, 1.0f*GroundSideInMetres, V3(0, 0, 0));
-                if(Global_GroundChunks_Outlines)
-                {
-                    PushRectOutline(RenderGroup, Transform, Delta, V2(GroundSideInMetres, GroundSideInMetres),
-                                    V4(1.0f, 1.0f, 0.0f, 1.0f));
-                }
-            }
-        }
-
-        RenderGroup->GlobalAlpha = 1.0f;
-
-        world_position MinChunkP = MapIntoChunkSpace(World, WorldMode->CameraP, GetMinCorner(CameraBoundsInMetres));
-        world_position MaxChunkP = MapIntoChunkSpace(World, WorldMode->CameraP, GetMaxCorner(CameraBoundsInMetres));
-
-        for(int32_t ChunkZ = MinChunkP.ChunkZ; ChunkZ <= MaxChunkP.ChunkZ; ++ChunkZ)
-        {
-            for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
-            {
-                for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
-                {
-//                    world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, ChunkZ);
-//                    if(Chunk)
-                    {
-                        world_position ChunkCentreP = CentredChunkPoint(ChunkX, ChunkY, ChunkZ);
-                        v3 RelP = Subtract(World, &ChunkCentreP, &WorldMode->CameraP);
-
-                        // TODO: This is super inefficient and i'll need to fix it later.
-                        real32 FurthestBufferLengthSq = 0.0f;
-                        ground_buffer *FurthestBuffer = 0;
-                        for(uint32_t GroundBufferIndex = 0;
-                            GroundBufferIndex < TranState->GroundBufferCount;
-                            ++GroundBufferIndex)
-                        {
-                            ground_buffer *GroundBuffer = TranState->GroundBuffers + GroundBufferIndex;
-                            if(AreInSameChunk(World, &GroundBuffer->P, &ChunkCentreP))
-                            {
-                                FurthestBuffer = 0;
-                                break;
-                            }
-                            else if(IsValid(GroundBuffer->P))
-                            {
-                                v3 RelP = Subtract(World, &GroundBuffer->P, &WorldMode->CameraP);
-                                real32 BufferLengthSq = LengthSq(RelP.xy);
-                                if(FurthestBufferLengthSq < BufferLengthSq)
-                                {
-                                    FurthestBufferLengthSq = BufferLengthSq;
-                                    FurthestBuffer = GroundBuffer;
-                                }
-                            }
-                            else
-                            {
-                                FurthestBufferLengthSq = Real32Maximum;
-                                FurthestBuffer = GroundBuffer;
-                            }
-                        }
-
-                        if(FurthestBuffer)
-                        {
-                            FillGroundChunk(TranState, WorldMode, FurthestBuffer, &ChunkCentreP);
-                        }
-                    }
-                }
-            }
-        }
-    }
-#endif
-
     b32 HeroesExist = false;
     b32 QuitRequested = false;
     for(u32 ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
@@ -691,10 +592,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 }
             }
 
+#if 0
             if(Controller->Start.EndedDown)
             {
                 ConHero->dZ = 3.0f;
             }
+#endif
 
             ConHero->dSword = {};
             if(Controller->ActionUp.EndedDown)
@@ -1094,16 +997,22 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         DrawHitPoints(Entity, RenderGroup, EntityTransform);
                     } break;
 
-                    case EntityType_Space:
+                    case EntityType_Floor:
                     {
-                        if(Global_Simulation_UseSpaceOutlines)
+                        for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                         {
-                            for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
-                            {
-                                sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-                                PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                                Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
-                            }
+                            sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+                            PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                                            Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
+                        }
+
+                        for(u32 TraversableIndex = 0; 
+                            TraversableIndex < Entity->Collision->TraversableCount; 
+                            ++TraversableIndex)
+                        {
+                            sim_entity_traversable_point *Traversable =
+                                Entity->Collision->Traversables + TraversableIndex;
+                            PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), V4(1.0f, 0.5f, 0.0f, 1));
                         }
                     } break;
 
