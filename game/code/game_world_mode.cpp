@@ -277,9 +277,23 @@ AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t St
 }
 
 sim_entity_collision_volume_group *
+MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ)
+{
+    // TODO: Change to using the fundamental types arena, etc
+    sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
+    Group->VolumeCount = 1;
+    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, sim_entity_collision_volume);
+    Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ);
+    Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
+    Group->Volumes[0] = Group->TotalVolume;
+
+    return(Group);
+}
+
+sim_entity_collision_volume_group *
 MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ)
 {
-    // TODO Change to using the fundamental types arena, etc.
+    // TODO: Change to using the fundamental types arena, etc
     sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
     Group->VolumeCount = 0;
     Group->TraversableCount = 1;
@@ -294,6 +308,7 @@ MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, r
 sim_entity_collision_volume_group *
 MakeNullCollision(game_mode_world *WorldMode)
 {
+    // TODO: Change to using the fundamental types arena, etc
     sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
     Group->VolumeCount = 0;
     Group->Volumes = 0;
@@ -331,22 +346,22 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     real32 TileDepthInMeters = WorldMode->TypicalFloorHeight;
 
     WorldMode->NullCollision = MakeNullCollision(WorldMode);
-    WorldMode->SwordCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 0.1f);
-    WorldMode->StairCollision = MakeSimpleFloorCollision(WorldMode,
+    WorldMode->SwordCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.1f);
+    WorldMode->StairCollision = MakeSimpleGroundedCollision(WorldMode,
                                                             TileSideInMeters,
                                                             2.0f*TileSideInMeters,
                                                             1.1f*TileDepthInMeters);
-    WorldMode->PlayerCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 1.2f);
-    WorldMode->MonsterCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 0.5f);
-    WorldMode->FamiliarCollision = MakeSimpleFloorCollision(WorldMode, 1.0f, 0.5f, 0.5f);
-    WorldMode->WallCollision = MakeSimpleFloorCollision(WorldMode,
-                                                        TileSideInMeters,
-                                                        TileSideInMeters,
-                                                        TileDepthInMeters);
+    WorldMode->PlayerCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 1.2f);
+    WorldMode->MonsterCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
+    WorldMode->FamiliarCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
+    WorldMode->WallCollision = MakeSimpleGroundedCollision(WorldMode,
+                                                           TileSideInMeters,
+                                                           TileSideInMeters,
+                                                           TileDepthInMeters);
     WorldMode->FloorCollision = MakeSimpleFloorCollision(WorldMode,
-                                                        TileSideInMeters,
-                                                        TileSideInMeters,
-                                                        0.9f*TileDepthInMeters);
+                                                         TileSideInMeters,
+                                                         TileSideInMeters,
+                                                         TileDepthInMeters);
 
     random_series Series = RandomSeed(1234);
 
@@ -357,13 +372,14 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     uint32_t ScreenY = ScreenBaseY;
     uint32_t AbsTileZ = ScreenBaseZ;
 
+    // TODO: Replace all of this with real world generation
     bool32 DoorLeft = false;
     bool32 DoorRight = false;
     bool32 DoorTop = false;
     bool32 DoorBottom = false;
     bool32 DoorUp = false;
     bool32 DoorDown = false;
-    for(uint32_t ScreenIndex = 1; ScreenIndex < 2000; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
     {
 #if 1
         uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -1007,12 +1023,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         }
 
                         for(u32 TraversableIndex = 0; 
-                            TraversableIndex < Entity->Collision->TraversableCount; 
+                            TraversableIndex < Entity->Collision->TraversableCount;
                             ++TraversableIndex)
                         {
                             sim_entity_traversable_point *Traversable =
                                 Entity->Collision->Traversables + TraversableIndex;
-                            PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), V4(1.0f, 0.5f, 0.0f, 1));
+                            PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), V4(1.0, 0.5f, 0.0f, 1));
                         }
                     } break;
 
