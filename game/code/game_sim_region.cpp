@@ -1,3 +1,16 @@
+
+inline sim_entity_traversable_point
+GetSimSpaceTraversable(sim_entity *Entity, u32 Index)
+{
+    Assert(Index < Entity->Collision->TraversableCount);
+    sim_entity_traversable_point Result = Entity->Collision->Traversables[Index];
+
+    // TODO: This wants to be rotated eventuially
+    Result.P += Entity->P;
+
+    return(Result);
+}
+
 internal sim_entity_hash *
 GetHashFromStorageIndex(sim_region *SimRegion, uint32_t StorageIndex)
 {
@@ -92,6 +105,7 @@ AddEntityRaw(game_mode_world *WorldMode, sim_region *SimRegion, uint32_t Storage
             {
                 *Entity = Source->Sim;
                 LoadEntityReference(WorldMode, SimRegion, &Entity->Sword);
+                LoadEntityReference(WorldMode, SimRegion, &Entity->Head);
 
                 Assert(!IsSet(&Source->Sim, EntityFlag_Simming));
                 AddFlags(&Source->Sim, EntityFlag_Simming);
@@ -218,6 +232,7 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
         Assert(!IsSet(&Stored->Sim, EntityFlag_Simming));
 
         StoreEntityReference(&Stored->Sim.Sword);
+        StoreEntityReference(&Stored->Sim.Head);
 
         world_position NewP = IsSet(Entity, EntityFlag_Nonspatial) ? 
                               NullPosition() :
@@ -450,7 +465,7 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, sim_entity *Entity
 
     world *World = SimRegion->World;
 
-    if(Entity->Type == EntityType_Hero)
+    if(Entity->Type == EntityType_HeroHead)
     {
         int BreakHere = 5;
     }

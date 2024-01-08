@@ -125,21 +125,26 @@ internal add_low_entity_result
 AddPlayer(game_mode_world *WorldMode)
 {
     world_position P = WorldMode->CameraP;
-    add_low_entity_result Entity = AddGroundedEntity(WorldMode, EntityType_Hero, P,
-                                                     WorldMode->PlayerCollision);
-    AddFlags(&Entity.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
-    InitHitPoints(Entity.Low, 3);
+    add_low_entity_result Body = AddGroundedEntity(WorldMode, EntityType_HeroBody, P,
+                                                   WorldMode->HeroBodyCollision);
+    AddFlags(&Body.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
+
+    add_low_entity_result Head = AddGroundedEntity(WorldMode, EntityType_HeroHead, P, 
+                                                   WorldMode->HeroHeadCollision);
+    AddFlags(&Head.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
+
+    InitHitPoints(Body.Low, 3);
 
     add_low_entity_result Sword = AddSword(WorldMode);
-    Entity.Low->Sim.Sword.Index = Sword.LowIndex;
+    Head.Low->Sim.Sword.Index = Sword.LowIndex;
 
     if(WorldMode->CameraFollowingEntityIndex == 0)
     {
-        WorldMode->CameraFollowingEntityIndex = Entity.LowIndex;
+        WorldMode->CameraFollowingEntityIndex = Body.LowIndex;
     }
 
-    return(Entity);
+    return(Head);
 }
 
 internal add_low_entity_result
@@ -277,13 +282,14 @@ AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t St
 }
 
 sim_entity_collision_volume_group *
-MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ)
+MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ, 
+                            real32 OffsetZ = 0.0f)
 {
     // TODO: Change to using the fundamental types arena, etc
     sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
     Group->VolumeCount = 1;
     Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, sim_entity_collision_volume);
-    Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ);
+    Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ + OffsetZ);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Volumes[0] = Group->TotalVolume;
 
@@ -351,7 +357,8 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                                             TileSideInMeters,
                                                             2.0f*TileSideInMeters,
                                                             1.1f*TileDepthInMeters);
-    WorldMode->PlayerCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 1.2f);
+    WorldMode->HeroHeadCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f, 0.7f);
+    WorldMode->HeroBodyCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.6f);
     WorldMode->MonsterCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
     WorldMode->FamiliarCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
     WorldMode->WallCollision = MakeSimpleGroundedCollision(WorldMode,
@@ -718,7 +725,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 HeroBitmaps.Torso = GetBestMatchBitmapFrom(TranState->Assets, Asset_Torso, &MatchVector, &WeightVector);
                 switch(Entity->Type)
                 {
-                    case EntityType_Hero:
+                    case EntityType_HeroHead:
                     {
                         for(uint32_t ControlIndex = 0; ControlIndex < ArrayCount(GameState->ControlledHeroes); ++ControlIndex)
                         {
@@ -752,6 +759,36 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         }
                     } break;
 
+                    case EntityType_HeroBody:
+                    {
+                        // TODO: Make spatial queries easy for things
+                        sim_entity *Head = Entity->Head.Ptr;
+                        if(Head)
+                        {
+                            r32 ClosestDistanceSq = Real32Maximum;
+                            v3 ClosestP = Entity->P;
+                            sim_entity *TestEntity = SimRegion->Entities;
+                            for(u32 TestEntityIndex = 0; 
+                                TestEntityIndex < SimRegion->EntityCount;
+                                ++TestEntityIndex, ++TestEntity)
+                            {
+                                sim_entity_collision_volume_group *VolGroup = TestEntity->Collision;
+                                for(u32 PIndex = 0; PIndex < VolGroup->TraversableCount; PIndex)
+                                {
+                                    sim_entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
+
+                                    real32 TestDSq = LengthSq(P.P - Head->P);
+                                    if(ClosestDistanceSq > TestDSq)
+                                    {
+                                        ClosestP = P.P;
+                                        ClosestDistanceSq = TestDSq;
+                                    }
+                                }
+                            }
+                            Entity->P = ClosestP;
+                        }
+                    } break;
+
                     case EntityType_Sword:
                     {
                         MoveSpec.UnitMaxAccelVector = false;
@@ -777,7 +814,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 TestEntityIndex < SimRegion->EntityCount;
                                 ++TestEntityIndex, ++TestEntity)
                             {
-                                if(TestEntity->Type == EntityType_Hero)
+                                if(TestEntity->Type == EntityType_HeroBody)
                                 {
                                     real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
                                     if(ClosestHeroDSq > TestDSq)
@@ -816,149 +853,21 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 //
                 switch(Entity->Type)
                 {
-                    case EntityType_Hero:
+                    case EntityType_HeroBody:
                     {
                         real32 HeroSizeC = 2.5f;
                         PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow), 
                                    HeroSizeC*1.0f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
                         PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Torso, HeroSizeC*1.2f, V3(0, 0, 0));
                         PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Cape, HeroSizeC*1.2f, V3(0, 0, 0));
-                        PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
                         DrawHitPoints(Entity, RenderGroup, EntityTransform);
+                    } break;
 
-                        if(Global_Particles_Test)
-                        {
-                            for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 3; ++ParticleSpawnIndex)
-                            {
-                                particle *Particle = WorldMode->Particles + WorldMode->NextParticle++;
-                                if(WorldMode->NextParticle >= ArrayCount(WorldMode->Particles))
-                                {
-                                    WorldMode->NextParticle = 0;
-                                }
+                    case EntityType_HeroHead:
+                    {
+                        real32 HeroSizeC = 2.5f;
+                        PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
 
-                                Particle->P = V3(RandomBetween(&WorldMode->EffectsEntropy, -0.05f, 0.05f), 0, 0);
-                                Particle->dP = V3(RandomBetween(&WorldMode->EffectsEntropy, -0.01f, 0.01f), 
-                                                  7.0f*RandomBetween(&WorldMode->EffectsEntropy, 0.7f, 1.0f),
-                                                  0.0f);
-                                Particle->ddP = V3(0.0f, -9.8f, 0.0f);
-                                Particle->Color = V4(RandomBetween(&WorldMode->EffectsEntropy, 0.75f, 1.0f),
-                                                     RandomBetween(&WorldMode->EffectsEntropy, 0.75f, 1.0f),
-                                                     RandomBetween(&WorldMode->EffectsEntropy, 0.75f, 1.0f),
-                                                     1.0f);
-                                Particle->dColor = V4(0, 0, 0, -0.25f);
-
-                                asset_vector MatchVector = {};
-                                asset_vector WeightVector = {};
-                                char Nothings[] = "NOTHINGS";
-                                MatchVector.E[Tag_UnicodeCodepoint] = (r32)Nothings[RandomChoice(&WorldMode->EffectsEntropy, ArrayCount(Nothings) - 1)];
-                                WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
-
-                                Particle->BitmapID = HeroBitmaps.Head; //GetBestMatchBitmapFrom(TranState->Assets, Asset_Font,
-                                                                       //     &MatchVector, &WeightVector);
-
-        //                        Particle->BitmapID = GetRandomBitmapFrom(TranState->Assets, Asset_Font, &WorldMode->EffectsEntropy);
-                            }
-
-                            // Particle system test.
-                            ZeroStruct(WorldMode->ParticleCels);
-
-                            r32 GridScale = 0.25f;
-                            r32 InvGridScale = 1.0f / GridScale;
-                            v3 GridOrigin = {-0.5f*GridScale*PARTICLE_CEL_DIM, 0.0f, 0.0f};
-                            for(u32 ParticleIndex = 0; ParticleIndex < ArrayCount(WorldMode->Particles); ++ParticleIndex)
-                            {
-                                particle *Particle = WorldMode->Particles + ParticleIndex;
-
-                                v3 P = InvGridScale*(Particle->P - GridOrigin);
-
-                                s32 X = TruncateReal32ToInt32(P.x);
-                                s32 Y = TruncateReal32ToInt32(P.y);
-
-                                if(X < 0) {X = 0;}
-                                if(X > (PARTICLE_CEL_DIM - 1)) {X = (PARTICLE_CEL_DIM - 1);}
-                                if(Y < 0) {Y = 0;}
-                                if(Y > (PARTICLE_CEL_DIM - 1)) {Y = (PARTICLE_CEL_DIM - 1);}
-
-                                particle_cel *Cel = &WorldMode->ParticleCels[Y][X];
-                                r32 Density = Particle->Color.a;
-                                Cel->Density += Density;
-                                Cel->VelocityTimesDensity += Density*Particle->dP;
-                            }
-
-                            if(Global_Particles_ShowGrid)
-                            {
-                                for(u32 Y = 0; Y < PARTICLE_CEL_DIM; ++Y)
-                                {
-                                    for(u32 X = 0; X < PARTICLE_CEL_DIM; ++X)
-                                    {
-                                        particle_cel *Cel = &WorldMode->ParticleCels[Y][X];
-                                        r32 Alpha = Clamp01(0.1f*Cel->Density);
-                                        PushRect(RenderGroup, EntityTransform, GridScale*V3((r32)X, (r32)Y, 0) + GridOrigin, GridScale*V2(1.0f, 1.0f),
-                                                 V4(Alpha, Alpha, Alpha, 1.0f));
-                                    }
-                                }
-                            }
-
-                            for(u32 ParticleIndex = 0; ParticleIndex < ArrayCount(WorldMode->Particles); ++ParticleIndex)
-                            {
-                                particle *Particle = WorldMode->Particles + ParticleIndex;
-
-                                v3 P = InvGridScale*(Particle->P - GridOrigin);
-
-                                s32 X = TruncateReal32ToInt32(P.x);
-                                s32 Y = TruncateReal32ToInt32(P.y);
-
-                                if(X < 1) {X = 1;}
-                                if(X > (PARTICLE_CEL_DIM - 2)) {X = (PARTICLE_CEL_DIM - 2);}
-                                if(Y < 1) {Y = 1;}
-                                if(Y > (PARTICLE_CEL_DIM - 2)) {Y = (PARTICLE_CEL_DIM - 2);}
-
-                                particle_cel *CelCentre = &WorldMode->ParticleCels[Y][X];
-                                particle_cel *CelLeft = &WorldMode->ParticleCels[Y][X - 1];
-                                particle_cel *CelRight = &WorldMode->ParticleCels[Y][X + 1];
-                                particle_cel *CelDown = &WorldMode->ParticleCels[Y - 1][X];
-                                particle_cel *CelUp = &WorldMode->ParticleCels[Y + 1][X];
-
-                                v3 Dispersion = {};
-                                r32 Dc = 1.0f;
-                                Dispersion += Dc*(CelCentre->Density - CelLeft->Density)*V3(-1.0f, 0.0f, 0.0f);
-                                Dispersion += Dc*(CelCentre->Density - CelRight->Density)*V3(1.0f, 0.0f, 0.0f);
-                                Dispersion += Dc*(CelCentre->Density - CelDown->Density)*V3(0.0f, -1.0f, 0.0f);
-                                Dispersion += Dc*(CelCentre->Density - CelUp->Density)*V3(0.0f, 1.0f, 0.0f);
-
-                                v3 ddP = Particle->ddP + Dispersion;
-
-                                // Simulate the particle forward in time.
-                                Particle->P += (0.5f*Square(Input->dtForFrame)*Input->dtForFrame*ddP +
-                                                Input->dtForFrame*Particle->dP);
-                                Particle->dP += Input->dtForFrame*ddP;
-                                Particle->Color += Input->dtForFrame*Particle->dColor;
-
-                                if(Particle->P.y < 0.0f)
-                                {
-                                    r32 CoefficientOfRestitution = 0.3f;
-                                    r32 CoefficientOfFriction = 0.7f;
-                                    Particle->P.y = -Particle->P.y;
-                                    Particle->dP.y = -CoefficientOfRestitution*Particle->dP.y;
-                                    Particle->dP.x = CoefficientOfFriction*Particle->dP.x;
-                                }
-
-                                // TODO: I should probably just clamp colours in the renderer.
-                                v4 Color;
-                                Color.r = Clamp01(Particle->Color.r);
-                                Color.g = Clamp01(Particle->Color.g);
-                                Color.b = Clamp01(Particle->Color.b);
-                                Color.a = Clamp01(Particle->Color.a);
-
-                                if(Color.a > 0.9f)
-                                {
-                                    Color.a = 0.9f*Clamp01MapToRange(1.0f, Color.a, 0.9f);
-                                }
-
-                                // Render the particle.
-                                PushBitmap(RenderGroup, EntityTransform, Particle->BitmapID, 1.0f, Particle->P, Color);
-                            }
-                        }
                     } break;
 
                     case EntityType_Wall:
@@ -1204,3 +1113,138 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     return(Result);
 }
 
+#if 0
+    if(Global_Particles_Test)
+    {
+        for(u32 ParticleSpawnIndex = 0; ParticleSpawnIndex < 3; ++ParticleSpawnIndex)
+        {
+            particle *Particle = WorldMode->Particles + WorldMode->NextParticle++;
+            if(WorldMode->NextParticle >= ArrayCount(WorldMode->Particles))
+            {
+                WorldMode->NextParticle = 0;
+            }
+
+            Particle->P = V3(RandomBetween(&WorldMode->EffectsEntropy, -0.05f, 0.05f), 0, 0);
+            Particle->dP = V3(RandomBetween(&WorldMode->EffectsEntropy, -0.01f, 0.01f), 
+                              7.0f*RandomBetween(&WorldMode->EffectsEntropy, 0.7f, 1.0f),
+                              0.0f);
+            Particle->ddP = V3(0.0f, -9.8f, 0.0f);
+            Particle->Color = V4(RandomBetween(&WorldMode->EffectsEntropy, 0.75f, 1.0f),
+                                 RandomBetween(&WorldMode->EffectsEntropy, 0.75f, 1.0f),
+                                 RandomBetween(&WorldMode->EffectsEntropy, 0.75f, 1.0f),
+                                 1.0f);
+            Particle->dColor = V4(0, 0, 0, -0.25f);
+
+            asset_vector MatchVector = {};
+            asset_vector WeightVector = {};
+            char Nothings[] = "NOTHINGS";
+            MatchVector.E[Tag_UnicodeCodepoint] = (r32)Nothings[RandomChoice(&WorldMode->EffectsEntropy, ArrayCount(Nothings) - 1)];
+            WeightVector.E[Tag_UnicodeCodepoint] = 1.0f;
+
+            Particle->BitmapID = HeroBitmaps.Head; //GetBestMatchBitmapFrom(TranState->Assets, Asset_Font,
+                                                   //     &MatchVector, &WeightVector);
+
+    //                        Particle->BitmapID = GetRandomBitmapFrom(TranState->Assets, Asset_Font, &WorldMode->EffectsEntropy);
+        }
+
+        // Particle system test.
+        ZeroStruct(WorldMode->ParticleCels);
+
+        r32 GridScale = 0.25f;
+        r32 InvGridScale = 1.0f / GridScale;
+        v3 GridOrigin = {-0.5f*GridScale*PARTICLE_CEL_DIM, 0.0f, 0.0f};
+        for(u32 ParticleIndex = 0; ParticleIndex < ArrayCount(WorldMode->Particles); ++ParticleIndex)
+        {
+            particle *Particle = WorldMode->Particles + ParticleIndex;
+
+            v3 P = InvGridScale*(Particle->P - GridOrigin);
+
+            s32 X = TruncateReal32ToInt32(P.x);
+            s32 Y = TruncateReal32ToInt32(P.y);
+
+            if(X < 0) {X = 0;}
+            if(X > (PARTICLE_CEL_DIM - 1)) {X = (PARTICLE_CEL_DIM - 1);}
+            if(Y < 0) {Y = 0;}
+            if(Y > (PARTICLE_CEL_DIM - 1)) {Y = (PARTICLE_CEL_DIM - 1);}
+
+            particle_cel *Cel = &WorldMode->ParticleCels[Y][X];
+            r32 Density = Particle->Color.a;
+            Cel->Density += Density;
+            Cel->VelocityTimesDensity += Density*Particle->dP;
+        }
+
+        if(Global_Particles_ShowGrid)
+        {
+            for(u32 Y = 0; Y < PARTICLE_CEL_DIM; ++Y)
+            {
+                for(u32 X = 0; X < PARTICLE_CEL_DIM; ++X)
+                {
+                    particle_cel *Cel = &WorldMode->ParticleCels[Y][X];
+                    r32 Alpha = Clamp01(0.1f*Cel->Density);
+                    PushRect(RenderGroup, EntityTransform, GridScale*V3((r32)X, (r32)Y, 0) + GridOrigin, GridScale*V2(1.0f, 1.0f),
+                             V4(Alpha, Alpha, Alpha, 1.0f));
+                }
+            }
+        }
+
+        for(u32 ParticleIndex = 0; ParticleIndex < ArrayCount(WorldMode->Particles); ++ParticleIndex)
+        {
+            particle *Particle = WorldMode->Particles + ParticleIndex;
+
+            v3 P = InvGridScale*(Particle->P - GridOrigin);
+
+            s32 X = TruncateReal32ToInt32(P.x);
+            s32 Y = TruncateReal32ToInt32(P.y);
+
+            if(X < 1) {X = 1;}
+            if(X > (PARTICLE_CEL_DIM - 2)) {X = (PARTICLE_CEL_DIM - 2);}
+            if(Y < 1) {Y = 1;}
+            if(Y > (PARTICLE_CEL_DIM - 2)) {Y = (PARTICLE_CEL_DIM - 2);}
+
+            particle_cel *CelCentre = &WorldMode->ParticleCels[Y][X];
+            particle_cel *CelLeft = &WorldMode->ParticleCels[Y][X - 1];
+            particle_cel *CelRight = &WorldMode->ParticleCels[Y][X + 1];
+            particle_cel *CelDown = &WorldMode->ParticleCels[Y - 1][X];
+            particle_cel *CelUp = &WorldMode->ParticleCels[Y + 1][X];
+
+            v3 Dispersion = {};
+            r32 Dc = 1.0f;
+            Dispersion += Dc*(CelCentre->Density - CelLeft->Density)*V3(-1.0f, 0.0f, 0.0f);
+            Dispersion += Dc*(CelCentre->Density - CelRight->Density)*V3(1.0f, 0.0f, 0.0f);
+            Dispersion += Dc*(CelCentre->Density - CelDown->Density)*V3(0.0f, -1.0f, 0.0f);
+            Dispersion += Dc*(CelCentre->Density - CelUp->Density)*V3(0.0f, 1.0f, 0.0f);
+
+            v3 ddP = Particle->ddP + Dispersion;
+
+            // Simulate the particle forward in time.
+            Particle->P += (0.5f*Square(Input->dtForFrame)*Input->dtForFrame*ddP +
+                            Input->dtForFrame*Particle->dP);
+            Particle->dP += Input->dtForFrame*ddP;
+            Particle->Color += Input->dtForFrame*Particle->dColor;
+
+            if(Particle->P.y < 0.0f)
+            {
+                r32 CoefficientOfRestitution = 0.3f;
+                r32 CoefficientOfFriction = 0.7f;
+                Particle->P.y = -Particle->P.y;
+                Particle->dP.y = -CoefficientOfRestitution*Particle->dP.y;
+                Particle->dP.x = CoefficientOfFriction*Particle->dP.x;
+            }
+
+            // TODO: I should probably just clamp colours in the renderer.
+            v4 Color;
+            Color.r = Clamp01(Particle->Color.r);
+            Color.g = Clamp01(Particle->Color.g);
+            Color.b = Clamp01(Particle->Color.b);
+            Color.a = Clamp01(Particle->Color.a);
+
+            if(Color.a > 0.9f)
+            {
+                Color.a = 0.9f*Clamp01MapToRange(1.0f, Color.a, 0.9f);
+            }
+
+            // Render the particle.
+            PushBitmap(RenderGroup, EntityTransform, Particle->BitmapID, 1.0f, Particle->P, Color);
+        }
+    }
+#endif
