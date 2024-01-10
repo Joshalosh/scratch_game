@@ -417,9 +417,23 @@ Length(v3 A)
 }
 
 inline v3
-Normalize(v3 A)
+Normalise(v3 A)
 {
     v3 Result = A * (1.0f / Length(A));
+
+    return(Result);
+}
+
+inline v3
+NOZ(v3 A)
+{
+    v3 Result = {};
+
+    r32 LenSq = LengthSq(A);
+    if(LenSq > Square(0.0001f))
+    {
+        Result = A * (1.0f / SquareRoot(LenSq));
+    }
 
     return(Result);
 }

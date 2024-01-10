@@ -139,6 +139,8 @@ AddPlayer(game_mode_world *WorldMode)
     add_low_entity_result Sword = AddSword(WorldMode);
     Head.Low->Sim.Sword.Index = Sword.LowIndex;
 
+    Body.Low->Sim.Head.Index = Head.LowIndex;
+
     if(WorldMode->CameraFollowingEntityIndex == 0)
     {
         WorldMode->CameraFollowingEntityIndex = Body.LowIndex;
@@ -307,6 +309,14 @@ MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, r
     Group->TotalVolume.OffsetP = V3(0, 0, 0);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Traversables[0].P = V3(0, 0, 0);
+
+#if 1
+    Group->VolumeCount = 1;
+    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, sim_entity_collision_volume);
+    Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ);
+    Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
+    Group->Volumes[0] = Group->TotalVolume;
+#endif
 
     return(Group);
 }
@@ -526,6 +536,8 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                         CameraTileZ);
         }
     }
+
+    GameState->WorldMode = WorldMode;
 }
 
 internal b32
@@ -765,7 +777,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         sim_entity *Head = Entity->Head.Ptr;
                         if(Head)
                         {
-                            r32 ClosestDistanceSq = Real32Maximum;
+                            r32 ClosestDistanceSq = Square(1000.0f);
                             v3 ClosestP = Entity->P;
                             sim_entity *TestEntity = SimRegion->Entities;
                             for(u32 TestEntityIndex = 0; 
@@ -773,11 +785,13 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 ++TestEntityIndex, ++TestEntity)
                             {
                                 sim_entity_collision_volume_group *VolGroup = TestEntity->Collision;
-                                for(u32 PIndex = 0; PIndex < VolGroup->TraversableCount; PIndex)
+                                for(u32 PIndex = 0; PIndex < VolGroup->TraversableCount; ++PIndex)
                                 {
                                     sim_entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
 
-                                    real32 TestDSq = LengthSq(P.P - Head->P);
+                                    v3 HeadToPoint = P.P - Head->P;
+
+                                    r32 TestDSq = LengthSq(HeadToPoint);
                                     if(ClosestDistanceSq > TestDSq)
                                     {
                                         ClosestP = P.P;
@@ -785,7 +799,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                     }
                                 }
                             }
-                            Entity->P = ClosestP;
+
+                            ddP = (ClosestP - Entity->P);
+                            Entity->Collision = WorldMode->NullCollision;
+                            MoveSpec.UnitMaxAccelVector = true;
+                            MoveSpec.Speed = 100.0f;
+                            MoveSpec.Drag = 10.0f;
                         }
                     } break;
 

@@ -373,6 +373,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if(GameState->GameMode == GameMode_None)
     {
         PlayIntroCutscene(GameState, TranState);
+#if 1
+        PlayWorld(GameState, TranState);
+        game_controller_input *Controller = GetController(Input, 0);
+        Controller->Start.EndedDown = true;
+        Controller->Start.HalfTransitionCount = 1;
+#endif 
     }
 
 #if 0
