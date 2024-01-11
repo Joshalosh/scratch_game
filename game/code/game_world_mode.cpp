@@ -773,7 +773,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                     case EntityType_HeroBody:
                     {
-                        // TODO: Make spatial queries easy for things
                         sim_entity *Head = Entity->Head.Ptr;
                         if(Head)
                         {
@@ -800,11 +799,37 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 }
                             }
 
-                            ddP = (ClosestP - Entity->P);
-                            Entity->Collision = WorldMode->NullCollision;
-                            MoveSpec.UnitMaxAccelVector = true;
-                            MoveSpec.Speed = 100.0f;
-                            MoveSpec.Drag = 10.0f;
+                            v3 BodyDelta = ClosestP - Entity->P;
+                            r32 BodyDistance = LengthSq(BodyDelta);
+
+                            switch(Entity->MovementMode)
+                            {
+                                case MovementMode_Planted:
+                                {
+                                    if(BodyDistance > Square(0.01f))
+                                    {
+                                        Entity->tMovement = 0.0f;
+                                        Entity->MovementFrom = Entity->P;
+                                        Entity->MovementTo = ClosestP;
+                                        Entity->MovementMode = MovementMode_Hopping;
+                                    }
+                                } break;
+
+                                case MovementMode_Hopping:
+                                {
+                                    Entity->tMovement += 6.0f*dt;
+                                    r32 t = Entity->tMovement;
+                                    v3 a = V3(0, -2.0f, 0.0f);
+                                    v3 b = (Entity->MovementTo - Entity->MovementFrom) - a;
+                                    Entity->P = a*t*t + b*t + Entity->MovementFrom; 
+                                    Entity->dP = V3(0, 0, 0);
+
+                                    if(Entity->tMovement >= 1.0f)
+                                    {
+                                        Entity->MovementMode = MovementMode_Planted;
+                                    }
+                                } break;
+                            }
                         }
                     } break;
 

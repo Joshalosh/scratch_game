@@ -72,6 +72,11 @@ struct sim_entity_collision_volume_group
     sim_entity_traversable_point *Traversables;
 };
 
+enum sim_movement_mode
+{
+    MovementMode_Planted,
+    MovementMode_Hopping,
+};
 struct sim_entity
 {
     // Note: These are only for the sim region.
@@ -103,6 +108,13 @@ struct sim_entity
     // TODO Only for Stairwells
     v2 WalkableDim;
     r32 WalkableHeight;
+
+    sim_movement_mode MovementMode;
+    r32 tMovement;
+    v3 MovementFrom;
+    v3 MovementTo;
+
+    // TODO: Generation index so I know how "up to date" this entity is
 };
 
 struct sim_entity_hash
