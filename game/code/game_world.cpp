@@ -277,6 +277,7 @@ ChangeEntityLocation(memory_arena *Arena, world *World,
     }
 
     ChangeEntityLocationRaw(Arena, World, LowEntityIndex, OldP, NewP);
+
     if(NewP)
     {
         LowEntity->P = *NewP;

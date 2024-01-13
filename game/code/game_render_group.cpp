@@ -237,7 +237,6 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H)
     u32 Size = sizeof(render_entry_cliprect);
     if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_entry)))
     {
-
         render_entry_cliprect *Rect = (render_entry_cliprect *)
             (Commands->PushBufferBase + Commands->PushBufferSize);
         Commands->PushBufferSize += Size;
@@ -261,7 +260,7 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H)
     }
 
     return(Result);
-};
+}
 
 inline u32
 PushClipRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Dim)

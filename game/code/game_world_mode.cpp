@@ -130,7 +130,7 @@ AddPlayer(game_mode_world *WorldMode)
                                                    WorldMode->HeroBodyCollision);
     AddFlags(&Body.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
-    add_low_entity_result Head = AddGroundedEntity(WorldMode, EntityType_HeroHead, P, 
+    add_low_entity_result Head = AddGroundedEntity(WorldMode, EntityType_HeroHead, P,
                                                    WorldMode->HeroHeadCollision);
     AddFlags(&Head.Low->Sim, EntityFlag_Collides|EntityFlag_Moveable);
 
@@ -284,7 +284,7 @@ AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t St
 }
 
 sim_entity_collision_volume_group *
-MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ, 
+MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ,
                             real32 OffsetZ = 0.0f)
 {
     // TODO: Change to using the fundamental types arena, etc
@@ -310,7 +310,7 @@ MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, r
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Traversables[0].P = V3(0, 0, 0);
 
-#if 1
+#if 0
     Group->VolumeCount = 1;
     Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, sim_entity_collision_volume);
     Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ);
@@ -821,7 +821,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                     r32 t = Entity->tMovement;
                                     v3 a = V3(0, -2.0f, 0.0f);
                                     v3 b = (Entity->MovementTo - Entity->MovementFrom) - a;
-                                    Entity->P = a*t*t + b*t + Entity->MovementFrom; 
+                                    Entity->P = a*t*t + b*t + Entity->MovementFrom;
                                     Entity->dP = V3(0, 0, 0);
 
                                     if(Entity->tMovement >= 1.0f)
@@ -854,7 +854,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         if(Global_AI_Familiar_FollowsHero)
                         {
                             sim_entity *TestEntity = SimRegion->Entities;
-                            for(uint32_t TestEntityIndex = 0;
+                            for(u32 TestEntityIndex = 0;
                                 TestEntityIndex < SimRegion->EntityCount;
                                 ++TestEntityIndex, ++TestEntity)
                             {
@@ -911,7 +911,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     {
                         real32 HeroSizeC = 2.5f;
                         PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, 0, 0));
-
                     } break;
 
                     case EntityType_Wall:
