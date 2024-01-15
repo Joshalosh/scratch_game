@@ -803,6 +803,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             r32 BodyDistance = LengthSq(BodyDelta);
                             Entity->tBob = 0.0f;
 
+                            Entity->FacingDirection = Head->FacingDirection;
+
                             switch(Entity->MovementMode)
                             {
                                 case MovementMode_Planted:
