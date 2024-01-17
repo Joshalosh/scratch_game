@@ -272,6 +272,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DEBUG_B32(Global_Particles_ShowGrid);
     }
     {DEBUG_DATA_BLOCK("Simulation");
+        DEBUG_VALUE(Global_Timestep_Percentage);
         DEBUG_B32(Global_Simulation_UseSpaceOutlines);
     }
     {DEBUG_DATA_BLOCK("Profile");
@@ -283,6 +284,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
 #endif
     TIMED_FUNCTION();
+
+    Input->dtForFrame *= Global_Timestep_Percentage / 100.0f;
 
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
            (ArrayCount(Input->Controllers[0].Buttons)));

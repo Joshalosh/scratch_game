@@ -96,6 +96,7 @@ struct sim_entity
 
     r32 FacingDirection;
     r32 tBob;
+    r32 dtBob;
 
     s32 dAbsTileZ;
 
