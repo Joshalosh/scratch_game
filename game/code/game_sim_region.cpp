@@ -649,6 +649,7 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, sim_entity *Entity
         Entity->DistanceLimit = DistanceRemaining;
     }
 
+#if 0
     if((Entity->dP.x == 0.0f) && (Entity->dP.y == 0.0f))
     {
         // NOTE: Leave facing direction as whatever it was.
@@ -657,4 +658,5 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, sim_entity *Entity
     {
         Entity->FacingDirection = ATan2(Entity->dP.y, Entity->dP.x);
     }
+#endif
 }
