@@ -115,6 +115,9 @@ struct sim_entity
     v3 MovementFrom;
     v3 MovementTo;
 
+    v2 XAxis;
+    v2 YAxis;
+
     // TODO: Generation index so I know how "up to date" this entity is
 };
 

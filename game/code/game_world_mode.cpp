@@ -719,6 +719,10 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         {
             sim_entity *Entity = SimRegion->Entities + EntityIndex;
 
+            // TODO: Set this at construction
+            Entity->XAxis = V2(1, 0);
+            Entity->YAxis = V2(0, 1);
+
             debug_id EntityDebugID = DEBUG_POINTER_ID(WorldMode->LowEntities + Entity->StorageIndex);
             if(DEBUG_REQUESTED(EntityDebugID))
             {
@@ -801,12 +805,15 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 v3 ClosestP = Entity->P;
                                 if(GetClosestTraversable(SimRegion, Entity->P, &ClosestP))
                                 {
+                                    b32 AnyPush = (LengthSq(ddP) < 0.1f);
+                                    r32 Cp = AnyPush ? 300.0f : 50.0f;
                                     v3 ddP2 = {};
                                     for(u32 E = 0; E < 3; ++E)
                                     {
-                                        if(Square(ddP.E[E]) < 0.1f)
+                                        //if(Square(ddP.E[E]) < 0.1f)
+                                        if(AnyPush)
                                         {
-                                            ddP2.E[E] = 300.0f*(ClosestP.E[E] - Entity->P.E[E]) - 30.0f*Entity->dP.E[E];
+                                            ddP2.E[E] = Cp*(ClosestP.E[E] - Entity->P.E[E]) - 30.0f*Entity->dP.E[E];
                                         }
                                     }
                                     Entity->dP += dt*ddP2;
@@ -844,6 +851,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             Entity->dP = V3(0, 0, 0);
 
                             r32 ddtBob = 0.0f;
+
+                            v3 HeadDelta = Head->P - Entity->P;
 
                             r32 HeadDistance = Length(Head->P - Entity->P);
                             r32 MaxHeadDistance = 0.5f;
@@ -903,6 +912,9 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             ddtBob += Cp*(0.0f - Entity->tBob) + Cv*(0.0f - Entity->dtBob);
                             Entity->tBob += ddtBob*dt*dt + Entity->dtBob*dt;
                             Entity->dtBob += ddtBob*dt;
+
+                            Entity->YAxis = V2(0, 1) + 1.0f*HeadDelta.xy;
+                            // Entity->XAxis = Perp(Entity->YAxis);
                         }
                     } break;
 
@@ -973,10 +985,13 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     case EntityType_HeroBody:
                     {
                         real32 HeroSizeC = 2.5f;
+                        v4 Color = {1, 1, 1, 1};
+                        v2 XAxis = Entity->XAxis;
+                        v2 YAxis = Entity->YAxis;
                         PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow), 
                                    HeroSizeC*1.0f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                        PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Torso, HeroSizeC*1.2f, V3(0, 0, 0));
-                        PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Cape, HeroSizeC*1.2f, V3(0, Entity->tBob, 1.0f));
+                        PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Torso, HeroSizeC*1.2f, V3(0, 0, 0), Color, 1.0f, XAxis, YAxis);
+                        PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Cape, HeroSizeC*1.2f, V3(0, Entity->tBob, 1.0f), Color, 1.0f, XAxis, YAxis);
                         DrawHitPoints(Entity, RenderGroup, EntityTransform);
                     } break;
 
