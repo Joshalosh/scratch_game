@@ -661,16 +661,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     ConHero->ddP.y = 0.0f;
                 }
 
-                if(!IsDown(Controller->MoveLeft) &&
+                if(!IsDown(Controller->MoveUp) &&
+                   !IsDown(Controller->MoveDown) &&
+                   !IsDown(Controller->MoveLeft) &&
                    !IsDown(Controller->MoveRight))
                 {
-                    ConHero->ddP.x = 0.0f;
-                }
-
-                if(!IsDown(Controller->MoveUp) &&
-                   !IsDown(Controller->MoveDown))
-                {
-                    ConHero->ddP.y = 0.0f;
+                    ConHero->ddP = V2(0, 0);
                 }
             }
 
