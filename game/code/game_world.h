@@ -1,6 +1,6 @@
 #if !defined(GAME_WORLD_H)
 
-introspect(category:"world") struct world_position
+struct world_position
 {
     // It seems like we have to store ChunkX/Y/Z with each
     // Entity because even though the sim region gather doesn't
@@ -17,9 +17,12 @@ introspect(category:"world") struct world_position
 
 struct world_entity_block
 {
-    uint32_t EntityCount;
-    uint32_t LowEntityIndex[16];
+    u32 EntityCount;
+    u32 LowEntityIndex[16];
     world_entity_block *Next;
+
+    u32 EntityDataSize;
+    u8 EntityData[1 << 16];
 };
 
 struct world_chunk
@@ -39,7 +42,7 @@ struct world
 
     world_entity_block *FirstFree;
 
-    world_chunk ChunkHash[4096];
+    world_chunk *ChunkHash[4096];
 
     memory_arena Arena;
 };

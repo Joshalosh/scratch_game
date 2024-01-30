@@ -362,11 +362,12 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
 
 struct controlled_hero
 {
-    uint32_t EntityIndex;
+    entity_id EntityIndex;
 
     v2 ddP;
     v2 dSword;
-    real32 dZ;
+    r32 dZ;
+    r32 RecentreTimer;
 };
 
 struct ground_buffer
