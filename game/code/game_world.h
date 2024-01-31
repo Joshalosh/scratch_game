@@ -31,7 +31,7 @@ struct world_chunk
     int32_t ChunkY;
     int32_t ChunkZ;
 
-    world_entity_block FirstBlock;
+    world_entity_block *FirstBlock;
 
     world_chunk *NextInHash;
 };

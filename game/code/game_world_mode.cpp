@@ -1,38 +1,34 @@
 
-internal low_entity *
-BeginLowEntity(game_mode_world *WorldMode, entity_type Type, world_position P)
+internal entity *
+BeginLowEntity(game_mode_world *WorldMode, entity_type Type)
 {
-    Assert(!WorldMode->CreationBufferLocked);
-    WorldMode->CreationBufferLocked = true;
+    Assert(WorldMode->CreationBufferIndex < ArrayCount(WorldMode->CreationBuffer));
+    entity *EntityLow = WorldMode->CreationBuffer + WorldMode->CreationBufferIndex++;
 
-    low_entity *EntityLow = &WorldMode->CreationBuffer;
-    EntityLow->Sim.StorageIndex.Value = ++WorldMode->LastUsedEntityStorageIndex;
+    EntityLow->StorageIndex.Value = ++WorldMode->LastUsedEntityStorageIndex;
 
     // TODO: Worry about this taking a while once the entities are large (sparse clear?)
     ZeroStruct(*EntityLow);
 
-    EntityLow->Sim.Type = Type;
-    EntityLow->Sim.Collision = WorldMode->NullCollision;
-    EntityLow->Sim.ChunkP = P;
+    EntityLow->Type = Type;
+    EntityLow->Collision = WorldMode->NullCollision;
 
     return(EntityLow);
 }
 
 internal void
-EndEntity(game_mode_world *WorldMode, low_entity *EntityLow)
+EndEntity(game_mode_world *WorldMode, entity *EntityLow, world_position P)
 {
-    Assert(WorldMode->CreationBufferLocked);
-    WorldMode->CreationBufferLocked = false;
-
-    PackEntityIntoWorld(WorldMode->World, &EntityLow->Sim);
+    --WorldMode->CreationBufferIndex;
+    Assert(EntityLow == (WorldMode->CreationBuffer + WorldMode->CreationBufferIndex));
+    PackEntityIntoWorld(WorldMode->World, EntityLow, P);
 }
 
-internal low_entity *
-BeginGroundedEntity(game_mode_world *WorldMode, entity_type Type, world_position P,
-                    sim_entity_collision_volume_group *Collision)
+internal entity *
+BeginGroundedEntity(game_mode_world *WorldMode, entity_type Type, entity_collision_volume_group *Collision)
 {
-    low_entity *Entity = BeginLowEntity(WorldMode, Type, P);
-    Entity->Sim.Collision = Collision;
+    entity *Entity = BeginLowEntity(WorldMode, Type);
+    Entity->Collision = Collision;
     return(Entity);
 }
 
@@ -63,8 +59,8 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
                                                              AbsTileY + OffsetY, AbsTileZ);
-            low_entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Floor, P, WorldMode->FloorCollision);
-            EndEntity(WorldMode, Entity);
+            entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Floor, WorldMode->FloorCollision);
+            EndEntity(WorldMode, Entity, P);
         }
     }
 }
@@ -73,30 +69,30 @@ internal void
 AddWall(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
-    low_entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Wall, P, WorldMode->WallCollision);
-    AddFlags(&Entity->Sim, EntityFlag_Collides);
-    EndEntity(WorldMode, Entity);
+    entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Wall, WorldMode->WallCollision);
+    AddFlags(Entity, EntityFlag_Collides);
+    EndEntity(WorldMode, Entity, P);
 }
 
 internal void
 AddStair(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
-    low_entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Stairwell, P, WorldMode->StairCollision);
-    AddFlags(&Entity->Sim, EntityFlag_Collides);
-    Entity->Sim.WalkableDim = Entity->Sim.Collision->TotalVolume.Dim.xy;
-    Entity->Sim.WalkableHeight = WorldMode->TypicalFloorHeight;
-    EndEntity(WorldMode, Entity);
+    entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Stairwell, WorldMode->StairCollision);
+    AddFlags(Entity, EntityFlag_Collides);
+    Entity->WalkableDim = Entity->Collision->TotalVolume.Dim.xy;
+    Entity->WalkableHeight = WorldMode->TypicalFloorHeight;
+    EndEntity(WorldMode, Entity, P);
 }
 
 internal void
-InitHitPoints(low_entity *EntityLow, uint32_t HitPointCount)
+InitHitPoints(entity *EntityLow, uint32_t HitPointCount)
 {
-    Assert(HitPointCount <= ArrayCount(EntityLow->Sim.HitPoint));
-    EntityLow->Sim.HitPointMax = HitPointCount;
-    for(uint32_t HitPointIndex = 0; HitPointIndex < EntityLow->Sim.HitPointMax; ++HitPointIndex)
+    Assert(HitPointCount <= ArrayCount(EntityLow->HitPoint));
+    EntityLow->HitPointMax = HitPointCount;
+    for(uint32_t HitPointIndex = 0; HitPointIndex < EntityLow->HitPointMax; ++HitPointIndex)
     {
-        hit_point *HitPoint = EntityLow->Sim.HitPoint + HitPointIndex;
+        hit_point *HitPoint = EntityLow->HitPoint + HitPointIndex;
         HitPoint->Flags = 0;
         HitPoint->FilledAmount = HIT_POINT_SUB_COUNT;
     }
@@ -107,26 +103,26 @@ AddPlayer(game_mode_world *WorldMode)
 {
     world_position P = WorldMode->CameraP;
 
-    low_entity *Body = BeginGroundedEntity(WorldMode, EntityType_HeroBody, P, WorldMode->HeroBodyCollision);
-    AddFlags(&Body->Sim, EntityFlag_Collides|EntityFlag_Moveable);
+    entity *Body = BeginGroundedEntity(WorldMode, EntityType_HeroBody, WorldMode->HeroBodyCollision);
+    AddFlags(Body, EntityFlag_Collides|EntityFlag_Moveable);
 
-    low_entity *Head = BeginGroundedEntity(WorldMode, EntityType_HeroHead, P, WorldMode->HeroHeadCollision);
-    AddFlags(&Head->Sim, EntityFlag_Collides|EntityFlag_Moveable);
+    entity *Head = BeginGroundedEntity(WorldMode, EntityType_HeroHead, WorldMode->HeroHeadCollision);
+    AddFlags(Head, EntityFlag_Collides|EntityFlag_Moveable);
 
     InitHitPoints(Body, 3);
 
-    Body->Sim.Head.Index = Head->Sim.StorageIndex;
-    Head->Sim.Head.Index = Body->Sim.StorageIndex;
+    Body->Head.Index = Head->StorageIndex;
+    Head->Head.Index = Body->StorageIndex;
 
     if(WorldMode->CameraFollowingEntityIndex.Value == 0)
     {
-        WorldMode->CameraFollowingEntityIndex = Body->Sim.StorageIndex;
+        WorldMode->CameraFollowingEntityIndex = Body->StorageIndex;
     }
 
-    entity_id Result = Head->Sim.StorageIndex;
+    entity_id Result = Head->StorageIndex;
 
-    EndEntity(WorldMode, Body);
-    EndEntity(WorldMode, Head);
+    EndEntity(WorldMode, Body, P);
+    EndEntity(WorldMode, Head, P);
 
     return(Result);
 }
@@ -135,26 +131,28 @@ internal void
 AddMonster(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
-    low_entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Monster, P, WorldMode->MonsterCollision);
-    AddFlags(&Entity->Sim, EntityFlag_Collides|EntityFlag_Moveable);
+    entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Monster, WorldMode->MonsterCollision);
+
+    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
 
     InitHitPoints(Entity, 3);
 
-    EndEntity(WorldMode, Entity);
+    EndEntity(WorldMode, Entity, P);
 }
 
 internal void
 AddFamiliar(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
-    low_entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Familiar, P, WorldMode->FamiliarCollision);
-    AddFlags(&Entity->Sim, EntityFlag_Collides|EntityFlag_Moveable);
+    entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Familiar, WorldMode->FamiliarCollision);
 
-    EndEntity(WorldMode, Entity);
+    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
+
+    EndEntity(WorldMode, Entity, P);
 }
 
 internal void
-DrawHitPoints(sim_entity *Entity, render_group *PieceGroup, object_transform Transform)
+DrawHitPoints(entity *Entity, render_group *PieceGroup, object_transform Transform)
 {
     if(Entity->HitPointMax >= 1)
     {
@@ -263,14 +261,14 @@ AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t St
     }
 }
 
-sim_entity_collision_volume_group *
+entity_collision_volume_group *
 MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ,
                             real32 OffsetZ = 0.0f)
 {
     // TODO: Change to using the fundamental types arena, etc
-    sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
+    entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, entity_collision_volume_group);
     Group->VolumeCount = 1;
-    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, sim_entity_collision_volume);
+    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, entity_collision_volume);
     Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ + OffsetZ);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Volumes[0] = Group->TotalVolume;
@@ -278,21 +276,21 @@ MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY
     return(Group);
 }
 
-sim_entity_collision_volume_group *
+entity_collision_volume_group *
 MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ)
 {
     // TODO: Change to using the fundamental types arena, etc
-    sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
+    entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, entity_collision_volume_group);
     Group->VolumeCount = 0;
     Group->TraversableCount = 1;
-    Group->Traversables = PushArray(&WorldMode->World->Arena, Group->TraversableCount, sim_entity_traversable_point);
+    Group->Traversables = PushArray(&WorldMode->World->Arena, Group->TraversableCount, entity_traversable_point);
     Group->TotalVolume.OffsetP = V3(0, 0, 0);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Traversables[0].P = V3(0, 0, 0);
 
 #if 0
     Group->VolumeCount = 1;
-    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, sim_entity_collision_volume);
+    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, entity_collision_volume);
     Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Volumes[0] = Group->TotalVolume;
@@ -301,11 +299,11 @@ MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, r
     return(Group);
 }
 
-sim_entity_collision_volume_group *
+entity_collision_volume_group *
 MakeNullCollision(game_mode_world *WorldMode)
 {
     // TODO: Change to using the fundamental types arena, etc
-    sim_entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, sim_entity_collision_volume_group);
+    entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, entity_collision_volume_group);
     Group->VolumeCount = 0;
     Group->Volumes = 0;
     Group->TotalVolume.OffsetP = V3(0, 0, 0);
@@ -321,15 +319,15 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, v3 *Result)
     b32 Found = false;
 
     r32 ClosestDistanceSq = Square(1000.0f);
-    sim_entity *TestEntity = SimRegion->Entities;
+    entity *TestEntity = SimRegion->Entities;
     for(u32 TestEntityIndex = 0; 
         TestEntityIndex < SimRegion->EntityCount;
         ++TestEntityIndex, ++TestEntity)
     {
-        sim_entity_collision_volume_group *VolGroup = TestEntity->Collision;
+        entity_collision_volume_group *VolGroup = TestEntity->Collision;
         for(u32 PIndex = 0; PIndex < VolGroup->TraversableCount; ++PIndex)
         {
-            sim_entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
+            entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
 
             v3 HeadToPoint = P.P - FromP;
 
@@ -729,14 +727,14 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
         for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
         {
-            sim_entity *Entity = SimRegion->Entities + EntityIndex;
+            entity *Entity = SimRegion->Entities + EntityIndex;
 
             // TODO: Set this at construction
             Entity->XAxis = V2(1, 0);
             Entity->YAxis = V2(0, 1);
 
             // TODO: I don't really have a way to unique-ify these at all just yet
-            debug_id EntityDebugID = DEBUG_POINTER_ID((void *)Entity->StorageIndex.Value);
+            debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->StorageIndex.Value); // TODO: Have a custom cast to u64 to get past the warning.
             if(DEBUG_REQUESTED(EntityDebugID))
             {
                 DEBUG_BEGIN_DATA_BLOCK("Simulation/Entity");
@@ -842,7 +840,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                     case EntityType_HeroBody:
                     {
-                        sim_entity *Head = Entity->Head.Ptr;
+                        entity *Head = Entity->Head.Ptr;
                         if(Head)
                         {
                             v3 ClosestP = Entity->P;
@@ -938,12 +936,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                     case EntityType_Familiar:
                     {
-                        sim_entity *ClosestHero = 0;
+                        entity *ClosestHero = 0;
                         real32 ClosestHeroDSq = Square(10.0f);
 
                         if(Global_AI_Familiar_FollowsHero)
                         {
-                            sim_entity *TestEntity = SimRegion->Entities;
+                            entity *TestEntity = SimRegion->Entities;
                             for(u32 TestEntityIndex = 0;
                                 TestEntityIndex < SimRegion->EntityCount;
                                 ++TestEntityIndex, ++TestEntity)
@@ -1062,7 +1060,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     {
                         for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                         {
-                            sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+                            entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
                             PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
                                             Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
                         }
@@ -1071,7 +1069,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             TraversableIndex < Entity->Collision->TraversableCount;
                             ++TraversableIndex)
                         {
-                            sim_entity_traversable_point *Traversable =
+                            entity_traversable_point *Traversable =
                                 Entity->Collision->Traversables + TraversableIndex;
                             PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), V4(1.0, 0.5f, 0.0f, 1));
                         }
@@ -1085,11 +1083,11 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 if(DEBUG_UI_ENABLED)
                 {
-                    debug_id EntityDebugID = DEBUG_POINTER_ID((void *)Entity->StorageIndex.Value);
+                    debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->StorageIndex.Value); // NOTE: Have a custom u64 cast to get past the warning
 
                     for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
-                        sim_entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+                        entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
 
                         v3 LocalMouseP = Unproject(RenderGroup, EntityTransform, MouseP);
 

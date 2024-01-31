@@ -3,7 +3,7 @@
 #define InvalidP V3(100000.0f, 100000.0f, 100000.0f)
 
 inline bool32
-IsSet(sim_entity *Entity, uint32_t Flag)
+IsSet(entity *Entity, uint32_t Flag)
 {
     bool32 Result = Entity->Flags & Flag;
 
@@ -11,26 +11,26 @@ IsSet(sim_entity *Entity, uint32_t Flag)
 }
 
 inline void 
-AddFlags(sim_entity *Entity, uint32_t Flag)
+AddFlags(entity *Entity, uint32_t Flag)
 {
     Entity->Flags |= Flag;
 }
 
 inline void
-ClearFlags(sim_entity *Entity, uint32_t Flag)
+ClearFlags(entity *Entity, uint32_t Flag)
 {
     Entity->Flags &= ~Flag;
 }
 
 inline void
-MakeEntityNonspatial(sim_entity *Entity)
+MakeEntityNonspatial(entity *Entity)
 {
     AddFlags(Entity, EntityFlag_Nonspatial);
     Entity->P = InvalidP;
 }
 
 inline void
-MakeEntitySpatial(sim_entity *Entity, v3 P, v3 dP)
+MakeEntitySpatial(entity *Entity, v3 P, v3 dP)
 {
     ClearFlags(Entity, EntityFlag_Nonspatial);
     Entity->P = P;
@@ -38,7 +38,7 @@ MakeEntitySpatial(sim_entity *Entity, v3 P, v3 dP)
 }
 
 inline v3
-GetEntityGroundPoint(sim_entity *Entity, v3 ForEntityP)
+GetEntityGroundPoint(entity *Entity, v3 ForEntityP)
 {
     v3 Result = ForEntityP;
 
@@ -46,7 +46,7 @@ GetEntityGroundPoint(sim_entity *Entity, v3 ForEntityP)
 }
 
 inline v3
-GetEntityGroundPoint(sim_entity *Entity)
+GetEntityGroundPoint(entity *Entity)
 {
     v3 Result = GetEntityGroundPoint(Entity, Entity->P);
 
@@ -54,7 +54,7 @@ GetEntityGroundPoint(sim_entity *Entity)
 }
 
 inline real32
-GetStairGround(sim_entity *Entity, v3 AtGroundPoint)
+GetStairGround(entity *Entity, v3 AtGroundPoint)
 {
     Assert(Entity->Type == EntityType_Stairwell);
 
