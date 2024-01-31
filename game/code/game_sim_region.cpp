@@ -175,13 +175,14 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
         {
             for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
             {
-                world_chunk *Chunk = GetWorldChunk(World, ChunkX, ChunkY, ChunkZ);
+                world_chunk *Chunk = RemoveWorldChunk(World, ChunkX, ChunkY, ChunkZ);
                 if(Chunk)
                 {
-                    for(world_entity_block *Block = &Chunk->FirstBlock; Block; Block = Block->Next)
+                    world_entity_block *Block = &Chunk->FirstBlock;
+                    while(Block)
                     {
                         for(uint32_t EntityIndex= 0;
-                            EntityIndex< Block->EntityCount;
+                            EntityIndex < Block->EntityCount;
                             ++EntityIndex)
                         {
                             low_entity *Low = (low_entity *)Block->EntityData + EntityIndex;
@@ -194,7 +195,16 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                 }
                             }
                         }
+
+                        world_entity_block *NextBlock = Block->Next;
+                        if(Block != &Chunk->FirstBlock)
+                        {
+                            AddBlockToFreeList(World, Block);
+                        }
+                        Block = NextBlock;
                     }
+
+                    AddChunkToFreeList(World, Chunk);
                 }
             }
         }
@@ -210,20 +220,13 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
 
     world *World = WorldMode->World;
 
-#if 0
     sim_entity *Entity = Region->Entities;
     for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
     {
-        Assert(IsSet(&Stored->Sim, EntityFlag_Simming));
-        Stored->Sim = *Entity;
-        Assert(!IsSet(&Stored->Sim, EntityFlag_Simming));
+        StoreEntityReference(&Entity->Head);
 
-        StoreEntityReference(&Stored->Sim.Head);
-
-        world_position NewP = IsSet(Entity, EntityFlag_Nonspatial) ? 
-                              NullPosition() :
-                              MapIntoChunkSpace(World, Region->Origin, Entity->P);
-        ChangeEntityLocation(&World->Arena, World, Entity->StorageIndex, Stored, NewP);
+        // TODO: Save state back to the stored entity, once high Entities
+        // do state decompression, etc
 
         if(Entity->StorageIndex == WorldMode->CameraFollowingEntityIndex)
         {
@@ -259,8 +262,10 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
 
             WorldMode->CameraP = NewCameraP;
         }
+
+        world_position NewP = MapIntoChunkSpace(World, Region->Origin, Entity->P);
+        PackEntityIntoWorld(&World->Arena, World, Entity, NewP);
     }
-#endif
 }
 
 struct test_wall

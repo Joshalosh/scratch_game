@@ -45,6 +45,9 @@ struct world
     world_chunk *ChunkHash[4096];
 
     memory_arena Arena;
+
+    world_chunk *FirstFreeChunk;
+    world_entity_block *FirstFreeBlock;
 };
 
 #define GAME_WORLD_H

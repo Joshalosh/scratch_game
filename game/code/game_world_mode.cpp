@@ -13,15 +13,9 @@ BeginLowEntity(game_mode_world *WorldMode, entity_type Type, world_position P)
 
     EntityLow->Sim.Type = Type;
     EntityLow->Sim.Collision = WorldMode->NullCollision;
-    EntityLow->P = P;
+    EntityLow->Sim.ChunkP = P;
 
     return(EntityLow);
-}
-
-internal void
-PackEntityIntoChunk(world *World, low_entity *Entity)
-{
-    // TODO: Not implemented yet
 }
 
 internal void
@@ -30,7 +24,7 @@ EndEntity(game_mode_world *WorldMode, low_entity *EntityLow)
     Assert(WorldMode->CreationBufferLocked);
     WorldMode->CreationBufferLocked = false;
 
-    PackEntityIntoChunk(WorldMode->World, EntityLow);
+    PackEntityIntoWorld(WorldMode->World, &EntityLow->Sim);
 }
 
 internal low_entity *

@@ -88,6 +88,8 @@ struct sim_entity
 {
     // Note: These are only for the sim region.
     world_chunk *OldChunk;
+    world_position ChunkP;
+
     entity_id StorageIndex;
     b32 Updatable;
 

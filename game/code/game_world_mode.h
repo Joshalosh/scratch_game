@@ -4,7 +4,6 @@ struct game_mode_world;
 
 struct low_entity
 {
-    world_position P;
     sim_entity Sim;
 };
 
