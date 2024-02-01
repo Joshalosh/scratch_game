@@ -12,19 +12,19 @@ GetSimSpaceTraversable(entity *Entity, u32 Index)
 }
 
 internal entity_hash *
-GetHashFromStorageIndex(sim_region *SimRegion, entity_id StorageIndex)
+GetHashFromID(sim_region *SimRegion, entity_id ID)
 {
-    Assert(StorageIndex.Value);
+    Assert(ID.Value);
 
     entity_hash *Result = 0;
 
-    uint32_t HashValue = StorageIndex.Value;
+    uint32_t HashValue = ID.Value;
     for(uint32_t Offset = 0; Offset < ArrayCount(SimRegion->Hash); ++Offset)
     {
         uint32_t HashMask  = (ArrayCount(SimRegion->Hash) - 1);
         uint32_t HashIndex = ((HashValue + Offset) & HashMask);
         entity_hash *Entry = SimRegion->Hash + HashIndex;
-        if((Entry->Index.Value == 0) || (Entry->Index.Value == StorageIndex.Value))
+        if((Entry->Index.Value == 0) || (Entry->Index.Value == ID.Value))
         {
             Result = Entry;
             break;
@@ -35,9 +35,9 @@ GetHashFromStorageIndex(sim_region *SimRegion, entity_id StorageIndex)
 }
 
 inline entity *
-GetEntityByStorageIndex(sim_region *SimRegion, entity_id StorageIndex)
+GetEntityByID(sim_region *SimRegion, entity_id ID)
 {
-    entity_hash *Entry = GetHashFromStorageIndex(SimRegion, StorageIndex);
+    entity_hash *Entry = GetHashFromID(SimRegion, ID);
     entity *Result = Entry->Ptr;
     return(Result);
 }
@@ -45,21 +45,17 @@ GetEntityByStorageIndex(sim_region *SimRegion, entity_id StorageIndex)
 inline v3
 GetSimSpaceP(sim_region *SimRegion, entity *Stored)
 {
-    v3 Result = InvalidP; 
-    if(!IsSet(Stored, EntityFlag_Nonspatial))
-    {
-        Result = Subtract(SimRegion->World, &Stored->ChunkP, &SimRegion->Origin);
-    }
+    v3 Result = Subtract(SimRegion->World, &Stored->ChunkP, &SimRegion->Origin);
 
     return(Result);
 }
 
 inline void
-LoadEntityReference(game_mode_world *WorldMode, sim_region *SimRegion, entity_reference *Ref)
+LoadEntityReference(sim_region *SimRegion, entity_reference *Ref)
 {
     if(Ref->Index.Value)
     {
-        entity_hash *Entry = GetHashFromStorageIndex(SimRegion, Ref->Index);
+        entity_hash *Entry = GetHashFromID(SimRegion, Ref->Index);
         Ref->Ptr = Entry ? Entry->Ptr : 0;
     }
 }
@@ -69,45 +65,17 @@ StoreEntityReference(entity_reference *Ref)
 {
     if(Ref->Ptr != 0)
     {
-        Ref->Index = Ref->Ptr->StorageIndex;
+        Ref->Index = Ref->Ptr->ID;
     }
 }
 
 internal entity *
-AddEntityRaw(game_mode_world *WorldMode, sim_region *SimRegion, entity_id StorageIndex, entity *Source)
+AddEntityRaw(game_mode_world *WorldMode, sim_region *SimRegion, entity_id ID, entity *Source)
 {
     TIMED_FUNCTION();
 
-    Assert(StorageIndex.Value);
+    Assert(ID.Value);
     entity *Entity = 0;
-
-    entity_hash *Entry = GetHashFromStorageIndex(SimRegion, StorageIndex);
-    if(Entry->Ptr == 0)
-    {
-        if(SimRegion->EntityCount < SimRegion->MaxEntityCount)
-        {
-            Entity = SimRegion->Entities + SimRegion->EntityCount++;
-
-            Entry->Index = StorageIndex;
-            Entry->Ptr = Entity;
-
-            if(Source)
-            {
-                *Entity = *Source;
-                LoadEntityReference(WorldMode, SimRegion, &Entity->Head);
-
-                Assert(!IsSet(Source, EntityFlag_Simming));
-                AddFlags(Source, EntityFlag_Simming);
-            }
-
-            Entity->StorageIndex = StorageIndex;
-            Entity->Updatable = false;
-        }
-        else
-        {
-            InvalidCodePath;
-        }
-    }
 
     return(Entity);
 }
@@ -120,24 +88,46 @@ EntityOverlapsRectangle(v3 P, entity_collision_volume Volume, rectangle3 Rect)
     return(Result);
 }
 
-internal entity *
-AddEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity_id StorageIndex, entity *Source, v3 *SimP)
+internal void 
+AddEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Source, v3 SimP)
 {
-    entity *Dest = AddEntityRaw(WorldMode, SimRegion, StorageIndex, Source);
-    if(Dest)
-    {
-        if(SimP)
-        {
-            Dest->P = *SimP;
-            Dest->Updatable = EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds);
-        }
-        else
-        {
-            Dest->P = GetSimSpaceP(SimRegion, Source);
-        }
-    }
+    entity_id ID = Source->ID;
 
-    return(Dest);
+    entity_hash *Entry = GetHashFromID(SimRegion, ID);
+    Assert(Entry->Ptr == 0);
+
+    if(SimRegion->EntityCount < SimRegion->MaxEntityCount)
+    {
+        entity *Dest = SimRegion->Entities + SimRegion->EntityCount++;
+
+        Entry->Index = ID;
+        Entry->Ptr = Dest;
+
+        if(Source)
+        {
+            // TODO: This should really be a decompression step, not a copy.
+            *Dest = *Source;
+            LoadEntityReference(SimRegion, &Dest->Head);
+        }
+
+        Dest->ID = ID;
+        Dest->P = SimP;
+        Dest->Updatable = EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds);
+    }
+    else
+    {
+        InvalidCodePath;
+    }
+}
+
+internal void
+ConnectEntityPointers(sim_region *SimRegion)
+{
+    for(u32 EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
+    {
+        entity *Entity = SimRegion->Entities + EntityIndex;
+        LoadEntityReference(SimRegion, &Entity->Head);
+    }
 }
 
 internal sim_region *
@@ -186,13 +176,10 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                             ++EntityIndex)
                         {
                             entity *Low = (entity *)Block->EntityData + EntityIndex;
-                            if(!IsSet(Low, EntityFlag_Nonspatial))
+                            v3 SimSpaceP = GetSimSpaceP(SimRegion, Low);
+                            if(EntityOverlapsRectangle(SimSpaceP, Low->Collision->TotalVolume, SimRegion->Bounds))
                             {
-                                v3 SimSpaceP = GetSimSpaceP(SimRegion, Low);
-                                if(EntityOverlapsRectangle(SimSpaceP, Low->Collision->TotalVolume, SimRegion->Bounds))
-                                {
-                                    AddEntity(WorldMode, SimRegion, Low->StorageIndex, Low, &SimSpaceP);
-                                }
+                                AddEntity(WorldMode, SimRegion, Low, SimSpaceP);
                             }
                         }
 
@@ -226,7 +213,7 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
         // TODO: Save state back to the stored entity, once high Entities
         // do state decompression, etc
 
-        if(Entity->StorageIndex.Value == WorldMode->CameraFollowingEntityIndex.Value)
+        if(Entity->ID.Value == WorldMode->CameraFollowingEntityIndex.Value)
         {
             world_position NewCameraP = WorldMode->CameraP;
 
@@ -303,11 +290,11 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 internal bool32
 CanCollide(game_mode_world *WorldMode, entity *A, entity *B)
 {
-    bool32 Result = false;
+    b32 Result = false;
 
     if(A != B)
     {
-        if(A->StorageIndex.Value > B->StorageIndex.Value)
+        if(A->ID.Value > B->ID.Value)
         {
             entity *Temp = A;
             A = B;
@@ -316,21 +303,16 @@ CanCollide(game_mode_world *WorldMode, entity *A, entity *B)
 
         if(IsSet(A, EntityFlag_Collides) && IsSet(B, EntityFlag_Collides))
         {
-            if(!IsSet(A, EntityFlag_Nonspatial) &&
-               !IsSet(B, EntityFlag_Nonspatial))
-            {
-                // TODO Property based collision logic in this scope.
-                Result = true;
-            }
+            Result = true;
 
             // TODO Implement a better hash function.
-            uint32_t HashBucket = A->StorageIndex.Value & (ArrayCount(WorldMode->CollisionRuleHash) - 1);
+            uint32_t HashBucket = A->ID.Value & (ArrayCount(WorldMode->CollisionRuleHash) - 1);
             for(pairwise_collision_rule *Rule = WorldMode->CollisionRuleHash[HashBucket];
                 Rule;
                 Rule = Rule->NextInHash)
             {
-                if((Rule->StorageIndexA == A->StorageIndex.Value) &&
-                   (Rule->StorageIndexB == B->StorageIndex.Value))
+                if((Rule->IDA == A->ID.Value) &&
+                   (Rule->IDB == B->ID.Value))
                 {
                     Result = Rule->CanCollide;
                     break;
@@ -345,17 +327,7 @@ CanCollide(game_mode_world *WorldMode, entity *A, entity *B)
 internal bool32
 HandleCollision(game_mode_world *WorldMode, entity *A, entity *B)
 {
-    bool32 StopsOnCollision = false;
-
-    if(A->Type == EntityType_Sword)
-    {
-        AddCollisionRule(WorldMode, A->StorageIndex.Value, B->StorageIndex.Value, false);
-        StopsOnCollision = false;
-    }
-    else
-    {
-        StopsOnCollision = true;
-    }
+    bool32 StopsOnCollision = true;
 
     if(A->Type > B->Type)
     {
@@ -363,18 +335,6 @@ HandleCollision(game_mode_world *WorldMode, entity *A, entity *B)
         A = B;
         B = Temp;
     }
-
-    if((A->Type == EntityType_Monster) &&
-       (B->Type == EntityType_Sword))
-    {
-        if(A->HitPointMax > 0)
-        {
-            --A->HitPointMax;
-        }
-    }
-
-    // TODO Handle stairs.
-//    Entity->AbsTileZ += HitLow->dAbsTileZ;
 
     return(StopsOnCollision);
 }
@@ -450,8 +410,6 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, re
 {
     TIMED_FUNCTION();
 
-    Assert(!IsSet(Entity, EntityFlag_Nonspatial));
-
     world *World = SimRegion->World;
 
     if(Entity->Type == EntityType_HeroHead)
@@ -507,84 +465,81 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, re
 
             v3 DesiredPosition = Entity->P + PlayerDelta;
 
-            if(!IsSet(Entity, EntityFlag_Nonspatial))
+            for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
             {
-                for(uint32_t TestHighEntityIndex = 0; TestHighEntityIndex < SimRegion->EntityCount; ++TestHighEntityIndex)
+                entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
+
+                real32 OverlapEpsilon = 0.001f;
+
+                if(CanCollide(WorldMode, Entity, TestEntity))
                 {
-                    entity *TestEntity = SimRegion->Entities + TestHighEntityIndex;
-
-                    real32 OverlapEpsilon = 0.001f;
-
-                    if(CanCollide(WorldMode, Entity, TestEntity))
+                    for(uint32_t VolumeIndex = 0;
+                        VolumeIndex < Entity->Collision->VolumeCount;
+                        ++VolumeIndex)
                     {
-                        for(uint32_t VolumeIndex = 0;
-                            VolumeIndex < Entity->Collision->VolumeCount;
-                            ++VolumeIndex)
+                        entity_collision_volume *Volume =
+                            Entity->Collision->Volumes + VolumeIndex;
+
+                        for(uint32_t TestVolumeIndex = 0;
+                            TestVolumeIndex < TestEntity->Collision->VolumeCount;
+                            ++TestVolumeIndex)
                         {
-                            entity_collision_volume *Volume =
-                                Entity->Collision->Volumes + VolumeIndex;
+                            entity_collision_volume *TestVolume =
+                                TestEntity->Collision->Volumes + TestVolumeIndex;
 
-                            for(uint32_t TestVolumeIndex = 0;
-                                TestVolumeIndex < TestEntity->Collision->VolumeCount;
-                                ++TestVolumeIndex)
+                            v3 MinkowskiDiameter = {TestVolume->Dim.x + Volume->Dim.x,
+                                                    TestVolume->Dim.y + Volume->Dim.y,
+                                                    TestVolume->Dim.z + Volume->Dim.z};
+
+                            v3 MinCorner = -0.5f*MinkowskiDiameter;
+                            v3 MaxCorner = 0.5f*MinkowskiDiameter;
+
+                            v3 Rel = ((Entity->P + Volume->OffsetP) -
+                                      (TestEntity->P + TestVolume->OffsetP));
+
+                            if((Rel.z >= MinCorner.z) && (Rel.z < MaxCorner.z))
                             {
-                                entity_collision_volume *TestVolume =
-                                    TestEntity->Collision->Volumes + TestVolumeIndex;
-
-                                v3 MinkowskiDiameter = {TestVolume->Dim.x + Volume->Dim.x,
-                                                        TestVolume->Dim.y + Volume->Dim.y,
-                                                        TestVolume->Dim.z + Volume->Dim.z};
-
-                                v3 MinCorner = -0.5f*MinkowskiDiameter;
-                                v3 MaxCorner = 0.5f*MinkowskiDiameter;
-
-                                v3 Rel = ((Entity->P + Volume->OffsetP) -
-                                          (TestEntity->P + TestVolume->OffsetP));
-
-                                if((Rel.z >= MinCorner.z) && (Rel.z < MaxCorner.z))
+                                test_wall Walls[] =
                                 {
-                                    test_wall Walls[] =
+                                    {MinCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y, MinCorner.y, MaxCorner.y, V3(-1, 0, 0)},
+                                    {MaxCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y, MinCorner.y, MaxCorner.y, V3(1, 0, 0)},
+                                    {MinCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x, MinCorner.x, MaxCorner.x, V3(0, -1, 0)},
+                                    {MaxCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x, MinCorner.x, MaxCorner.x, V3(0, 1, 0)},
+                                };
+
+                                real32 tMinTest = tMin;
+                                bool32 HitThis = false;
+
+                                v3 TestWallNormal = {};
+                                for(uint32_t WallIndex = 0; WallIndex < ArrayCount(Walls); ++WallIndex)
+                                {
+                                    test_wall *Wall = Walls + WallIndex;
+
+                                    real32 tEpsilon = 0.001f;
+                                    if(Wall->DeltaX != 0.0f)
                                     {
-                                        {MinCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y, MinCorner.y, MaxCorner.y, V3(-1, 0, 0)},
-                                        {MaxCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y, MinCorner.y, MaxCorner.y, V3(1, 0, 0)},
-                                        {MinCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x, MinCorner.x, MaxCorner.x, V3(0, -1, 0)},
-                                        {MaxCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x, MinCorner.x, MaxCorner.x, V3(0, 1, 0)},
-                                    };
-
-                                    real32 tMinTest = tMin;
-                                    bool32 HitThis = false;
-
-                                    v3 TestWallNormal = {};
-                                    for(uint32_t WallIndex = 0; WallIndex < ArrayCount(Walls); ++WallIndex)
-                                    {
-                                        test_wall *Wall = Walls + WallIndex;
-
-                                        real32 tEpsilon = 0.001f;
-                                        if(Wall->DeltaX != 0.0f)
+                                        real32 tResult = (Wall->X - Wall->RelX) / Wall->DeltaX;
+                                        real32 Y = Wall->RelY + tResult*Wall->DeltaY;
+                                        if((tResult >= 0.0f) && (tMinTest > tResult))
                                         {
-                                            real32 tResult = (Wall->X - Wall->RelX) / Wall->DeltaX;
-                                            real32 Y = Wall->RelY + tResult*Wall->DeltaY;
-                                            if((tResult >= 0.0f) && (tMinTest > tResult))
+                                            if((Y >= Wall->MinY) && (Y <= Wall->MaxY))
                                             {
-                                                if((Y >= Wall->MinY) && (Y <= Wall->MaxY))
-                                                {
-                                                    tMinTest = Maximum(0.0f, tResult - tEpsilon);
-                                                    TestWallNormal = Wall->Normal;
-                                                    HitThis = true;
-                                                }
+                                                tMinTest = Maximum(0.0f, tResult - tEpsilon);
+                                                TestWallNormal = Wall->Normal;
+                                                HitThis = true;
                                             }
                                         }
                                     }
+                                }
 
-                                    if(HitThis)
+                                if(HitThis)
+                                {
+                                    v3 TestP = Entity->P + tMinTest*PlayerDelta;
+                                    if(SpeculativeCollide(Entity, TestEntity, TestP))
                                     {
-                                        v3 TestP = Entity->P + tMinTest*PlayerDelta;
-                                        if(SpeculativeCollide(Entity, TestEntity, TestP))
-                                        {
-                                            tMin = tMinTest;
-                                            WallNormalMin = TestWallNormal;
-                                            HitEntityMin = TestEntity;
-                                        }
+                                        tMin = tMinTest;
+                                        WallNormalMin = TestWallNormal;
+                                        HitEntityMin = TestEntity;
                                     }
                                 }
                             }

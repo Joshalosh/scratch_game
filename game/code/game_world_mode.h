@@ -5,8 +5,8 @@ struct game_mode_world;
 struct pairwise_collision_rule
 {
     bool32 CanCollide;
-    uint32_t StorageIndexA;
-    uint32_t StorageIndexB;
+    uint32_t IDA;
+    uint32_t IDB;
 
     pairwise_collision_rule *NextInHash;
 };

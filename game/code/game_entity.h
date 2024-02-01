@@ -23,16 +23,8 @@ ClearFlags(entity *Entity, uint32_t Flag)
 }
 
 inline void
-MakeEntityNonspatial(entity *Entity)
-{
-    AddFlags(Entity, EntityFlag_Nonspatial);
-    Entity->P = InvalidP;
-}
-
-inline void
 MakeEntitySpatial(entity *Entity, v3 P, v3 dP)
 {
-    ClearFlags(Entity, EntityFlag_Nonspatial);
     Entity->P = P;
     Entity->dP = dP;
 }

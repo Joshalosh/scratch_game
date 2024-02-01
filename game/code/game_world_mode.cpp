@@ -4,12 +4,10 @@ BeginLowEntity(game_mode_world *WorldMode, entity_type Type)
 {
     Assert(WorldMode->CreationBufferIndex < ArrayCount(WorldMode->CreationBuffer));
     entity *EntityLow = WorldMode->CreationBuffer + WorldMode->CreationBufferIndex++;
-
-    EntityLow->StorageIndex.Value = ++WorldMode->LastUsedEntityStorageIndex;
-
     // TODO: Worry about this taking a while once the entities are large (sparse clear?)
     ZeroStruct(*EntityLow);
 
+    EntityLow->ID.Value = ++WorldMode->LastUsedEntityStorageIndex;
     EntityLow->Type = Type;
     EntityLow->Collision = WorldMode->NullCollision;
 
@@ -111,15 +109,15 @@ AddPlayer(game_mode_world *WorldMode)
 
     InitHitPoints(Body, 3);
 
-    Body->Head.Index = Head->StorageIndex;
-    Head->Head.Index = Body->StorageIndex;
+    Body->Head.Index = Head->ID;
+    Head->Head.Index = Body->ID;
 
     if(WorldMode->CameraFollowingEntityIndex.Value == 0)
     {
-        WorldMode->CameraFollowingEntityIndex = Body->StorageIndex;
+        WorldMode->CameraFollowingEntityIndex = Body->ID;
     }
 
-    entity_id Result = Head->StorageIndex;
+    entity_id Result = Head->ID;
 
     EndEntity(WorldMode, Body, P);
     EndEntity(WorldMode, Head, P);
@@ -178,7 +176,7 @@ DrawHitPoints(entity *Entity, render_group *PieceGroup, object_transform Transfo
 }
 
 internal void
-ClearCollisionRulesFor(game_mode_world *WorldMode, uint32_t StorageIndex)
+ClearCollisionRulesFor(game_mode_world *WorldMode, uint32_t ID)
 {
     // TODO Make a better data structure that allows the removal
     // of collision rules without having to search the entire table.
@@ -195,8 +193,8 @@ ClearCollisionRulesFor(game_mode_world *WorldMode, uint32_t StorageIndex)
             *Rule;
             )
         {
-            if(((*Rule)->StorageIndexA == StorageIndex) ||
-               ((*Rule)->StorageIndexB == StorageIndex))
+            if(((*Rule)->IDA == ID) ||
+               ((*Rule)->IDB == ID))
             {
                 pairwise_collision_rule *RemovedRule = *Rule;
                 *Rule = (*Rule)->NextInHash;
@@ -213,24 +211,24 @@ ClearCollisionRulesFor(game_mode_world *WorldMode, uint32_t StorageIndex)
 }
 
 internal void
-AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 CanCollide)
+AddCollisionRule(game_mode_world *WorldMode, uint32_t IDA, uint32_t IDB, bool32 CanCollide)
 {
-    if(StorageIndexA > StorageIndexB)
+    if(IDA > IDB)
     {
-        uint32_t Temp = StorageIndexA;
-        StorageIndexA = StorageIndexB;
-        StorageIndexB = Temp;
+        uint32_t Temp = IDA;
+        IDA = IDB;
+        IDB = Temp;
     }
 
     // TODO Implement a better hash function.
     pairwise_collision_rule *Found = 0;
-    uint32_t HashBucket = StorageIndexA & (ArrayCount(WorldMode->CollisionRuleHash) - 1);
+    uint32_t HashBucket = IDA & (ArrayCount(WorldMode->CollisionRuleHash) - 1);
     for(pairwise_collision_rule *Rule = WorldMode->CollisionRuleHash[HashBucket];
         Rule;
         Rule = Rule->NextInHash)
     {
-        if((Rule->StorageIndexA == StorageIndexA) &&
-           (Rule->StorageIndexB == StorageIndexB))
+        if((Rule->IDA == IDA) &&
+           (Rule->IDB == IDB))
         {
             Found = Rule;
             break;
@@ -255,8 +253,8 @@ AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t St
 
     if(Found)
     {
-        Found->StorageIndexA = StorageIndexA;
-        Found->StorageIndexB = StorageIndexB;
+        Found->IDA = IDA;
+        Found->IDB = IDB;
         Found->CanCollide = CanCollide;
     }
 }
@@ -734,7 +732,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             Entity->YAxis = V2(0, 1);
 
             // TODO: I don't really have a way to unique-ify these at all just yet
-            debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->StorageIndex.Value); // TODO: Have a custom cast to u64 to get past the warning.
+            debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->ID.Value); // TODO: Have a custom cast to u64 to get past the warning.
             if(DEBUG_REQUESTED(EntityDebugID))
             {
                 DEBUG_BEGIN_DATA_BLOCK("Simulation/Entity");
@@ -790,7 +788,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         {
                             controlled_hero *ConHero = GameState->ControlledHeroes + ControlIndex;
 
-                            if(Entity->StorageIndex.Value == ConHero->EntityIndex.Value)
+                            if(Entity->ID.Value == ConHero->EntityIndex.Value)
                             {
                                 ConHero->RecentreTimer = ClampAboveZero(ConHero->RecentreTimer - dt);
                                 if(ConHero->dZ != 0.0f)
@@ -921,19 +919,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         }
                     } break;
 
-                    case EntityType_Sword:
-                    {
-                        MoveSpec.UnitMaxAccelVector = false;
-                        MoveSpec.Speed = 0.0f;
-                        MoveSpec.Drag = 0.0f;
-
-                        if(Entity->DistanceLimit == 0.0f)
-                        {
-                            ClearCollisionRulesFor(WorldMode, Entity->StorageIndex.Value);
-                            MakeEntityNonspatial(Entity);
-                        }
-                    } break;
-
                     case EntityType_Familiar:
                     {
                         entity *ClosestHero = 0;
@@ -971,8 +956,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     } break;
                 }
 
-                if(!IsSet(Entity, EntityFlag_Nonspatial) &&
-                   IsSet(Entity, EntityFlag_Moveable))
+                if(IsSet(Entity, EntityFlag_Moveable))
                 {
                     MoveEntity(WorldMode, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
                 }
@@ -1019,13 +1003,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     {
                         PushRect(RenderGroup, EntityTransform, V3(0, 0, 0), Entity->WalkableDim, V4(1, 0.5f, 0, 1));
                         PushRect(RenderGroup, EntityTransform, V3(0, 0, Entity->WalkableHeight), Entity->WalkableDim, V4(1, 1, 0, 1));
-                    } break;
-
-                    case EntityType_Sword:
-                    {
-                        PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow), 
-                                   0.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                        PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Sword), 0.5f, V3(0, 0, 0));
                     } break;
 
                     case EntityType_Familiar:
@@ -1083,7 +1060,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 if(DEBUG_UI_ENABLED)
                 {
-                    debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->StorageIndex.Value); // NOTE: Have a custom u64 cast to get past the warning
+                    debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->ID.Value); // NOTE: Have a custom u64 cast to get past the warning
 
                     for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
@@ -1108,7 +1085,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 if(DEBUG_REQUESTED(EntityDebugID))
                 {
-                    DEBUG_VALUE(Entity->StorageIndex.Value);
+                    DEBUG_VALUE(Entity->ID.Value);
                     DEBUG_VALUE(Entity->Updatable);
                     DEBUG_VALUE(Entity->Type);
                     DEBUG_VALUE(Entity->P);

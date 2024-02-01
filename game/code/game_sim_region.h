@@ -18,7 +18,6 @@ enum entity_type
     EntityType_Floor,
     EntityType_Familiar,
     EntityType_Monster,
-    EntityType_Sword,
     EntityType_Stairwell,
 };
 
@@ -47,8 +46,7 @@ enum entity_flags
 {
     // TODO Collides and ZSupported can prabably be removed.
     EntityFlag_Collides = (1 << 0),
-    EntityFlag_Nonspatial = (1 << 1),
-    EntityFlag_Moveable = (1 << 2),
+    EntityFlag_Moveable = (1 << 1),
 
     EntityFlag_Simming = (1 << 30),
 };
@@ -90,7 +88,7 @@ struct entity
     world_chunk *OldChunk;
     world_position ChunkP;
 
-    entity_id StorageIndex;
+    entity_id ID;
     b32 Updatable;
 
     entity_type Type;
