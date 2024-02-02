@@ -353,8 +353,8 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
 }
 
 #include "game_world.h"
-#include "game_sim_region.h"
 #include "game_entity.h"
+#include "game_sim_region.h"
 #include "game_world_mode.h"
 #include "game_render_group.h"
 #include "game_asset.h"
@@ -368,12 +368,7 @@ struct controlled_hero
     v2 dSword;
     r32 dZ;
     r32 RecentreTimer;
-};
-
-struct ground_buffer
-{
-    world_position P;
-    loaded_bitmap Bitmap;
+    b32 Exited;
 };
 
 struct hero_bitmap_ids

@@ -19,6 +19,7 @@ EndEntity(game_mode_world *WorldMode, entity *EntityLow, world_position P)
 {
     --WorldMode->CreationBufferIndex;
     Assert(EntityLow == (WorldMode->CreationBuffer + WorldMode->CreationBufferIndex));
+    EntityLow->P = P.Offset_;
     PackEntityIntoWorld(WorldMode->World, EntityLow, P);
 }
 
@@ -27,6 +28,7 @@ BeginGroundedEntity(game_mode_world *WorldMode, entity_type Type, entity_collisi
 {
     entity *Entity = BeginLowEntity(WorldMode, Type);
     Entity->Collision = Collision;
+
     return(Entity);
 }
 
@@ -119,8 +121,8 @@ AddPlayer(game_mode_world *WorldMode)
 
     entity_id Result = Head->ID;
 
-    EndEntity(WorldMode, Body, P);
     EndEntity(WorldMode, Head, P);
+    EndEntity(WorldMode, Body, P);
 
     return(Result);
 }
@@ -339,7 +341,7 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, v3 *Result)
         }
     }
 
-    return (Found);
+    return(Found);
 }
 
 internal void
@@ -399,9 +401,9 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorBottom = false;
     bool32 DoorUp = false;
     bool32 DoorDown = false;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 8; ++ScreenIndex)
     {
-#if 1
+#if 0
         uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 4);
 #else
         uint32_t DoorDirection = RandomChoice(&Series, 2);
@@ -697,9 +699,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
             if(WasPressed(Controller->Back))
             {
-                Assert(!"Mark this and delete in sim!");
-                //DeleteLowEntity(WorldMode, ConHero->EntityIndex);
-                ConHero->EntityIndex.Value = 0;
+                ConHero->Exited = true;
             }
         }
     }
@@ -807,7 +807,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 {
                                     // NOTE: Leave FacingDirection whatever it was
                                 }
-                                else 
+                                else
                                 {
                                     Entity->FacingDirection = ATan2(ConHero->dSword.y, ConHero->dSword.x);
                                 }
@@ -832,6 +832,13 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                     }
                                     Entity->dP += dt*ddP2;
                                 }
+
+                                if(ConHero->Exited)
+                                {
+                                    ConHero->Exited = false;
+                                    DeleteEntity(SimRegion, Entity);
+                                    ConHero->EntityIndex.Value = 0;
+                                }
                             }
                         }
                     } break;
@@ -853,11 +860,11 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                             v3 HeadDelta = Head->P - Entity->P;
 
-                            r32 HeadDistance = Length(Head->P - Entity->P);
+                            r32 HeadDistance = Length(HeadDelta);
                             r32 MaxHeadDistance = 0.5f;
                             r32 tHeadDistance = Clamp01MapToRange(0.0f, HeadDistance, MaxHeadDistance);
 
-                            Entity->FloorDisplace = (0.1f*HeadDelta).xy;
+                            Entity->FloorDisplace = (0.25f*HeadDelta).xy;
 
                             switch(Entity->MovementMode)
                             {
@@ -1211,8 +1218,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the
-    // frame so there isn't a frame of lag in camera updating compared to the
-    // main protagonist.
+    // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
     EndSim(SimRegion, WorldMode);
     EndTemporaryMemory(SimMemory);
 

@@ -92,7 +92,7 @@ GetWorldChunkInternal(world *World, int32_t ChunkX, int32_t ChunkY, int32_t Chun
 inline world_chunk *
 GetWorldChunk(world *World, s32 ChunkX, s32 ChunkY, s32 ChunkZ, memory_arena *Arena = 0)
 {
-    world_chunk **ChunkPtr = GetWorldChunkInternal(World, ChunkZ, ChunkY, ChunkZ);
+    world_chunk **ChunkPtr = GetWorldChunkInternal(World, ChunkX, ChunkY, ChunkZ);
     world_chunk *Result = *ChunkPtr;
     if(!Result && Arena)
     {
@@ -228,10 +228,8 @@ PackEntityIntoChunk(world *World, entity *Source, world_chunk *Chunk)
 internal void
 PackEntityIntoWorld(world *World, entity *Source, world_position At)
 {
-    world_chunk *Chunk = GetWorldChunk(World, At.ChunkX, At.ChunkY, At.ChunkZ,  &World->Arena);
+    world_chunk *Chunk = GetWorldChunk(World, At.ChunkX, At.ChunkY, At.ChunkZ, &World->Arena);
     Assert(Chunk);
-
-    Source->ChunkP = At;
     PackEntityIntoChunk(World, Source, Chunk);
 }
 
