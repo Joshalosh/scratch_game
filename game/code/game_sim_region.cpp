@@ -194,6 +194,8 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
         }
     }
 
+    ConnectEntityPointers(SimRegion);
+
     return(SimRegion);
 }
 
