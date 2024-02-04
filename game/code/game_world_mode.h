@@ -37,7 +37,7 @@ struct game_mode_world
     // TODO: Allow split-screen?
     entity_id CameraFollowingEntityIndex;
     world_position CameraP;
-    world_position LastCameraP;
+    v3 CameraOffset;
 
     // TODO: Must be a power of two.
     pairwise_collision_rule *CollisionRuleHash[256];
