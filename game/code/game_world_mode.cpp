@@ -59,7 +59,8 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
                                                              AbsTileY + OffsetY, AbsTileZ);
-            P.Offset_.z = RandomBetween(Series, 0.0f, 0.5f);
+            P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
+
             entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Floor, WorldMode->FloorCollision);
             EndEntity(WorldMode, Entity, P);
         }
@@ -331,6 +332,8 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, v3 *Result)
             entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
 
             v3 HeadToPoint = P.P - FromP;
+            // TODO: What should this value be?
+            HeadToPoint.z = ClampAboveZero(AbsoluteValue(HeadToPoint.z) - 1.0f);
 
             r32 TestDSq = LengthSq(HeadToPoint);
             if(ClosestDistanceSq > TestDSq)
@@ -402,7 +405,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorBottom = false;
     bool32 DoorUp = false;
     bool32 DoorDown = false;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 8; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -707,7 +710,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     // TODO: How big do I actually want to expand here?
     // TODO: Do we I want to simulate upper floors and stuff?
-    v3 SimBoundsExpansion = {15.0f, 15.0f, 0.0f};
+    v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
     world_position SimCentreP = WorldMode->CameraP;
@@ -1037,6 +1040,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                     case EntityType_Monster:
                     {
+                        DEBUG_VALUE(CameraRelativeGroundP);
                         PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow),
                                    4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
                         PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Torso, 4.5f, V3(0, 0, 0));
