@@ -51,7 +51,7 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
 }
 
 internal void
-AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ)
+AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ, random_series *Series)
 {
     for(s32 OffsetY = -4; OffsetY <= 4; ++OffsetY)
     {
@@ -59,6 +59,7 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
                                                              AbsTileY + OffsetY, AbsTileZ);
+            P.Offset_.z = RandomBetween(Series, 0.0f, 0.5f);
             entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Floor, WorldMode->FloorCollision);
             EndEntity(WorldMode, Entity, P);
         }
@@ -434,7 +435,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
         AddStandardRoom(WorldMode,
                         ScreenX*TilesPerWidth + TilesPerWidth/2,
                         ScreenY*TilesPerHeight + TilesPerHeight/2,
-                        AbsTileZ);
+                        AbsTileZ, &Series);
 
         for(uint32_t TileY = 0; TileY < TilesPerHeight; ++TileY)
         {
