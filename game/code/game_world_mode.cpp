@@ -468,6 +468,11 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                     ShouldBeDoor = true;
                 }
 
+                if(TileX == 14)
+                {
+                    AddWall(WorldMode, AbsTileX, AbsTileY, AbsTileZ);
+                }
+
                 if(ShouldBeDoor)
                 {
                     AddWall(WorldMode, AbsTileX, AbsTileY, AbsTileZ);

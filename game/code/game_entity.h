@@ -68,6 +68,12 @@ struct entity_collision_volume_group
     entity_traversable_point *Traversables;
 };
 
+struct traversable_reference
+{
+    entity_reference Entity;
+    u32 TraversableIndex;
+};
+
 enum entity_movement_mode
 {
     MovementMode_Planted,
@@ -105,8 +111,8 @@ struct entity
 
     entity_movement_mode MovementMode;
     r32 tMovement;
-    v3 MovementFrom;
-    v3 MovementTo;
+    traversable_reference MovementFrom;
+    traversable_reference MovementTo;
 
     v2 XAxis;
     v2 YAxis;
