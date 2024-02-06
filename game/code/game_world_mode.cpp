@@ -61,8 +61,17 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
                                                              AbsTileY + OffsetY, AbsTileZ);
             P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
 
-            entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Floor, WorldMode->FloorCollision);
-            EndEntity(WorldMode, Entity, P);
+            if((OffsetX == 2) && (OffsetY == 2))
+            {
+                entity *Entity = BeginGroundedEntity(WorldMode, EntityType_FloatyThingForNow, 
+                                                     WorldMode->FloorCollision);
+                EndEntity(WorldMode, Entity, P);
+            }
+            else 
+            {
+                entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Floor, WorldMode->FloorCollision);
+                EndEntity(WorldMode, Entity, P);
+            }
         }
     }
 }
@@ -101,7 +110,7 @@ InitHitPoints(entity *EntityLow, uint32_t HitPointCount)
 }
 
 internal entity_id
-AddPlayer(game_mode_world *WorldMode)
+AddPlayer(game_mode_world *WorldMode, traversable_reference StandingOn)
 {
     world_position P = WorldMode->CameraP;
 
@@ -113,8 +122,10 @@ AddPlayer(game_mode_world *WorldMode)
 
     InitHitPoints(Body, 3);
 
-    Body->Head.Index = Head->ID;
-    Head->Head.Index = Body->ID;
+    Body->StandingOn = StandingOn;
+
+    Body->Head.Ptr = Head;
+    Head->Head.Ptr = Body;
 
     if(WorldMode->CameraFollowingEntityIndex.Value == 0)
     {
@@ -313,39 +324,6 @@ MakeNullCollision(game_mode_world *WorldMode)
     Group->TotalVolume.Dim = V3(0, 0, 0);
 
     return(Group);
-}
-
-internal b32
-GetClosestTraversable(sim_region *SimRegion, v3 FromP, v3 *Result)
-{
-    b32 Found = false;
-
-    r32 ClosestDistanceSq = Square(1000.0f);
-    entity *TestEntity = SimRegion->Entities;
-    for(u32 TestEntityIndex = 0; 
-        TestEntityIndex < SimRegion->EntityCount;
-        ++TestEntityIndex, ++TestEntity)
-    {
-        entity_collision_volume_group *VolGroup = TestEntity->Collision;
-        for(u32 PIndex = 0; PIndex < VolGroup->TraversableCount; ++PIndex)
-        {
-            entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
-
-            v3 HeadToPoint = P.P - FromP;
-            // TODO: What should this value be?
-            HeadToPoint.z = ClampAboveZero(AbsoluteValue(HeadToPoint.z) - 1.0f);
-
-            r32 TestDSq = LengthSq(HeadToPoint);
-            if(ClosestDistanceSq > TestDSq)
-            {
-                *Result = P.P;
-                ClosestDistanceSq = TestDSq;
-                Found = true;
-            }
-        }
-    }
-
-    return(Found);
 }
 
 internal void
@@ -588,6 +566,25 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     real32 FadeBottomStartZ = -2.0f*WorldMode->TypicalFloorHeight;
     real32 FadeBottomEndZ = -2.25f*WorldMode->TypicalFloorHeight;
 
+    // TODO: How big do I actually want to expand here?
+    // TODO: Do we I want to simulate upper floors and stuff?
+    v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
+    rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
+    temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
+    world_position SimCentreP = WorldMode->CameraP;
+    sim_region *SimRegion = BeginSim(&TranState->TranArena, WorldMode, WorldMode->World,
+                                     SimCentreP, SimBounds, Input->dtForFrame);
+
+    v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
+
+    object_transform WorldTransform = DefaultUprightTransform();
+    WorldTransform.OffsetP -= CameraP;
+
+    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
+//    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
+    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
+    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
+
     b32 HeroesExist = false;
     b32 QuitRequested = false;
     for(u32 ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
@@ -603,7 +600,16 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             else if(WasPressed(Controller->Start))
             {
                 *ConHero = {};
-                ConHero->EntityIndex = AddPlayer(WorldMode);
+                traversable_reference Traversable;
+                if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
+                {
+                    ConHero->EntityIndex = AddPlayer(WorldMode, Traversable);
+                }
+                else 
+                {
+                    // TODO: GameUI that tells you there's no safe place, 
+                    // maybe keep trying on subsequent frames?
+                }
             }
         }
 
@@ -713,25 +719,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         }
     }
 
-    // TODO: How big do I actually want to expand here?
-    // TODO: Do we I want to simulate upper floors and stuff?
-    v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
-    rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
-    temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
-    world_position SimCentreP = WorldMode->CameraP;
-    sim_region *SimRegion = BeginSim(&TranState->TranArena, WorldMode, WorldMode->World,
-                                     SimCentreP, SimBounds, Input->dtForFrame);
-
-    v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
-
-    object_transform WorldTransform = DefaultUprightTransform();
-    WorldTransform.OffsetP -= CameraP;
-
-    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
-//    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
-    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
-    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
-
     {
         TIMED_BLOCK("EntityRender");
 
@@ -825,8 +812,11 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 }
 
                                 v3 ClosestP = Entity->P;
-                                if(GetClosestTraversable(SimRegion, Entity->P, &ClosestP))
+                                traversable_reference Traversable;
+                                if(GetClosestTraversable(SimRegion, Entity->P, &Traversable))
                                 {
+                                    ClosestP = GetSimSpaceTraversable(Traversable).P;
+
                                     b32 TimerIsUp = (ConHero->RecentreTimer == 0.0f);
                                     b32 NoPush = (LengthSq(ddP) < 0.1f);
                                     r32 Cp = NoPush ? 300.0f : 25.0f;
@@ -860,8 +850,18 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         entity *Head = Entity->Head.Ptr;
                         if(Head)
                         {
+                            if(Entity->MovementMode == MovementMode_Planted)
+                            {
+                                Entity->P = GetSimSpaceTraversable(Entity->StandingOn).P;
+                            }
+
                             v3 ClosestP = Entity->P;
-                            b32 Found = GetClosestTraversable(SimRegion, Head->P, &ClosestP);
+                            traversable_reference Traversable;
+                            b32 Found = GetClosestTraversable(SimRegion, Head->P, &Traversable);
+                            if(Found)
+                            {
+                                ClosestP = GetSimSpaceTraversable(Traversable).P;
+                            }
                             v3 BodyDelta = ClosestP - Entity->P;
                             r32 BodyDistance = LengthSq(BodyDelta);
 
@@ -885,8 +885,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                     if(Found && (BodyDistance > Square(0.01f)))
                                     {
                                         Entity->tMovement = 0.0f;
-                                        Entity->MovementFrom = Entity->P;
-                                        Entity->MovementTo = ClosestP;
+                                        Entity->MovingTo = Traversable;
                                         Entity->MovementMode = MovementMode_Hopping;
                                     }
 
@@ -895,6 +894,9 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                                 case MovementMode_Hopping:
                                 {
+                                    v3 MovementTo = GetSimSpaceTraversable(Entity->MovingTo).P;
+                                    v3 MovementFrom = GetSimSpaceTraversable(Entity->StandingOn).P;
+
                                     r32 tJump = 0.1f;
                                     r32 tThrust = 0.2f;
                                     r32 tLand = 0.9f;
@@ -908,13 +910,14 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                     {
                                         r32 t = Clamp01MapToRange(tJump, Entity->tMovement, tLand);
                                         v3 a = V3(0, -2.0f, 0.0f);
-                                        v3 b = (Entity->MovementTo - Entity->MovementFrom) - a;
-                                        Entity->P = a*t*t + b*t + Entity->MovementFrom;
+                                        v3 b = (MovementTo - MovementFrom) - a;
+                                        Entity->P = a*t*t + b*t + MovementFrom;
                                     }
 
                                     if(Entity->tMovement >= 1.0f)
                                     {
-                                        Entity->P = Entity->MovementTo;
+                                        Entity->P = MovementTo;
+                                        Entity->StandingOn = Entity->MovingTo;
                                         Entity->MovementMode = MovementMode_Planted;
                                         Entity->dtBob = -2.0f;
                                     }
@@ -936,6 +939,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             Entity->YAxis = V2(0, 1) + 0.5f*HeadDelta.xy;
                             // Entity->XAxis = Perp(Entity->YAxis);
                         }
+                    } break;
+
+                    case EntityType_FloatyThingForNow:
+                    {
+                        Entity->P.z = 2.0f*Sin(Entity->tBob);
+                        Entity->tBob += dt;
                     } break;
 
                     case EntityType_Familiar:
@@ -1054,6 +1063,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     } break;
 
                     case EntityType_Floor:
+                    case EntityType_FloatyThingForNow:
                     {
                         for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                         {

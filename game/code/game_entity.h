@@ -11,6 +11,7 @@ enum entity_type
 
     EntityType_Wall,
     EntityType_Floor,
+    EntityType_FloatyThingForNow,
     EntityType_Familiar,
     EntityType_Monster,
     EntityType_Stairwell,
@@ -32,6 +33,12 @@ union entity_reference
 {
     entity *Ptr;
     entity_id Index;
+};
+
+struct traversable_reference
+{
+    entity_reference Entity;
+    u32 Index;
 };
 
 enum entity_flags
@@ -66,12 +73,6 @@ struct entity_collision_volume_group
 
     u32 TraversableCount;
     entity_traversable_point *Traversables;
-};
-
-struct traversable_reference
-{
-    entity_reference Entity;
-    u32 TraversableIndex;
 };
 
 enum entity_movement_mode
@@ -111,8 +112,8 @@ struct entity
 
     entity_movement_mode MovementMode;
     r32 tMovement;
-    traversable_reference MovementFrom;
-    traversable_reference MovementTo;
+    traversable_reference StandingOn;
+    traversable_reference MovingTo;
 
     v2 XAxis;
     v2 YAxis;

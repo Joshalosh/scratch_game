@@ -11,6 +11,13 @@ GetSimSpaceTraversable(entity *Entity, u32 Index)
     return(Result);
 }
 
+inline entity_traversable_point 
+GetSimSpaceTraversable(traversable_reference Reference)
+{
+    entity_traversable_point Result = GetSimSpaceTraversable(Reference.Entity.Ptr, Reference.Index);
+    return(Result);
+}
+
 internal entity_hash *
 GetHashFromID(sim_region *SimRegion, entity_id StorageIndex)
 {
@@ -56,21 +63,6 @@ inline void
 LoadTraversableReference(sim_region *SimRegion, traversable_reference *Ref)
 {
     LoadEntityReference(SimRegion, &Ref->Entity);
-}
-
-inline void
-StoreEntityReference(entity_reference *Ref)
-{
-    if(Ref->Ptr != 0)
-    {
-        Ref->Index = Ref->Ptr->ID;
-    }
-}
-
-inline void
-StoreTraversableReference(traversable_reference *Ref)
-{
-    StoreEntityReference(&Ref->Entity);
 }
 
 internal entity *
@@ -131,8 +123,8 @@ ConnectEntityPointers(sim_region *SimRegion)
     {
         entity *Entity = SimRegion->Entities + EntityIndex;
         LoadEntityReference(SimRegion, &Entity->Head);
-        LoadTraversableReference(SimRegion, &Entity->MovementFrom);
-        LoadTraversableReference(SimRegion, &Entity->MovementTo);
+        LoadTraversableReference(SimRegion, &Entity->StandingOn);
+        LoadTraversableReference(SimRegion, &Entity->MovingTo);
     }
 }
 
@@ -307,9 +299,6 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
             }
 
             Entity->P += ChunkDelta;
-            StoreTraversableReference(&Entity->MovementFrom);
-            StoreTraversableReference(&Entity->MovementTo);
-            StoreEntityReference(&Entity->Head);
             PackEntityIntoWorld(World, Entity, EntityP);
         }
     }
@@ -499,12 +488,6 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, re
     Entity->dP = ddP*dt + Entity->dP;
     // TODO Upgrade physical motion routinges to handle capping
     // the maximum velocity?
-    Assert(LengthSq(Entity->dP) <= Square(SimRegion->MaxEntityVelocity));
-
-    real32 DistanceRemaining = Entity->DistanceLimit;
-    if(DistanceRemaining == 0.0f)
-    {
-        // TODO: Maybe formalise this number.
         DistanceRemaining = 10000.0f;
     }
 
@@ -691,11 +674,20 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Re
             r32 TestDSq = LengthSq(HeadToPoint);
             if(ClosestDistanceSq > TestDSq)
             {
-                *Result = P.P;
+                // P.P;
+                Result->Entity.Ptr = TestEntity;
+                Result->Index = PIndex;
+                ClosestDistanceSq = TestDSq;
                 ClosestDistanceSq = TestDSq;
                 Found = true;
             }
         }
+    }
+
+    if(!Found)
+    {
+        Result->Entity.Ptr = 0;
+        Result->Index = 0;
     }
 
     return(Found);
