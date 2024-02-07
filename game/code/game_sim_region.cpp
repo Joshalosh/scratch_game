@@ -488,6 +488,13 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, re
     Entity->dP = ddP*dt + Entity->dP;
     // TODO Upgrade physical motion routinges to handle capping
     // the maximum velocity?
+    Assert(LengthSq(Entity->dP) <= Square(SimRegion->MaxEntityVelocity));
+
+    r32 DistanceRemaining = Entity->DistanceLimit;
+
+    if(DistanceRemaining == 0.0f)
+    {
+        // TODO: Do I want to formalise this number?
         DistanceRemaining = 10000.0f;
     }
 
