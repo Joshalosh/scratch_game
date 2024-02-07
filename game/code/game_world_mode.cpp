@@ -783,6 +783,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 {
                     case EntityType_HeroHead:
                     {
+                        DEBUG_VALUE(Entity->P);
                         for(uint32_t ControlIndex = 0; ControlIndex < ArrayCount(GameState->ControlledHeroes); ++ControlIndex)
                         {
                             controlled_hero *ConHero = GameState->ControlledHeroes + ControlIndex;
@@ -815,11 +816,26 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                     Entity->FacingDirection = ATan2(ConHero->dSword.y, ConHero->dSword.x);
                                 }
 
-                                v3 ClosestP = Entity->P;
                                 traversable_reference Traversable;
-                                if(GetClosestTraversable(SimRegion, Entity->P, &Traversable))
+                                if(GetClosestTraversable(SimRegion, Head->P, &Traversable))
                                 {
-                                    ClosestP = GetSimSpaceTraversable(Traversable).P;
+                                    if(Body)
+                                    {
+                                        if(Body->MovementMode == MovementMode_Planted)
+                                        {
+                                            if(!IsEqual(Traversable, Body->StandingOn))
+                                            {
+                                                Body->tMovement = 0.0f;
+                                                Body->MovingTo = Traversable;
+                                                Body->MovementMode = MovementMode_Hopping;
+                                            }
+                                        }
+                                    }
+                                    else 
+                                    {
+                                    }
+
+                                    v3 ClosestP = GetSimSpaceTraversable(Traversable).P;
 
                                     b32 TimerIsUp = (ConHero->RecentreTimer == 0.0f);
                                     b32 NoPush = (LengthSq(ddP) < 0.1f);
@@ -841,29 +857,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                                 if(Body)
                                 {
-                                    v3 ClosestP = Body->P;
-                                    traversable_reference Traversable;
-                                    b32 Found = GetClosestTraversable(SimRegion, Head->P, &Traversable);
-                                    if(Found)
-                                    {
-                                        ClosestP = GetSimSpaceTraversable(Traversable).P;
-                                    }
-
-                                    v3 BodyDelta = ClosestP - Body->P;
-                                    r32 BodyDistance = LengthSq(BodyDelta);
-
-                                    if(Body->MovementMode == MovementMode_Planted)
-                                    {
-                                        if(Found && (BodyDistance > Square(0.01f)))
-                                        {
-                                            Body->tMovement = 0.0f;
-                                            Body->MovingTo = Traversable;
-                                            Body->MovementMode = MovementMode_Hopping;
-                                        }
-                                    }
-
                                     Body->FacingDirection = Head->FacingDirection;
-
                                     // Body->XAxis = Perp(Body->YAxis);
                                 }
 
@@ -879,6 +873,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                     case EntityType_HeroBody:
                     {
+                        DEBUG_VALUE(Entity->P);
                         entity *Head = Entity->Head.Ptr;
                         entity *Body = Entity;
 
@@ -889,7 +884,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                             Entity->P = GetSimSpaceTraversable(Entity->StandingOn).P;
                         }
 
-                        v32 HeadDelta = {};
+                        v3 HeadDelta = {};
                         if(Head)
                         {
                             HeadDelta = Head->P - Body->P;
@@ -958,7 +953,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                     case EntityType_FloatyThingForNow:
                     {
-                        Entity->P.z = 2.0f*Sin(Entity->tBob);
+                        Entity->P.z += 0.05f*Cos(Entity->tBob);
                         Entity->tBob += dt;
                     } break;
 

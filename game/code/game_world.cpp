@@ -150,6 +150,7 @@ MapIntoChunkSpace(world *World, world_position BasePos, v3 Offset)
     world_position Result = BasePos;
 
     Result.Offset_ += Offset;
+
     RecanonicaliseCoord(World->ChunkDimInMeters.x, &Result.ChunkX, &Result.Offset_.x);
     RecanonicaliseCoord(World->ChunkDimInMeters.y, &Result.ChunkY, &Result.Offset_.y);
     RecanonicaliseCoord(World->ChunkDimInMeters.z, &Result.ChunkZ, &Result.Offset_.z);
@@ -165,26 +166,6 @@ Subtract(world *World, world_position *A, world_position *B)
                 (real32)A->ChunkZ - (real32)B->ChunkZ};
 
     v3 Result = Hadamard(World->ChunkDimInMeters, dTile) + (A->Offset_ - B->Offset_);
-
-    return(Result);
-}
-
-inline world_position
-CentredChunkPoint(uint32_t ChunkX, uint32_t ChunkY, uint32_t ChunkZ)
-{
-    world_position Result = {};
-
-    Result.ChunkX = ChunkX;
-    Result.ChunkY = ChunkY;
-    Result.ChunkZ = ChunkZ;
-
-    return(Result);
-}
-
-inline world_position
-CentredChunkPoint(world_chunk *Chunk)
-{
-    world_position Result = CentredChunkPoint(Chunk->ChunkX, Chunk->ChunkY, Chunk->ChunkZ);
 
     return(Result);
 }

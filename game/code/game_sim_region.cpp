@@ -11,7 +11,7 @@ GetSimSpaceTraversable(entity *Entity, u32 Index)
     return(Result);
 }
 
-inline entity_traversable_point 
+inline entity_traversable_point
 GetSimSpaceTraversable(traversable_reference Reference)
 {
     entity_traversable_point Result = GetSimSpaceTraversable(Reference.Entity.Ptr, Reference.Index);
@@ -157,6 +157,11 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
     world_position MinChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMinCorner(SimRegion->Bounds));
     world_position MaxChunkP = MapIntoChunkSpace(World, SimRegion->Origin, GetMaxCorner(SimRegion->Bounds));
 
+    DEBUG_VALUE(SimRegion->Origin.ChunkX);
+    DEBUG_VALUE(SimRegion->Origin.ChunkY);
+    DEBUG_VALUE(SimRegion->Origin.ChunkZ);
+    DEBUG_VALUE(SimRegion->Origin.Offset_);
+
     for(int32_t ChunkZ = MinChunkP.ChunkZ; ChunkZ <= MaxChunkP.ChunkZ; ++ChunkZ)
     {
         for(int32_t ChunkY = MinChunkP.ChunkY; ChunkY <= MaxChunkP.ChunkY; ++ChunkY)
@@ -166,6 +171,9 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                 world_chunk *Chunk = RemoveWorldChunk(World, ChunkX, ChunkY, ChunkZ);
                 if(Chunk)
                 {
+                    Assert(Chunk->ChunkX == ChunkX);
+                    Assert(Chunk->ChunkY == ChunkY);
+                    Assert(Chunk->ChunkZ == ChunkZ);
                     world_position ChunkPosition = {ChunkX, ChunkY, ChunkZ};
                     v3 ChunkDelta = Subtract(SimRegion->World, &ChunkPosition, &SimRegion->Origin);
                     world_entity_block *Block = Chunk->FirstBlock;
@@ -221,7 +229,7 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
             world_position ChunkP = EntityP;
             ChunkP.Offset_ = V3(0, 0, 0);
 
-            v3 ChunkDelta = -Subtract(Region->World, &ChunkP, &Region->Origin);
+            v3 ChunkDelta = EntityP.Offset_ - Entity->P;
 
             // TODO: Save state back to the stored entity, once high Entities
             // do state decompression, etc
@@ -280,7 +288,7 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
                     if(EntityP.z > hRoomApron.z)
                     {
                         r32 t = Clamp01MapToRange(hRoomApron.z, EntityP.z, hRoomDelta.z);
-                        WorldMode->CameraOffset = V3(0, 0, t*hRoomDelta.z); 
+                        WorldMode->CameraOffset = V3(0, 0, t*hRoomDelta.z);
                     }
                     if(EntityP.z < -hRoomApron.z)
                     {
@@ -298,8 +306,13 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
                 WorldMode->CameraP = NewCameraP;
             }
 
+            v3 OldEntityP = Entity->P;
             Entity->P += ChunkDelta;
-            PackEntityIntoWorld(World, Entity, EntityP);
+            PackEntityIntoWorld(World, Entity, ChunkP);
+
+            //v3 ReverseChunkDelta = Subtract(Region->World, &ChunkP, &Region->Origin);
+            //v3 TestP = Entity->P + ReverseChunkDelta;
+            //Assert(OldEntityP.z == TestP.z);
         }
     }
 }
@@ -491,7 +504,6 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, re
     Assert(LengthSq(Entity->dP) <= Square(SimRegion->MaxEntityVelocity));
 
     r32 DistanceRemaining = Entity->DistanceLimit;
-
     if(DistanceRemaining == 0.0f)
     {
         // TODO: Do I want to formalise this number?
@@ -674,17 +686,16 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Re
         {
             entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
 
-            v3 HeadToPoint = P.P - FromP;
+            v3 ToPoint = P.P - FromP;
             // TODO: What should this value be?
-            HeadToPoint.z = ClampAboveZero(AbsoluteValue(HeadToPoint.z) - 1.0f);
+            //ToPoint.z = ClampAboveZero(AbsoluteValue(ToPoint.z) - 1.0f);
 
-            r32 TestDSq = LengthSq(HeadToPoint);
+            r32 TestDSq = LengthSq(ToPoint);
             if(ClosestDistanceSq > TestDSq)
             {
                 // P.P;
                 Result->Entity.Ptr = TestEntity;
                 Result->Index = PIndex;
-                ClosestDistanceSq = TestDSq;
                 ClosestDistanceSq = TestDSq;
                 Found = true;
             }

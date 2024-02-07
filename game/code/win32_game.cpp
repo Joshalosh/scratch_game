@@ -1163,6 +1163,8 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
             {
                 uint32_t VKCode = (uint32_t)Message.wParam;
 
+                bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
+
                 // Comparing WasDown to IsDown needs to use
                 // == and != to convert these but tests to 
                 // actual 0 or 1 values.
@@ -1230,28 +1232,34 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
                     {
                         if(IsDown)
                         {
-                            if(State->InputPlayingIndex == 0)
+                            if(AltKeyWasDown)
                             {
-                                if(State->InputRecordingIndex == 0)
+                                Win32BeginInputPlayback(State, 1);
+                            }
+                            else 
+                            {
+                                if(State->InputPlayingIndex == 0)
                                 {
-                                    Win32BeginRecordingInput(State, 1);
+                                    if(State->InputRecordingIndex == 0)
+                                    {
+                                        Win32BeginRecordingInput(State, 1);
+                                    }
+                                    else
+                                    {
+                                        Win32EndRecordingInput(State);
+                                        Win32BeginInputPlayback(State, 1);
+                                    }
                                 }
                                 else
                                 {
-                                    Win32EndRecordingInput(State);
-                                    Win32BeginInputPlayback(State, 1);
+                                    Win32EndInputPlayback(State);
                                 }
-                            }
-                            else
-                            {
-                                Win32EndInputPlayback(State);
                             }
                         }
                     }
 #endif
                     if(IsDown)
                     {
-                        bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
                         if((VKCode == VK_F4) && AltKeyWasDown)
                         {
                             GlobalRunning = false;
