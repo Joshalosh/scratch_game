@@ -1,12 +1,35 @@
 
+inline entity_traversable_point *
+GetTraversable(entity *Entity, u32 Index)
+{
+    entity_traversable_point *Result = 0;
+    if(Entity)
+    {
+        Assert(Index < Entity->TraversableCount);
+        Result = Entity->Traversables + Index;
+    }
+    return(Result);
+}
+
+inline entity_traversable_point *
+GetTraversable(traversable_reference Reference)
+{
+    entity_traversable_point *Result = GetTraversable(Reference.Entity.Ptr, Reference.Index);
+    return(Result);
+}
+
 inline entity_traversable_point
 GetSimSpaceTraversable(entity *Entity, u32 Index)
 {
-    Assert(Index < Entity->Collision->TraversableCount);
-    entity_traversable_point Result = Entity->Collision->Traversables[Index];
+    entity_traversable_point Result = {};
+    Result.P = Entity->P;
 
-    // TODO: This wants to be rotated eventuially
-    Result.P += Entity->P;
+    entity_traversable_point *Point = GetTraversable(Entity, Index);
+    if(Point)
+    {
+        // TODO: This wants to be rotated eventuially
+        Result.P += Point->P;
+    }
 
     return(Result);
 }
@@ -123,8 +146,13 @@ ConnectEntityPointers(sim_region *SimRegion)
     {
         entity *Entity = SimRegion->Entities + EntityIndex;
         LoadEntityReference(SimRegion, &Entity->Head);
-        LoadTraversableReference(SimRegion, &Entity->StandingOn);
-        LoadTraversableReference(SimRegion, &Entity->MovingTo);
+        LoadTraversableReference(SimRegion, &Entity->Occupying);
+        if(Entity->Occupying.Entity.Ptr)
+        {
+            Entity->Occupying.Entity.Ptr->Traversables[Entity->Occupying.Index].Occupier = Entity;
+        }
+
+        LoadTraversableReference(SimRegion, &Entity->CameFrom);
     }
 }
 
@@ -470,6 +498,27 @@ EntitiesOverlap(entity *Entity, entity *TestEntity, v3 Epsilon = V3(0, 0, 0))
     return(Result);
 }
 
+internal b32
+TransactionalOccupy(entity *Entity, traversable_reference *DestRef, traversable_reference DesiredRef)
+{
+    b32 Result = false;
+
+    entity_traversable_point *Desired = GetTraversable(DesiredRef);
+    if(!Desired->Occupier)
+    {
+        entity_traversable_point *Dest = GetTraversable(*DestRef);
+        if(Dest)
+        {
+            Dest->Occupier = 0;
+        }
+        *DestRef = DesiredRef;
+        Desired->Occupier = Entity;
+        Result = true;
+    }
+
+    return(Result);
+}
+
 internal void
 MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, real32 dt, move_spec *MoveSpec, v3 ddP)
 {
@@ -681,8 +730,7 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Re
         TestEntityIndex < SimRegion->EntityCount;
         ++TestEntityIndex, ++TestEntity)
     {
-        entity_collision_volume_group *VolGroup = TestEntity->Collision;
-        for(u32 PIndex = 0; PIndex < VolGroup->TraversableCount; ++PIndex)
+        for(u32 PIndex = 0; PIndex < TestEntity->TraversableCount; ++PIndex)
         {
             entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
 

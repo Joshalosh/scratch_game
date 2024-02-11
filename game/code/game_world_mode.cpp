@@ -59,17 +59,23 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
                                                              AbsTileY + OffsetY, AbsTileZ);
-            P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
+            //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
 
             if((OffsetX == 2) && (OffsetY == 2))
             {
                 entity *Entity = BeginGroundedEntity(WorldMode, EntityType_FloatyThingForNow, 
                                                      WorldMode->FloorCollision);
+                Entity->TraversableCount = 1;
+                Entity->Traversables[0].P = V3(0, 0, 0);
+                Entity->Traversables[0].Occupier = 0;
                 EndEntity(WorldMode, Entity, P);
             }
             else 
             {
                 entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Floor, WorldMode->FloorCollision);
+                Entity->TraversableCount = 1;
+                Entity->Traversables[0].P = V3(0, 0, 0);
+                Entity->Traversables[0].Occupier = 0;
                 EndEntity(WorldMode, Entity, P);
             }
         }
@@ -122,7 +128,9 @@ AddPlayer(game_mode_world *WorldMode, traversable_reference StandingOn)
 
     InitHitPoints(Body, 3);
 
-    Body->StandingOn = StandingOn;
+    // TODO: We will probably need a creation-time system for
+    // gauranteeing now overlapping occupation
+    Body->Occupying = StandingOn;
 
     Body->Head.Ptr = Head;
     Head->Head.Ptr = Body;
@@ -295,11 +303,8 @@ MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, r
     // TODO: Change to using the fundamental types arena, etc
     entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, entity_collision_volume_group);
     Group->VolumeCount = 0;
-    Group->TraversableCount = 1;
-    Group->Traversables = PushArray(&WorldMode->World->Arena, Group->TraversableCount, entity_traversable_point);
     Group->TotalVolume.OffsetP = V3(0, 0, 0);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
-    Group->Traversables[0].P = V3(0, 0, 0);
 
 #if 0
     Group->VolumeCount = 1;
@@ -603,6 +608,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 traversable_reference Traversable;
                 if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
                 {
+                    HeroesExist = true;
                     ConHero->EntityIndex = AddPlayer(WorldMode, Traversable);
                 }
                 else 
@@ -612,8 +618,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 }
             }
         }
-
-        if(ConHero->EntityIndex.Value)
+        else //if(ConHero->EntityIndex.Value)
         {
             HeroesExist = true;
 
@@ -679,6 +684,21 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     if(IsDown(Controller->MoveRight))
                     {
                         ConHero->ddP.x = 1.0f;
+                    }
+                }
+
+                if(WasPressed(Controller->Start))
+                {
+                    *ConHero = {};
+                    traversable_reference Traversable;
+                    if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
+                    {
+                        ConHero->EntityIndex = AddPlayer(WorldMode, Traversable);
+                    }
+                    else 
+                    {
+                        //TODO: GameUI that tells you there's no safe place
+                        // maybe keep trying on subsequent frames?
                     }
                 }
             }
@@ -823,16 +843,16 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                     {
                                         if(Body->MovementMode == MovementMode_Planted)
                                         {
-                                            if(!IsEqual(Traversable, Body->StandingOn))
+                                            if(!IsEqual(Traversable, Body->Occupying))
                                             {
-                                                Body->tMovement = 0.0f;
-                                                Body->MovingTo = Traversable;
-                                                Body->MovementMode = MovementMode_Hopping;
+                                                Body->CameFrom = Body->Occupying;
+                                                if(TransactionalOccupy(Body, &Body->Occupying, Traversable))
+                                                {
+                                                    Body->tMovement = 0.0f;
+                                                    Body->MovementMode = MovementMode_Hopping;
+                                                }
                                             }
                                         }
-                                    }
-                                    else 
-                                    {
                                     }
 
                                     v3 ClosestP = GetSimSpaceTraversable(Traversable).P;
@@ -881,7 +901,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                         if(Entity->MovementMode == MovementMode_Planted)
                         {
-                            Entity->P = GetSimSpaceTraversable(Entity->StandingOn).P;
+                            Entity->P = GetSimSpaceTraversable(Entity->Occupying).P;
                         }
 
                         v3 HeadDelta = {};
@@ -908,8 +928,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                             case MovementMode_Hopping:
                             {
-                                v3 MovementTo = GetSimSpaceTraversable(Entity->MovingTo).P;
-                                v3 MovementFrom = GetSimSpaceTraversable(Entity->StandingOn).P;
+                                v3 MovementTo = GetSimSpaceTraversable(Entity->Occupying).P;
+                                v3 MovementFrom = GetSimSpaceTraversable(Entity->CameFrom).P;
 
                                 r32 tJump = 0.1f;
                                 r32 tThrust = 0.2f;
@@ -931,7 +951,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 if(Entity->tMovement >= 1.0f)
                                 {
                                     Entity->P = MovementTo;
-                                    Entity->StandingOn = Entity->MovingTo;
+                                    Entity->CameFrom = Entity->Occupying;
                                     Entity->MovementMode = MovementMode_Planted;
                                     Entity->dtBob = -2.0f;
                                 }
@@ -1083,12 +1103,13 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         }
 
                         for(u32 TraversableIndex = 0; 
-                            TraversableIndex < Entity->Collision->TraversableCount;
+                            TraversableIndex < Entity->TraversableCount;
                             ++TraversableIndex)
                         {
                             entity_traversable_point *Traversable =
-                                Entity->Collision->Traversables + TraversableIndex;
-                            PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), V4(1.0, 0.5f, 0.0f, 1));
+                                Entity->Traversables + TraversableIndex;
+                            PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), 
+                                     Traversable->Occupier ? V4(0.0f, 0.5f, 1.0f, 1) : V4(1.0, 0.5f, 0.0f, 1));
                         }
                     } break;
 
