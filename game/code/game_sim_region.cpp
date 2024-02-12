@@ -29,6 +29,7 @@ GetSimSpaceTraversable(entity *Entity, u32 Index)
     {
         // TODO: This wants to be rotated eventuially
         Result.P += Point->P;
+        Result.Occupier = Point->Occupier;
     }
 
     return(Result);
@@ -719,8 +720,12 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, re
 #endif
 }
 
+enum traversable_search_flag
+{
+    TraversableSearch_Unoccupied = 0x1,
+};
 internal b32
-GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Result)
+GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Result, u32 Flags = 0)
 {
     b32 Found = false;
 
@@ -733,19 +738,21 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Re
         for(u32 PIndex = 0; PIndex < TestEntity->TraversableCount; ++PIndex)
         {
             entity_traversable_point P = GetSimSpaceTraversable(TestEntity, PIndex);
-
-            v3 ToPoint = P.P - FromP;
-            // TODO: What should this value be?
-            //ToPoint.z = ClampAboveZero(AbsoluteValue(ToPoint.z) - 1.0f);
-
-            r32 TestDSq = LengthSq(ToPoint);
-            if(ClosestDistanceSq > TestDSq)
+            if(!(Flags & TraversableSearch_Unoccupied) || (P.Occupier == 0))
             {
-                // P.P;
-                Result->Entity.Ptr = TestEntity;
-                Result->Index = PIndex;
-                ClosestDistanceSq = TestDSq;
-                Found = true;
+                v3 ToPoint = P.P - FromP;
+                // TODO: What should this value be?
+                //ToPoint.z = ClampAboveZero(AbsoluteValue(ToPoint.z) - 1.0f);
+
+                r32 TestDSq = LengthSq(ToPoint);
+                if(ClosestDistanceSq > TestDSq)
+                {
+                    // P.P;
+                    Result->Entity.Ptr = TestEntity;
+                    Result->Index = PIndex;
+                    ClosestDistanceSq = TestDSq;
+                    Found = true;
+                }
             }
         }
     }

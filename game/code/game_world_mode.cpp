@@ -116,9 +116,10 @@ InitHitPoints(entity *EntityLow, uint32_t HitPointCount)
 }
 
 internal entity_id
-AddPlayer(game_mode_world *WorldMode, traversable_reference StandingOn)
+AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_reference StandingOn)
 {
-    world_position P = WorldMode->CameraP;
+    world_position P = MapIntoChunkSpace(SimRegion->World, SimRegion->Origin, 
+                                         GetSimSpaceTraversable(StandingOn).P);
 
     entity *Body = BeginGroundedEntity(WorldMode, EntityType_HeroBody, WorldMode->HeroBodyCollision);
     AddFlags(Body, EntityFlag_Collides|EntityFlag_Moveable);
@@ -609,9 +610,9 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
                 {
                     HeroesExist = true;
-                    ConHero->EntityIndex = AddPlayer(WorldMode, Traversable);
+                    ConHero->EntityIndex = AddPlayer(WorldMode, SimRegion, Traversable);
                 }
-                else 
+                else
                 {
                     // TODO: GameUI that tells you there's no safe place, 
                     // maybe keep trying on subsequent frames?
@@ -689,17 +690,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 if(WasPressed(Controller->Start))
                 {
-                    *ConHero = {};
-                    traversable_reference Traversable;
-                    if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
-                    {
-                        ConHero->EntityIndex = AddPlayer(WorldMode, Traversable);
-                    }
-                    else 
-                    {
-                        //TODO: GameUI that tells you there's no safe place
-                        // maybe keep trying on subsequent frames?
-                    }
+                    ConHero->DebugSpawn = true;
                 }
             }
 
@@ -804,90 +795,112 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     case EntityType_HeroHead:
                     {
                         DEBUG_VALUE(Entity->P);
+                        controlled_hero ConHero_ = {};
+                        ConHero_.ddP.x = 1.0f;
+
+                        controlled_hero *ConHero = &ConHero_;
                         for(uint32_t ControlIndex = 0; ControlIndex < ArrayCount(GameState->ControlledHeroes); ++ControlIndex)
                         {
-                            controlled_hero *ConHero = GameState->ControlledHeroes + ControlIndex;
+                            controlled_hero *TestHero = GameState->ControlledHeroes + ControlIndex;
 
-                            if(Entity->ID.Value == ConHero->EntityIndex.Value)
+                            if(Entity->ID.Value == TestHero->EntityIndex.Value)
                             {
-                                ConHero->RecentreTimer = ClampAboveZero(ConHero->RecentreTimer - dt);
+                                ConHero = TestHero;
 
-                                entity *Head = Entity;
-                                entity *Body = Head->Head.Ptr;
-
-                                if(ConHero->dZ != 0.0f)
+                                if(ConHero->DebugSpawn)
                                 {
-                                    Entity->dP.z = ConHero->dZ;
-                                }
-
-                                MoveSpec.UnitMaxAccelVector = true;
-                                MoveSpec.Speed = 30.0f;
-                                MoveSpec.Drag = 8.0f;
-
-                                ddP = V3(ConHero->ddP, 0);
-
-                                // TODO: Change to using the acceleration vector 
-                                if((ConHero->dSword.x == 0.0f) && (ConHero->dSword.y == 0.0f))
-                                {
-                                    // NOTE: Leave FacingDirection whatever it was
-                                }
-                                else
-                                {
-                                    Entity->FacingDirection = ATan2(ConHero->dSword.y, ConHero->dSword.x);
-                                }
-
-                                traversable_reference Traversable;
-                                if(GetClosestTraversable(SimRegion, Head->P, &Traversable))
-                                {
-                                    if(Body)
+                                    traversable_reference Traversable;
+                                    if(GetClosestTraversable(SimRegion, Entity->P, &Traversable, TraversableSearch_Unoccupied))
                                     {
-                                        if(Body->MovementMode == MovementMode_Planted)
-                                        {
-                                            if(!IsEqual(Traversable, Body->Occupying))
-                                            {
-                                                Body->CameFrom = Body->Occupying;
-                                                if(TransactionalOccupy(Body, &Body->Occupying, Traversable))
-                                                {
-                                                    Body->tMovement = 0.0f;
-                                                    Body->MovementMode = MovementMode_Hopping;
-                                                }
-                                            }
-                                        }
+                                        AddPlayer(WorldMode, SimRegion, Traversable);
+                                    }
+                                    else
+                                    {
+                                        //TODO: GameUI that tells you there's no safe place
+                                        // maybe keep trying on subsequent frames?
                                     }
 
-                                    v3 ClosestP = GetSimSpaceTraversable(Traversable).P;
-
-                                    b32 TimerIsUp = (ConHero->RecentreTimer == 0.0f);
-                                    b32 NoPush = (LengthSq(ddP) < 0.1f);
-                                    r32 Cp = NoPush ? 300.0f : 25.0f;
-                                    v3 ddP2 = {};
-                                    for(u32 E = 0; E < 3; ++E)
-                                    {
-#if 1
-                                        if(NoPush || (TimerIsUp && (Square(ddP.E[E]) < 0.1f)))
-#else
-                                        if(NoPush)
-#endif
-                                        {
-                                            ddP2.E[E] = Cp*(ClosestP.E[E] - Entity->P.E[E]) - 30.0f*Entity->dP.E[E];
-                                        }
-                                    }
-                                    Entity->dP += dt*ddP2;
-                                }
-
-                                if(Body)
-                                {
-                                    Body->FacingDirection = Head->FacingDirection;
-                                    // Body->XAxis = Perp(Body->YAxis);
-                                }
-
-                                if(ConHero->Exited)
-                                {
-                                    ConHero->Exited = false;
-                                    DeleteEntity(SimRegion, Entity);
-                                    ConHero->EntityIndex.Value = 0;
+                                    ConHero->DebugSpawn = false;
                                 }
                             }
+                        }
+
+                        ConHero->RecentreTimer = ClampAboveZero(ConHero->RecentreTimer - dt);
+
+                        entity *Head = Entity;
+                        entity *Body = Head->Head.Ptr;
+
+                        if(ConHero->dZ != 0.0f)
+                        {
+                            Entity->dP.z = ConHero->dZ;
+                        }
+
+                        MoveSpec.UnitMaxAccelVector = true;
+                        MoveSpec.Speed = 30.0f;
+                        MoveSpec.Drag = 8.0f;
+
+                        ddP = V3(ConHero->ddP, 0);
+
+                        // TODO: Change to using the acceleration vector 
+                        if((ConHero->dSword.x == 0.0f) && (ConHero->dSword.y == 0.0f))
+                        {
+                            // NOTE: Leave FacingDirection whatever it was
+                        }
+                        else
+                        {
+                            Entity->FacingDirection = ATan2(ConHero->dSword.y, ConHero->dSword.x);
+                        }
+
+                        traversable_reference Traversable;
+                        if(GetClosestTraversable(SimRegion, Head->P, &Traversable))
+                        {
+                            if(Body)
+                            {
+                                if(Body->MovementMode == MovementMode_Planted)
+                                {
+                                    if(!IsEqual(Traversable, Body->Occupying))
+                                    {
+                                        Body->CameFrom = Body->Occupying;
+                                        if(TransactionalOccupy(Body, &Body->Occupying, Traversable))
+                                        {
+                                            Body->tMovement = 0.0f;
+                                            Body->MovementMode = MovementMode_Hopping;
+                                        }
+                                    }
+                                }
+                            }
+
+                            v3 ClosestP = GetSimSpaceTraversable(Traversable).P;
+
+                            b32 TimerIsUp = (ConHero->RecentreTimer == 0.0f);
+                            b32 NoPush = (LengthSq(ddP) < 0.1f);
+                            r32 Cp = NoPush ? 300.0f : 25.0f;
+                            v3 ddP2 = {};
+                            for(u32 E = 0; E < 3; ++E)
+                            {
+#if 1
+                                if(NoPush || (TimerIsUp && (Square(ddP.E[E]) < 0.1f)))
+#else
+                                if(NoPush)
+#endif
+                                {
+                                    ddP2.E[E] = Cp*(ClosestP.E[E] - Entity->P.E[E]) - 30.0f*Entity->dP.E[E];
+                                }
+                            }
+                            Entity->dP += dt*ddP2;
+                        }
+
+                        if(Body)
+                        {
+                            Body->FacingDirection = Head->FacingDirection;
+                            // Body->XAxis = Perp(Body->YAxis);
+                        }
+
+                        if(ConHero->Exited)
+                        {
+                            ConHero->Exited = false;
+                            DeleteEntity(SimRegion, Entity);
+                            ConHero->EntityIndex.Value = 0;
                         }
                     } break;
 
