@@ -28,11 +28,33 @@ struct entity_id
 {
     u32 Value;
 };
+enum entity_relationship
+{
+    Relationship_None,
 
-union entity_reference
+    Relationship_Paired,
+};
+struct stored_entity_reference
+{
+    entity_id Index;
+    entity_relationship Relationship;
+};
+struct entity_reference
 {
     entity *Ptr;
-    entity_id Index;
+    stored_entity_reference Stored;
+};
+inline b32 ReferenceIsValid(entity_reference A) 
+{
+    b32 Result = (A.Stored.Index.Value != 0); 
+    return(Result);
+}
+inline b32 ReferencesAreEqual(entity_reference A, entity_reference B)
+{
+    b32 Result = ((A.Ptr == B.Ptr) &&
+                  (A.Stored.Index.Value == B.Stored.Index.Value) &&
+                  (A.Stored.Relationship == B.Stored.Relationship));
+    return(Result);
 };
 
 struct traversable_reference
@@ -42,8 +64,7 @@ struct traversable_reference
 };
 inline b32 IsEqual(traversable_reference A, traversable_reference B)
 {
-    b32 Result = ((A.Entity.Ptr == B.Entity.Ptr) &&
-                  (A.Entity.Index.Value == B.Entity.Index.Value) &&
+    b32 Result = (ReferencesAreEqual(A.Entity, B.Entity) &&
                   (A.Index == B.Index));
 
     return(Result);

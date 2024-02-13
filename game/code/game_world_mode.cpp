@@ -133,8 +133,17 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     // gauranteeing now overlapping occupation
     Body->Occupying = StandingOn;
 
-    Body->Head.Ptr = Head;
-    Head->Head.Ptr = Body;
+    entity_reference BodyRefs[1];
+    entity_reference HeadRefs[1];
+
+    BodyRefs[0].Ptr = Head;
+    HeadRefs[0].Ptr = Body;
+
+    Body->PairedEntityCount = 1;
+    Body->PairedEntities = BodyRefs;
+
+    Head->PairedEntityCount = 1;
+    Head->PairedEntities = HeadRefs;
 
     if(WorldMode->CameraFollowingEntityIndex.Value == 0)
     {
@@ -827,8 +836,9 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                         ConHero->RecentreTimer = ClampAboveZero(ConHero->RecentreTimer - dt);
 
+                        // TODO: Reenable
                         entity *Head = Entity;
-                        entity *Body = Head->Head.Ptr;
+                        entity *Body = 0;//Head->Head.Ptr;
 
                         if(ConHero->dZ != 0.0f)
                         {
@@ -907,7 +917,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     case EntityType_HeroBody:
                     {
                         DEBUG_VALUE(Entity->P);
-                        entity *Head = Entity->Head.Ptr;
+                        // TODO: Reenable
+                        entity *Head = 0;//Entity->Head.Ptr;
                         entity *Body = Entity;
 
                         Entity->dP = V3(0, 0, 0);
@@ -979,13 +990,22 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 {
                     case MovementMode_Planted:
                     {
-                        if(Head)
+                        r32 HeadDistance = 0.0f;
+                        for(u32 PairedEntityIndex = 0; 
+                            PairedEntityIndex < Entity->PairedEntityCount; 
+                            ++PairedEntityIndex)
                         {
-                            r32 HeadDistance = Length(HeadDelta);
-                            r32 MaxHeadDistance = 0.5f;
-                            r32 tHeadDistance = Clamp01MapToRange(0.0f, HeadDistance, MaxHeadDistance);
-                            ddtBob = -20.0f*tHeadDistance;
+                            entity *Pair = Entity->PairedEntities[PairedEntityIndex].Ptr;
+                            if(Pair)
+                            {
+                                HeadDistance += LengthSq(Pair->P - Entity->P);
+                            }
                         }
+                        HeadDistance = SquareRoot(HeadDistance);
+
+                        r32 MaxHeadDistance = 0.5f;
+                        r32 tHeadDistance = Clamp01MapToRange(0.0f, HeadDistance, MaxHeadDistance);
+                        ddtBob = -20.0f*tHeadDistance;
                     } break;
 
                     case MovementMode_Hopping:
