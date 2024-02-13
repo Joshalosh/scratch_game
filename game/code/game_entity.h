@@ -91,6 +91,17 @@ struct entity
     entity_id ID;
     b32 Updatable;
 
+    //
+    // NOTE:
+    //
+
+    u32 PairedEntityCount;
+    entity_reference *PairedEntities;
+
+    //
+    // NOTE: Everything below here is not worked out
+    //
+
     entity_type Type;
     u32 Flags;
 
@@ -109,8 +120,6 @@ struct entity
 
     u32 HitPointMax;
     hit_point HitPoint[16];
-
-    entity_reference Head;
 
     // TODO Only for Stairwells
     v2 WalkableDim;
