@@ -50,11 +50,11 @@ GetHashFromID(sim_region *SimRegion, entity_id StorageIndex)
     entity_hash *Result = 0;
 
     uint32_t HashValue = StorageIndex.Value;
-    for(uint32_t Offset = 0; Offset < ArrayCount(SimRegion->Hash); ++Offset)
+    for(uint32_t Offset = 0; Offset < ArrayCount(SimRegion->EntityHash); ++Offset)
     {
-        uint32_t HashMask  = (ArrayCount(SimRegion->Hash) - 1);
+        uint32_t HashMask  = (ArrayCount(SimRegion->EntityHash) - 1);
         uint32_t HashIndex = ((HashValue + Offset) & HashMask);
-        entity_hash *Entry = SimRegion->Hash + HashIndex;
+        entity_hash *Entry = SimRegion->EntityHash + HashIndex;
         if((Entry->Index.Value == 0) || (Entry->Index.Value == StorageIndex.Value))
         {
             Result = Entry;
@@ -76,14 +76,10 @@ GetEntityByID(sim_region *SimRegion, entity_id ID)
 inline void
 LoadEntityReference(sim_region *SimRegion, entity_reference *Ref)
 {
-    // TODO: Load these
-#if 0
     if(Ref->Index.Value)
     {
-        entity_hash *Entry = GetHashFromID(SimRegion, Ref->Index);
-        Ref->Ptr = Entry ? Entry->Ptr : 0;
+        Ref->Ptr = GetEntityByID(SimRegion, Ref->Index);
     }
-#endif
 }
 
 inline void
@@ -245,7 +241,10 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
 inline void
 DeleteEntity(sim_region *Region, entity *Entity)
 {
-    Entity->Flags |= EntityFlag_Deleted;
+    if(Entity)
+    {
+        Entity->Flags |= EntityFlag_Deleted;
+    }
 }
 
 internal void
@@ -343,7 +342,7 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
 
             v3 OldEntityP = Entity->P;
             Entity->P += ChunkDelta;
-            PackEntityIntoWorld(World, Entity, ChunkP);
+            PackEntityIntoWorld(World, Region, Entity, ChunkP);
 
             //v3 ReverseChunkDelta = Subtract(Region->World, &ChunkP, &Region->Origin);
             //v3 TestP = Entity->P + ReverseChunkDelta;

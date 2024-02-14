@@ -1,5 +1,3 @@
-#if !defined(GAME_SIM_REGION_H)
-
 struct move_spec
 {
     bool32 UnitMaxAccelVector;
@@ -10,7 +8,19 @@ struct move_spec
 struct entity_hash
 {
     entity *Ptr;
-    entity_id Index;
+    entity_id Index; // TODO: Why is this being stored in the hash?
+};
+
+struct brain
+{
+    brain_id ID;
+    brain_type Type;
+};
+
+struct brain_hash
+{
+    brain *Ptr;
+    brain_id ID; // TODO: Why is this being stored in the hash?
 };
 
 struct sim_region
@@ -27,8 +37,12 @@ struct sim_region
     u32 EntityCount;
     entity *Entities;
 
-    entity_hash Hash[4096];
+    u32 MaxBrainCount;
+    u32 BrainCount;
+    brain *Brains;
+
+    entity_hash EntityHash[4096];
+    brain_hash BrainHash[256];
 };
 
-#define GAME_SIM_REGION_H
-#endif
+internal entity_hash *GetHashFromID(sim_region *SimRegion, entity_id StorageIndex);
