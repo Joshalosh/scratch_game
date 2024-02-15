@@ -122,8 +122,8 @@ InitHitPoints(entity *EntityLow, uint32_t HitPointCount)
     }
 }
 
-internal brain_id
-AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_reference StandingOn)
+internal void
+AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_reference StandingOn, brain_id BrainID)
 {
     world_position P = MapIntoChunkSpace(SimRegion->World, SimRegion->Origin, 
                                          GetSimSpaceTraversable(StandingOn).P);
@@ -140,7 +140,6 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     // gauranteeing now overlapping occupation
     Body->Occupying = StandingOn;
 
-    brain_id BrainID = AddBrain(WorldMode);
     Body->BrainType = Brain_Hero;
     Body->BrainSlot.Index = 0;
     Body->BrainID = BrainID;
@@ -157,8 +156,6 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
 
     EndEntity(WorldMode, Head, P);
     EndEntity(WorldMode, Body, P);
-
-    return(BrainID);
 }
 
 internal void
@@ -353,6 +350,8 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
     uint32_t TilesPerWidth = 17;
     uint32_t TilesPerHeight = 9;
+
+    WorldMode->LastUsedEntityStorageIndex = ReservedBrainID_FirstFree;
 
     WorldMode->EffectsEntropy = RandomSeed(1234);
     WorldMode->TypicalFloorHeight = 3.0f;
@@ -607,8 +606,45 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     b32 QuitRequested = false;
     r32 dt = Input->dtForFrame;
 
+    //
+    // NOTE: Look to see if any players are trying to join
+    //
+
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
     {
+        for(u32 ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
+        {
+            game_controller_input *Controller = GetController(Input, ControllerIndex);
+            controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
+            if(ConHero->BrainID.Value == 0)
+            {
+                if(WasPressed(Controller->Back))
+                {
+                    QuitRequested = true;
+                }
+                else if(WasPressed(Controller->Start))
+                {
+                    *ConHero = {};
+                    traversable_reference Traversable;
+                    if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
+                    {
+                        HeroesExist = true;
+                        brain_id BrainID = {ReservedBrainID_FirstHero + ControllerIndex};
+                        AddPlayer(WorldMode, SimRegion, Traversable, BrainID);
+                    }
+                    else
+                    {
+                        // TODO: GameUI that tells you there's no safe place, 
+                        // maybe keep trying on subsequent frames?
+                    }
+                }
+            }
+        }
+
+        //
+        // NOTE: Run all brains
+        //
+
         brain *Brain = SimRegion->Brains + BrainIndex;
         switch(Brain->Type)
         {
@@ -617,38 +653,139 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 controlled_hero ConHero_ = {};
                 ConHero_.ddP.x = 1.0f;
 
-                // TODO: Fill these in from the brain
                 // TODO: Check that they're not deleted when I do.
-                entity *Head = 0;
-                entity *Body = 0;
+                entity *Head = Brain->Hero.Head;
+                entity *Body = Brain->Hero.Body;
 
-                controlled_hero *ConHero = &ConHero_;
-                for(uint32_t ControlIndex = 0; ControlIndex < ArrayCount(GameState->ControlledHeroes); ++ControlIndex)
+                u32 ControllerIndex = Brain->ID.Value - ReservedBrainID_FirstHero;
+                game_controller_input *Controller = GetController(Input, ControllerIndex);
+                controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
+
+                HeroesExist = true;
+
+                ConHero->dZ = 0.0f;
+                ConHero->dSword = {};
+
+                if(Controller->IsAnalogue)
                 {
-                    controlled_hero *TestHero = GameState->ControlledHeroes + ControlIndex;
-
-                    if(Brain->ID.Value == TestHero->BrainID.Value)
+                    // Use analogue movement tuning
+                    ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
+                }
+                else
+                {
+                    // Use digital movement tuning
+                    r32 Recentre = 0.5f;
+                    if(WasPressed(Controller->MoveUp))
                     {
-                        ConHero = TestHero;
+                        ConHero->ddP.x = 0.0f;
+                        ConHero->ddP.y = 1.0f;
+                        ConHero->RecentreTimer = Recentre;
+                    }
+                    if(WasPressed(Controller->MoveDown))
+                    {
+                        ConHero->ddP.x = 0.0f;
+                        ConHero->ddP.y = -1.0f;
+                        ConHero->RecentreTimer = Recentre;
+                    }
+                    if(WasPressed(Controller->MoveLeft))
+                    {
+                        ConHero->ddP.x = -1.0f;
+                        ConHero->ddP.y = 0.0f;
+                        ConHero->RecentreTimer = Recentre;
+                    }
+                    if(WasPressed(Controller->MoveRight))
+                    {
+                        ConHero->ddP.x = 1.0f;
+                        ConHero->ddP.y = 0.0f;
+                        ConHero->RecentreTimer = Recentre;
+                    }
 
-                        if(ConHero->DebugSpawn && Head)
+                    if(!IsDown(Controller->MoveLeft) &&
+                       !IsDown(Controller->MoveRight))
+                    {
+                        ConHero->ddP.x = 0.0f;
+                        if(IsDown(Controller->MoveUp))
                         {
-                            traversable_reference Traversable;
-                            if(GetClosestTraversable(SimRegion, Head->P, &Traversable, 
-                                                     TraversableSearch_Unoccupied))
-                            {
-                                AddPlayer(WorldMode, SimRegion, Traversable);
-                            }
-                            else
-                            {
-                                //TODO: GameUI that tells you there's no safe place
-                                // maybe keep trying on subsequent frames?
-                            }
-
-                            ConHero->DebugSpawn = false;
+                            ConHero->ddP.y = 1.0f;
+                        }
+                        if(IsDown(Controller->MoveDown))
+                        {
+                            ConHero->ddP.y = -1.0f;
                         }
                     }
+
+                    if(!IsDown(Controller->MoveUp) &&
+                       !IsDown(Controller->MoveDown))
+                    {
+                        ConHero->ddP.y = 0.0f;
+                        if(IsDown(Controller->MoveLeft))
+                        {
+                            ConHero->ddP.x = -1.0f;
+                        }
+                        if(IsDown(Controller->MoveRight))
+                        {
+                            ConHero->ddP.x = 1.0f;
+                        }
+                    }
+
+                    if(WasPressed(Controller->Start))
+                    {
+                        ConHero->DebugSpawn = true;
+                    }
                 }
+
+#if 0
+                if(Controller->Start.EndedDown)
+                {
+                    ConHero->dZ = 3.0f;
+                }
+#endif
+
+                ConHero->dSword = {};
+                if(Controller->ActionUp.EndedDown)
+                {
+                    ChangeVolume(&GameState->AudioState, GameState->Music, 10.0f, V2(1.0f, 1.0f));
+                    ConHero->dSword = V2(0.0f, 1.0f);
+                }
+                if(Controller->ActionDown.EndedDown)
+                {
+                    ChangeVolume(&GameState->AudioState, GameState->Music, 10.0f, V2(0.0f, 0.0f));
+                    ConHero->dSword = V2(0.0f, -1.0f);
+                }
+                if(Controller->ActionLeft.EndedDown)
+                {
+                    ChangeVolume(&GameState->AudioState, GameState->Music, 5.0f, V2(1.0f, 0.0f));
+                    ConHero->dSword = V2(-1.0f, 0.0f);
+                }
+                if(Controller->ActionRight.EndedDown)
+                {
+                    ChangeVolume(&GameState->AudioState, GameState->Music, 5.0f, V2(0.0f, 1.0f));
+                    ConHero->dSword = V2(1.0f, 0.0f);
+                }
+
+                if(WasPressed(Controller->Back))
+                {
+                    ConHero->Exited = true;
+                }
+
+#if 0
+                if(ConHero->DebugSpawn && Head)
+                {
+                    traversable_reference Traversable;
+                    if(GetClosestTraversable(SimRegion, Head->P, &Traversable, 
+                                             TraversableSearch_Unoccupied))
+                    {
+                        AddPlayer(WorldMode, SimRegion, Traversable);
+                    }
+                    else
+                    {
+                        //TODO: GameUI that tells you there's no safe place
+                        // maybe keep trying on subsequent frames?
+                    }
+
+                    ConHero->DebugSpawn = false;
+                }
+#endif
 
                 ConHero->RecentreTimer = ClampAboveZero(ConHero->RecentreTimer - dt);
 
@@ -744,143 +881,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             } break;
 
             InvalidDefaultCase;
-        }
-    }
-
-    for(u32 ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
-    {
-        game_controller_input *Controller = GetController(Input, ControllerIndex);
-        controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
-        if(ConHero->BrainID.Value == 0)
-        {
-            if(WasPressed(Controller->Back))
-            {
-                QuitRequested = true;
-            }
-            else if(WasPressed(Controller->Start))
-            {
-                *ConHero = {};
-                traversable_reference Traversable;
-                if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
-                {
-                    HeroesExist = true;
-                    ConHero->BrainID = AddPlayer(WorldMode, SimRegion, Traversable);
-                }
-                else
-                {
-                    // TODO: GameUI that tells you there's no safe place, 
-                    // maybe keep trying on subsequent frames?
-                }
-            }
-        }
-        else //if(ConHero->EntityIndex.Value)
-        {
-            HeroesExist = true;
-
-            ConHero->dZ = 0.0f;
-            ConHero->dSword = {};
-
-            if(Controller->IsAnalogue)
-            {
-                // Use analogue movement tuning
-                ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
-            }
-            else
-            {
-                // Use digital movement tuning
-                r32 Recentre = 0.5f;
-                if(WasPressed(Controller->MoveUp))
-                {
-                    ConHero->ddP.x = 0.0f;
-                    ConHero->ddP.y = 1.0f;
-                    ConHero->RecentreTimer = Recentre;
-                }
-                if(WasPressed(Controller->MoveDown))
-                {
-                    ConHero->ddP.x = 0.0f;
-                    ConHero->ddP.y = -1.0f;
-                    ConHero->RecentreTimer = Recentre;
-                }
-                if(WasPressed(Controller->MoveLeft))
-                {
-                    ConHero->ddP.x = -1.0f;
-                    ConHero->ddP.y = 0.0f;
-                    ConHero->RecentreTimer = Recentre;
-                }
-                if(WasPressed(Controller->MoveRight))
-                {
-                    ConHero->ddP.x = 1.0f;
-                    ConHero->ddP.y = 0.0f;
-                    ConHero->RecentreTimer = Recentre;
-                }
-
-                if(!IsDown(Controller->MoveLeft) &&
-                   !IsDown(Controller->MoveRight))
-                {
-                    ConHero->ddP.x = 0.0f;
-                    if(IsDown(Controller->MoveUp))
-                    {
-                        ConHero->ddP.y = 1.0f;
-                    }
-                    if(IsDown(Controller->MoveDown))
-                    {
-                        ConHero->ddP.y = -1.0f;
-                    }
-                }
-
-                if(!IsDown(Controller->MoveUp) &&
-                   !IsDown(Controller->MoveDown))
-                {
-                    ConHero->ddP.y = 0.0f;
-                    if(IsDown(Controller->MoveLeft))
-                    {
-                        ConHero->ddP.x = -1.0f;
-                    }
-                    if(IsDown(Controller->MoveRight))
-                    {
-                        ConHero->ddP.x = 1.0f;
-                    }
-                }
-
-                if(WasPressed(Controller->Start))
-                {
-                    ConHero->DebugSpawn = true;
-                }
-            }
-
-#if 0
-            if(Controller->Start.EndedDown)
-            {
-                ConHero->dZ = 3.0f;
-            }
-#endif
-
-            ConHero->dSword = {};
-            if(Controller->ActionUp.EndedDown)
-            {
-                ChangeVolume(&GameState->AudioState, GameState->Music, 10.0f, V2(1.0f, 1.0f));
-                ConHero->dSword = V2(0.0f, 1.0f);
-            }
-            if(Controller->ActionDown.EndedDown)
-            {
-                ChangeVolume(&GameState->AudioState, GameState->Music, 10.0f, V2(0.0f, 0.0f));
-                ConHero->dSword = V2(0.0f, -1.0f);
-            }
-            if(Controller->ActionLeft.EndedDown)
-            {
-                ChangeVolume(&GameState->AudioState, GameState->Music, 5.0f, V2(1.0f, 0.0f));
-                ConHero->dSword = V2(-1.0f, 0.0f);
-            }
-            if(Controller->ActionRight.EndedDown)
-            {
-                ChangeVolume(&GameState->AudioState, GameState->Music, 5.0f, V2(0.0f, 1.0f));
-                ConHero->dSword = V2(1.0f, 0.0f);
-            }
-
-            if(WasPressed(Controller->Back))
-            {
-                ConHero->Exited = true;
-            }
         }
     }
 

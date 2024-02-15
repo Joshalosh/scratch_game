@@ -129,6 +129,7 @@ struct entity
 
     v3 P;
     v3 dP;
+    v3 ddP;
 
     r32 DistanceLimit;
 
@@ -161,6 +162,32 @@ struct entity
     entity_traversable_point Traversables[16];
 
     // TODO: Generation index so I know how "up to date" this entity is
+};
+
+struct brain_hero_parts
+{
+    entity *Head;
+    entity *Body;
+};
+
+struct brain
+{
+    brain_id ID;
+    brain_type Type;
+
+    union 
+    {
+        brain_hero_parts Hero;
+        entity *Array[16];
+    };
+};
+
+enum reserved_brain_id
+{
+    ReservedBrainID_FirstHero = 1,
+    ReservedBrainID_LastHero = (ReservedBrainID_FirstHero + MAX_CONTROLLER_COUNT - 1),
+
+    ReservedBrainID_FirstFree,
 };
 
 #define InvalidP V3(100000.0f, 100000.0f, 100000.0f)
