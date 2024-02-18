@@ -362,12 +362,8 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
 
 struct controlled_hero
 {
-    v2 ddP;
-    v2 dSword;
-    r32 dZ;
+    brain_id BrainID;
     r32 RecentreTimer;
-    b32 Exited;
-    b32 DebugSpawn;
 };
 
 struct hero_bitmap_ids

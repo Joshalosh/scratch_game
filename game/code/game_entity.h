@@ -169,7 +169,14 @@ struct brain_hero_parts
     entity *Head;
     entity *Body;
 };
+#define BrainSlotFor(type, Member) BrainSlotFor_(&(((type *)0)->Member) - (entity **)0)
+inline brain_slot
+BrainSlotFor_(u32 PackValue)
+{
+    brain_slot Result = {PackValue};
 
+    return(Result);
+}
 struct brain
 {
     brain_id ID;

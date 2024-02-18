@@ -143,12 +143,10 @@ GetOrAddBrain(sim_region *SimRegion, brain_id ID, brain_type Type)
 internal void
 ConnectEntityPointers(sim_region *SimRegion)
 {
-    // TODO: Reenable this
-#if 0
     for(u32 EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
     {
         entity *Entity = SimRegion->Entities + EntityIndex;
-        LoadEntityReference(SimRegion, &Entity->Head);
+
         LoadTraversableReference(SimRegion, &Entity->Occupying);
         if(Entity->Occupying.Entity.Ptr)
         {
@@ -157,7 +155,6 @@ ConnectEntityPointers(sim_region *SimRegion)
 
         LoadTraversableReference(SimRegion, &Entity->CameFrom);
     }
-#endif
 }
 
 internal sim_region *

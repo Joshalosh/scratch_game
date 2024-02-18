@@ -141,10 +141,10 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     Body->Occupying = StandingOn;
 
     Body->BrainType = Brain_Hero;
-    Body->BrainSlot.Index = 0;
+    Body->BrainSlot = BrainSlotFor(brain_hero_parts, Body);
     Body->BrainID = BrainID;
     Head->BrainType = Brain_Hero;
-    Head->BrainSlot.Index = 1;
+    Body->BrainSlot = BrainSlotFor(brain_hero_parts, Head);
     Head->BrainID = BrainID;
 
     if(WorldMode->CameraFollowingEntityIndex.Value == 0)
@@ -629,8 +629,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
                     {
                         HeroesExist = true;
-                        brain_id BrainID = {ReservedBrainID_FirstHero + ControllerIndex};
-                        AddPlayer(WorldMode, SimRegion, Traversable, BrainID);
+                        ConHero->BrainID = {ReservedBrainID_FirstHero + ControllerIndex};
+                        AddPlayer(WorldMode, SimRegion, Traversable, ConHero->BrainID);
                     }
                     else
                     {
@@ -650,12 +650,10 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         {
             case Brain_Hero:
             {
-                controlled_hero ConHero_ = {};
-                ConHero_.ddP.x = 1.0f;
-
                 // TODO: Check that they're not deleted when I do.
-                entity *Head = Brain->Hero.Head;
-                entity *Body = Brain->Hero.Body;
+                brain_hero_parts *Parts = &Brain->Hero;
+                entity *Head = Parts->Head;
+                entity *Body = Parts->Body;
 
                 u32 ControllerIndex = Brain->ID.Value - ReservedBrainID_FirstHero;
                 game_controller_input *Controller = GetController(Input, ControllerIndex);
@@ -663,13 +661,16 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 HeroesExist = true;
 
-                ConHero->dZ = 0.0f;
-                ConHero->dSword = {};
+                v2 dSword = {};
+                r32 dZ = 0.0f;
+                b32 Exited = false;
+                b32 DebugSpawn = false;
+                v2 ddP = {};
 
                 if(Controller->IsAnalogue)
                 {
                     // Use analogue movement tuning
-                    ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
+                    ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
                 }
                 else
                 {
@@ -677,60 +678,60 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     r32 Recentre = 0.5f;
                     if(WasPressed(Controller->MoveUp))
                     {
-                        ConHero->ddP.x = 0.0f;
-                        ConHero->ddP.y = 1.0f;
+                        ddP.x = 0.0f;
+                        ddP.y = 1.0f;
                         ConHero->RecentreTimer = Recentre;
                     }
                     if(WasPressed(Controller->MoveDown))
                     {
-                        ConHero->ddP.x = 0.0f;
-                        ConHero->ddP.y = -1.0f;
+                        ddP.x = 0.0f;
+                        ddP.y = -1.0f;
                         ConHero->RecentreTimer = Recentre;
                     }
                     if(WasPressed(Controller->MoveLeft))
                     {
-                        ConHero->ddP.x = -1.0f;
-                        ConHero->ddP.y = 0.0f;
+                        ddP.x = -1.0f;
+                        ddP.y = 0.0f;
                         ConHero->RecentreTimer = Recentre;
                     }
                     if(WasPressed(Controller->MoveRight))
                     {
-                        ConHero->ddP.x = 1.0f;
-                        ConHero->ddP.y = 0.0f;
+                        ddP.x = 1.0f;
+                        ddP.y = 0.0f;
                         ConHero->RecentreTimer = Recentre;
                     }
 
                     if(!IsDown(Controller->MoveLeft) &&
                        !IsDown(Controller->MoveRight))
                     {
-                        ConHero->ddP.x = 0.0f;
+                        ddP.x = 0.0f;
                         if(IsDown(Controller->MoveUp))
                         {
-                            ConHero->ddP.y = 1.0f;
+                            ddP.y = 1.0f;
                         }
                         if(IsDown(Controller->MoveDown))
                         {
-                            ConHero->ddP.y = -1.0f;
+                            ddP.y = -1.0f;
                         }
                     }
 
                     if(!IsDown(Controller->MoveUp) &&
                        !IsDown(Controller->MoveDown))
                     {
-                        ConHero->ddP.y = 0.0f;
+                        ddP.y = 0.0f;
                         if(IsDown(Controller->MoveLeft))
                         {
-                            ConHero->ddP.x = -1.0f;
+                            ddP.x = -1.0f;
                         }
                         if(IsDown(Controller->MoveRight))
                         {
-                            ConHero->ddP.x = 1.0f;
+                            ddP.x = 1.0f;
                         }
                     }
 
                     if(WasPressed(Controller->Start))
                     {
-                        ConHero->DebugSpawn = true;
+                        DebugSpawn = true;
                     }
                 }
 
@@ -741,31 +742,31 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 }
 #endif
 
-                ConHero->dSword = {};
+                dSword = {};
                 if(Controller->ActionUp.EndedDown)
                 {
                     ChangeVolume(&GameState->AudioState, GameState->Music, 10.0f, V2(1.0f, 1.0f));
-                    ConHero->dSword = V2(0.0f, 1.0f);
+                    dSword = V2(0.0f, 1.0f);
                 }
                 if(Controller->ActionDown.EndedDown)
                 {
                     ChangeVolume(&GameState->AudioState, GameState->Music, 10.0f, V2(0.0f, 0.0f));
-                    ConHero->dSword = V2(0.0f, -1.0f);
+                    dSword = V2(0.0f, -1.0f);
                 }
                 if(Controller->ActionLeft.EndedDown)
                 {
                     ChangeVolume(&GameState->AudioState, GameState->Music, 5.0f, V2(1.0f, 0.0f));
-                    ConHero->dSword = V2(-1.0f, 0.0f);
+                    dSword = V2(-1.0f, 0.0f);
                 }
                 if(Controller->ActionRight.EndedDown)
                 {
                     ChangeVolume(&GameState->AudioState, GameState->Music, 5.0f, V2(0.0f, 1.0f));
-                    ConHero->dSword = V2(1.0f, 0.0f);
+                    dSword = V2(1.0f, 0.0f);
                 }
 
                 if(WasPressed(Controller->Back))
                 {
-                    ConHero->Exited = true;
+                    Exited = true;
                 }
 
 #if 0
@@ -791,23 +792,16 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
                 if(Head)
                 {
-                    if(ConHero->dZ != 0.0f)
-                    {
-                        Head->dP.z = ConHero->dZ;
-                    }
-                    
                     // TODO: Change to using the acceleration vector 
-                    if((ConHero->dSword.x == 0.0f) && (ConHero->dSword.y == 0.0f))
+                    if((dSword.x == 0.0f) && (dSword.y == 0.0f))
                     {
                         // NOTE: Leave FacingDirection whatever it was
                     }
                     else
                     {
-                        Head->FacingDirection = ATan2(ConHero->dSword.y, ConHero->dSword.x);
+                        Head->FacingDirection = ATan2(dSword.y, dSword.x);
                     }
                 }
-
-                v3 ddP = V3(ConHero->ddP, 0);
 
                 traversable_reference Traversable;
                 if(Head && GetClosestTraversable(SimRegion, Head->P, &Traversable))
@@ -867,9 +861,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     Body->YAxis = V2(0, 1) + 0.5f*HeadDelta.xy;
                 }
 
-                if(ConHero->Exited)
+                if(Exited)
                 {
-                    ConHero->Exited = false;
                     DeleteEntity(SimRegion, Head);
                     DeleteEntity(SimRegion, Body);
                     ConHero->BrainID.Value = 0;
@@ -995,7 +988,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     } break;
                 }
 
-#if 0
                 //
                 // NOTE: Handle entity movement mode
                 //
@@ -1004,6 +996,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 {
                     case MovementMode_Planted:
                     {
+#if 0
                         r32 HeadDistance = 0.0f;
                         for(u32 PairedEntityIndex = 0; 
                             PairedEntityIndex < Entity->PairedEntityCount; 
@@ -1020,6 +1013,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                         r32 MaxHeadDistance = 0.5f;
                         r32 tHeadDistance = Clamp01MapToRange(0.0f, HeadDistance, MaxHeadDistance);
                         ddtBob = -20.0f*tHeadDistance;
+#endif
                     } break;
 
                     case MovementMode_Hopping:
@@ -1065,7 +1059,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 ddtBob += Cp*(0.0f - Entity->tBob) + Cv*(0.0f - Entity->dtBob);
                 Entity->tBob += ddtBob*dt*dt + Entity->dtBob*dt;
                 Entity->dtBob += ddtBob*dt;
-#endif
 
                 if(IsSet(Entity, EntityFlag_Moveable))
                 {
