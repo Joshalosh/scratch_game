@@ -353,6 +353,7 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
 }
 
 #include "game_world.h"
+#include "game_brain.h"
 #include "game_entity.h"
 #include "game_sim_region.h"
 #include "game_world_mode.h"
@@ -389,7 +390,7 @@ struct game_state
     memory_arena ModeArena;
     memory_arena AudioArena; // TODO: Move this into the audio system proper
 
-    controlled_hero ControlledHeroes[ArrayCount(((game_input *)0)->Controllers)];
+    controlled_hero ControlledHeroes[MAX_CONTROLLER_COUNT];
 
     loaded_bitmap TestDiffuse; // TODO: Re-fill this bad boy with grey.
     loaded_bitmap TestNormal;

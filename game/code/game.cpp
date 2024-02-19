@@ -5,6 +5,7 @@
 #include "game_audio.cpp"
 #include "game_world.cpp"
 #include "game_sim_region.cpp"
+#include "game_brain.cpp"
 #include "game_entity.cpp"
 #include "game_world_mode.cpp"
 #include "game_cutscene.cpp"
