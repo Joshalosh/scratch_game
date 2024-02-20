@@ -134,6 +134,7 @@ struct entity
     r32 WalkableHeight;
 
     entity_movement_mode MovementMode;
+    move_spec MoveSpec;
     r32 tMovement;
     traversable_reference Occupying;
     traversable_reference CameFrom;
