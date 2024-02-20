@@ -90,11 +90,24 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
 }
 
 internal void
+AddPiece(entity *Entity, asset_type_id AssetType, r32 Height, v4 Color)
+{
+    Assert(Entity->PieceCount < ArrayCount(Entity->Pieces));
+    entity_visible_piece *Piece = Entity->Pieces + Entity->PieceCount++;
+    Piece->AssetType = AssetType;
+    Piece->Height = Height;
+    Piece->Color = Color;
+}
+
+internal void
 AddWall(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
 {
     world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
     entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Wall, WorldMode->WallCollision);
     AddFlags(Entity, EntityFlag_Collides);
+
+    AddPiece(Entity, Asset_Tree, 2.5f, V4(1, 1, 1, 1));
+
     EndEntity(WorldMode, Entity, P);
 }
 
@@ -664,9 +677,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 ShadowAlpha = 0.0f;
             }
 
-            move_spec MoveSpec = DefaultMoveSpec();
-            v3 ddP = {};
-
             // TODO: Probably indicates I want to seperate update and render
             // for entities sometime soon.
             v3 CameraRelativeGroundP = GetEntityGroundPoint(Entity) - CameraP;
@@ -682,70 +692,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 RenderGroup->GlobalAlpha = Clamp01MapToRange(FadeBottomEndZ,
                                                              CameraRelativeGroundP.z,
                                                              FadeBottomStartZ);
-            }
-
-            //
-            // Pre-physics entity work.
-            //
-            hero_bitmap_ids HeroBitmaps = {};
-            asset_vector MatchVector = {};
-            MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
-            asset_vector WeightVector = {};
-            WeightVector.E[Tag_FacingDirection] = 1.0f;
-            HeroBitmaps.Head = GetBestMatchBitmapFrom(TranState->Assets, Asset_Head, &MatchVector, &WeightVector);
-            HeroBitmaps.Cape = GetBestMatchBitmapFrom(TranState->Assets, Asset_Cape, &MatchVector, &WeightVector);
-            HeroBitmaps.Torso = GetBestMatchBitmapFrom(TranState->Assets, Asset_Torso, &MatchVector, &WeightVector);
-            switch(Entity->Type)
-            {
-                case EntityType_HeroBody:
-                {
-                    MoveSpec.UnitMaxAccelVector = true;
-                    MoveSpec.Speed = 30.0f;
-                    MoveSpec.Drag = 8.0f;
-                } break;
-
-                case EntityType_FloatyThingForNow:
-                {
-                    // TODO: Think about what this stuff actually should mean
-                    //Entity->P.z += 0.05f*Cos(Entity->tBob);
-                    //Entity->tBob += dt;
-                } break;
-
-                case EntityType_Familiar:
-                {
-                    entity *ClosestHero = 0;
-                    real32 ClosestHeroDSq = Square(10.0f);
-
-                    if(Global_AI_Familiar_FollowsHero)
-                    {
-                        entity *TestEntity = SimRegion->Entities;
-                        for(u32 TestEntityIndex = 0;
-                            TestEntityIndex < SimRegion->EntityCount;
-                            ++TestEntityIndex, ++TestEntity)
-                        {
-                            if(TestEntity->Type == EntityType_HeroBody)
-                            {
-                                real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
-                                if(ClosestHeroDSq > TestDSq)
-                                {
-                                    ClosestHero = TestEntity;
-                                    ClosestHeroDSq = TestDSq;
-                                }
-                            }
-                        }
-                    }
-
-                    if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
-                    {
-                        real32 Acceleration = 0.5f;
-                        real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
-                        ddP = OneOverLength*(ClosestHero->P - Entity->P);
-                    }
-
-                    MoveSpec.UnitMaxAccelVector = true;
-                    MoveSpec.Speed = 50.0f;
-                    MoveSpec.Drag = 8.0f;
-                } break;
             }
 
             //
@@ -803,7 +749,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
             if(IsSet(Entity, EntityFlag_Moveable))
             {
-                MoveEntity(WorldMode, SimRegion, Entity, Input->dtForFrame, &MoveSpec, ddP);
+                MoveEntity(WorldMode, SimRegion, Entity, Input->dtForFrame, &Entity->MoveSpec, Entity->ddP);
             }
 
             object_transform EntityTransform = DefaultUprightTransform();
@@ -812,6 +758,19 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             //
             // NOTE: Rendering
             //
+
+            //
+            // Pre-physics entity work.
+            //
+            hero_bitmap_ids HeroBitmaps = {};
+            asset_vector MatchVector = {};
+            MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
+            asset_vector WeightVector = {};
+            WeightVector.E[Tag_FacingDirection] = 1.0f;
+            HeroBitmaps.Head = GetBestMatchBitmapFrom(TranState->Assets, Asset_Head, &MatchVector, &WeightVector);
+            HeroBitmaps.Cape = GetBestMatchBitmapFrom(TranState->Assets, Asset_Cape, &MatchVector, &WeightVector);
+            HeroBitmaps.Torso = GetBestMatchBitmapFrom(TranState->Assets, Asset_Torso, &MatchVector, &WeightVector);
+
             real32 HeroSizeC = 3.0f;
             switch(Entity->Type)
             {
@@ -833,18 +792,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, -0.7f, 0));
                 } break;
 
-                case EntityType_Wall:
-                {
-                    bitmap_id BID = GetFirstBitmapFrom(TranState->Assets, Asset_Tree);
-                    PushBitmap(RenderGroup, EntityTransform, BID, 2.5f, V3(0, 0, 0));
-                } break;
-
-                case EntityType_Stairwell:
-                {
-                    PushRect(RenderGroup, EntityTransform, V3(0, 0, 0), Entity->WalkableDim, V4(1, 0.5f, 0, 1));
-                    PushRect(RenderGroup, EntityTransform, V3(0, 0, Entity->WalkableHeight), Entity->WalkableDim, V4(1, 1, 0, 1));
-                } break;
-
                 case EntityType_Familiar:
                 {
                     bitmap_id BID = HeroBitmaps.Head;
@@ -864,35 +811,34 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow),
                                4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
                     PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Torso, 4.5f, V3(0, 0, 0));
-
-                    DrawHitPoints(Entity, RenderGroup, EntityTransform);
                 } break;
+            }
 
-                case EntityType_Floor:
-                case EntityType_FloatyThingForNow:
-                {
-                    for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
-                    {
-                        entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-                        PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                        Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
-                    }
+            for(u32 PieceIndex = 0; PieceIndex < Entity->PieceCount; ++PieceIndex)
+            {
+                entity_visible_piece *Piece = Entity->Pieces + PieceIndex;
+                bitmap_id BitmapID = GetBestMatchBitmapFrom(TranState->Assets, Piece->AssetType, 
+                                                            &MatchVector, &WeightVector);
+                PushBitmap(RenderGroup, EntityTransform, BitmapID, Piece->Height, V3(0, 0, 0), Piece->Color);
+            }
 
-                    for(u32 TraversableIndex = 0; 
-                        TraversableIndex < Entity->TraversableCount;
-                        ++TraversableIndex)
-                    {
-                        entity_traversable_point *Traversable =
-                            Entity->Traversables + TraversableIndex;
-                        PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), 
-                                 Traversable->Occupier ? V4(0.0f, 0.5f, 1.0f, 1) : V4(1.0, 0.5f, 0.0f, 1));
-                    }
-                } break;
+            DrawHitPoints(Entity, RenderGroup, EntityTransform);
 
-                default:
-                {
-                    // InvalidCodePath;
-                } break;
+            for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
+            {
+                entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+                PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                                Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
+            }
+
+            for(u32 TraversableIndex = 0; 
+                TraversableIndex < Entity->TraversableCount;
+                ++TraversableIndex)
+            {
+                entity_traversable_point *Traversable =
+                    Entity->Traversables + TraversableIndex;
+                PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), 
+                         Traversable->Occupier ? V4(0.0f, 0.5f, 1.0f, 1) : V4(1.0, 0.5f, 0.0f, 1));
             }
 
             if(DEBUG_UI_ENABLED)

@@ -19,12 +19,11 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
             r32 dZ = 0.0f;
             b32 Exited = false;
             b32 DebugSpawn = false;
-            v2 ddP = {};
 
             if(Controller->IsAnalogue)
             {
                 // Use analogue movement tuning
-                ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
+                ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
             }
             else
             {
@@ -32,54 +31,54 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
                 r32 Recentre = 0.5f;
                 if(WasPressed(Controller->MoveUp))
                 {
-                    ddP.x = 0.0f;
-                    ddP.y = 1.0f;
+                    ConHero->ddP.x = 0.0f;
+                    ConHero->ddP.y = 1.0f;
                     ConHero->RecentreTimer = Recentre;
                 }
                 if(WasPressed(Controller->MoveDown))
                 {
-                    ddP.x = 0.0f;
-                    ddP.y = -1.0f;
+                    ConHero->ddP.x = 0.0f;
+                    ConHero->ddP.y = -1.0f;
                     ConHero->RecentreTimer = Recentre;
                 }
                 if(WasPressed(Controller->MoveLeft))
                 {
-                    ddP.x = -1.0f;
-                    ddP.y = 0.0f;
+                    ConHero->ddP.x = -1.0f;
+                    ConHero->ddP.y = 0.0f;
                     ConHero->RecentreTimer = Recentre;
                 }
                 if(WasPressed(Controller->MoveRight))
                 {
-                    ddP.x = 1.0f;
-                    ddP.y = 0.0f;
+                    ConHero->ddP.x = 1.0f;
+                    ConHero->ddP.y = 0.0f;
                     ConHero->RecentreTimer = Recentre;
                 }
 
                 if(!IsDown(Controller->MoveLeft) &&
                    !IsDown(Controller->MoveRight))
                 {
-                    ddP.x = 0.0f;
+                    ConHero->ddP.x = 0.0f;
                     if(IsDown(Controller->MoveUp))
                     {
-                        ddP.y = 1.0f;
+                        ConHero->ddP.y = 1.0f;
                     }
                     if(IsDown(Controller->MoveDown))
                     {
-                        ddP.y = -1.0f;
+                        ConHero->ddP.y = -1.0f;
                     }
                 }
 
                 if(!IsDown(Controller->MoveUp) &&
                    !IsDown(Controller->MoveDown))
                 {
-                    ddP.y = 0.0f;
+                    ConHero->ddP.y = 0.0f;
                     if(IsDown(Controller->MoveLeft))
                     {
-                        ddP.x = -1.0f;
+                        ConHero->ddP.x = -1.0f;
                     }
                     if(IsDown(Controller->MoveRight))
                     {
-                        ddP.x = 1.0f;
+                        ConHero->ddP.x = 1.0f;
                     }
                 }
 
@@ -179,13 +178,13 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
                 v3 ClosestP = GetSimSpaceTraversable(Traversable).P;
 
                 b32 TimerIsUp = (ConHero->RecentreTimer == 0.0f);
-                b32 NoPush = (LengthSq(ddP) < 0.1f);
+                b32 NoPush = (LengthSq(ConHero->ddP) < 0.1f);
                 r32 Cp = NoPush ? 300.0f : 25.0f;
-                v3 ddP2 = {};
+                v3 ddP2 = V3(ConHero->ddP , 0);
                 for(u32 E = 0; E < 3; ++E)
                 {
 #if 1
-                    if(NoPush || (TimerIsUp && (Square(ddP.E[E]) < 0.1f)))
+                    if(NoPush || (TimerIsUp && (Square(ConHero->ddP.E[E]) < 0.1f)))
 #else
                     if(NoPush)
 #endif
@@ -193,7 +192,11 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
                         ddP2.E[E] = Cp*(ClosestP.E[E] - Head->P.E[E]) - 30.0f*Head->dP.E[E];
                     }
                 }
-                Head->dP += dt*ddP2;
+
+                Head->MoveSpec.UnitMaxAccelVector = true;
+                Head->MoveSpec.Speed = 30.0f;
+                Head->MoveSpec.Drag = 8.0f;
+                Head->ddP = ddP2;
             }
 
             if(Body)
@@ -234,6 +237,55 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
         } break;
 
         case Brain_Snake:
+        {
+        } break;
+
+        case Brain_Familiar:
+        {
+#if 0
+            entity *ClosestHero = 0;
+            real32 ClosestHeroDSq = Square(10.0f);
+
+            if(Global_AI_Familiar_FollowsHero)
+            {
+                entity *TestEntity = SimRegion->Entities;
+                for(u32 TestEntityIndex = 0;
+                    TestEntityIndex < SimRegion->EntityCount;
+                    ++TestEntityIndex, ++TestEntity)
+                {
+                    if(TestEntity->Type == EntityType_HeroBody)
+                    {
+                        real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
+                        if(ClosestHeroDSq > TestDSq)
+                        {
+                            ClosestHero = TestEntity;
+                            ClosestHeroDSq = TestDSq;
+                        }
+                    }
+                }
+            }
+
+            if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
+            {
+                real32 Acceleration = 0.5f;
+                real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
+                Entity->ddP = OneOverLength*(ClosestHero->P - Entity->P);
+            }
+
+            MoveSpec.UnitMaxAccelVector = true;
+            MoveSpec.Speed = 50.0f;
+            MoveSpec.Drag = 8.0f;
+#endif
+        } break;
+
+        case Brain_FloatyThingForNow:
+        {
+            // TODO: Think about what this stuff actually should mean
+            //Entity->P.z += 0.05f*Cos(Entity->tBob);
+            //Entity->tBob += dt;
+        } break;
+
+        case Brain_Monster:
         {
         } break;
 

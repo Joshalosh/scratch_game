@@ -365,6 +365,7 @@ struct controlled_hero
 {
     brain_id BrainID;
     r32 RecentreTimer;
+    v2 ddP;
 };
 
 struct hero_bitmap_ids

@@ -86,11 +86,26 @@ struct entity_traversable_point
     entity *Occupier;
 };
 
+struct move_spec
+{
+    bool32 UnitMaxAccelVector;
+    real32 Speed;
+    real32 Drag;
+};
+
 enum entity_movement_mode
 {
     MovementMode_Planted,
     MovementMode_Hopping,
 };
+
+struct entity_visible_piece
+{
+    v4 Color;
+    asset_type_id AssetType;
+    r32 Height;
+};
+
 struct entity
 {
     entity_id ID;
@@ -134,7 +149,7 @@ struct entity
     r32 WalkableHeight;
 
     entity_movement_mode MovementMode;
-    move_spec MoveSpec;
+    move_spec MoveSpec; // TODO: Do not pack this
     r32 tMovement;
     traversable_reference Occupying;
     traversable_reference CameFrom;
@@ -146,6 +161,9 @@ struct entity
 
     u32 TraversableCount;
     entity_traversable_point Traversables[16];
+
+    u32 PieceCount;
+    entity_visible_piece Pieces[4];
 
     // TODO: Generation index so I know how "up to date" this entity is
 };

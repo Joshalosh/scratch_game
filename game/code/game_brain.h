@@ -4,7 +4,12 @@ struct entity;
 enum brain_type
 {
     Brain_Hero,
+
+    // NOTE: Test Brains
     Brain_Snake,
+    Brain_Familiar,
+    Brain_FloatyThingForNow,
+    Brain_Monster,
 
     Brain_Count,
 };
