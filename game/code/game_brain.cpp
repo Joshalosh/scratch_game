@@ -184,7 +184,7 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
                 for(u32 E = 0; E < 3; ++E)
                 {
 #if 1
-                    if(NoPush || (TimerIsUp && (Square(ConHero->ddP.E[E]) < 0.1f)))
+                    if(NoPush || (TimerIsUp && (Square(ddP2.E[E]) < 0.1f)))
 #else
                     if(NoPush)
 #endif

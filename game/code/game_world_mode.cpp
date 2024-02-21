@@ -90,12 +90,13 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
 }
 
 internal void
-AddPiece(entity *Entity, asset_type_id AssetType, r32 Height, v4 Color)
+AddPiece(entity *Entity, asset_type_id AssetType, r32 Height, v3 Offset, v4 Color)
 {
     Assert(Entity->PieceCount < ArrayCount(Entity->Pieces));
     entity_visible_piece *Piece = Entity->Pieces + Entity->PieceCount++;
     Piece->AssetType = AssetType;
     Piece->Height = Height;
+    Piece->Offset = Offset;
     Piece->Color = Color;
 }
 
@@ -106,7 +107,7 @@ AddWall(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32
     entity *Entity = BeginGroundedEntity(WorldMode, EntityType_Wall, WorldMode->WallCollision);
     AddFlags(Entity, EntityFlag_Collides);
 
-    AddPiece(Entity, Asset_Tree, 2.5f, V4(1, 1, 1, 1));
+    AddPiece(Entity, Asset_Tree, 2.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
 
     EndEntity(WorldMode, Entity, P);
 }
@@ -167,6 +168,9 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
 
     entity_id Result = Head->ID;
 
+    real32 HeroSizeC = 3.0f;
+    AddPiece(Head, Asset_Head, HeroSizeC*1.2f, V3(0, -0.7f, 0), V4(1, 1, 1, 1));
+
     EndEntity(WorldMode, Head, P);
     EndEntity(WorldMode, Body, P);
 }
@@ -180,6 +184,9 @@ AddMonster(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uin
     AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
 
     InitHitPoints(Entity, 3);
+
+    AddPiece(Entity, Asset_Shadow, 4.5f, V3(0, 0, 0), V4(1, 1, 1, 0.5f));
+    AddPiece(Entity, Asset_Torso, 4.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
 
     EndEntity(WorldMode, Entity, P);
 }
@@ -762,20 +769,17 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             //
             // Pre-physics entity work.
             //
-            hero_bitmap_ids HeroBitmaps = {};
             asset_vector MatchVector = {};
             MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
             asset_vector WeightVector = {};
             WeightVector.E[Tag_FacingDirection] = 1.0f;
-            HeroBitmaps.Head = GetBestMatchBitmapFrom(TranState->Assets, Asset_Head, &MatchVector, &WeightVector);
-            HeroBitmaps.Cape = GetBestMatchBitmapFrom(TranState->Assets, Asset_Cape, &MatchVector, &WeightVector);
-            HeroBitmaps.Torso = GetBestMatchBitmapFrom(TranState->Assets, Asset_Torso, &MatchVector, &WeightVector);
 
-            real32 HeroSizeC = 3.0f;
+            real32 HeroSizeC = 3.0f; // TODO: Delete this
             switch(Entity->Type)
             {
                 case EntityType_HeroBody:
                 {
+#if 0
                     v4 Color = {1, 1, 1, 1};
                     v2 XAxis = Entity->XAxis;
                     v2 YAxis = Entity->YAxis;
@@ -785,15 +789,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Torso, HeroSizeC*1.2f, V3(0, 0.0f, -0.002f), Color, 1.0f, XAxis, YAxis);
                     PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Cape, HeroSizeC*1.2f, Offset + V3(0, Entity->tBob - 0.1f, -0.001f), Color, 1.0f, XAxis, YAxis);
                     DrawHitPoints(Entity, RenderGroup, EntityTransform);
-                } break;
-
-                case EntityType_HeroHead:
-                {
-                    PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Head, HeroSizeC*1.2f, V3(0, -0.7f, 0));
+#endif
                 } break;
 
                 case EntityType_Familiar:
                 {
+#if 0
                     bitmap_id BID = HeroBitmaps.Head;
                     Entity->tBob += dt;
                     if(Entity->tBob > Tau32)
@@ -804,25 +805,19 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow),
                                2.5f, V3(0, 0, 0), V4(1, 1, 1, (0.5f*ShadowAlpha) + 0.2f*BobSin));
                     PushBitmap(RenderGroup, EntityTransform, BID, 2.5f, V3(0, 0, 0.25f*BobSin));
-                } break;
-
-                case EntityType_Monster:
-                {
-                    PushBitmap(RenderGroup, EntityTransform, GetFirstBitmapFrom(TranState->Assets, Asset_Shadow),
-                               4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-                    PushBitmap(RenderGroup, EntityTransform, HeroBitmaps.Torso, 4.5f, V3(0, 0, 0));
+#endif
                 } break;
             }
+
+            DrawHitPoints(Entity, RenderGroup, EntityTransform);
 
             for(u32 PieceIndex = 0; PieceIndex < Entity->PieceCount; ++PieceIndex)
             {
                 entity_visible_piece *Piece = Entity->Pieces + PieceIndex;
                 bitmap_id BitmapID = GetBestMatchBitmapFrom(TranState->Assets, Piece->AssetType, 
                                                             &MatchVector, &WeightVector);
-                PushBitmap(RenderGroup, EntityTransform, BitmapID, Piece->Height, V3(0, 0, 0), Piece->Color);
+                PushBitmap(RenderGroup, EntityTransform, BitmapID, Piece->Height, Piece->Offset, Piece->Color);
             }
-
-            DrawHitPoints(Entity, RenderGroup, EntityTransform);
 
             for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
             {
@@ -896,6 +891,37 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     }
 
     RenderGroup->GlobalAlpha = 1.0f;
+
+    Orthographic(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, 1.0f);
+
+    PushRectOutline(RenderGroup, DefaultFlatTransform(), V3(MouseP, 0.0f), V2(2.0f, 2.0f));
+
+    // TODO: Make sure we hoist the camera update out to a place where the
+    // renderer can know about the location of the camera at the end of the
+    // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
+    EndSim(SimRegion, WorldMode);
+    EndTemporaryMemory(SimMemory);
+
+    b32 HeroesExist = false;
+    for(u32 ConHeroIndex = 0; ConHeroIndex < ArrayCount(GameState->ControlledHeroes); ++ConHeroIndex)
+    {
+        if(GameState->ControlledHeroes[ConHeroIndex].BrainID.Value)
+        {
+            HeroesExist = true;
+            break;
+        }
+    }
+    if(!HeroesExist)
+    {
+        PlayTitleScreen(GameState, TranState);
+    }
+
+    return(Result);
+}
+
+//
+// NOTE: Old code below here 
+//
 
 #if 0
     WorldMode->Time += Input->dtForFrame;
@@ -986,34 +1012,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         MapP += YAxis + V2(0.0f, 6.0f);
     }
 #endif
-
-    Orthographic(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, 1.0f);
-
-    PushRectOutline(RenderGroup, DefaultFlatTransform(), V3(MouseP, 0.0f), V2(2.0f, 2.0f));
-
-    // TODO: Make sure we hoist the camera update out to a place where the
-    // renderer can know about the location of the camera at the end of the
-    // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
-    EndSim(SimRegion, WorldMode);
-    EndTemporaryMemory(SimMemory);
-
-    b32 HeroesExist = false;
-    for(u32 ConHeroIndex = 0; ConHeroIndex < ArrayCount(GameState->ControlledHeroes); ++ConHeroIndex)
-    {
-        if(GameState->ControlledHeroes[ConHeroIndex].BrainID.Value)
-        {
-            HeroesExist = true;
-            break;
-        }
-    }
-    if(!HeroesExist)
-    {
-        PlayTitleScreen(GameState, TranState);
-    }
-
-    return(Result);
-}
-
 #if 0
     if(Global_Particles_Test)
     {

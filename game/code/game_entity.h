@@ -102,6 +102,7 @@ enum entity_movement_mode
 struct entity_visible_piece
 {
     v4 Color;
+    v3 Offset;
     asset_type_id AssetType;
     r32 Height;
 };
