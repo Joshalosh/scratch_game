@@ -4,10 +4,10 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
 {
     switch(Brain->Type)
     {
-        case Brain_Hero:
+        case Type_brain_hero:
         {
             // TODO: Check that they're not deleted when I do.
-            brain_hero_parts *Parts = &Brain->Hero;
+            brain_hero *Parts = &Brain->Hero;
             entity *Head = Parts->Head;
             entity *Body = Parts->Body;
 
@@ -88,12 +88,34 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
                 }
             }
 
-#if 0
-            if(Controller->Start.EndedDown)
+            if(Head && WasPressed(Controller->Start))
             {
-                ConHero->dZ = 3.0f;
+                entity *ClosestHero = 0;
+                r32 ClosestHeroDSq = Square(10.0f);
+                entity *TestEntity = SimRegion->Entities;
+                for(u32 TestEntityIndex = 0; TestEntityIndex < SimRegion->EntityCount; ++TestEntityIndex, ++TestEntity)
+                {
+                    if((TestEntity->BrainID.Value != Head->BrainID.Value) && TestEntity->BrainID.Value)
+                    {
+                        r32 TestDSq = LengthSq(TestEntity->P - Head->P);
+                        if(ClosestHeroDSq > TestDSq)
+                        {
+                            ClosestHero = TestEntity;
+                            ClosestHeroDSq = TestDSq;
+                        }
+                    }
+                }
+
+                if(ClosestHero)
+                {
+                    brain_id OldBrainID = Head->BrainID;
+                    brain_slot OldBrainSlot = Head->BrainSlot;
+                    Head->BrainID = ClosestHero->BrainID;
+                    Head->BrainSlot = ClosestHero->BrainSlot;
+                    ClosestHero->BrainID = OldBrainID;
+                    ClosestHero->BrainSlot = OldBrainSlot;
+                }
             }
-#endif
 
             dSword = {};
             if(Controller->ActionUp.EndedDown)
@@ -236,26 +258,29 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
             }
         } break;
 
-        case Brain_Snake:
+        case Type_brain_snake:
         {
         } break;
 
-        case Brain_Familiar:
+        case Type_brain_familiar:
         {
-#if 0
+            brain_familiar *Parts = &Brain->Familiar;
+            entity *Head = Parts->Head;
+
             entity *ClosestHero = 0;
             real32 ClosestHeroDSq = Square(10.0f);
 
             if(Global_AI_Familiar_FollowsHero)
             {
+                // TODO: Make spatial queries easy for things
                 entity *TestEntity = SimRegion->Entities;
                 for(u32 TestEntityIndex = 0;
                     TestEntityIndex < SimRegion->EntityCount;
                     ++TestEntityIndex, ++TestEntity)
                 {
-                    if(TestEntity->Type == EntityType_HeroBody)
+                    if(TestEntity->BrainSlot.Type == Type_brain_hero)
                     {
-                        real32 TestDSq = LengthSq(TestEntity->P - Entity->P);
+                        real32 TestDSq = LengthSq(TestEntity->P - Head->P);
                         if(ClosestHeroDSq > TestDSq)
                         {
                             ClosestHero = TestEntity;
@@ -269,23 +294,22 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
             {
                 real32 Acceleration = 0.5f;
                 real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
-                Entity->ddP = OneOverLength*(ClosestHero->P - Entity->P);
+                Head->ddP = OneOverLength*(ClosestHero->P - Head->P);
             }
 
-            MoveSpec.UnitMaxAccelVector = true;
-            MoveSpec.Speed = 50.0f;
-            MoveSpec.Drag = 8.0f;
-#endif
+            Head->MoveSpec.UnitMaxAccelVector = true;
+            Head->MoveSpec.Speed = 50.0f;
+            Head->MoveSpec.Drag = 8.0f;
         } break;
 
-        case Brain_FloatyThingForNow:
+        case Type_brain_floaty_thing_for_now:
         {
             // TODO: Think about what this stuff actually should mean
             //Entity->P.z += 0.05f*Cos(Entity->tBob);
             //Entity->tBob += dt;
         } break;
 
-        case Brain_Monster:
+        case Type_brain_monster:
         {
         } break;
 

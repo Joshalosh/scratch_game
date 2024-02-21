@@ -243,7 +243,7 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
 
                                 if(Dest->BrainID.Value)
                                 {
-                                    brain *Brain = GetOrAddBrain(SimRegion, Dest->BrainID, Dest->BrainType);
+                                    brain *Brain = GetOrAddBrain(SimRegion, Dest->BrainID, (brain_type)Dest->BrainSlot.Type);
                                     Assert(Dest->BrainSlot.Index < ArrayCount(Brain->Array));
                                     Brain->Array[Dest->BrainSlot.Index] = Dest;
                                 }
@@ -460,12 +460,14 @@ HandleCollision(game_mode_world *WorldMode, entity *A, entity *B)
 {
     bool32 StopsOnCollision = true;
 
+#if 0
     if(A->Type > B->Type)
     {
         entity *Temp = A;
         A = B;
         B = Temp;
     }
+#endif
 
     return(StopsOnCollision);
 }
@@ -477,10 +479,12 @@ CanOverlap(game_mode_world *WorldMode, entity *Mover, entity *Region)
 
     if(Mover != Region)
     {
+#if 0
         if(Region->Type == EntityType_Stairwell)
         {
             Result = true;
         }
+#endif
     }
 
     return(Result);
@@ -493,6 +497,7 @@ SpeculativeCollide(entity *Mover, entity *Region, v3 TestP)
 
     bool32 Result = true;
 
+#if 0
     if(Region->Type == EntityType_Stairwell)
     {
         real32 StepHeight = 0.1f;
@@ -504,6 +509,7 @@ SpeculativeCollide(entity *Mover, entity *Region, v3 TestP)
         real32 Ground = GetStairGround(Region, MoverGroundPoint);
         Result = (AbsoluteValue(MoverGroundPoint.z - Ground) > StepHeight);
     }
+#endif
 
     return(Result);
 }
@@ -563,11 +569,6 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, re
     TIMED_FUNCTION();
 
     world *World = SimRegion->World;
-
-    if(Entity->Type == EntityType_HeroHead)
-    {
-        int BreakHere = 5;
-    }
 
     if(MoveSpec->UnitMaxAccelVector)
     {
