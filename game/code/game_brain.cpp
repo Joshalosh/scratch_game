@@ -1,6 +1,7 @@
 
 inline void
-ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, brain *Brain, r32 dt)
+ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Input, 
+             sim_region *SimRegion, brain *Brain, r32 dt)
 {
     switch(Brain->Type)
     {
@@ -311,6 +312,28 @@ ExecuteBrain(game_state *GameState, game_input *Input, sim_region *SimRegion, br
 
         case Type_brain_monster:
         {
+            brain_monster *Parts = &Brain->Monster;
+            entity *Body = Parts->Body;
+            if(Body)
+            {
+                v3 Delta = {RandomBilateral(&WorldMode->GameEntropy), RandomBilateral(&WorldMode->GameEntropy), 0.0f};
+                traversable_reference Traversable;
+                if(GetClosestTraversable(SimRegion, Body->P + Delta, &Traversable))
+                {
+                    if(Body->MovementMode == MovementMode_Planted)
+                    {
+                        if(!IsEqual(Traversable, Body->Occupying))
+                        {
+                            Body->CameFrom = Body->Occupying;
+                            if(TransactionalOccupy(Body, &Body->Occupying, Traversable))
+                            {
+                                Body->tMovement = 0.0f;
+                                Body->MovementMode = MovementMode_Hopping;
+                            }
+                        }
+                    }
+                }
+            }
         } break;
 
         InvalidDefaultCase;

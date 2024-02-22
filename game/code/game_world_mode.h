@@ -54,7 +54,8 @@ struct game_mode_world
 
     real32 Time;
 
-    random_series EffectsEntropy; // This is entropy that doesn't affect the gameplay.
+    random_series GameEntropy; // NOTE: This is entropy that does affect the gameplay
+    random_series EffectsEntropy; // NOTE: This is entropy that doesn't affect the gameplay.
     real32 tSine;
 
 #define PARTICLE_CEL_DIM 32

@@ -1,4 +1,20 @@
 
+// TODO: Shadows should be handled specially, because they need their
+// own pass technically as well
+#define ShadowAlpha 0.5f
+
+internal void
+AddPiece(entity *Entity, asset_type_id AssetType, r32 Height, v3 Offset, v4 Color, u32 Flags = 0)
+{
+    Assert(Entity->PieceCount < ArrayCount(Entity->Pieces));
+    entity_visible_piece *Piece = Entity->Pieces + Entity->PieceCount++;
+    Piece->AssetType = AssetType;
+    Piece->Height = Height;
+    Piece->Offset = Offset;
+    Piece->Color = Color;
+    Piece->Flags = Flags;
+}
+
 internal brain_id
 AddBrain(game_mode_world *WorldMode)
 {
@@ -60,6 +76,53 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
 }
 
 internal void
+InitHitPoints(entity *Entity, uint32_t HitPointCount)
+{
+    Assert(HitPointCount <= ArrayCount(Entity->HitPoint));
+    Entity->HitPointMax = HitPointCount;
+    for(uint32_t HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
+    {
+        hit_point *HitPoint = Entity->HitPoint + HitPointIndex;
+        HitPoint->Flags = 0;
+        HitPoint->FilledAmount = HIT_POINT_SUB_COUNT;
+    }
+}
+
+internal void
+AddMonster(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn)
+{
+    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->MonsterCollision);
+    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
+
+    Entity->BrainSlot = BrainSlotFor(brain_monster, Body);
+    Entity->BrainID = AddBrain(WorldMode);
+    Entity->Occupying = StandingOn;
+
+    InitHitPoints(Entity, 3);
+
+    AddPiece(Entity, Asset_Shadow, 4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+    AddPiece(Entity, Asset_Torso, 4.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
+
+    EndEntity(WorldMode, Entity, P);
+}
+
+internal void
+AddFamiliar(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+{
+    world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
+    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FamiliarCollision);
+    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
+
+    Entity->BrainSlot = BrainSlotFor(brain_familiar, Head);
+    Entity->BrainID = AddBrain(WorldMode);
+
+    AddPiece(Entity, Asset_Shadow, 2.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+    AddPiece(Entity, Asset_Head, 2.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
+
+    EndEntity(WorldMode, Entity, P);
+}
+
+internal void
 AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ, random_series *Series)
 {
     for(s32 OffsetY = -4; OffsetY <= 4; ++OffsetY)
@@ -70,9 +133,11 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
                                                              AbsTileY + OffsetY, AbsTileZ);
             //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
 
+            traversable_reference StandingOn = {};
             if((OffsetX == 2) && (OffsetY == 2))
             {
                 entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                StandingOn.Entity.Index = Entity->ID;
                 Entity->TraversableCount = 1;
                 Entity->Traversables[0].P = V3(0, 0, 0);
                 Entity->Traversables[0].Occupier = 0;
@@ -81,25 +146,34 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
             else 
             {
                 entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                StandingOn.Entity.Index = Entity->ID;
                 Entity->TraversableCount = 1;
                 Entity->Traversables[0].P = V3(0, 0, 0);
                 Entity->Traversables[0].Occupier = 0;
                 EndEntity(WorldMode, Entity, P);
             }
+
+            if((OffsetX == -2) && (OffsetY == -2))
+            {
+                AddMonster(WorldMode, P, StandingOn);
+            }
+
+#if 0
+            AddMonster(WorldMode, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
+            for(u32 FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
+            {
+                int32_t FamiliarOffsetX = RandomBetween(&Series, -7, 7);
+                int32_t FamiliarOffsetY = RandomBetween(&Series, -3, -1);
+                if((FamiliarOffsetX != 0) ||
+                   (FamiliarOffsetY != 0))
+                {
+                    AddFamiliar(WorldMode, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY,
+                                CameraTileZ);
+                }
+            }
+#endif
         }
     }
-}
-
-internal void
-AddPiece(entity *Entity, asset_type_id AssetType, r32 Height, v3 Offset, v4 Color, u32 Flags = 0)
-{
-    Assert(Entity->PieceCount < ArrayCount(Entity->Pieces));
-    entity_visible_piece *Piece = Entity->Pieces + Entity->PieceCount++;
-    Piece->AssetType = AssetType;
-    Piece->Height = Height;
-    Piece->Offset = Offset;
-    Piece->Color = Color;
-    Piece->Flags = Flags;
 }
 
 internal void
@@ -125,22 +199,6 @@ AddStair(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint3
     EndEntity(WorldMode, Entity, P);
 }
 
-internal void
-InitHitPoints(entity *Entity, uint32_t HitPointCount)
-{
-    Assert(HitPointCount <= ArrayCount(Entity->HitPoint));
-    Entity->HitPointMax = HitPointCount;
-    for(uint32_t HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
-    {
-        hit_point *HitPoint = Entity->HitPoint + HitPointIndex;
-        HitPoint->Flags = 0;
-        HitPoint->FilledAmount = HIT_POINT_SUB_COUNT;
-    }
-}
-
-// TODO: Shadows should be handled specially, because they need their
-// own pass technically as well
-#define ShadowAlpha 0.5f
 internal void
 AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_reference StandingOn, brain_id BrainID)
 {
@@ -181,40 +239,6 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
 
     EndEntity(WorldMode, Head, P);
     EndEntity(WorldMode, Body, P);
-}
-
-internal void
-AddMonster(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
-{
-    world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
-    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->MonsterCollision);
-    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
-
-    Entity->BrainSlot = BrainSlotFor(brain_monster, Body);
-    Entity->BrainID = AddBrain(WorldMode);
-
-    InitHitPoints(Entity, 3);
-
-    AddPiece(Entity, Asset_Shadow, 4.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-    AddPiece(Entity, Asset_Torso, 4.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
-
-    EndEntity(WorldMode, Entity, P);
-}
-
-internal void
-AddFamiliar(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
-{
-    world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
-    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FamiliarCollision);
-    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
-
-    Entity->BrainSlot = BrainSlotFor(brain_familiar, Head);
-    Entity->BrainID = AddBrain(WorldMode);
-
-    AddPiece(Entity, Asset_Shadow, 2.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-    AddPiece(Entity, Asset_Head, 2.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
-
-    EndEntity(WorldMode, Entity, P);
 }
 
 internal void
@@ -389,6 +413,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     WorldMode->LastUsedEntityStorageIndex = ReservedBrainID_FirstFree;
 
     WorldMode->EffectsEntropy = RandomSeed(1234);
+    WorldMode->GameEntropy = RandomSeed(1234);
     WorldMode->TypicalFloorHeight = 3.0f;
 
     // TODO: Remove this.
@@ -419,8 +444,6 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                                          TileSideInMeters,
                                                          TileDepthInMeters);
 
-    random_series Series = RandomSeed(1234);
-
     uint32_t ScreenBaseX = 0;
     uint32_t ScreenBaseY = 0;
     uint32_t ScreenBaseZ = 0;
@@ -435,12 +458,13 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorBottom = false;
     bool32 DoorUp = false;
     bool32 DoorDown = false;
+    random_series *Series = &WorldMode->GameEntropy;
     for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
     {
 #if 0
-        uint32_t DoorDirection = RandomChoice(&Series, (DoorUp || DoorDown) ? 2 : 4);
+        uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
 #else
-        uint32_t DoorDirection = RandomChoice(&Series, 2);
+        uint32_t DoorDirection = RandomChoice(Series, 2);
 #endif
 
 //            DoorDirection = 3;
@@ -468,7 +492,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
         AddStandardRoom(WorldMode,
                         ScreenX*TilesPerWidth + TilesPerWidth/2,
                         ScreenY*TilesPerHeight + TilesPerHeight/2,
-                        AbsTileZ, &Series);
+                        AbsTileZ, Series);
 
         for(uint32_t TileY = 0; TileY < TilesPerHeight; ++TileY)
         {
@@ -568,19 +592,6 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     NewCameraP = ChunkPositionFromTilePosition(WorldMode->World, CameraTileX, CameraTileY, CameraTileZ);
     WorldMode->CameraP = NewCameraP;
 
-    AddMonster(WorldMode, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
-    for(u32 FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
-    {
-        int32_t FamiliarOffsetX = RandomBetween(&Series, -7, 7);
-        int32_t FamiliarOffsetY = RandomBetween(&Series, -3, -1);
-        if((FamiliarOffsetX != 0) ||
-           (FamiliarOffsetY != 0))
-        {
-            AddFamiliar(WorldMode, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY,
-                        CameraTileZ);
-        }
-    }
-
     GameState->WorldMode = WorldMode;
 }
 
@@ -671,7 +682,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
     {
         brain *Brain = SimRegion->Brains + BrainIndex;
-        ExecuteBrain(GameState, Input, SimRegion, Brain, dt);
+        ExecuteBrain(GameState, WorldMode, Input, SimRegion, Brain, dt);
     }
 
     // NOTE: Simulate all entities
