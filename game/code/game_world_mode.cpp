@@ -122,9 +122,16 @@ AddFamiliar(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, ui
     EndEntity(WorldMode, Entity, P);
 }
 
-internal void
+struct standard_room
+{
+    world_position P[17][9];
+    traversable_reference Ground[17][9];
+};
+internal standard_room
 AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ, random_series *Series)
 {
+    standard_room Result = {};
+
     for(s32 OffsetY = -4; OffsetY <= 4; ++OffsetY)
     {
         for(s32 OffsetX = -8; OffsetX <= 8; ++OffsetX)
@@ -153,10 +160,8 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
                 EndEntity(WorldMode, Entity, P);
             }
 
-            if((OffsetX == -2) && (OffsetY == -2))
-            {
-                AddMonster(WorldMode, P, StandingOn);
-            }
+            Result.P[OffsetX + 8][OffsetY + 4] = P;
+            Result.Ground[OffsetX + 8][OffsetY + 4] = StandingOn;
 
 #if 0
             AddMonster(WorldMode, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
@@ -174,6 +179,8 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
 #endif
         }
     }
+
+    return(Result);
 }
 
 internal void
@@ -489,10 +496,11 @@ PlayWorld(game_state *GameState, transient_state *TranState)
             DoorTop = true;
         }
 
-        AddStandardRoom(WorldMode,
-                        ScreenX*TilesPerWidth + TilesPerWidth/2,
-                        ScreenY*TilesPerHeight + TilesPerHeight/2,
-                        AbsTileZ, Series);
+        standard_room Room = AddStandardRoom(WorldMode,
+                                             ScreenX*TilesPerWidth + TilesPerWidth/2,
+                                             ScreenY*TilesPerHeight + TilesPerHeight/2,
+                                             AbsTileZ, Series);
+        AddMonster(WorldMode, Room.P[3][4], Room.Ground[3][4]);
 
         for(uint32_t TileY = 0; TileY < TilesPerHeight; ++TileY)
         {
