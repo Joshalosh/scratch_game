@@ -92,7 +92,7 @@ internal void
 AddMonster(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn)
 {
     entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->MonsterCollision);
-    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
+    AddFlags(Entity, EntityFlag_Collides);
 
     Entity->BrainSlot = BrainSlotFor(brain_monster, Body);
     Entity->BrainID = AddBrain(WorldMode);
@@ -107,17 +107,17 @@ AddMonster(game_mode_world *WorldMode, world_position P, traversable_reference S
 }
 
 internal void
-AddFamiliar(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddFamiliar(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn)
 {
-    world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
     entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FamiliarCollision);
-    AddFlags(Entity, EntityFlag_Collides|EntityFlag_Moveable);
+    AddFlags(Entity, EntityFlag_Collides);
 
     Entity->BrainSlot = BrainSlotFor(brain_familiar, Head);
     Entity->BrainID = AddBrain(WorldMode);
+    Entity->Occupying = StandingOn;
 
     AddPiece(Entity, Asset_Shadow, 2.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-    AddPiece(Entity, Asset_Head, 2.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
+    AddPiece(Entity, Asset_Head, 2.5f, V3(0, 0, 0), V4(1, 1, 1, 1), PieceMove_BobOffset);
 
     EndEntity(WorldMode, Entity, P);
 }
@@ -150,7 +150,7 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
                 Entity->Traversables[0].Occupier = 0;
                 EndEntity(WorldMode, Entity, P);
             }
-            else 
+            else
             {
                 entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
                 StandingOn.Entity.Index = Entity->ID;
@@ -162,21 +162,6 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
 
             Result.P[OffsetX + 8][OffsetY + 4] = P;
             Result.Ground[OffsetX + 8][OffsetY + 4] = StandingOn;
-
-#if 0
-            AddMonster(WorldMode, CameraTileX - 3, CameraTileY + 2, CameraTileZ);
-            for(u32 FamiliarIndex = 0; FamiliarIndex < 1; ++FamiliarIndex)
-            {
-                int32_t FamiliarOffsetX = RandomBetween(&Series, -7, 7);
-                int32_t FamiliarOffsetY = RandomBetween(&Series, -3, -1);
-                if((FamiliarOffsetX != 0) ||
-                   (FamiliarOffsetY != 0))
-                {
-                    AddFamiliar(WorldMode, CameraTileX + FamiliarOffsetX, CameraTileY + FamiliarOffsetY,
-                                CameraTileZ);
-                }
-            }
-#endif
         }
     }
 
@@ -184,13 +169,14 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
 }
 
 internal void
-AddWall(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint32_t AbsTileZ)
+AddWall(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn)
 {
-    world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ);
     entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->WallCollision);
     AddFlags(Entity, EntityFlag_Collides);
 
     AddPiece(Entity, Asset_Tree, 2.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
+
+    Entity->Occupying = StandingOn;
 
     EndEntity(WorldMode, Entity, P);
 }
@@ -213,15 +199,15 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
                                          GetSimSpaceTraversable(StandingOn).P);
 
     entity *Body = BeginGroundedEntity(WorldMode, WorldMode->HeroBodyCollision);
-    AddFlags(Body, EntityFlag_Collides|EntityFlag_Moveable);
+    AddFlags(Body, EntityFlag_Collides);
 
     entity *Head = BeginGroundedEntity(WorldMode, WorldMode->HeroHeadCollision);
-    AddFlags(Head, EntityFlag_Collides|EntityFlag_Moveable);
+    AddFlags(Head, EntityFlag_Collides);
 
     InitHitPoints(Body, 3);
 
     // TODO: We will probably need a creation-time system for
-    // gauranteeing now overlapping occupation
+    // guaranteeing now overlapping occupation
     Body->Occupying = StandingOn;
 
     Body->BrainSlot = BrainSlotFor(brain_hero, Body);
@@ -438,7 +424,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                                             TileSideInMeters,
                                                             2.0f*TileSideInMeters,
                                                             1.1f*TileDepthInMeters);
-    WorldMode->HeroHeadCollision = WorldMode->NullCollision; //MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f, 0.7f);
+    WorldMode->HeroHeadCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f, 0.7f);
     WorldMode->HeroBodyCollision = WorldMode->NullCollision; //MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.6f);
     WorldMode->MonsterCollision = WorldMode->NullCollision; //MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
     WorldMode->FamiliarCollision = WorldMode->NullCollision; //MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
@@ -501,13 +487,14 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
                                              AbsTileZ, Series);
         AddMonster(WorldMode, Room.P[3][4], Room.Ground[3][4]);
+        AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
 
-        for(uint32_t TileY = 0; TileY < TilesPerHeight; ++TileY)
+        for(uint32_t TileY = 0; TileY < ArrayCount(Room.P[0]); ++TileY)
         {
-            for(uint32_t TileX = 0; TileX < TilesPerWidth; ++TileX)
+            for(uint32_t TileX = 0; TileX < ArrayCount(Room.P); ++TileX)
             {
-                uint32_t AbsTileX = ScreenX*TilesPerWidth + TileX;
-                uint32_t AbsTileY = ScreenY*TilesPerHeight + TileY;
+                world_position P = Room.P[TileX][TileY];
+                traversable_reference Ground = Room.Ground[TileX][TileY];
 
                 bool32 ShouldBeDoor = false;
                 if((TileX == 0) && (!DoorLeft || (TileY != (TilesPerHeight/2))))
@@ -532,20 +519,22 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
                 if(TileX == 14)
                 {
-                    AddWall(WorldMode, AbsTileX, AbsTileY, AbsTileZ);
+                    AddWall(WorldMode, P, Ground);
                 }
 
                 if(ShouldBeDoor)
                 {
-                    AddWall(WorldMode, AbsTileX, AbsTileY, AbsTileZ);
+                    AddWall(WorldMode, P, Ground);
                 }
                 else if(CreatedZDoor)
                 {
+#if 0
                     if(((AbsTileZ % 2) && (TileX == 10) && (TileY == 5)) ||
                        (!(AbsTileZ % 2) && (TileX == 4) && (TileY == 5)))
                     {
                         AddStair(WorldMode, AbsTileX, AbsTileY, DoorDown ? AbsTileZ - 1 : AbsTileZ);
                     }
+#endif
                 }
             }
         }
@@ -778,9 +767,9 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             Entity->tBob += Entity->ddtBob*dt*dt + Entity->dtBob*dt;
             Entity->dtBob += Entity->ddtBob*dt;
 
-            if(IsSet(Entity, EntityFlag_Moveable))
+            if(LengthSq(Entity->ddP) > 0)
             {
-                MoveEntity(WorldMode, SimRegion, Entity, Input->dtForFrame, &Entity->MoveSpec, Entity->ddP);
+                MoveEntity(WorldMode, SimRegion, Entity, Input->dtForFrame, Entity->ddP);
             }
 
             object_transform EntityTransform = DefaultUprightTransform();

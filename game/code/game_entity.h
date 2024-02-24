@@ -58,8 +58,7 @@ enum entity_flags
 {
     // TODO Collides and ZSupported can prabably be removed.
     EntityFlag_Collides = (1 << 0),
-    EntityFlag_Moveable = (1 << 1),
-    EntityFlag_Deleted = (1 << 2),
+    EntityFlag_Deleted = (1 << 1),
 };
 
 struct entity_collision_volume
@@ -157,7 +156,6 @@ struct entity
     r32 WalkableHeight;
 
     entity_movement_mode MovementMode;
-    move_spec MoveSpec; // TODO: Do not pack this
     r32 tMovement;
     traversable_reference Occupying;
     traversable_reference CameFrom;

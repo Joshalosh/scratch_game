@@ -92,7 +92,7 @@ inline entity *
 GetEntityByID(sim_region *SimRegion, entity_id ID)
 {
     entity_hash *Entry = GetHashFromID(SimRegion, ID);
-    entity *Result = Entry->Ptr;
+    entity *Result = Entry ? Entry->Ptr : 0;
     return(Result);
 }
 
@@ -564,26 +564,11 @@ TransactionalOccupy(entity *Entity, traversable_reference *DestRef, traversable_
 }
 
 internal void
-MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, real32 dt, move_spec *MoveSpec, v3 ddP)
+MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, r32 dt, v3 ddP)
 {
     TIMED_FUNCTION();
 
     world *World = SimRegion->World;
-
-    if(MoveSpec->UnitMaxAccelVector)
-    {
-        real32 ddPLength = LengthSq(ddP);
-        if(ddPLength > 1.0f)
-        {
-            ddP *= (1.0f / SquareRoot(ddPLength));
-        }
-    }
-
-    ddP *= MoveSpec->Speed;
-
-    v3 Drag = -MoveSpec->Drag*Entity->dP;
-    Drag.z = 0.0f;
-    ddP += Drag;
 
     v3 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);
     Entity->dP = ddP*dt + Entity->dP;
