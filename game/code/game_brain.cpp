@@ -250,6 +250,48 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
 
         case Type_brain_snake:
         {
+            brain_snake *Parts = &Brain->Snake;
+
+            entity *Head = Parts->Segments[0];
+            if(Head)
+            {
+                v3 Delta = {RandomBilateral(&WorldMode->GameEntropy),
+                            RandomBilateral(&WorldMode->GameEntropy),
+                            0.0f};
+                traversable_reference Traversable;
+                if(GetClosestTraversable(SimRegion, Head->P + Delta, &Traversable))
+                {
+                    if(Head->MovementMode == MovementMode_Planted)
+                    {
+                        if(!IsEqual(Traversable, Head->Occupying))
+                        {
+                            traversable_reference LastOccupying = Head->Occupying;
+                            Head->CameFrom = Head->Occupying;
+                            if(TransactionalOccupy(Head, &Head->Occupying, Traversable))
+                            {
+                                Head->tMovement = 0.0f;
+                                Head->MovementMode = MovementMode_Hopping;
+
+                                for(u32 SegmentIndex = 1; 
+                                    SegmentIndex < ArrayCount(Parts->Segments); 
+                                    ++SegmentIndex)
+                                {
+                                    entity *Segment = Parts->Segments[SegmentIndex];
+                                    if(Segment)
+                                    {
+                                        Segment->CameFrom = Segment->Occupying;
+                                        TransactionalOccupy(Segment, &Segment->Occupying, LastOccupying);
+                                        LastOccupying = Segment->CameFrom;
+
+                                        Segment->tMovement = 0.0f;
+                                        Segment->MovementMode = MovementMode_Hopping;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } break;
 
         case Type_brain_familiar:
@@ -268,7 +310,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                     TestEntityIndex < SimRegion->EntityCount;
                     ++TestEntityIndex, ++TestEntity)
                 {
-                    if(TestEntity->BrainSlot.Type == Type_brain_hero)
+                    if(IsType(TestEntity->BrainSlot, Type_brain_hero))
                     {
                         real32 TestDSq = LengthSq(TestEntity->P - Head->P);
                         if(ClosestHeroDSq > TestDSq)
@@ -282,7 +324,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
 
             if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
             {
-                real32 Acceleration = 0.5f;
+                real32 Acceleration = 1.0f;
                 real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
                 Head->ddP = OneOverLength*(ClosestHero->P - Head->P);
             }

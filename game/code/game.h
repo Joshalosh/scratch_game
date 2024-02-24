@@ -8,6 +8,10 @@
    - Draw tile chunks so we can verify that things are aligned /
      in the chunks we want them to be in
 
+ - Entity System 
+   - What to do about geographically disparate entities that might only partially
+     get streamed in to a sim region, but which need to move together as a unit?
+
  - Audio
    - Fix the clicking bug at the end of samples.
 
@@ -36,7 +40,6 @@
    - Frinstances
      ZFUDGE
  - Collision detection
-   - Fix sword collisions
    - Clean up predicate proliferation. Can we make a nice clean
      set of flags/rules so that it's easy to understand how
      things work in terms of special handling? This may involve
@@ -56,13 +59,11 @@
    - Sim region merging? For multiple players?
    - Simple zoomed-out view for testing
  - AI
-   - Rudimentary monster example
-   * Pathfinding
+   - Pathfinding
    - AI 'storage'
 
  PRODUCTION
  -> GAME
-   - Entity system
    - Rudimentary world gen (no quality, just 'what sorts of things' we do)
      - Placement of background things
      - Connectivity?

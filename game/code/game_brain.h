@@ -21,6 +21,11 @@ struct brain_familiar
     entity *Head;
 };
 
+struct brain_snake
+{
+    entity *Segments[16];
+};
+
 //
 // NOTE: Brain
 //
@@ -43,7 +48,15 @@ struct brain_slot
     u16 Type;
     u16 Index;
 };
+inline b32
+IsType(brain_slot Slot, brain_type Type)
+{
+    b32 Result = ((Slot.Index != 0) && (Slot.Type == Type));
+    return(Result);
+}
+
 #define BrainSlotFor(type, Member) BrainSlotFor_(Type_##type, &(((type *)0)->Member) - (entity **)0)
+#define IndexedBrainSlotFor(type, Member, Index) BrainSlotFor_(Type_##type, (u16)(Index) + (u16)((((type *)0)->Member) - (entity **)0))
 inline brain_slot
 BrainSlotFor_(brain_type Type, u16 PackValue)
 {
@@ -65,11 +78,11 @@ struct brain
 
     union 
     {
+        entity *Array;
         brain_hero Hero;
         brain_monster Monster;
         brain_familiar Familiar;
-
-        entity *Array[16];
+        brain_snake Snake;
     };
 };
 

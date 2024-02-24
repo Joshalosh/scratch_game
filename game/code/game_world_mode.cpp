@@ -107,6 +107,25 @@ AddMonster(game_mode_world *WorldMode, world_position P, traversable_reference S
 }
 
 internal void
+AddSnakeSegment(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn, 
+                brain_id BrainID, u32 SegmentIndex)
+{
+    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->MonsterCollision);
+    AddFlags(Entity, EntityFlag_Collides);
+
+    Entity->BrainSlot = IndexedBrainSlotFor(brain_snake, Segments, SegmentIndex);
+    Entity->BrainID = BrainID;
+    Entity->Occupying = StandingOn;
+
+    InitHitPoints(Entity, 3);
+
+    AddPiece(Entity, Asset_Shadow, 1.5f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
+    AddPiece(Entity, SegmentIndex ? Asset_Torso : Asset_Head, 1.5f, V3(0, 0, 0), V4(1, 1, 1, 1));
+
+    EndEntity(WorldMode, Entity, P);
+}
+
+internal void
 AddFamiliar(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn)
 {
     entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FamiliarCollision);
@@ -452,7 +471,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 6; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -489,6 +508,13 @@ PlayWorld(game_state *GameState, transient_state *TranState)
         AddMonster(WorldMode, Room.P[3][4], Room.Ground[3][4]);
         AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
 
+        brain_id SnakeBrainID = AddBrain(WorldMode);
+        for(u32 SegmentIndex = 0; SegmentIndex < 12; ++SegmentIndex)
+        {
+            u32 X = 2 + SegmentIndex;
+            AddSnakeSegment(WorldMode, Room.P[X][2], Room.Ground[X][2], SnakeBrainID, SegmentIndex);
+        }
+
         for(uint32_t TileY = 0; TileY < ArrayCount(Room.P[0]); ++TileY)
         {
             for(uint32_t TileX = 0; TileX < ArrayCount(Room.P); ++TileX)
@@ -515,11 +541,6 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                 if((TileY == (TilesPerHeight - 1)) && (!DoorTop || (TileX != (TilesPerWidth/2))))
                 {
                     ShouldBeDoor = true;
-                }
-
-                if(TileX == 14)
-                {
-                    AddWall(WorldMode, P, Ground);
                 }
 
                 if(ShouldBeDoor)
@@ -767,7 +788,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             Entity->tBob += Entity->ddtBob*dt*dt + Entity->dtBob*dt;
             Entity->dtBob += Entity->ddtBob*dt;
 
-            if(LengthSq(Entity->ddP) > 0)
+            if((LengthSq(Entity->dP) > 0) || (LengthSq(Entity->ddP) > 0))
             {
                 MoveEntity(WorldMode, SimRegion, Entity, Input->dtForFrame, Entity->ddP);
             }

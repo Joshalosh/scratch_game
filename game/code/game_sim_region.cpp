@@ -244,8 +244,10 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                 if(Dest->BrainID.Value)
                                 {
                                     brain *Brain = GetOrAddBrain(SimRegion, Dest->BrainID, (brain_type)Dest->BrainSlot.Type);
-                                    Assert(Dest->BrainSlot.Index < ArrayCount(Brain->Array));
-                                    Brain->Array[Dest->BrainSlot.Index] = Dest;
+                                    u8 *Ptr = (u8 *)&Brain->Array;
+                                    Ptr += sizeof(entity *)*Dest->BrainSlot.Index;
+                                    Assert(Ptr <= ((u8 *)Brain + sizeof(brain) - sizeof(entity *)));
+                                    *((entity **)Ptr) = Dest;
                                 }
                             }
                             else
