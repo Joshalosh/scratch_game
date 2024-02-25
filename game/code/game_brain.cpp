@@ -304,10 +304,11 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                 real32 ClosestHeroDSq = Square(10.0f);
 
                 b32 Blocked = true;
+                
                 traversable_reference Traversable;
                 if(GetClosestTraversable(SimRegion, Head->P, &Traversable))
                 {
-                    if(!IsEqual(Traversable, Head->Occupying))
+                    if(IsEqual(Traversable, Head->Occupying))
                     {
                         Blocked = false;
                     }
