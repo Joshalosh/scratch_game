@@ -298,35 +298,55 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
         {
             brain_familiar *Parts = &Brain->Familiar;
             entity *Head = Parts->Head;
-
-            entity *ClosestHero = 0;
-            real32 ClosestHeroDSq = Square(10.0f);
-
-            if(Global_AI_Familiar_FollowsHero)
+            if(Head)
             {
-                // TODO: Make spatial queries easy for things
-                entity *TestEntity = SimRegion->Entities;
-                for(u32 TestEntityIndex = 0;
-                    TestEntityIndex < SimRegion->EntityCount;
-                    ++TestEntityIndex, ++TestEntity)
+                entity *ClosestHero = 0;
+                real32 ClosestHeroDSq = Square(10.0f);
+
+                b32 Blocked = true;
+                traversable_reference Traversable;
+                if(GetClosestTraversable(SimRegion, Head->P, &Traversable))
                 {
-                    if(IsType(TestEntity->BrainSlot, Type_brain_hero))
+                    if(!IsEqual(Traversable, Head->Occupying))
                     {
-                        real32 TestDSq = LengthSq(TestEntity->P - Head->P);
-                        if(ClosestHeroDSq > TestDSq)
+                        Blocked = false;
+                    }
+                    else
+                    {
+                        if(TransactionalOccupy(Head, &Head->Occupying, Traversable))
                         {
-                            ClosestHero = TestEntity;
-                            ClosestHeroDSq = TestDSq;
+                            Blocked = false;
                         }
                     }
                 }
-            }
 
-            if(ClosestHero && (ClosestHeroDSq > Square(3.0f)))
-            {
-                real32 Acceleration = 1.0f;
-                real32 OneOverLength = Acceleration / SquareRoot(ClosestHeroDSq);
-                Head->ddP = OneOverLength*(ClosestHero->P - Head->P);
+                v3 TargetP = GetSimSpaceTraversable(Head->Occupying).P;
+                if(!Blocked)
+                {
+                    // TODO: Make spatial queries easy for things
+                    entity *TestEntity = SimRegion->Entities;
+                    for(u32 TestEntityIndex = 0;
+                        TestEntityIndex < SimRegion->EntityCount;
+                        ++TestEntityIndex, ++TestEntity)
+                    {
+                        if(IsType(TestEntity->BrainSlot, Type_brain_hero))
+                        {
+                            real32 TestDSq = LengthSq(TestEntity->P - Head->P);
+                            if(ClosestHeroDSq > TestDSq)
+                            {
+                                ClosestHero = TestEntity;
+                                ClosestHeroDSq = TestDSq;
+                            }
+                        }
+                    }
+
+                    if(ClosestHero) // && (ClosestHeroDSq > Square(3.0f)))
+                    {
+                        TargetP = ClosestHero->P;
+                    }
+                }
+
+                Head->ddP = 10.0f*(TargetP - Head->P) - 8.0f*(Head->dP);
             }
         } break;
 

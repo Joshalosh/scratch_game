@@ -774,6 +774,7 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Re
                 {
                     // P.P;
                     Result->Entity.Ptr = TestEntity;
+                    Result->Entity.Index = TestEntity->ID;
                     Result->Index = PIndex;
                     ClosestDistanceSq = TestDSq;
                     Found = true;
