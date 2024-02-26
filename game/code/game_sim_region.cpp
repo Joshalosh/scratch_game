@@ -269,6 +269,8 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
 
     ConnectEntityPointers(SimRegion);
 
+    DEBUG_VALUE(SimRegion->EntityCount);
+
     return(SimRegion);
 }
 
@@ -830,4 +832,35 @@ GetClosestTraversableAlongRay(sim_region *SimRegion, v3 FromP, v3 Dir, traversab
     }
 
     return(Found);
+}
+
+struct closest_entity
+{
+    entity *Entity;
+    v3 Delta;
+    r32 DistanceSq;
+};
+internal closest_entity
+GetClosestEntityWithBrain(sim_region *SimRegion, v3 P, brain_type Type, r32 MaxRadius = 20.0f)
+{
+    closest_entity Result = {};
+    Result.DistanceSq = Square(MaxRadius);
+
+    entity *TestEntity = SimRegion->Entities;
+    for(u32 TestEntityIndex = 0; TestEntityIndex < SimRegion->EntityCount; ++TestEntityIndex, ++TestEntity)
+    {
+        if(IsType(TestEntity->BrainSlot, Type))
+        {
+            v3 TestDelta = TestEntity->P - P;
+            r32 TestDSq = LengthSq(TestDelta);
+            if(Result.DistanceSq > TestDSq)
+            {
+                Result.Entity = TestEntity;
+                Result.DistanceSq = TestDSq;
+                Result.Delta = TestDelta;
+            }
+        }
+    }
+
+    return(Result);
 }

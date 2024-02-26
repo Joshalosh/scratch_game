@@ -324,35 +324,16 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                 v3 TargetP = GetSimSpaceTraversable(Head->Occupying).P;
                 if(!Blocked)
                 {
-                    // TODO: Make spatial queries easy for things
-                    entity *TestEntity = SimRegion->Entities;
-                    for(u32 TestEntityIndex = 0;
-                        TestEntityIndex < SimRegion->EntityCount;
-                        ++TestEntityIndex, ++TestEntity)
+                    closest_entity Closest = GetClosestEntityWithBrain(SimRegion, Head->P, Type_brain_hero);
+                    if(Closest.Entity) // && (ClosestHeroDSq > Square(3.0f)))
                     {
-                        if(IsType(TestEntity->BrainSlot, Type_brain_hero))
-                        {
-                            real32 TestDSq = LengthSq(TestEntity->P - Head->P);
-                            if(ClosestHeroDSq > TestDSq)
-                            {
-                                ClosestHero = TestEntity;
-                                ClosestHeroDSq = TestDSq;
-                            }
-                        }
-                    }
-
-                    if(ClosestHero) // && (ClosestHeroDSq > Square(3.0f)))
-                    {
-                        r32 DefaultDistance = 1.0f;
-                        v3 Delta = DefaultDistance*NOZ(ClosestHero->P - Head->P);
-
                         traversable_reference TargetTraversable;
-                        if(GetClosestTraversableAlongRay(SimRegion, Head->P, Delta, 
+                        if(GetClosestTraversableAlongRay(SimRegion, Head->P, NOZ(Closest.Delta), 
                                                          Head->Occupying, &TargetTraversable))
                         {
                             if(!IsOccupied(TargetTraversable))
                             {
-                                TargetP = ClosestHero->P;
+                                TargetP = Closest.Entity->P;
                             }
                         }
                     }
