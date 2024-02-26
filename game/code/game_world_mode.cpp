@@ -157,6 +157,9 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
                                                              AbsTileY + OffsetY, AbsTileZ);
+            P.Offset_.x += 0.25f*RandomBilateral(Series);
+            P.Offset_.y += 0.25f*RandomBilateral(Series);
+
             //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
 
             traversable_reference StandingOn = {};

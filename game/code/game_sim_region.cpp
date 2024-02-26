@@ -544,6 +544,20 @@ EntitiesOverlap(entity *Entity, entity *TestEntity, v3 Epsilon = V3(0, 0, 0))
     return(Result);
 }
 
+inline b32
+IsOccupied(traversable_reference Ref)
+{
+    b32 Result = true;
+
+    entity_traversable_point *Dest = GetTraversable(Ref);
+    if(Dest)
+    {
+        Result = (Dest->Occupier != 0);
+    }
+
+    return(Result);
+}
+
 internal b32
 TransactionalOccupy(entity *Entity, traversable_reference *DestRef, traversable_reference DesiredRef)
 {
@@ -752,6 +766,8 @@ enum traversable_search_flag
 internal b32
 GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Result, u32 Flags = 0)
 {
+    TIMED_FUNCTION();
+
     b32 Found = false;
 
     r32 ClosestDistanceSq = Square(1000.0f);
@@ -792,3 +808,26 @@ GetClosestTraversable(sim_region *SimRegion, v3 FromP, traversable_reference *Re
     return(Found);
 }
 
+internal b32
+GetClosestTraversableAlongRay(sim_region *SimRegion, v3 FromP, v3 Dir, traversable_reference Skip,
+                              traversable_reference *Result, u32 Flags = 0)
+{
+    TIMED_FUNCTION();
+
+    b32 Found = false;
+
+    for(u32 ProbeIndex = 0; ProbeIndex < 5; ++ProbeIndex)
+    {
+        v3 SampleP = FromP + 0.5f*(r32)ProbeIndex*Dir;
+        if(GetClosestTraversable(SimRegion, SampleP, Result, Flags))
+        {
+            if(!IsEqual(Skip, *Result))
+            {
+                Found = true;
+                break;
+            }
+        }
+    }
+
+    return(Found);
+}

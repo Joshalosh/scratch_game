@@ -343,7 +343,18 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
 
                     if(ClosestHero) // && (ClosestHeroDSq > Square(3.0f)))
                     {
-                        TargetP = ClosestHero->P;
+                        r32 DefaultDistance = 1.0f;
+                        v3 Delta = DefaultDistance*NOZ(ClosestHero->P - Head->P);
+
+                        traversable_reference TargetTraversable;
+                        if(GetClosestTraversableAlongRay(SimRegion, Head->P, Delta, 
+                                                         Head->Occupying, &TargetTraversable))
+                        {
+                            if(!IsOccupied(TargetTraversable))
+                            {
+                                TargetP = ClosestHero->P;
+                            }
+                        }
                     }
                 }
 
