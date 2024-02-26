@@ -512,7 +512,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
         AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
 
         brain_id SnakeBrainID = AddBrain(WorldMode);
-        for(u32 SegmentIndex = 0; SegmentIndex < 12; ++SegmentIndex)
+        for(u32 SegmentIndex = 0; SegmentIndex < 5; ++SegmentIndex)
         {
             u32 X = 2 + SegmentIndex;
             AddSnakeSegment(WorldMode, Room.P[X][2], Room.Ground[X][2], SnakeBrainID, SegmentIndex);
