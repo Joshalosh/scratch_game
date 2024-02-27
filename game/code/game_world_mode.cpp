@@ -226,6 +226,10 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     entity *Head = BeginGroundedEntity(WorldMode, WorldMode->HeroHeadCollision);
     AddFlags(Head, EntityFlag_Collides);
 
+    entity *Glove = BeginGroundedEntity(WorldMode, WorldMode->HeroGloveCollision);
+    AddFlags(Glove, EntityFlag_Collides);
+    Glove->MovementMode = MovementMode_AngleOffset;
+
     InitHitPoints(Body, 3);
 
     // TODO: We will probably need a creation-time system for
@@ -236,6 +240,8 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     Body->BrainID = BrainID;
     Head->BrainSlot = BrainSlotFor(brain_hero, Head);
     Head->BrainID = BrainID;
+    Glove->BrainSlot = BrainSlotFor(brain_hero, Glove);
+    Glove->BrainID = BrainID;
 
     if(WorldMode->CameraFollowingEntityIndex.Value == 0)
     {
@@ -252,6 +258,9 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
 
     AddPiece(Head, Asset_Head, HeroSizeC*1.2f, V3(0, -0.7f, 0), Color);
 
+    AddPiece(Glove, Asset_Sword, HeroSizeC*0.25f, V3(0, 0, 0), Color);
+
+    EndEntity(WorldMode, Glove, P);
     EndEntity(WorldMode, Head, P);
     EndEntity(WorldMode, Body, P);
 }
@@ -448,6 +457,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                                             1.1f*TileDepthInMeters);
     WorldMode->HeroHeadCollision = MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f, 0.7f);
     WorldMode->HeroBodyCollision = WorldMode->NullCollision; //MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.6f);
+    WorldMode->HeroGloveCollision = WorldMode->NullCollision;
     WorldMode->MonsterCollision = WorldMode->NullCollision; //MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
     WorldMode->FamiliarCollision = WorldMode->NullCollision; //MakeSimpleGroundedCollision(WorldMode, 1.0f, 0.5f, 0.5f);
     WorldMode->WallCollision = MakeSimpleGroundedCollision(WorldMode,
@@ -782,6 +792,31 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     {
                         Entity->tMovement = 1.0f;
                     }
+                } break;
+
+                case MovementMode_AttackSwipe:
+                {
+                    if(Entity->tMovement < 1.0f)
+                    {
+                        Entity->AngleCurrent = Lerp(Entity->AngleStart, Entity->tMovement, Entity->AngleTarget);
+                    }
+                    else 
+                    {
+                        Entity->MovementMode = MovementMode_AngleOffset;
+                        Entity->AngleCurrent = Entity->AngleTarget;
+                    }
+
+                    Entity->tMovement += 4.0f*dt;
+                    if(Entity->tMovement > 1.0f)
+                    {
+                        Entity->tMovement = 1.0f;
+                    }
+                } break;
+
+                case MovementMode_AngleOffset:
+                {
+                    v2 Arm = 0.5f*Arm2(Entity->AngleCurrent + Entity->FacingDirection);
+                    Entity->P = Entity->AngleBase + V3(Arm.x, Arm.y + 0.5f, 0.0f);
                 } break;
             }
 

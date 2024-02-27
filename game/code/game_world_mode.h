@@ -47,6 +47,7 @@ struct game_mode_world
     entity_collision_volume_group *StairCollision;
     entity_collision_volume_group *HeroHeadCollision;
     entity_collision_volume_group *HeroBodyCollision;
+    entity_collision_volume_group *HeroGloveCollision;
     entity_collision_volume_group *MonsterCollision;
     entity_collision_volume_group *FamiliarCollision;
     entity_collision_volume_group *WallCollision;
