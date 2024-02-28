@@ -87,6 +87,26 @@ Square(real32 A)
     return(Result);
 }
 
+inline r32
+Sin01(r32 t)
+{
+    r32 Result = Sin(Pi32*t);
+
+    return(Result);
+}
+
+inline r32
+Triangle01(r32 t)
+{
+    r32 Result = 2.0f*t;
+    if(Result > 1.0f)
+    {
+        Result = 2.0f - Result;
+    }
+
+    return(Result);
+}
+
 inline real32
 Lerp(real32 A, real32 t, real32 B)
 {

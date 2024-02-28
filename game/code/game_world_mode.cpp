@@ -229,6 +229,10 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     entity *Glove = BeginGroundedEntity(WorldMode, WorldMode->HeroGloveCollision);
     AddFlags(Glove, EntityFlag_Collides);
     Glove->MovementMode = MovementMode_AngleOffset;
+    Glove->AngleCurrent = -0.25f*Tau32;
+    Glove->AngleBaseDistance = 0.3f;
+    Glove->AngleSwipeDistance = 1.0f;
+    Glove->AngleCurrentDistance = 0.3f;
 
     InitHitPoints(Body, 3);
 
@@ -794,28 +798,34 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                     }
                 } break;
 
-                case MovementMode_AttackSwipe:
+                case MovementMode_AngleAttackSwipe:
                 {
                     if(Entity->tMovement < 1.0f)
                     {
                         Entity->AngleCurrent = Lerp(Entity->AngleStart, Entity->tMovement, Entity->AngleTarget);
+
+                        Entity->AngleCurrentDistance = Lerp(Entity->AngleBaseDistance,
+                                                            Triangle01(Entity->tMovement),
+                                                            Entity->AngleSwipeDistance);
                     }
                     else 
                     {
                         Entity->MovementMode = MovementMode_AngleOffset;
                         Entity->AngleCurrent = Entity->AngleTarget;
+                        Entity->AngleCurrentDistance = Entity->AngleBaseDistance;
                     }
 
-                    Entity->tMovement += 4.0f*dt;
+                    Entity->tMovement += 10.0f*dt;
                     if(Entity->tMovement > 1.0f)
                     {
                         Entity->tMovement = 1.0f;
                     }
-                } break;
+
+                }
 
                 case MovementMode_AngleOffset:
                 {
-                    v2 Arm = 0.5f*Arm2(Entity->AngleCurrent + Entity->FacingDirection);
+                    v2 Arm = Entity->AngleCurrentDistance*Arm2(Entity->AngleCurrent + Entity->FacingDirection);
                     Entity->P = Entity->AngleBase + V3(Arm.x, Arm.y + 0.5f, 0.0f);
                 } break;
             }

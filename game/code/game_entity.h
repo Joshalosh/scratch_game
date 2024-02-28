@@ -168,6 +168,9 @@ struct entity
     r32 AngleCurrent;
     r32 AngleStart;
     r32 AngleTarget;
+    r32 AngleCurrentDistance;
+    r32 AngleBaseDistance;
+    r32 AngleSwipeDistance;
 
     v2 XAxis;
     v2 YAxis;
