@@ -668,7 +668,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     real32 DistanceAboveGround = 9.0f;
     Perspective(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, MetresToPixels, FocalLength, DistanceAboveGround);
 
-    Clear(RenderGroup, V4(0.25f, 0.25f, 0.25f, 0.0f));
+    v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 1.0f);
+    Clear(RenderGroup, BackgroundColor);
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};
@@ -759,18 +760,22 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             // TODO: Probably indicates I want to seperate update and render
             // for entities sometime soon.
             v3 CameraRelativeGroundP = GetEntityGroundPoint(Entity) - CameraP;
-            RenderGroup->GlobalAlpha = 1.0f;
+
             if(CameraRelativeGroundP.z > FadeTopStartZ)
             {
-                RenderGroup->GlobalAlpha = Clamp01MapToRange(FadeTopEndZ,
-                                                             CameraRelativeGroundP.z,
-                                                             FadeTopStartZ);
+                r32 t = Clamp01MapToRange(FadeTopStartZ, CameraRelativeGroundP.z, FadeTopEndZ);
+                RenderGroup->tGlobalColor = V4(0, 0, 0, t);
+                RenderGroup->GlobalColor = V4(0, 0, 0, 0);
             }
             else if(CameraRelativeGroundP.z < FadeBottomStartZ)
             {
-                RenderGroup->GlobalAlpha = Clamp01MapToRange(FadeBottomEndZ,
-                                                             CameraRelativeGroundP.z,
-                                                             FadeBottomStartZ);
+                r32 t = Clamp01MapToRange(FadeBottomStartZ, CameraRelativeGroundP.z, FadeBottomEndZ);
+                RenderGroup->tGlobalColor = V4(t, t, t, 0.0f);
+                RenderGroup->GlobalColor = BackgroundColor;
+            }
+            else 
+            {
+                RenderGroup->tGlobalColor = V4(0, 0, 0, 0);
             }
 
             //
@@ -905,6 +910,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
             DrawHitPoints(Entity, RenderGroup, EntityTransform);
 
+            EntityTransform.Upright = false;
             for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
             {
                 entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
@@ -912,6 +918,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                                 Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
             }
 
+            BEGIN_BLOCK("TraversableRendering");
             for(u32 TraversableIndex = 0; 
                 TraversableIndex < Entity->TraversableCount;
                 ++TraversableIndex)
@@ -922,6 +929,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                          Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1) : V4(0.05f, 0.25f, 0.05f, 1));
                 PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
             }
+            END_BLOCK();
 
             if(DEBUG_UI_ENABLED)
             {
@@ -977,7 +985,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     }
     END_BLOCK();
 
-    RenderGroup->GlobalAlpha = 1.0f;
+    RenderGroup->tGlobalColor = V4(0, 0, 0, 0);
 
     Orthographic(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, 1.0f);
 
