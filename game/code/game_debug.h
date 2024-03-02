@@ -233,6 +233,7 @@ struct debug_state
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
 
+    object_transform ToolTipTransform;
     object_transform TextTransform;
     object_transform ShadowTransform;
     object_transform UITransform;

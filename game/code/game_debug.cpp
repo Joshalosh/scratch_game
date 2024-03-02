@@ -745,6 +745,8 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
         PC = 100.0f / TotalTime;
     }
 
+    r64 RunningSum = 0.0f;
+
     v2 At = V2(ProfileRect.Min.x, ProfileRect.Max.y - GetBaseline(DebugState));
     for(Index = 0; Index < LinkCount; ++Index)
     {
@@ -752,12 +754,24 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
         debug_statistic *Stats = &Entry->Stats;
         debug_element *Element = Entry->Element;
 
+        RunningSum += Stats->Sum;
+
         char TextBuffer[256];
         _snprintf_s(TextBuffer, sizeof(TextBuffer),
                     "%10ucy %02.02f%% %4d %s",
                     (u32)Stats->Sum, (PC*Stats->Sum), Stats->Count, 
                     Element->GUID + Element->NameStartsAt);
         TextOutAt(DebugState, At, TextBuffer);
+        rectangle2 TextRect = GetTextSize(DebugState, At, TextBuffer);
+
+        if(IsInRectangle(TextRect, MouseP))
+        {
+            char TextBuffer[256];
+            _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                        "Cumulative to this point: %02.02f%%",
+                        (PC*RunningSum));
+            AddTooltip(DebugState, TextBuffer);
+        }
 
         if(At.y < ProfileRect.Min.y)
         {
@@ -1989,6 +2003,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->LeftEdge = -0.5f*Width;
     DebugState->RightEdge = 0.5f*Width;
 
+    DebugState->ToolTipTransform = DefaultFlatTransform();
     DebugState->TextTransform = DefaultFlatTransform();
     DebugState->ShadowTransform = DefaultFlatTransform();
     DebugState->UITransform = DefaultFlatTransform();
@@ -1998,6 +2013,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->ShadowTransform.SortBias = 200000.0f;
     DebugState->UITransform.SortBias = 300000.0f;
     DebugState->TextTransform.SortBias = 400000.0f;
+    DebugState->ToolTipTransform.SortBias = 500000.0f;
 
     DebugState->DefaultClipRect = DebugState->RenderGroup.CurrentClipRectIndex;
 

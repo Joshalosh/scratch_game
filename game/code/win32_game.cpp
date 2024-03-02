@@ -737,8 +737,13 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
 
     if(GlobalRenderingType == Win32RenderType_RenderOpenGL_DisplayOpenGL)
     {
+        BEGIN_BLOCK("OpenGLRenderCommands");
         OpenGLRenderCommands(Commands, WindowWidth, WindowHeight);
+        END_BLOCK();
+
+        BEGIN_BLOCK("SwapBuffers");
         SwapBuffers(DeviceContext);
+        END_BLOCK();
     }
     else
     {

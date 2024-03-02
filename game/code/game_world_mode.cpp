@@ -157,37 +157,48 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
                                                              AbsTileY + OffsetY, AbsTileZ);
+            traversable_reference StandingOn = {};
 #if 0
             P.Offset_.x += 0.25f*RandomBilateral(Series);
             P.Offset_.y += 0.25f*RandomBilateral(Series);
 #endif
-            if((OffsetX == 3) &&
-               (OffsetY >= -2) &&
-               (OffsetY <= 2))
-            {
-                P.Offset_.z += 0.5f*(r32)(OffsetY + 2);
-            }
 
-            //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
-
-            traversable_reference StandingOn = {};
-            if((OffsetX == 2) && (OffsetY == 2))
+            if((OffsetX >= -5) &&
+               (OffsetX <= -3) &&
+               (OffsetY >= 0) &&
+               (OffsetY <= 1))
             {
-                entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
-                StandingOn.Entity.Index = Entity->ID;
-                Entity->TraversableCount = 1;
-                Entity->Traversables[0].P = V3(0, 0, 0);
-                Entity->Traversables[0].Occupier = 0;
-                EndEntity(WorldMode, Entity, P);
+                // NOTE: Hole down to floor below.
             }
-            else
+            else 
             {
-                entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
-                StandingOn.Entity.Index = Entity->ID;
-                Entity->TraversableCount = 1;
-                Entity->Traversables[0].P = V3(0, 0, 0);
-                Entity->Traversables[0].Occupier = 0;
-                EndEntity(WorldMode, Entity, P);
+                if((OffsetX == 3) &&
+                   (OffsetY >= -2) &&
+                   (OffsetY <= 2))
+                {
+                    P.Offset_.z += 0.5f*(r32)(OffsetY + 2);
+                }
+
+                //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
+
+                if((OffsetX == 2) && (OffsetY == 2))
+                {
+                    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                    StandingOn.Entity.Index = Entity->ID;
+                    Entity->TraversableCount = 1;
+                    Entity->Traversables[0].P = V3(0, 0, 0);
+                    Entity->Traversables[0].Occupier = 0;
+                    EndEntity(WorldMode, Entity, P);
+                }
+                else
+                {
+                    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                    StandingOn.Entity.Index = Entity->ID;
+                    Entity->TraversableCount = 1;
+                    Entity->Traversables[0].P = V3(0, 0, 0);
+                    Entity->Traversables[0].Occupier = 0;
+                    EndEntity(WorldMode, Entity, P);
+                }
             }
 
             Result.P[OffsetX + 8][OffsetY + 4] = P;
@@ -496,7 +507,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 6; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -530,7 +541,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                              ScreenX*TilesPerWidth + TilesPerWidth/2,
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
                                              AbsTileZ, Series);
-        AddMonster(WorldMode, Room.P[3][4], Room.Ground[3][4]);
+        AddMonster(WorldMode, Room.P[3][6], Room.Ground[3][6]);
         //AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
 
         brain_id SnakeBrainID = AddBrain(WorldMode);
@@ -669,8 +680,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     real32 FadeTopEndZ = 0.75f*WorldMode->TypicalFloorHeight;
     real32 FadeTopStartZ = 0.5f*WorldMode->TypicalFloorHeight;
-    real32 FadeBottomStartZ = -2.0f*WorldMode->TypicalFloorHeight;
-    real32 FadeBottomEndZ = -2.25f*WorldMode->TypicalFloorHeight;
+    real32 FadeBottomStartZ = -1.0f*WorldMode->TypicalFloorHeight;
+    real32 FadeBottomEndZ = -4.0f*WorldMode->TypicalFloorHeight;
 
     // TODO: How big do I actually want to expand here?
     // TODO: Do we I want to simulate upper floors and stuff?
@@ -722,13 +733,16 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     }
 
     // NOTE: Run all brains
+    BEGIN_BLOCK("ExecuteBrains");
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
     {
         brain *Brain = SimRegion->Brains + BrainIndex;
         ExecuteBrain(GameState, WorldMode, Input, SimRegion, Brain, dt);
     }
+    END_BLOCK();
 
     // NOTE: Simulate all entities
+    BEGIN_BLOCK("SimulateEntities");
     for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
     {
         entity *Entity = SimRegion->Entities + EntityIndex;
@@ -762,6 +776,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             //
             // NOTE: Physics 
             //
+
+            BEGIN_BLOCK("EntityPhysics");
 
             switch(Entity->MovementMode)
             {
@@ -849,13 +865,14 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 MoveEntity(WorldMode, SimRegion, Entity, Input->dtForFrame, Entity->ddP);
             }
 
+            END_BLOCK();
+
             object_transform EntityTransform = DefaultUprightTransform();
             EntityTransform.OffsetP = GetEntityGroundPoint(Entity) - CameraP;
 
             //
             // NOTE: Rendering
             //
-
             asset_vector MatchVector = {};
             MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
             asset_vector WeightVector = {};
@@ -902,7 +919,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                 entity_traversable_point *Traversable =
                     Entity->Traversables + TraversableIndex;
                 PushRect(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), 
-                         Traversable->Occupier ? V4(0.0f, 0.5f, 1.0f, 1) : V4(1.0, 0.5f, 0.0f, 1));
+                         Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1) : V4(0.05f, 0.25f, 0.05f, 1));
                 PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
             }
 
@@ -958,6 +975,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             }
         }
     }
+    END_BLOCK();
 
     RenderGroup->GlobalAlpha = 1.0f;
 

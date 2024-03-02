@@ -160,6 +160,14 @@ GetTextSize(debug_state *DebugState, char *String)
     return(Result);
 }
 
+inline rectangle2
+GetTextSize(debug_state *DebugState, v2 At, char *String)
+{
+    rectangle2 Result = TextOp(DebugState, DEBUGTextOp_SizeText, At, String);
+
+    return(Result);
+}
+
 inline r32
 GetLineAdvance(debug_state *DebugState)
 {
@@ -411,10 +419,13 @@ AddTooltip(debug_state *DebugState, char *Text)
     layout_element Element = BeginElementRectangle(Layout, &Dim);
     EndElement(&Element);
 
+    PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, AddRadiusTo(Element.Bounds, V2(4.0f, 4.0f)), 
+             0.0f, V4(0, 0, 0, 0.75f));
+
     TextOutAt(DebugState, V2(GetMinCorner(Element.Bounds).x,
                              GetMaxCorner(Element.Bounds).y - 
                              DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
-              Text, V4(1, 1, 1, 1), 10000.0f);
+              Text, V4(1, 1, 1, 1), 110000.0f);
 
     RenderGroup->CurrentClipRectIndex = OldClipRect;
 }
