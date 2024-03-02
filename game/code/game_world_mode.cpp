@@ -157,8 +157,16 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
         {
             world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
                                                              AbsTileY + OffsetY, AbsTileZ);
+#if 0
             P.Offset_.x += 0.25f*RandomBilateral(Series);
             P.Offset_.y += 0.25f*RandomBilateral(Series);
+#endif
+            if((OffsetX == 3) &&
+               (OffsetY >= -2) &&
+               (OffsetY <= 2))
+            {
+                P.Offset_.z += 0.5f*(r32)(OffsetY + 2);
+            }
 
             //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
 
@@ -488,12 +496,12 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 6; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
 #else
-        uint32_t DoorDirection = RandomChoice(Series, 2);
+        uint32_t DoorDirection = 2; //RandomChoice(Series, 2);
 #endif
 
 //            DoorDirection = 3;
@@ -523,7 +531,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
                                              AbsTileZ, Series);
         AddMonster(WorldMode, Room.P[3][4], Room.Ground[3][4]);
-        AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
+        //AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
 
         brain_id SnakeBrainID = AddBrain(WorldMode);
         for(u32 SegmentIndex = 0; SegmentIndex < 5; ++SegmentIndex)
@@ -893,8 +901,9 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
             {
                 entity_traversable_point *Traversable =
                     Entity->Traversables + TraversableIndex;
-                PushRect(RenderGroup, EntityTransform, Traversable->P, V2(0.1f, 0.1f), 
+                PushRect(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), 
                          Traversable->Occupier ? V4(0.0f, 0.5f, 1.0f, 1) : V4(1.0, 0.5f, 0.0f, 1));
+                PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
             }
 
             if(DEBUG_UI_ENABLED)

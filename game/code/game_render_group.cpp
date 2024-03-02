@@ -167,7 +167,7 @@ PushRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Di
         if(Rect)
         {
             Rect->P = Basis.P;
-            Rect->Color = Color;
+            Rect->Color = Group->GlobalAlpha*Color;
             Rect->Dim = Basis.Scale*Dim;
         }
     }
