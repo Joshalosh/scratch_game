@@ -1,11 +1,21 @@
 
+inline r32
+ComputeSortKey(camera_transform CameraTransform, object_transform ObjectTransform, v4 OriginalP)
+{
+    r32 Result = 0;
+    return(Result);
+}
+
 inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransform,
                                                    object_transform ObjectTransform,
                                                    v3 OriginalP)
 {
     entity_basis_p_result Result = {};
 
-    v3 P = V3(OriginalP.xy, 0.0f) + ObjectTransform.OffsetP;
+    v3 P = OriginalP + ObjectTransform.OffsetP;
+    //v3 P = OriginalP.xyz + ObjectTransform.OffsetP.xyz;
+    //r32 Pw = OriginalP.w + ObjectTransform.OffsetP.w;
+    r32 Pw = 0;
 
     if(CameraTransform.Orthographic)
     {
@@ -37,9 +47,15 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransf
             Result.Valid = true;
         }
     }
+    
+    r32 PerspectiveZ = Result.Scale;
+    r32 DisplacementZ = Result.Scale*Pw;
 
-    Result.SortKey = ObjectTransform.SortBias + 
-        (4096.0f*(2.0f*P.z + OriginalP.z + 1.0f*(r32)ObjectTransform.Upright) - P.y);
+    r32 PerspectiveSortTerm = 4096.0f*PerspectiveZ;
+    r32 YSortTerm = -1024.0f*P.y;
+    r32 ZSortTerm = DisplacementZ;
+
+    Result.SortKey = (PerspectiveSortTerm + YSortTerm + ZSortTerm) + ObjectTransform.SortBias; 
 
     return(Result);
 }
@@ -253,7 +269,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
 }
 
 inline u32
-PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H)
+PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H, clip_rect_fx FX = {})
 {
     u32 Result = 0;
 
