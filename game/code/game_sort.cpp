@@ -187,3 +187,98 @@ RadixSort(u32 Count, sort_entry *First, sort_entry *Temp)
     }
 }
 
+struct sort_sprite_bound
+{
+    r32 YMin;
+    r32 YMax;
+    r32 ZMax;
+    u32 Index;
+};
+
+inline b32
+IsInFrontOf(sort_sprite_bound *A, sort_sprite_bound *B)
+{
+    b32 BothZSprites = ((A->YMin != A->YMax) && (B->YMin != B->YMax));
+    b32 AIncludesB = ((B->YMin >= A->YMin) && (B->YMin < A->YMax));
+    b32 BIncludesA = ((A->YMin >= B->YMin) && (A->YMin < B->YMax));
+
+    b32 SortByZ = (BothZSprites || AIncludesB || BIncludesA);
+
+    b32 Result = (SortByZ ? (A->ZMax > B->ZMax) : (A->YMin < B->YMin));
+    return(Result);
+}
+
+inline void
+Swap(sort_sprite_bound *A, sort_sprite_bound *B)
+{
+    sort_sprite_bound Temp = *B;
+    *B = *A;
+    *A = Temp;
+}
+
+internal void
+MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
+{
+    if(Count == 1)
+    {
+        // NOTE: Nothing to do
+    }
+    else if(Count == 2)
+    {
+        sort_sprite_bound *EntryA = First;
+        sort_sprite_bound *EntryB = First + 1;
+        if(IsInFrontOf(EntryB, EntryA))
+        {
+            Swap(EntryA, EntryB);
+        }
+    }
+    else
+    {
+        u32 Half0 = Count / 2;
+        u32 Half1 = Count - Half0;
+
+        Assert(Half0 >= 1);
+        Assert(Half1 >= 1);
+
+        sort_sprite_bound *InHalf0 = First;
+        sort_sprite_bound *InHalf1 = First + Half0;
+        sort_sprite_bound *End = First + Count;
+
+        MergeSort(Half0, InHalf0, Temp);
+        MergeSort(Half1, InHalf1, Temp);
+
+        sort_sprite_bound *ReadHalf0 = InHalf0;
+        sort_sprite_bound *ReadHalf1 = InHalf1;
+
+        sort_sprite_bound *Out = Temp;
+        for(u32 Index = 0; Index < Count; ++Index)
+        {
+            if(ReadHalf0 == InHalf1)
+            {
+                *Out++ = *ReadHalf1++;
+            }
+            else if(ReadHalf1 == End)
+            {
+                *Out++ = *ReadHalf0++;
+            }
+            else if(IsInFrontOf(ReadHalf0, ReadHalf1))
+            {
+                *Out++ = *ReadHalf0++;
+            }
+            else
+            {
+                *Out++ = *ReadHalf1++;
+            }
+        }
+        Assert(Out == (Temp + Count));
+        Assert(ReadHalf0 == InHalf1);
+        Assert(ReadHalf1 == End);
+
+        // TODO: Not necessary if we ping-pong
+        for(u32 Index = 0; Index < Count; ++Index)
+        {
+            First[Index] = Temp[Index];
+        }
+    }
+}
+
