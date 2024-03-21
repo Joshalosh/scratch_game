@@ -196,10 +196,10 @@ OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 Window
     OpenGLSetScreenspace(Commands->Width, Commands->Height);
 
     u32 SortEntryCount = Commands->PushBufferElementCount;
-    sort_entry *SortEntries = (sort_entry *)(Commands->PushBufferBase + Commands->SortEntryAt);
+    sort_sprite_bound *SortEntries = GetSortEntries(Commands);
 
     u32 ClipRectIndex = 0xFFFFFFFF;
-    sort_entry *Entry = SortEntries;
+    sort_sprite_bound *Entry = SortEntries;
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
         render_group_entry_header *Header = (render_group_entry_header *)

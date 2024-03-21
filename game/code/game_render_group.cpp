@@ -48,21 +48,12 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransf
         }
     }
     
-    r32 PerspectiveZ = Result.Scale;
-    r32 DisplacementZ = Result.Scale*Pw;
-
-    r32 PerspectiveSortTerm = 4096.0f*PerspectiveZ;
-    r32 YSortTerm = -1024.0f*P.y;
-    r32 ZSortTerm = DisplacementZ;
-
-    Result.SortKey = (PerspectiveSortTerm + YSortTerm + ZSortTerm) + ObjectTransform.SortBias; 
-
     return(Result);
 }
 
 #define PushRenderElement(Group, type, SortKey) (type *)PushRenderElement_(Group, sizeof(type), RenderGroupEntryType_##type, SortKey)
 inline void *
-PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type, r32 SortKey)
+PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type, sprite_bound SortKey)
 {
     game_render_commands *Commands = Group->Commands;
 
@@ -70,7 +61,7 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 
     Size += sizeof(render_group_entry_header);
 
-    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_entry)))
+    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_sprite_bound)))
     {
         render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + Commands->PushBufferSize);
         Header->Type = (u16)Type;
@@ -80,8 +71,8 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 #endif
         Result = (uint8_t *)Header + sizeof(*Header);
 
-        Commands->SortEntryAt -= sizeof(sort_entry);
-        sort_entry *Entry = (sort_entry *)(Commands->PushBufferBase + Commands->SortEntryAt);
+        Commands->SortEntryAt -= sizeof(sort_sprite_bound);
+        sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
         Entry->SortKey = SortKey;
         Entry->Index = Commands->PushBufferSize;
 
@@ -128,6 +119,29 @@ StoreColor(render_group *Group, v4 Source)
     return(Dest);
 }
 
+inline sprite_bound 
+GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
+{
+    sprite_bound SpriteBound;
+    SpriteBound.YMin = SpriteBound.YMax = ObjectTransform.OffsetP.y + Offset.y;
+    SpriteBound.ZMax = ObjectTransform.OffsetP.z + Offset.z;
+    if(ObjectTransform.Upright)
+    {
+        // TODO: More accurate ZMax calculations - this doesn't handle
+        // alignment, rotation, or axis shear/scale
+        SpriteBound.ZMax += 0.5f*Height;
+    }
+    else 
+    {
+        // TODO: More accurate ZMax calculations - this doesn't handle
+        // alignment, rotation, or axis shear/scale
+        SpriteBound.YMin = -0.5f*Height;
+        SpriteBound.YMax = 0.5f*Height;
+    }
+
+    return(SpriteBound);
+}
+
 inline void
 PushBitmap(render_group *Group, object_transform ObjectTransform,
            loaded_bitmap *Bitmap, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f,
@@ -136,7 +150,8 @@ PushBitmap(render_group *Group, object_transform ObjectTransform,
     used_bitmap_dim Dim = GetBitmapDim(Group, ObjectTransform, Bitmap, Height, Offset, CAlign, XAxis, YAxis);
     if(Dim.Basis.Valid)
     {
-        render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap, Dim.Basis.SortKey);
+        sprite_bound SpriteBound = GetBoundFor(ObjectTransform, Offset, Height);
+        render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap, SpriteBound);
         if(Entry)
         {
             Entry->Bitmap = Bitmap;
@@ -198,7 +213,8 @@ PushRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Di
     entity_basis_p_result Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, P);
     if(Basis.Valid)
     {
-        render_entry_rectangle *Rect = PushRenderElement(Group, render_entry_rectangle, Basis.SortKey);
+        sprite_bound SpriteBound = GetBoundFor(ObjectTransform, Offset, Dim.y);
+        render_entry_rectangle *Rect = PushRenderElement(Group, render_entry_rectangle, SpriteBound);
         if(Rect)
         {
             Rect->P = Basis.P;
@@ -235,7 +251,11 @@ PushRectOutline(render_group *Group, object_transform ObjectTransform, rectangle
 inline void
 Clear(render_group *Group, v4 Color)
 {
-    render_entry_clear *Entry = PushRenderElement(Group, render_entry_clear, Real32Minimum);
+    sprite_bound SortKey;
+    SortKey.YMin = Real32Minimum;
+    SortKey.YMax = Real32Maximum;
+    SortKey.ZMax = Real32Minimum;
+    render_entry_clear *Entry = PushRenderElement(Group, render_entry_clear, SortKey);
     if(Entry)
     {
         Entry->PremulColor = StoreColor(Group, Color);
@@ -276,7 +296,7 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H, clip_rect_fx FX = 
     game_render_commands *Commands = Group->Commands;
 
     u32 Size = sizeof(render_entry_cliprect);
-    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_entry)))
+    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_sprite_bound)))
     {
         render_entry_cliprect *Rect = (render_entry_cliprect *)
             (Commands->PushBufferBase + Commands->PushBufferSize);

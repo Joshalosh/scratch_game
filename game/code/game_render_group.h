@@ -168,7 +168,6 @@ struct entity_basis_p_result
     v2 P;
     r32 Scale;
     b32 Valid;
-    r32 SortKey;
 };
 
 struct used_bitmap_dim

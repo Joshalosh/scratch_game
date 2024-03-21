@@ -1098,30 +1098,6 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 }
 
 internal void
-SortEntries(game_render_commands *Commands, void *SortMemory)
-{
-    u32 Count = Commands->PushBufferElementCount;
-    sort_entry *Entries = (sort_entry *)(Commands->PushBufferBase + Commands->SortEntryAt);
-
-    // BubbleSort(Count, Entries, SortMemory);
-    // MergeSort(Count, Entries, SortMemory);
-    RadixSort(Count, Entries, (sort_entry *)SortMemory);
-
-#if GAME_SLOW
-    if(Count)
-    {
-        for(u32 Index = 0; Index < (Count - 1); ++Index)
-        {
-            sort_entry *EntryA = Entries + Index;
-            sort_entry *EntryB = EntryA + 1;
-
-            Assert(EntryA->SortKey <= EntryB->SortKey);
-        }
-    }
-#endif
-}
-
-internal void
 LineariseClipRects(game_render_commands *Commands, void *ClipMemory)
 {
     render_entry_cliprect *Out = (render_entry_cliprect *)ClipMemory;
@@ -1138,14 +1114,14 @@ RenderCommandsToBitmap(game_render_commands *Commands, loaded_bitmap *OutputTarg
     IGNORED_TIMED_FUNCTION();
 
     u32 SortEntryCount = Commands->PushBufferElementCount;
-    sort_entry *SortEntries = (sort_entry *)(Commands->PushBufferBase + Commands->SortEntryAt);
+    sort_sprite_bound *SortEntries = GetSortEntries(Commands);
 
     real32 NullPixelsToMetres = 1.0f;
 
     u32 ClipRectIndex = 0xFFFFFFFF;
     rectangle2i ClipRect = BaseClipRect;
 
-    sort_entry *Entry = SortEntries;
+    sort_sprite_bound *Entry = SortEntries;
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
         render_group_entry_header *Header = (render_group_entry_header *)

@@ -2502,7 +2502,7 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK("Frame Display");
 
-                    umm NeededSortMemorySize = RenderCommands.PushBufferElementCount * sizeof(sort_entry);
+                    umm NeededSortMemorySize = GetSortTempMemorySize(&RenderCommands);
                     if(CurrentSortMemorySize < NeededSortMemorySize)
                     {
                         Win32DeallocateMemory(SortMemory);

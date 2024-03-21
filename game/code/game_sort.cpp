@@ -187,24 +187,29 @@ RadixSort(u32 Count, sort_entry *First, sort_entry *Temp)
     }
 }
 
-struct sort_sprite_bound
+struct sprite_bound 
 {
     r32 YMin;
     r32 YMax;
     r32 ZMax;
+};
+
+struct sort_sprite_bound
+{
+    sprite_bound SortKey;
     u32 Index;
 };
 
 inline b32
-IsInFrontOf(sort_sprite_bound *A, sort_sprite_bound *B)
+IsInFrontOf(sprite_bound A, sprite_bound B)
 {
-    b32 BothZSprites = ((A->YMin != A->YMax) && (B->YMin != B->YMax));
-    b32 AIncludesB = ((B->YMin >= A->YMin) && (B->YMin < A->YMax));
-    b32 BIncludesA = ((A->YMin >= B->YMin) && (A->YMin < B->YMax));
+    b32 BothZSprites = ((A.YMin != A.YMax) && (B.YMin != B.YMax));
+    b32 AIncludesB = ((B.YMin >= A.YMin) && (B.YMin < A.YMax));
+    b32 BIncludesA = ((A.YMin >= B.YMin) && (A.YMin < B.YMax));
 
     b32 SortByZ = (BothZSprites || AIncludesB || BIncludesA);
 
-    b32 Result = (SortByZ ? (A->ZMax > B->ZMax) : (A->YMin < B->YMin));
+    b32 Result = (SortByZ ? (A.ZMax > B.ZMax) : (A.YMin < B.YMin));
     return(Result);
 }
 
@@ -227,7 +232,7 @@ MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
     {
         sort_sprite_bound *EntryA = First;
         sort_sprite_bound *EntryB = First + 1;
-        if(IsInFrontOf(EntryB, EntryA))
+        if(IsInFrontOf(EntryB->SortKey, EntryA->SortKey))
         {
             Swap(EntryA, EntryB);
         }
@@ -261,7 +266,7 @@ MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
             {
                 *Out++ = *ReadHalf0++;
             }
-            else if(IsInFrontOf(ReadHalf0, ReadHalf1))
+            else if(IsInFrontOf(ReadHalf0->SortKey, ReadHalf1->SortKey))
             {
                 *Out++ = *ReadHalf0++;
             }
@@ -280,5 +285,41 @@ MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
             First[Index] = Temp[Index];
         }
     }
+}
+
+inline sort_sprite_bound *
+GetSortEntries(game_render_commands *Commands)
+{
+    sort_sprite_bound *SortEntries = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
+    return(SortEntries);
+}
+
+inline umm
+GetSortTempMemorySize(game_render_commands *Commands)
+{
+    umm NeededSortMemorySize = Commands->PushBufferElementCount * sizeof(sort_sprite_bound);
+    return(NeededSortMemorySize);
+}
+
+internal void
+SortEntries(game_render_commands *Commands, void *SortMemory)
+{
+    u32 Count = Commands->PushBufferElementCount;
+    sort_sprite_bound *Entries = GetSortEntries(Commands);
+
+    MergeSort(Count, Entries, (sort_sprite_bound *)SortMemory);
+
+#if GAME_SLOW
+    if(Count)
+    {
+        for(u32 Index = 0; Index < (Count - 1); ++Index)
+        {
+            sort_sprite_bound *EntryA = Entries + Index;
+            sort_sprite_bound *EntryB = EntryA + 1;
+
+            Assert(IsInFrontOf(EntryA->SortKey, EntryB->SortKey));
+        }
+    }
+#endif
 }
 
