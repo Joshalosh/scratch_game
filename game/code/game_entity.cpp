@@ -202,7 +202,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
             object_transform EntityTransform = DefaultUprightTransform();
             EntityTransform.OffsetP = GetEntityGroundPoint(Entity) - CameraP;
-            s32 RelativeLayer = ConvertToLayerRelative(WorldMode, &EntityTransform.OffsetP.z);
+            r32 TempZ = EntityTransform.OffsetP.z;
+            s32 RelativeLayer = ConvertToLayerRelative(WorldMode, &TempZ);
 
             if((RelativeLayer >= MinimumLevelIndex) &&
                (RelativeLayer <= MaximumLevelIndex))

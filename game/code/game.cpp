@@ -455,7 +455,6 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 #else
 extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
 {
-    return(0);
 }
 #endif
 

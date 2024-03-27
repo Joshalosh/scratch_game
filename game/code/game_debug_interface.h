@@ -1,4 +1,4 @@
-#if !defined(GAME_DEBUG_INTERFACE_H)
+
 struct debug_table;
 #define DEBUG_GAME_FRAME_END(name) void name(game_memory *Memory, game_input *Input, game_render_commands *RenderCommands)
 typedef DEBUG_GAME_FRAME_END(debug_game_frame_end);
@@ -269,8 +269,9 @@ inline debug_id DEBUG_POINTER_ID(void *Pointer) {debug_id NullID = {}; return(Nu
 #define DEBUG_HIT(...)
 #define DEBUG_HIGHLIGHTED(...) 0
 #define DEBUG_REQUESTED(...) 0
+#define DEBUG_BEGIN_DATA_BLOCK(...)
+#define DEBUG_END_DATA_BLOCK(...)
+#define DEBUG_B32(...)
+#define DEBUGSetEventRecording(...)
 
-#endif
-
-#define GAME_DEBUG_INTERFACE_H
 #endif

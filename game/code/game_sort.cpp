@@ -232,7 +232,7 @@ MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
     {
         sort_sprite_bound *EntryA = First;
         sort_sprite_bound *EntryB = First + 1;
-        if(IsInFrontOf(EntryB->SortKey, EntryA->SortKey))
+        if(IsInFrontOf(EntryA->SortKey, EntryB->SortKey))
         {
             Swap(EntryA, EntryB);
         }
@@ -266,7 +266,7 @@ MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
             {
                 *Out++ = *ReadHalf0++;
             }
-            else if(IsInFrontOf(ReadHalf0->SortKey, ReadHalf1->SortKey))
+            else if(IsInFrontOf(ReadHalf1->SortKey, ReadHalf0->SortKey))
             {
                 *Out++ = *ReadHalf0++;
             }
@@ -317,7 +317,12 @@ SortEntries(game_render_commands *Commands, void *SortMemory)
             sort_sprite_bound *EntryA = Entries + Index;
             sort_sprite_bound *EntryB = EntryA + 1;
 
-            Assert(IsInFrontOf(EntryA->SortKey, EntryB->SortKey));
+            if(IsInFrontOf(EntryA->SortKey, EntryB->SortKey))
+            {
+                Assert((EntryA->SortKey.YMin == EntryB->SortKey.YMin) &&
+                       (EntryA->SortKey.YMax == EntryB->SortKey.YMax) &&
+                       (EntryA->SortKey.ZMax == EntryB->SortKey.ZMax));
+            }
         }
     }
 #endif
