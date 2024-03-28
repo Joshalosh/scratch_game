@@ -314,17 +314,74 @@ SortEntries(game_render_commands *Commands, void *SortMemory)
     {
         for(u32 Index = 0; Index < (Count - 1); ++Index)
         {
-            sort_sprite_bound *EntryA = Entries + Index;
-            sort_sprite_bound *EntryB = EntryA + 1;
-
-            if(IsInFrontOf(EntryA->SortKey, EntryB->SortKey))
+#if 0
+            // NOTE: This is the O(n) partial ordering check - only neighbors are verified
+            u32 IndexB = Index + 1;
+#else 
+            // NOTE: This is the O(n^2) total ordering check - all pairs verified
+            for(u32 IndexB = Index + 1; IndexB < Count; ++IndexB)
             {
-                Assert((EntryA->SortKey.YMin == EntryB->SortKey.YMin) &&
-                       (EntryA->SortKey.YMax == EntryB->SortKey.YMax) &&
-                       (EntryA->SortKey.ZMax == EntryB->SortKey.ZMax));
+#endif
+                sort_sprite_bound *EntryA = Entries + Index;
+                sort_sprite_bound *EntryB = Entries + IndexB;
+
+                if(IsInFrontOf(EntryA->SortKey, EntryB->SortKey))
+                {
+                    Assert((EntryA->SortKey.YMin == EntryB->SortKey.YMin) &&
+                           (EntryA->SortKey.YMax == EntryB->SortKey.YMax) &&
+                           (EntryA->SortKey.ZMax == EntryB->SortKey.ZMax));
+                }
             }
         }
     }
 #endif
 }
+
+#if 0
+struct sprite_node
+{
+    rectangle2 ScreenArea;
+    r32 ZMax;
+};
+
+struct sprite_edge
+{
+    u32 Front;
+    u32 Behind;
+};
+
+internal void 
+BuildSpriteGraph()
+{
+    u32 InputNodeCount;
+    sprite_node *InputNodes;
+
+    if(InputNodeCount)
+    {
+        for(u32 NodeIndexA = 0; NodeIndexA < (InputNodeCount - 1); ++NodeIndexA)
+        {
+            for(u32 NodeIndexB = NodeIndexA; NodeIndexB < InputNodeCount; ++NodeIndexB)
+            {
+                sprite_node *A = InputNodes + NodeIndexA;
+                sprite_node *B = InputNodes + NodeIndexB;
+
+                if(RectanglesIntersect(A->ScreenArea, B->ScreenArea))
+                {
+                    sprite_bound A = {A->ScreenArea.Min.y, A->ScreenArea.Max.y, A->ZMax};
+                    sprite_bound B = {B->ScreenArea.Min.y, B->ScreenArea.Max.y, B->ZMax};
+
+                    if(IsInFronOf(BoundA, BoundB))
+                    {
+                        AddEdge(A, B);
+                    }
+                    else 
+                    {
+                        AddEdge(B, A);
+                    }
+                }
+            }
+        }
+    }
+}
+#endif
 

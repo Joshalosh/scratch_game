@@ -135,8 +135,8 @@ GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
     {
         // TODO: More accurate ZMax calculations - this doesn't handle
         // alignment, rotation, or axis shear/scale
-        SpriteBound.YMin = -0.5f*Height;
-        SpriteBound.YMax = 0.5f*Height;
+        SpriteBound.YMin -= 0.5f*Height;
+        SpriteBound.YMax += 0.5f*Height;
     }
 
     return(SpriteBound);

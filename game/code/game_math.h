@@ -756,6 +756,16 @@ IsInRectangle(rectangle2 Rectangle, v2 Test)
     return(Result);
 }
 
+inline b32 
+RectanglesIntersect(rectangle2 A, rectangle2 B)
+{
+    b32 Result = !((B.Max.x <= A.Min.x) ||
+                   (B.Min.x >= A.Max.x) ||
+                   (B.Max.y <= A.Min.y) ||
+                   (B.Min.y >= A.Max.y));
+    return(Result);
+}
+
 inline v2
 GetBarycentric(rectangle2 A, v2 P)
 {
