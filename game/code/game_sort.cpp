@@ -287,6 +287,100 @@ MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
     }
 }
 
+inline b32
+IsZSprite(sprite_bound Bound)
+{
+    b32 Result = (Bound.YMin != Bound.YMax);
+    return(Result);
+}
+
+internal void 
+VerifyBuffer(u32 Count, sort_sprite_bound *Buffer, b32 ZSprite)
+{
+    for(u32 Index = 0; Index < Count; ++Index)
+    {
+        Assert(IsZSprite(Buffer[Index].SortKey) == ZSprite);
+        if(Index > 0)
+        {
+            Assert(IsInFrontOf(Buffer[Index].SortKey, Buffer[Index - 1].SortKey));
+        }
+    }
+}
+
+internal void
+SeperatedSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
+{
+    u32 YCount = 0;
+    u32 ZCount = 0;
+    for(u32 Index = 0; Index < Count; ++Index)
+    {
+        sort_sprite_bound *This = First + Index;
+        if(IsZSprite(This->SortKey))
+        {
+            Temp[ZCount++] = *This;
+        }
+        else 
+        {
+            First[YCount++] = *This;
+        }
+    }
+
+#if GAME_SLOW 
+    VerifyBuffer(YCount, First, false);
+    VerifyBuffer(ZCount, Temp, true);
+#endif
+
+    MergeSort(YCount, First, Temp + ZCount);
+    MergeSort(ZCount, Temp, First + YCount);
+    if(YCount == 1)
+    {
+        Temp[ZCount] = First[0];
+    }
+    else if(YCount == 2)
+    {
+        Temp[ZCount] = First[0];
+        Temp[ZCount + 1] = First[1];
+    }
+
+    sort_sprite_bound *InHalf0 = Temp;
+    sort_sprite_bound *InHalf1 = Temp + ZCount;
+
+#if GAME_SLOW 
+    VerifyBuffer(YCount, InHalf1, false);
+    VerifyBuffer(ZCount, InHalf0, true);
+#endif
+
+    sort_sprite_bound *End = InHalf1 + YCount;
+    sort_sprite_bound *ReadHalf0 = InHalf0;
+    sort_sprite_bound *ReadHalf1 = InHalf1;
+
+    sort_sprite_bound *Out = First;
+    for(u32 Index = 0; Index < Count; ++Index)
+    {
+        if(ReadHalf0 == InHalf1)
+        {
+            *Out++ = *ReadHalf1++;
+        }
+        else if(ReadHalf1 == End)
+        {
+            *Out++ = *ReadHalf0++;
+        }
+        //TODO: This merge comparison can be simpler now since we know
+        // which sprite is a Z sprite and which is a Y sprite
+        else if(IsInFrontOf(ReadHalf1->SortKey, ReadHalf0->SortKey))
+        {
+            *Out++ = *ReadHalf0++;
+        }
+        else
+        {
+            *Out++ = *ReadHalf1++;
+        }
+    }
+    Assert(Out == (First + Count));
+    Assert(ReadHalf0 == InHalf1);
+    Assert(ReadHalf1 == End);
+}
+
 inline sort_sprite_bound *
 GetSortEntries(game_render_commands *Commands)
 {
@@ -317,6 +411,7 @@ SortEntries(game_render_commands *Commands, void *SortMemory)
 #if 0
             // NOTE: This is the O(n) partial ordering check - only neighbors are verified
             u32 IndexB = Index + 1;
+            {
 #else 
             // NOTE: This is the O(n^2) total ordering check - all pairs verified
             for(u32 IndexB = Index + 1; IndexB < Count; ++IndexB)
