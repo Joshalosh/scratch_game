@@ -194,10 +194,25 @@ struct sprite_bound
     r32 ZMax;
 };
 
+struct sprite_edge
+{
+    sprite_edge *NextEdgeWithSameFront;
+    u32 Front;
+    u32 Behind;
+};
+
+enum sprite_flag
+{
+    Sprite_Visited = 0x1,
+    Sprite_Drawn = 0x2,
+};
 struct sort_sprite_bound
 {
+    sprite_edge *FirstEdgeWithMeAsFront;
+    rectangle2 ScreenArea;
     sprite_bound SortKey;
     u32 Index;
+    u32 Flags;
 };
 
 inline b32
@@ -395,13 +410,91 @@ GetSortTempMemorySize(game_render_commands *Commands)
     return(NeededSortMemorySize);
 }
 
-internal void
-SortEntries(game_render_commands *Commands, void *SortMemory)
+internal void 
+BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena)
 {
+    if(InputNodeCount)
+    {
+        for(u32 NodeIndexA = 0; NodeIndexA < (InputNodeCount - 1); ++NodeIndexA)
+        {
+            sort_sprite_bound *A = InputNodes + NodeIndexA;
+            Assert(A->Flags == 0);
+
+            for(u32 NodeIndexB = NodeIndexA; NodeIndexB < InputNodeCount; ++NodeIndexB)
+            {
+                sort_sprite_bound *B = InputNodes + NodeIndexB;
+
+                if(RectanglesIntersect(A->ScreenArea, B->ScreenArea))
+                {
+                    u32 FrontIndex = NodeIndexA;
+                    u32 BackIndex = NodeIndexB;
+                    if(IsInFrontOf(B->SortKey, A->SortKey))
+                    {
+                        u32 Temp = FrontIndex;
+                        FrontIndex = BackIndex;
+                        BackIndex = Temp;
+                    }
+
+                    // TODO: Reenable the push
+                    sprite_edge *Edge = 0; //PushStruct(Arena, sprite_edge);
+                    sort_sprite_bound *Front = InputNodes + FrontIndex;
+                    Edge->Front = FrontIndex;
+                    Edge->Behind = BackIndex;
+
+                    Edge->NextEdgeWithSameFront = Front->FirstEdgeWithMeAsFront;
+                    Front->FirstEdgeWithMeAsFront = Edge;
+                }
+            }
+        }
+    }
+}
+
+struct sprite_graph_walk
+{
+    sort_sprite_bound *InputNodes;
+    u32 *OutIndex;
+};
+
+internal void
+RecursiveFromToBack(sprite_graph_walk *Walk, u32 AtIndex)
+{
+    sort_sprite_bound *At = Walk->InputNodes + AtIndex;
+    if(!(At->Flags & Sprite_Visited))
+    {
+        At->Flags |= Sprite_Visited;
+
+        for(sprite_edge *Edge = At->FirstEdgeWithMeAsFront; Edge; Edge = Edge->NextEdgeWithSameFront)
+        {
+            Assert(Edge->Front == AtIndex);
+            RecursiveFromToBack(Walk, Edge->Behind);
+        }
+
+        *Walk->OutIndex++ = AtIndex;
+    }
+}
+
+internal void
+WalkSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, u32 *OutIndexArray)
+{
+    sprite_graph_walk Walk = {};
+    Walk.InputNodes = InputNodes;
+    Walk.OutIndex = OutIndexArray;
+    for(u32 NodeIndexA = 0; NodeIndexA < InputNodeCount; ++NodeIndexA)
+    {
+        RecursiveFromToBack(&Walk, NodeIndexA);
+    }
+}
+
+internal void
+SortEntries(game_render_commands *Commands, memory_arena *TempArena, u32 *OutIndexArray)
+{
+    TIMED_FUNCTION();
+
     u32 Count = Commands->PushBufferElementCount;
     sort_sprite_bound *Entries = GetSortEntries(Commands);
 
-    MergeSort(Count, Entries, (sort_sprite_bound *)SortMemory);
+    BuildSpriteGraph(Count, Entries, TempArena);
+    WalkSpriteGraph(Count, Entries, OutIndexArray);
 
 #if GAME_SLOW
     if(Count)
@@ -431,52 +524,4 @@ SortEntries(game_render_commands *Commands, void *SortMemory)
     }
 #endif
 }
-
-#if 0
-struct sprite_node
-{
-    rectangle2 ScreenArea;
-    r32 ZMax;
-};
-
-struct sprite_edge
-{
-    u32 Front;
-    u32 Behind;
-};
-
-internal void 
-BuildSpriteGraph()
-{
-    u32 InputNodeCount;
-    sprite_node *InputNodes;
-
-    if(InputNodeCount)
-    {
-        for(u32 NodeIndexA = 0; NodeIndexA < (InputNodeCount - 1); ++NodeIndexA)
-        {
-            for(u32 NodeIndexB = NodeIndexA; NodeIndexB < InputNodeCount; ++NodeIndexB)
-            {
-                sprite_node *A = InputNodes + NodeIndexA;
-                sprite_node *B = InputNodes + NodeIndexB;
-
-                if(RectanglesIntersect(A->ScreenArea, B->ScreenArea))
-                {
-                    sprite_bound A = {A->ScreenArea.Min.y, A->ScreenArea.Max.y, A->ZMax};
-                    sprite_bound B = {B->ScreenArea.Min.y, B->ScreenArea.Max.y, B->ZMax};
-
-                    if(IsInFronOf(BoundA, BoundB))
-                    {
-                        AddEdge(A, B);
-                    }
-                    else 
-                    {
-                        AddEdge(B, A);
-                    }
-                }
-            }
-        }
-    }
-}
-#endif
 

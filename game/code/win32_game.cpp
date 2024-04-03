@@ -725,7 +725,8 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
                            HDC DeviceContext, s32 WindowWidth, s32 WindowHeight, 
                            void *SortMemory, void *ClipRectMemory)
 {
-    SortEntries(Commands, SortMemory);
+    // TODO: Move this into platform specific layer
+    //SortEntries(Commands, SortMemory);
     LineariseClipRects(Commands, ClipRectMemory);
 
     /* TODO: Do I want to check for resources like before? Probably... yes
