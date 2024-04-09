@@ -342,13 +342,18 @@ typedef struct game_render_commands
     u32 SortEntryAt;
 
     u32 ClipRectCount;
-    struct render_entry_cliprect *ClipRects;
 
-    render_entry_cliprect *FirstRect;
-    render_entry_cliprect *LastRect;
+    struct render_entry_cliprect *FirstRect;
+    struct render_entry_cliprect *LastRect;
 } game_render_commands;
 #define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
     {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, 0, MaxPushBufferSize};
+
+typedef struct game_render_prep
+{
+    struct render_entry_cliprect *ClipRects;
+    u32 *SortedIndices;
+} game_render_prep;
 
 typedef struct game_sound_output_buffer
 {

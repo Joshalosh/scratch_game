@@ -88,6 +88,7 @@ global_variable GLuint OpenGLReservedBlitTexture;
 
 #include "game_sort.cpp"
 #include "game_opengl.cpp"
+#include "game_render.h"
 #include "game_render.cpp"
 
 // XInputGetState
@@ -722,12 +723,11 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 internal void
 Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_commands *Commands,
-                           HDC DeviceContext, s32 WindowWidth, s32 WindowHeight, 
-                           void *SortMemory, void *ClipRectMemory)
+                           HDC DeviceContext, s32 WindowWidth, s32 WindowHeight, memory_arena *TempArena)
 {
-    // TODO: Move this into platform specific layer
-    //SortEntries(Commands, SortMemory);
-    LineariseClipRects(Commands, ClipRectMemory);
+    temporary_memory TempMem = BeginTemporaryMemory(TempArena);
+
+    game_render_prep Prep = PrepForRender(Commands, TempArena);
 
     /* TODO: Do I want to check for resources like before? Probably... yes
     if(AllResourcesPresent(RenderGroup))
@@ -739,7 +739,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
     if(GlobalRenderingType == Win32RenderType_RenderOpenGL_DisplayOpenGL)
     {
         BEGIN_BLOCK("OpenGLRenderCommands");
-        OpenGLRenderCommands(Commands, WindowWidth, WindowHeight);
+        OpenGLRenderCommands(Commands, &Prep, WindowWidth, WindowHeight);
         END_BLOCK();
 
         BEGIN_BLOCK("SwapBuffers");
@@ -754,7 +754,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
         OutputTarget.Height = GlobalBackbuffer.Height;
         OutputTarget.Pitch = GlobalBackbuffer.Pitch;
 
-        SoftwareRenderCommands(RenderQueue, Commands, &OutputTarget);
+        SoftwareRenderCommands(RenderQueue, &Prep, Commands, &OutputTarget);
 
         if(GlobalRenderingType == Win32RenderType_RenderSoftware_DisplayOpenGL)
         {
@@ -802,6 +802,8 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
             }
         }
     }
+
+    EndTemporaryMemory(TempMem);
 }
 
 internal LRESULT CALLBACK
@@ -1872,10 +1874,10 @@ WinMain(HINSTANCE Instance,
 
             GlobalRunning = true;
 
-            umm CurrentSortMemorySize = Megabytes(1);
-            void *SortMemory = Win32AllocateMemory(CurrentSortMemorySize);
-            umm CurrentClipMemorySize = Megabytes(1);
-            void *ClipMemory = Win32AllocateMemory(CurrentClipMemorySize);
+            // TODO: I want to make this a growable arena
+            memory_arena FrameTempArena;
+            memory_index FrameTempArenaSize = Megabytes(64);
+            InitialiseArena(&FrameTempArena, FrameTempArenaSize, Win32AllocateMemory(FrameTempArenaSize));
 
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(64);
@@ -2503,27 +2505,10 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK("Frame Display");
 
-                    umm NeededSortMemorySize = GetSortTempMemorySize(&RenderCommands);
-                    if(CurrentSortMemorySize < NeededSortMemorySize)
-                    {
-                        Win32DeallocateMemory(SortMemory);
-                        CurrentSortMemorySize = NeededSortMemorySize;
-                        SortMemory = Win32AllocateMemory(CurrentSortMemorySize);
-                    }
-                    
-                    // TODO: Collapse this with the above
-                    umm NeededClipMemorySize = RenderCommands.PushBufferElementCount * sizeof(render_entry_cliprect);
-                    if(CurrentClipMemorySize < NeededClipMemorySize)
-                    {
-                        Win32DeallocateMemory(ClipMemory);
-                        CurrentClipMemorySize = NeededClipMemorySize;
-                        ClipMemory = Win32AllocateMemory(CurrentClipMemorySize);
-                    }
-
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     HDC DeviceContext = GetDC(Window);
                     Win32DisplayBufferInWindow(&HighPriorityQueue, &RenderCommands, DeviceContext,
-                                               Dimension.Width, Dimension.Height, SortMemory, ClipMemory);
+                                               Dimension.Width, Dimension.Height, &FrameTempArena);
                     ReleaseDC(Window, DeviceContext);
 
                     FlipWallClock = Win32GetWallClock();

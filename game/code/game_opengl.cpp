@@ -178,10 +178,9 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-// TODO: Get rid of this
-global_variable u32 TextureBindCount = 0;
 internal void
-OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 WindowHeight)
+OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
+                     s32 WindowWidth, s32 WindowHeight)
 {
     glViewport(0, 0, Commands->Width, Commands->Height);
 
@@ -196,20 +195,18 @@ OpenGLRenderCommands(game_render_commands *Commands, s32 WindowWidth, s32 Window
     OpenGLSetScreenspace(Commands->Width, Commands->Height);
 
     u32 SortEntryCount = Commands->PushBufferElementCount;
-    sort_sprite_bound *SortEntries = GetSortEntries(Commands);
 
     u32 ClipRectIndex = 0xFFFFFFFF;
-    sort_sprite_bound *Entry = SortEntries;
+    u32 *Entry = Prep->SortedIndices;
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
-        render_group_entry_header *Header = (render_group_entry_header *)
-            (Commands->PushBufferBase + Entry->Index);
+        render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + *Entry);
         if(ClipRectIndex != Header->ClipRectIndex)
         {
             ClipRectIndex = Header->ClipRectIndex;
             Assert(ClipRectIndex < Commands->ClipRectCount);
 
-            render_entry_cliprect *Clip = Commands->ClipRects + ClipRectIndex;
+            render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
             glScissor(Clip->Rect.MinX, Clip->Rect.MinY, 
                       Clip->Rect.MaxX - Clip->Rect.MinX, 
                       Clip->Rect.MaxY - Clip->Rect.MinY);

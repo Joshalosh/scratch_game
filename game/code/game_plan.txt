@@ -1,0 +1,74 @@
+ TODO
+
+ - Debug code
+   - Diagramming
+   - Draw tile chunks so we can verify that things are aligned /
+     in the chunks we want them to be in
+
+ - Entity System 
+   - What to do about geographically disparate entities that might only partially
+     get streamed in to a sim region, but which need to move together as a unit?
+
+ - Audio
+   - Fix the clicking bug at the end of samples.
+
+ - Rendering
+   - What's up with the 18,000 rectangle draws?
+   - Real projections with solid concept of project/unproject
+   - Straighten out all of the coordinate systems.
+     - Screen
+     - World
+     - Texture
+   - Particle systems
+   - Lighting
+   - Final Optimisation
+   - Hardware Rendering
+     - Shaders
+     - Render-to-texture
+
+ ARCHITECTURE EXPLORATION
+ - Z
+   - Need to make a solid concept of ground levels so the camera can
+     be freely placed in Z and have multiple ground levels in one sim
+     region.
+   - Concept of ground in the collision loop so it can handle
+     collisions coming onto _and off of_ stairwells, for example.
+   - Make sure flying things can go over low walls
+   - Frinstances
+     ZFUDGE
+ - Collision detection
+   - Clean up predicate proliferation. Can we make a nice clean
+     set of flags/rules so that it's easy to understand how
+     things work in terms of special handling? This may involve
+     making the iteration handle everything instead of handling
+     overlap outside and so on.
+   - Transient collision rules, clear based on flag
+     - Allow non-stransient rules to overide transient ones
+   - Entry / exit?
+   - What's the plan for robustness / shape definition?
+   - Implement reprojection to handle interpenetration
+   - Things pushing other things
+ - Animtaion
+   - Skeletal animation
+   - Particle systems
+ - Implement multiple sim regions per fram
+   - Per-entity clocking
+   - Sim region merging? For multiple players?
+   - Simple zoomed-out view for testing
+ - AI
+   - Pathfinding
+   - AI 'storage'
+
+ PRODUCTION
+ -> GAME
+   - Rudimentary world gen (no quality, just 'what sorts of things' we do)
+     - Placement of background things
+     - Connectivity?
+     - Non-overlapping?
+     - Map display
+       - Magnets - how do they work?
+ - Metagame / save game
+   - How do you enter a 'save slot'?
+   - Persistent unlocks/etc
+   - Do we allow saved games? Probably yes, just for 'pausing',
+   * Continuous save for crash recovery?

@@ -15,13 +15,6 @@
 
 global_variable b32 Global_Renderer_ShowLightingSamples = false;
 
-struct tile_render_work
-{
-    game_render_commands *Commands;
-    loaded_bitmap *OutputTarget;
-    rectangle2i ClipRect;
-};
-
 inline v4
 Unpack4x8(uint32_t Packed)
 {
@@ -1098,40 +1091,29 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 }
 
 internal void
-LineariseClipRects(game_render_commands *Commands, void *ClipMemory)
-{
-    render_entry_cliprect *Out = (render_entry_cliprect *)ClipMemory;
-    for(render_entry_cliprect *Rect = Commands->FirstRect; Rect; Rect = Rect->Next)
-    {
-        *Out++ = *Rect;
-    }
-    Commands->ClipRects = (render_entry_cliprect *)ClipMemory;
-}
-
-internal void
-RenderCommandsToBitmap(game_render_commands *Commands, loaded_bitmap *OutputTarget, rectangle2i BaseClipRect)
+RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
+                       loaded_bitmap *OutputTarget, rectangle2i BaseClipRect)
 {
     IGNORED_TIMED_FUNCTION();
 
     u32 SortEntryCount = Commands->PushBufferElementCount;
-    sort_sprite_bound *SortEntries = GetSortEntries(Commands);
 
     real32 NullPixelsToMetres = 1.0f;
 
     u32 ClipRectIndex = 0xFFFFFFFF;
     rectangle2i ClipRect = BaseClipRect;
 
-    sort_sprite_bound *Entry = SortEntries;
+    u32 *Entry = Prep->SortedIndices;
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
         render_group_entry_header *Header = (render_group_entry_header *)
-            (Commands->PushBufferBase + Entry->Index);
+            (Commands->PushBufferBase + *Entry);
         if(ClipRectIndex != Header->ClipRectIndex)
         {
             ClipRectIndex = Header->ClipRectIndex;
             Assert(ClipRectIndex < Commands->ClipRectCount);
 
-            render_entry_cliprect *Clip = Commands->ClipRects + ClipRectIndex;
+            render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
             ClipRect = Intersect(BaseClipRect, Clip->Rect);
         }
 
@@ -1222,12 +1204,12 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 
     tile_render_work *Work = (tile_render_work *)Data;
 
-    RenderCommandsToBitmap(Work->Commands, Work->OutputTarget, Work->ClipRect);
+    RenderCommandsToBitmap(Work->Commands, Work->Prep, Work->OutputTarget, Work->ClipRect);
 }
 
 internal void
 SoftwareRenderCommands(platform_work_queue *RenderQueue,
-                       game_render_commands *Commands, loaded_bitmap *OutputTarget)
+                       game_render_prep *Prep, game_render_commands *Commands, loaded_bitmap *OutputTarget)
 {
     TIMED_FUNCTION();
 
@@ -1274,6 +1256,7 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue,
             }
 
             Work->Commands = Commands;
+            Work->Prep = Prep;
             Work->OutputTarget = OutputTarget;
             Work->ClipRect = ClipRect;
 #if 1
@@ -1287,5 +1270,346 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue,
     }
 
     Platform.CompleteAllWork(RenderQueue);
+}
+
+inline b32
+IsInFrontOf(sprite_bound A, sprite_bound B)
+{
+    b32 BothZSprites = ((A.YMin != A.YMax) && (B.YMin != B.YMax));
+    b32 AIncludesB = ((B.YMin >= A.YMin) && (B.YMin < A.YMax));
+    b32 BIncludesA = ((A.YMin >= B.YMin) && (A.YMin < B.YMax));
+
+    b32 SortByZ = (BothZSprites || AIncludesB || BIncludesA);
+
+    b32 Result = (SortByZ ? (A.ZMax > B.ZMax) : (A.YMin < B.YMin));
+    return(Result);
+}
+
+inline void
+Swap(sort_sprite_bound *A, sort_sprite_bound *B)
+{
+    sort_sprite_bound Temp = *B;
+    *B = *A;
+    *A = Temp;
+}
+
+internal void
+MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
+{
+    if(Count == 1)
+    {
+        // NOTE: Nothing to do
+    }
+    else if(Count == 2)
+    {
+        sort_sprite_bound *EntryA = First;
+        sort_sprite_bound *EntryB = First + 1;
+        if(IsInFrontOf(EntryA->SortKey, EntryB->SortKey))
+        {
+            Swap(EntryA, EntryB);
+        }
+    }
+    else
+    {
+        u32 Half0 = Count / 2;
+        u32 Half1 = Count - Half0;
+
+        Assert(Half0 >= 1);
+        Assert(Half1 >= 1);
+
+        sort_sprite_bound *InHalf0 = First;
+        sort_sprite_bound *InHalf1 = First + Half0;
+        sort_sprite_bound *End = First + Count;
+
+        MergeSort(Half0, InHalf0, Temp);
+        MergeSort(Half1, InHalf1, Temp);
+
+        sort_sprite_bound *ReadHalf0 = InHalf0;
+        sort_sprite_bound *ReadHalf1 = InHalf1;
+
+        sort_sprite_bound *Out = Temp;
+        for(u32 Index = 0; Index < Count; ++Index)
+        {
+            if(ReadHalf0 == InHalf1)
+            {
+                *Out++ = *ReadHalf1++;
+            }
+            else if(ReadHalf1 == End)
+            {
+                *Out++ = *ReadHalf0++;
+            }
+            else if(IsInFrontOf(ReadHalf1->SortKey, ReadHalf0->SortKey))
+            {
+                *Out++ = *ReadHalf0++;
+            }
+            else
+            {
+                *Out++ = *ReadHalf1++;
+            }
+        }
+        Assert(Out == (Temp + Count));
+        Assert(ReadHalf0 == InHalf1);
+        Assert(ReadHalf1 == End);
+
+        // TODO: Not necessary if we ping-pong
+        for(u32 Index = 0; Index < Count; ++Index)
+        {
+            First[Index] = Temp[Index];
+        }
+    }
+}
+
+inline b32
+IsZSprite(sprite_bound Bound)
+{
+    b32 Result = (Bound.YMin != Bound.YMax);
+    return(Result);
+}
+
+internal void 
+VerifyBuffer(u32 Count, sort_sprite_bound *Buffer, b32 ZSprite)
+{
+    for(u32 Index = 0; Index < Count; ++Index)
+    {
+        Assert(IsZSprite(Buffer[Index].SortKey) == ZSprite);
+        if(Index > 0)
+        {
+            Assert(IsInFrontOf(Buffer[Index].SortKey, Buffer[Index - 1].SortKey));
+        }
+    }
+}
+
+internal void
+SeperatedSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
+{
+    u32 YCount = 0;
+    u32 ZCount = 0;
+    for(u32 Index = 0; Index < Count; ++Index)
+    {
+        sort_sprite_bound *This = First + Index;
+        if(IsZSprite(This->SortKey))
+        {
+            Temp[ZCount++] = *This;
+        }
+        else 
+        {
+            First[YCount++] = *This;
+        }
+    }
+
+#if GAME_SLOW 
+    VerifyBuffer(YCount, First, false);
+    VerifyBuffer(ZCount, Temp, true);
+#endif
+
+    MergeSort(YCount, First, Temp + ZCount);
+    MergeSort(ZCount, Temp, First + YCount);
+    if(YCount == 1)
+    {
+        Temp[ZCount] = First[0];
+    }
+    else if(YCount == 2)
+    {
+        Temp[ZCount] = First[0];
+        Temp[ZCount + 1] = First[1];
+    }
+
+    sort_sprite_bound *InHalf0 = Temp;
+    sort_sprite_bound *InHalf1 = Temp + ZCount;
+
+#if GAME_SLOW 
+    VerifyBuffer(YCount, InHalf1, false);
+    VerifyBuffer(ZCount, InHalf0, true);
+#endif
+
+    sort_sprite_bound *End = InHalf1 + YCount;
+    sort_sprite_bound *ReadHalf0 = InHalf0;
+    sort_sprite_bound *ReadHalf1 = InHalf1;
+
+    sort_sprite_bound *Out = First;
+    for(u32 Index = 0; Index < Count; ++Index)
+    {
+        if(ReadHalf0 == InHalf1)
+        {
+            *Out++ = *ReadHalf1++;
+        }
+        else if(ReadHalf1 == End)
+        {
+            *Out++ = *ReadHalf0++;
+        }
+        //TODO: This merge comparison can be simpler now since we know
+        // which sprite is a Z sprite and which is a Y sprite
+        else if(IsInFrontOf(ReadHalf1->SortKey, ReadHalf0->SortKey))
+        {
+            *Out++ = *ReadHalf0++;
+        }
+        else
+        {
+            *Out++ = *ReadHalf1++;
+        }
+    }
+    Assert(Out == (First + Count));
+    Assert(ReadHalf0 == InHalf1);
+    Assert(ReadHalf1 == End);
+}
+
+inline sort_sprite_bound *
+GetSortEntries(game_render_commands *Commands)
+{
+    sort_sprite_bound *SortEntries = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
+    return(SortEntries);
+}
+
+inline umm
+GetSortTempMemorySize(game_render_commands *Commands)
+{
+    umm NeededSortMemorySize = Commands->PushBufferElementCount * sizeof(sort_sprite_bound);
+    return(NeededSortMemorySize);
+}
+
+internal void 
+BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena)
+{
+    if(InputNodeCount)
+    {
+        for(u32 NodeIndexA = 0; NodeIndexA < (InputNodeCount - 1); ++NodeIndexA)
+        {
+            sort_sprite_bound *A = InputNodes + NodeIndexA;
+            Assert(A->Flags == 0);
+
+            for(u32 NodeIndexB = NodeIndexA; NodeIndexB < InputNodeCount; ++NodeIndexB)
+            {
+                sort_sprite_bound *B = InputNodes + NodeIndexB;
+
+                if(RectanglesIntersect(A->ScreenArea, B->ScreenArea))
+                {
+                    u32 FrontIndex = NodeIndexA;
+                    u32 BackIndex = NodeIndexB;
+                    if(IsInFrontOf(B->SortKey, A->SortKey))
+                    {
+                        u32 Temp = FrontIndex;
+                        FrontIndex = BackIndex;
+                        BackIndex = Temp;
+                    }
+
+                    // TODO: Reenable the push
+                    sprite_edge *Edge = 0; //PushStruct(Arena, sprite_edge);
+                    sort_sprite_bound *Front = InputNodes + FrontIndex;
+                    Edge->Front = FrontIndex;
+                    Edge->Behind = BackIndex;
+
+                    Edge->NextEdgeWithSameFront = Front->FirstEdgeWithMeAsFront;
+                    Front->FirstEdgeWithMeAsFront = Edge;
+                }
+            }
+        }
+    }
+}
+
+internal void
+RecursiveFromToBack(sprite_graph_walk *Walk, u32 AtIndex)
+{
+    sort_sprite_bound *At = Walk->InputNodes + AtIndex;
+    if(!(At->Flags & Sprite_Visited))
+    {
+        At->Flags |= Sprite_Visited;
+
+        for(sprite_edge *Edge = At->FirstEdgeWithMeAsFront; Edge; Edge = Edge->NextEdgeWithSameFront)
+        {
+            Assert(Edge->Front == AtIndex);
+            RecursiveFromToBack(Walk, Edge->Behind);
+        }
+
+        *Walk->OutIndex++ = At->Offset;
+    }
+}
+
+internal void
+WalkSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, u32 *OutIndexArray)
+{
+    sprite_graph_walk Walk = {};
+    Walk.InputNodes = InputNodes;
+    Walk.OutIndex = OutIndexArray;
+    for(u32 NodeIndexA = 0; NodeIndexA < InputNodeCount; ++NodeIndexA)
+    {
+        RecursiveFromToBack(&Walk, NodeIndexA);
+    }
+    Assert((Walk.OutIndex - OutIndexArray) == InputNodeCount);
+}
+
+internal u32 *
+SortEntries(game_render_commands *Commands, memory_arena *TempArena)
+{
+    TIMED_FUNCTION();
+
+    u32 Count = Commands->PushBufferElementCount;
+    sort_sprite_bound *Entries = GetSortEntries(Commands);
+    u32 *Result = PushArray(TempArena, Count, u32);
+
+#if 1
+    BuildSpriteGraph(Count, Entries, TempArena);
+    WalkSpriteGraph(Count, Entries, Result);
+#else
+    for(u32 NodeIndexA = 0; NodeIndexA < Count; ++NodeIndexA)
+    {
+        Result[NodeIndexA] = Entries[NodeIndexA].Index;
+    }
+#endif
+
+#if 0
+#if GAME_SLOW
+    if(Count)
+    {
+        for(u32 Index = 0; Index < (Count - 1); ++Index)
+        {
+#if 0
+            // NOTE: This is the O(n) partial ordering check - only neighbors are verified
+            u32 IndexB = Index + 1;
+            {
+#else 
+            // NOTE: This is the O(n^2) total ordering check - all pairs verified
+            for(u32 IndexB = Index + 1; IndexB < Count; ++IndexB)
+            {
+#endif
+                sort_sprite_bound *EntryA = Entries + Index;
+                sort_sprite_bound *EntryB = Entries + IndexB;
+
+                if(IsInFrontOf(EntryA->SortKey, EntryB->SortKey))
+                {
+                    Assert((EntryA->SortKey.YMin == EntryB->SortKey.YMin) &&
+                           (EntryA->SortKey.YMax == EntryB->SortKey.YMax) &&
+                           (EntryA->SortKey.ZMax == EntryB->SortKey.ZMax));
+                }
+            }
+        }
+    }
+#endif
+#endif
+    return(Result);
+}
+
+internal render_entry_cliprect *
+LineariseClipRects(game_render_commands *Commands, memory_arena *TempArena)
+{
+    render_entry_cliprect *Result = PushArray(TempArena, Commands->PushBufferElementCount, 
+                                              render_entry_cliprect);
+    render_entry_cliprect *Out = Result;
+    for(render_entry_cliprect *Rect = Commands->FirstRect; Rect; Rect = Rect->Next)
+    {
+        *Out++ = *Rect;
+    }
+
+    return(Result);
+}
+
+internal game_render_prep
+PrepForRender(game_render_commands *Commands, memory_arena *TempArena)
+{
+    game_render_prep Prep;
+
+    Prep.SortedIndices = SortEntries(Commands, TempArena);
+    Prep.ClipRects = LineariseClipRects(Commands, TempArena);
+
+    return(Prep);
 }
 

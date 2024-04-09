@@ -73,8 +73,10 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 
         Commands->SortEntryAt -= sizeof(sort_sprite_bound);
         sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
+        Entry->FirstEdgeWithMeAsFront = 0;
         Entry->SortKey = SortKey;
-        Entry->Index = Commands->PushBufferSize;
+        Entry->Offset = Commands->PushBufferSize;
+        Entry->Flags = 0;
 
         Commands->PushBufferSize += Size;
         ++Commands->PushBufferElementCount;
