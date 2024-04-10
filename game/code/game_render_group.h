@@ -143,6 +143,8 @@ struct render_group
 {
     struct game_assets *Assets;
 
+    rectangle2 ScreenArea;
+
     v4 tGlobalColor;
     v4 GlobalColor;
 

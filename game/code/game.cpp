@@ -372,6 +372,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         PlayIntroCutscene(GameState, TranState);
 #if 1
+        // NOTE: This jumps straight into the game, no title sequence
         game_controller_input *Controller = GetController(Input, 0);
         Controller->Start.EndedDown = true;
         Controller->Start.HalfTransitionCount = 1;
@@ -393,7 +394,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     temporary_memory RenderMemory = BeginTemporaryMemory(&TranState->TranArena);
 
     // TODO: Need to figure out what the pushbuffer size is.
-    render_group RenderGroup_ = BeginRenderGroup(TranState->Assets, RenderCommands, TranState->MainGenerationID, false);
+    render_group RenderGroup_ = BeginRenderGroup(TranState->Assets, RenderCommands, TranState->MainGenerationID, false,
+                                                 RenderCommands->Width, RenderCommands->Height);
     render_group *RenderGroup = &RenderGroup_;
 
     // TODO: Eliminate these entirely

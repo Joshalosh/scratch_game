@@ -51,9 +51,10 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransf
     return(Result);
 }
 
-#define PushRenderElement(Group, type, SortKey) (type *)PushRenderElement_(Group, sizeof(type), RenderGroupEntryType_##type, SortKey)
+#define PushRenderElement(Group, type, SortKey, ScreenArea) (type *)PushRenderElement_(Group, sizeof(type), RenderGroupEntryType_##type, SortKey, ScreenArea)
 inline void *
-PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type, sprite_bound SortKey)
+PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type, 
+                   sprite_bound SortKey, rectangle2 ScreenArea)
 {
     game_render_commands *Commands = Group->Commands;
 
@@ -66,9 +67,6 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
         render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + Commands->PushBufferSize);
         Header->Type = (u16)Type;
         Header->ClipRectIndex = SafeTruncateToU16(Group->CurrentClipRectIndex);
-#if GAME_SLOW
-        Header->DebugTag = Group->DebugTag;
-#endif
         Result = (uint8_t *)Header + sizeof(*Header);
 
         Commands->SortEntryAt -= sizeof(sort_sprite_bound);
@@ -76,10 +74,17 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
         Entry->FirstEdgeWithMeAsFront = 0;
         Entry->SortKey = SortKey;
         Entry->Offset = Commands->PushBufferSize;
+        Entry->ScreenArea = ScreenArea;
         Entry->Flags = 0;
 
+#if GAME_SLOW
+        Header->DebugTag = Group->DebugTag;
+        Entry->DebugTag = Group->DebugTag;
+#endif
         Commands->PushBufferSize += Size;
         ++Commands->PushBufferElementCount;
+
+        //Assert(GetArea(ScreenArea) < (2000.0f*2000.0f));
     }
     else
     {
@@ -152,14 +157,16 @@ PushBitmap(render_group *Group, object_transform ObjectTransform,
     used_bitmap_dim Dim = GetBitmapDim(Group, ObjectTransform, Bitmap, Height, Offset, CAlign, XAxis, YAxis);
     if(Dim.Basis.Valid)
     {
+        v2 Size = Dim.Basis.Scale*Dim.Size;
         sprite_bound SpriteBound = GetBoundFor(ObjectTransform, Offset, Height);
-        render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap, SpriteBound);
+        // TODO: I need more conservative bounds here
+        rectangle2 ScreenArea = RectMinDim(Dim.Basis.P, Size);
+        render_entry_bitmap *Entry = PushRenderElement(Group, render_entry_bitmap, SpriteBound, ScreenArea);
         if(Entry)
         {
             Entry->Bitmap = Bitmap;
             Entry->P = Dim.Basis.P;
             Entry->PremulColor = StoreColor(Group, Color);
-            v2 Size = Dim.Basis.Scale*Dim.Size;
             Entry->XAxis = Size.x*XAxis;
             Entry->YAxis = Size.y*YAxis;
         }
@@ -215,13 +222,15 @@ PushRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Di
     entity_basis_p_result Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, P);
     if(Basis.Valid)
     {
+        v2 ScaledDim = Basis.Scale*Dim;
         sprite_bound SpriteBound = GetBoundFor(ObjectTransform, Offset, Dim.y);
-        render_entry_rectangle *Rect = PushRenderElement(Group, render_entry_rectangle, SpriteBound);
+        rectangle2 ScreenArea = RectMinDim(Basis.P, ScaledDim);
+        render_entry_rectangle *Rect = PushRenderElement(Group, render_entry_rectangle, SpriteBound, ScreenArea);
         if(Rect)
         {
             Rect->P = Basis.P;
             Rect->PremulColor = StoreColor(Group, Color);
-            Rect->Dim = Basis.Scale*Dim;
+            Rect->Dim = ScaledDim;
         }
     }
 }
@@ -257,7 +266,7 @@ Clear(render_group *Group, v4 Color)
     SortKey.YMin = Real32Minimum;
     SortKey.YMax = Real32Maximum;
     SortKey.ZMax = Real32Minimum;
-    render_entry_clear *Entry = PushRenderElement(Group, render_entry_clear, SortKey);
+    render_entry_clear *Entry = PushRenderElement(Group, render_entry_clear, SortKey, Group->ScreenArea);
     if(Entry)
     {
         Entry->PremulColor = StoreColor(Group, Color);
@@ -408,8 +417,8 @@ AllResourcesPresent(render_group *Group)
 }
 
 inline render_group
-BeginRenderGroup(game_assets *Assets, game_render_commands *Commands,
-                 u32 GenerationID, b32 RendersInBackground)
+BeginRenderGroup(game_assets *Assets, game_render_commands *Commands, u32 GenerationID, b32 RendersInBackground, 
+                 int32_t PixelWidth, int32_t PixelHeight)
 {
     render_group Result = {};
 
@@ -418,6 +427,8 @@ BeginRenderGroup(game_assets *Assets, game_render_commands *Commands,
     Result.MissingResourceCount = 0;
     Result.GenerationID = GenerationID;
     Result.Commands = Commands;
+    Result.ScreenArea = RectMinDim(V2(0, 0), V2i(PixelWidth, PixelHeight));
+    Result.CurrentClipRectIndex = PushClipRect(&Result, 0, 0, PixelWidth, PixelHeight);
 
     return(Result);
 }
@@ -430,11 +441,13 @@ EndRenderGroup(render_group *RenderGroup)
 }
 
 inline void
-Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
+Perspective(render_group *RenderGroup,
             real32 MetresToPixels, real32 FocalLength, real32 DistanceAboveTarget)
 {
     // TODO: I need to adjust this based on buffer size.
     real32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
+    r32 PixelWidth = GetDim(RenderGroup->ScreenArea).x;
+    r32 PixelHeight = GetDim(RenderGroup->ScreenArea).y;
 
     RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
                                            0.5f*PixelHeight*PixelsToMetres};
@@ -444,14 +457,15 @@ Perspective(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->CameraTransform.DistanceAboveTarget = DistanceAboveTarget;
     RenderGroup->CameraTransform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
     RenderGroup->CameraTransform.Orthographic = false;
-
-    RenderGroup->CurrentClipRectIndex = PushClipRect(RenderGroup, 0, 0, PixelWidth, PixelHeight);
 }
 
 inline void
-Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight, real32 MetresToPixels)
+Orthographic(render_group *RenderGroup, r32 MetresToPixels)
 {
-    real32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
+    r32 PixelsToMetres = SafeRatio1(1.0f, MetresToPixels);
+    r32 PixelWidth = GetDim(RenderGroup->ScreenArea).x;
+    r32 PixelHeight = GetDim(RenderGroup->ScreenArea).y;
+
     RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
                                            0.5f*PixelHeight*PixelsToMetres};
 
@@ -460,7 +474,5 @@ Orthographic(render_group *RenderGroup, int32_t PixelWidth, int32_t PixelHeight,
     RenderGroup->CameraTransform.DistanceAboveTarget = 1.0f;
     RenderGroup->CameraTransform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
     RenderGroup->CameraTransform.Orthographic = true;
-
-    RenderGroup->CurrentClipRectIndex = PushClipRect(RenderGroup, 0, 0, PixelWidth, PixelHeight);
 }
 

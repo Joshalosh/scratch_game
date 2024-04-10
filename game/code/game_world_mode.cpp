@@ -481,7 +481,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 6; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -515,6 +515,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                              ScreenX*TilesPerWidth + TilesPerWidth/2,
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
                                              AbsTileZ, Series);
+#if 0
         AddMonster(WorldMode, Room.P[3][6], Room.Ground[3][6]);
         //AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
 
@@ -524,6 +525,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
             u32 X = 2 + SegmentIndex;
             AddSnakeSegment(WorldMode, Room.P[X][2], Room.Ground[X][2], SnakeBrainID, SegmentIndex);
         }
+#endif
 
         for(uint32_t TileY = 0; TileY < ArrayCount(Room.P[0]); ++TileY)
         {
@@ -640,7 +642,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     real32 FocalLength = 0.6f;
     real32 DistanceAboveGround = 9.0f;
-    Perspective(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, MetresToPixels, FocalLength, DistanceAboveGround);
+    Perspective(RenderGroup, MetresToPixels, FocalLength, DistanceAboveGround);
 
     v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 1.0f);
     Clear(RenderGroup, BackgroundColor);
@@ -717,7 +719,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     RenderGroup->tGlobalColor = V4(0, 0, 0, 0);
 
-    Orthographic(RenderGroup, DrawBuffer->Width, DrawBuffer->Height, 1.0f);
+    Orthographic(RenderGroup, 1.0f);
 
     PushRectOutline(RenderGroup, DefaultFlatTransform(), V3(MouseP, 0.0f), V2(2.0f, 2.0f));
 

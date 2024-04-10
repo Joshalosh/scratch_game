@@ -777,6 +777,14 @@ GetBarycentric(rectangle2 A, v2 P)
     return(Result);
 }
 
+inline r32
+GetArea(rectangle2 A)
+{
+    v2 Dim = GetDim(A);
+    r32 Result = Dim.x*Dim.y;
+    return(Result);
+}
+
 //
 // NOTE(casey): Rectangle3
 //

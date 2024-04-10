@@ -25,6 +25,9 @@ struct sort_sprite_bound
     sprite_bound SortKey;
     u32 Offset;
     u32 Flags;
+#if GAME_SLOW
+    u32 DebugTag;
+#endif
 };
 
 struct sprite_graph_walk

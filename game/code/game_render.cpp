@@ -1470,6 +1470,8 @@ GetSortTempMemorySize(game_render_commands *Commands)
 internal void 
 BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena)
 {
+    TIMED_FUNCTION();
+
     if(InputNodeCount)
     {
         for(u32 NodeIndexA = 0; NodeIndexA < (InputNodeCount - 1); ++NodeIndexA)
@@ -1477,7 +1479,7 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
             sort_sprite_bound *A = InputNodes + NodeIndexA;
             Assert(A->Flags == 0);
 
-            for(u32 NodeIndexB = NodeIndexA; NodeIndexB < InputNodeCount; ++NodeIndexB)
+            for(u32 NodeIndexB = (NodeIndexA + 1); NodeIndexB < InputNodeCount; ++NodeIndexB)
             {
                 sort_sprite_bound *B = InputNodes + NodeIndexB;
 
@@ -1493,7 +1495,7 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
                     }
 
                     // TODO: Reenable the push
-                    sprite_edge *Edge = 0; //PushStruct(Arena, sprite_edge);
+                    sprite_edge *Edge = PushStruct(Arena, sprite_edge);
                     sort_sprite_bound *Front = InputNodes + FrontIndex;
                     Edge->Front = FrontIndex;
                     Edge->Behind = BackIndex;
