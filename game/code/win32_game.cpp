@@ -34,6 +34,7 @@ enum win32_rendering_type
 global_variable win32_rendering_type GlobalRenderingType; // = Win32RenderType_RenderSoftware_DisplayGDI;
 global_variable b32 GlobalRunning;
 global_variable b32 GlobalPause;
+global_variable b32 GlobalShowSortGroups = true;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable s64 GlobalPerfCountFrequency;
@@ -87,8 +88,8 @@ global_variable GLuint OpenGLDefaultInternalTextureFormat;
 global_variable GLuint OpenGLReservedBlitTexture;
 
 #include "game_sort.cpp"
-#include "game_opengl.cpp"
 #include "game_render.h"
+#include "game_opengl.cpp"
 #include "game_render.cpp"
 
 // XInputGetState
@@ -2013,6 +2014,7 @@ WinMain(HINSTANCE Instance,
                     {DEBUG_DATA_BLOCK("Platform/Controls");
                         DEBUG_B32(GlobalPause);
                         DEBUG_B32(GlobalRenderingType);
+                        DEBUG_B32(GlobalShowSortGroups);
                     }
 
                     //

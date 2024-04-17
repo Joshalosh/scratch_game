@@ -483,22 +483,6 @@ GetTotalClocks(debug_element_frame *Frame)
     return(Result);
 }
 
-global_variable v3 DebugColorTable[] =
-{
-    {1, 0, 0},
-    {0, 1, 0},
-    {0, 0, 1},
-    {1, 1, 0},
-    {0, 1, 1},
-    {1, 0, 1},
-    {1, 0.5f, 0},
-    {1, 0, 0.5f},
-    {0.5f, 1, 0},
-    {0, 1, 0.5f},
-    {0.5f, 0, 1},
-    //{0, 0.5f, 1},
-};
-
 internal void
 DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect, v2 MouseP,
                 debug_profile_node *RootNode, r32 LaneStride, r32 LaneHeight, u32 DepthRemaining)
@@ -1984,7 +1968,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
         AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
     }
 
-    DebugState->RenderGroup = BeginRenderGroup(Assets, Commands, MainGenerationID, false);
+    DebugState->RenderGroup = BeginRenderGroup(Assets, Commands, MainGenerationID, false, Width, Height);
 
     DebugState->DebugFont = PushFont(&DebugState->RenderGroup, DebugState->FontID);
     DebugState->DebugFontInfo = GetFontInfo(DebugState->RenderGroup.Assets, DebugState->FontID);
@@ -1999,7 +1983,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->FontID = GetBestMatchFontFrom(Assets, Asset_Font, &MatchVector, &WeightVector);
 
     DebugState->FontScale = 1.0f;
-    Orthographic(&DebugState->RenderGroup, Width, Height, 1.0f);
+    Orthographic(&DebugState->RenderGroup, 1.0f);
     DebugState->LeftEdge = -0.5f*Width;
     DebugState->RightEdge = 0.5f*Width;
 

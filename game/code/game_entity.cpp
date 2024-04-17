@@ -263,12 +263,14 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 DrawHitPoints(Entity, RenderGroup, EntityTransform);
 
                 EntityTransform.Upright = false;
+#if 0
                 for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                 {
                     entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
                     PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
                                     Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
                 }
+#endif
 
                 BEGIN_BLOCK("TraversableRendering");
                 for(u32 TraversableIndex = 0; 
@@ -279,7 +281,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                         Entity->Traversables + TraversableIndex;
                     PushRect(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), 
                              Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1) : V4(0.05f, 0.25f, 0.05f, 1));
-                    PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
+                    //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
                 }
                 END_BLOCK();
 

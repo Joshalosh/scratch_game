@@ -338,6 +338,8 @@ typedef struct game_render_commands
     u32 PushBufferSize;
     u8 *PushBufferBase;
 
+    v4 ClearColor;
+
     u32 PushBufferElementCount;
     u32 SortEntryAt;
 
@@ -347,7 +349,7 @@ typedef struct game_render_commands
     struct render_entry_cliprect *LastRect;
 } game_render_commands;
 #define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
-    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, 0, MaxPushBufferSize};
+    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, {0, 0, 0, 0}, 0, MaxPushBufferSize};
 
 typedef struct game_render_prep
 {

@@ -41,7 +41,6 @@ struct environment_map
 
 enum render_group_entry_type
 {
-    RenderGroupEntryType_render_entry_clear,
     RenderGroupEntryType_render_entry_bitmap,
     RenderGroupEntryType_render_entry_rectangle,
     RenderGroupEntryType_render_entry_cliprect,

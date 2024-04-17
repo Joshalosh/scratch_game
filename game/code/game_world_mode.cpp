@@ -481,7 +481,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -645,7 +645,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     Perspective(RenderGroup, MetresToPixels, FocalLength, DistanceAboveGround);
 
     v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 1.0f);
-    Clear(RenderGroup, BackgroundColor);
+    //Clear(RenderGroup, BackgroundColor);
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};

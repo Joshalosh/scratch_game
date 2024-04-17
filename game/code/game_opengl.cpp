@@ -109,6 +109,22 @@ OpenGLSetScreenspace(s32 Width, s32 Height)
 }
 
 inline void
+OpenGLLineVertices(v2 MinP, v2 MaxP)
+{
+    glVertex2f(MinP.x, MinP.y);
+    glVertex2f(MaxP.x, MinP.y);
+
+    glVertex2f(MaxP.x, MinP.y);
+    glVertex2f(MaxP.x, MaxP.y);
+
+    glVertex2f(MaxP.x, MaxP.y);
+    glVertex2f(MinP.x, MaxP.y);
+
+    glVertex2f(MinP.x, MaxP.y);
+    glVertex2f(MinP.x, MinP.y);
+}
+
+inline void
 OpenGLRectangle(v2 MinP, v2 MaxP, v4 PremulColor, v2 MinUV = V2(0, 0), v2 MaxUV = V2(1, 1))
 {
     glBegin(GL_TRIANGLES);
@@ -179,6 +195,30 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
 }
 
 internal void
+OpenGLDrawBoundsRecursive(sort_sprite_bound *Bounds, u32 BoundIndex)
+{
+    sort_sprite_bound *Bound = Bounds + BoundIndex;
+    if(!(Bound->Flags & Sprite_DebugBox))
+    {
+        v2 Center = GetCenter(Bound->ScreenArea);
+        Bound->Flags |= Sprite_DebugBox;
+        for(sprite_edge *Edge = Bound->FirstEdgeWithMeAsFront; Edge; Edge = Edge->NextEdgeWithSameFront)
+        {
+            sort_sprite_bound *Behind = Bounds + Edge->Behind;
+            v2 BehindCenter = GetCenter(Behind->ScreenArea);
+            glVertex2fv(Center.E);
+            glVertex2fv(BehindCenter.E);
+
+            OpenGLDrawBoundsRecursive(Bounds, Edge->Behind);
+        }
+
+        v2 SMin = GetMinCorner(Bound->ScreenArea);
+        v2 SMax = GetMaxCorner(Bound->ScreenArea);
+        OpenGLLineVertices(SMin, SMax);
+    }
+}
+
+internal void
 OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                      s32 WindowWidth, s32 WindowHeight)
 {
@@ -191,6 +231,10 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
 
     glMatrixMode(GL_TEXTURE);
     glLoadIdentity();
+
+    glClearColor(Commands->ClearColor.r, Commands->ClearColor.g, 
+                 Commands->ClearColor.b, Commands->ClearColor.a);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     OpenGLSetScreenspace(Commands->Width, Commands->Height);
 
@@ -220,14 +264,6 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
         void *Data = (uint8_t *)Header + sizeof(*Header);
         switch(Header->Type)
         {
-            case RenderGroupEntryType_render_entry_clear:
-            {
-                render_entry_clear *Entry = (render_entry_clear *)Data;
-
-                glClearColor(Entry->PremulColor.r, Entry->PremulColor.g, Entry->PremulColor.b, Entry->PremulColor.a);
-                glClear(GL_COLOR_BUFFER_BIT);
-            } break;
-
             case RenderGroupEntryType_render_entry_bitmap:
             {
                 render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
@@ -296,6 +332,31 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
             } break;
 
             InvalidDefaultCase;
+        }
+    }
+
+    if(GlobalShowSortGroups)
+    {
+        glDisable(GL_TEXTURE_2D);
+        u32 BoundCount = Commands->PushBufferElementCount;
+        sort_sprite_bound *Bounds = GetSortEntries(Commands);
+        u32 GroupIndex = 0;
+        for(u32 BoundIndex = 0; BoundIndex < BoundCount; ++BoundIndex)
+        {
+            sort_sprite_bound *Bound = Bounds + BoundIndex;
+            if(Bound->Flags & Sprite_Cycle)
+            {
+                if(!(Bound->Flags & Sprite_DebugBox))
+                {
+                    v4 Color = V4(DebugColorTable[GroupIndex++ % ArrayCount(DebugColorTable)], 1.0f);
+                    glColor4fv(Color.E);
+                    glBegin(GL_LINES);
+                    OpenGLDrawBoundsRecursive(Bounds, BoundIndex);
+                    glEnd();
+
+                    ++GroupIndex;
+                }
+            }
         }
     }
 }

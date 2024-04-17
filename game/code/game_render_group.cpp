@@ -262,15 +262,7 @@ PushRectOutline(render_group *Group, object_transform ObjectTransform, rectangle
 inline void
 Clear(render_group *Group, v4 Color)
 {
-    sprite_bound SortKey;
-    SortKey.YMin = Real32Minimum;
-    SortKey.YMax = Real32Maximum;
-    SortKey.ZMax = Real32Minimum;
-    render_entry_clear *Entry = PushRenderElement(Group, render_entry_clear, SortKey, Group->ScreenArea);
-    if(Entry)
-    {
-        Entry->PremulColor = StoreColor(Group, Color);
-    }
+    Group->Commands->ClearColor = Color;
 }
 
 inline void

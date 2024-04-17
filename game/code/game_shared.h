@@ -4,6 +4,22 @@
 #include "game_math.h"
 #include "game_memory.h"
 
+global_variable v3 DebugColorTable[] =
+{
+    {1, 0, 0},
+    {0, 1, 0},
+    {0, 0, 1},
+    {1, 1, 0},
+    {0, 1, 1},
+    {1, 0, 1},
+    {1, 0.5f, 0},
+    {1, 0, 0.5f},
+    {0.5f, 1, 0},
+    {0, 1, 0.5f},
+    {0.5f, 0, 1},
+    //{0, 0.5f, 1},
+};
+
 inline b32
 IsEndOfLine(char C)
 {

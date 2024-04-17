@@ -1103,6 +1103,9 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
     u32 ClipRectIndex = 0xFFFFFFFF;
     rectangle2i ClipRect = BaseClipRect;
 
+    DrawRectangle(OutputTarget, V2(0.0f, 0.0f), V2((real32)OutputTarget->Width, (real32)OutputTarget->Height), 
+                  V4(Commands->ClearColor.xyz, 1.0f), ClipRect);
+
     u32 *Entry = Prep->SortedIndices;
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
@@ -1120,14 +1123,6 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
         void *Data = (uint8_t *)Header + sizeof(*Header);
         switch(Header->Type)
         {
-            case RenderGroupEntryType_render_entry_clear:
-            {
-                render_entry_clear *Entry = (render_entry_clear *)Data;
-
-                DrawRectangle(OutputTarget, V2(0.0f, 0.0f), V2((real32)OutputTarget->Width,
-                              (real32)OutputTarget->Height), V4(Entry->PremulColor.xyz, 1.0f), ClipRect);
-            } break;
-
             case RenderGroupEntryType_render_entry_bitmap:
             {
                 render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
@@ -1453,20 +1448,6 @@ SeperatedSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
     Assert(ReadHalf1 == End);
 }
 
-inline sort_sprite_bound *
-GetSortEntries(game_render_commands *Commands)
-{
-    sort_sprite_bound *SortEntries = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
-    return(SortEntries);
-}
-
-inline umm
-GetSortTempMemorySize(game_render_commands *Commands)
-{
-    umm NeededSortMemorySize = Commands->PushBufferElementCount * sizeof(sort_sprite_bound);
-    return(NeededSortMemorySize);
-}
-
 internal void 
 BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena)
 {
@@ -1514,12 +1495,18 @@ RecursiveFromToBack(sprite_graph_walk *Walk, u32 AtIndex)
     sort_sprite_bound *At = Walk->InputNodes + AtIndex;
     if(!(At->Flags & Sprite_Visited))
     {
-        At->Flags |= Sprite_Visited;
+        Walk->HitCycle = Walk->HitCycle || (At->Flags & Sprite_Cycle);
+        At->Flags |= Sprite_Visited|Sprite_Cycle;
 
         for(sprite_edge *Edge = At->FirstEdgeWithMeAsFront; Edge; Edge = Edge->NextEdgeWithSameFront)
         {
             Assert(Edge->Front == AtIndex);
             RecursiveFromToBack(Walk, Edge->Behind);
+        }
+
+        if(!Walk->HitCycle)
+        {
+            At->Flags &= ~Sprite_Cycle;
         }
 
         *Walk->OutIndex++ = At->Offset;
@@ -1534,6 +1521,7 @@ WalkSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, u32 *OutIndex
     Walk.OutIndex = OutIndexArray;
     for(u32 NodeIndexA = 0; NodeIndexA < InputNodeCount; ++NodeIndexA)
     {
+        Walk.HitCycle = false;
         RecursiveFromToBack(&Walk, NodeIndexA);
     }
     Assert((Walk.OutIndex - OutIndexArray) == InputNodeCount);
