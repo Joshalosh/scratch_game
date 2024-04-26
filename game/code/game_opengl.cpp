@@ -323,6 +323,10 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                 render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
                 glDisable(GL_TEXTURE_2D);
                 OpenGLRectangle(Entry->P, Entry->P + Entry->Dim, Entry->PremulColor);
+                glBegin(GL_LINES);
+                glColor4f(0, 0, 0, 1);
+                OpenGLLineVertices(Entry->P, Entry->P + Entry->Dim);
+                glEnd();
                 glEnable(GL_TEXTURE_2D);
             } break;
 
@@ -344,18 +348,21 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
         for(u32 BoundIndex = 0; BoundIndex < BoundCount; ++BoundIndex)
         {
             sort_sprite_bound *Bound = Bounds + BoundIndex;
-            if(Bound->Flags & Sprite_Cycle)
+            if(!(Bound->Flags & Sprite_DebugBox))
             {
-                if(!(Bound->Flags & Sprite_DebugBox))
+                v4 Color = V4(DebugColorTable[GroupIndex++ % ArrayCount(DebugColorTable)], 0.25f);
+                if(Bound->Flags & Sprite_Cycle)
                 {
-                    v4 Color = V4(DebugColorTable[GroupIndex++ % ArrayCount(DebugColorTable)], 1.0f);
-                    glColor4fv(Color.E);
-                    glBegin(GL_LINES);
-                    OpenGLDrawBoundsRecursive(Bounds, BoundIndex);
-                    glEnd();
-
-                    ++GroupIndex;
+                    Color.a = 1.0f;
                 }
+                Color.rgb *= Color.a;
+
+                glBegin(GL_LINES);
+                glColor4fv(Color.E);
+                OpenGLDrawBoundsRecursive(Bounds, BoundIndex);
+                glEnd();
+
+                ++GroupIndex;
             }
         }
     }

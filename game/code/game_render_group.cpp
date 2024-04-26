@@ -131,7 +131,7 @@ GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
 {
     sprite_bound SpriteBound;
     SpriteBound.YMin = SpriteBound.YMax = ObjectTransform.OffsetP.y + Offset.y;
-    SpriteBound.ZMax = ObjectTransform.OffsetP.z + Offset.z;
+    SpriteBound.ZMax = ObjectTransform.OffsetP.z + Offset.z + ObjectTransform.SortBias;
     if(ObjectTransform.Upright)
     {
         // TODO: More accurate ZMax calculations - this doesn't handle
@@ -245,12 +245,12 @@ inline void
 PushRectOutline(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1), real32 Thickness = 0.1f)
 {
     // Top and Bottom.
-    PushRect(Group, ObjectTransform, Offset - V3(0, 0.5f*Dim.y, 0), V2(Dim.x, Thickness), Color);
-    PushRect(Group, ObjectTransform, Offset + V3(0, 0.5f*Dim.y, 0), V2(Dim.x, Thickness), Color);
+    PushRect(Group, ObjectTransform, Offset - V3(0, 0.5f*Dim.y, 0), V2(Dim.x-Thickness-0.01f, Thickness), Color);
+    PushRect(Group, ObjectTransform, Offset + V3(0, 0.5f*Dim.y, 0), V2(Dim.x-Thickness-0.01f, Thickness), Color);
 
     // Left and Right.
-    PushRect(Group, ObjectTransform, Offset - V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y), Color);
-    PushRect(Group, ObjectTransform, Offset + V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y), Color);
+    PushRect(Group, ObjectTransform, Offset - V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y + Thickness), Color);
+    PushRect(Group, ObjectTransform, Offset + V3(0.5f*Dim.x, 0, 0), V2(Thickness, Dim.y + Thickness), Color);
 }
 
 inline void

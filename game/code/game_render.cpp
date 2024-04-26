@@ -1490,18 +1490,18 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
 }
 
 internal void
-RecursiveFromToBack(sprite_graph_walk *Walk, u32 AtIndex)
+RecursiveFrontToBack(sprite_graph_walk *Walk, u32 AtIndex)
 {
     sort_sprite_bound *At = Walk->InputNodes + AtIndex;
+        Walk->HitCycle = Walk->HitCycle || (At->Flags & Sprite_Cycle);
     if(!(At->Flags & Sprite_Visited))
     {
-        Walk->HitCycle = Walk->HitCycle || (At->Flags & Sprite_Cycle);
         At->Flags |= Sprite_Visited|Sprite_Cycle;
 
         for(sprite_edge *Edge = At->FirstEdgeWithMeAsFront; Edge; Edge = Edge->NextEdgeWithSameFront)
         {
             Assert(Edge->Front == AtIndex);
-            RecursiveFromToBack(Walk, Edge->Behind);
+            RecursiveFrontToBack(Walk, Edge->Behind);
         }
 
         if(!Walk->HitCycle)
@@ -1522,7 +1522,7 @@ WalkSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, u32 *OutIndex
     for(u32 NodeIndexA = 0; NodeIndexA < InputNodeCount; ++NodeIndexA)
     {
         Walk.HitCycle = false;
-        RecursiveFromToBack(&Walk, NodeIndexA);
+        RecursiveFrontToBack(&Walk, NodeIndexA);
     }
     Assert((Walk.OutIndex - OutIndexArray) == InputNodeCount);
 }

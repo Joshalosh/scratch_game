@@ -481,7 +481,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -515,9 +515,9 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                              ScreenX*TilesPerWidth + TilesPerWidth/2,
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
                                              AbsTileZ, Series);
-#if 0
+#if 1
         AddMonster(WorldMode, Room.P[3][6], Room.Ground[3][6]);
-        //AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
+        AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
 
         brain_id SnakeBrainID = AddBrain(WorldMode);
         for(u32 SegmentIndex = 0; SegmentIndex < 5; ++SegmentIndex)
