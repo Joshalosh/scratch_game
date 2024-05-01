@@ -1448,10 +1448,73 @@ SeperatedSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
     Assert(ReadHalf1 == End);
 }
 
+#define SORT_GRID_WIDTH 16 
+#define SORT_GRID_HEIGHT 9
+struct sort_grid_entry
+{
+    sort_grid_entry *Next;
+    u32 OccupantIndex;
+};
+
+internal b32
+GetGridSpan(rectangle2 TotalScreen, v2 InvCellDim, rectangle2 Source, rectangle2i *Dest)
+{
+    v2 MinR = Hadamard(InvCellDim, GetMinCorner(Source));
+    v2 MaxR = Hadamard(InvCellDim, GetMaxCorner(Source));
+
+    Dest->MinX = TruncateReal32ToInt32(MinR.x);
+    Dest->MinY = TruncateReal32ToInt32(MinR.y);
+    Dest->MaxX = TruncateReal32ToInt32(MaxR.x);
+    Dest->MaxY = TruncateReal32ToInt32(MaxR.y);
+
+    b32 Inside = RectanglesIntersect(TotalScreen, Source);
+    if(Inside)
+    {
+        if(Dest->MinX < 0) {Dest->MinX = 0;}
+        if(Dest->MinX >= SORT_GRID_WIDTH) {Dest->MinX = (SORT_GRID_WIDTH - 1);}
+        if(Dest->MaxX < 0) {Dest->MaxX = 0;}
+        if(Dest->MaxX >= SORT_GRID_WIDTH) {Dest->MaxX = (SORT_GRID_WIDTH - 1);}
+        if(Dest->MinY < 0) {Dest->MinY = 0;}
+        if(Dest->MinY >= SORT_GRID_HEIGHT) {Dest->MinY = (SORT_GRID_HEIGHT - 1);}
+        if(Dest->MaxY < 0) {Dest->MaxX = 0;}
+        if(Dest->MaxY >= SORT_GRID_HEIGHT) {Dest->MaxY = (SORT_GRID_HEIGHT - 1);}
+    }
+
+    return(Inside);
+}
+
 internal void 
-BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena)
+BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena,
+                 u32 ScreenWidth, u32 ScreenHeight)
 {
     TIMED_FUNCTION();
+
+    rectangle2 TotalScreen = RectMinMax(V2(0, 0), V2((r32)ScreenWidth, (r32)ScreenHeight));
+    v2 InvCellDim = {(r32)SORT_GRID_WIDTH / (r32)ScreenWidth,
+                     (r32)SORT_GRID_HEIGHT / (r32)ScreenHeight};
+
+    sort_grid_entry *Grid[SORT_GRID_WIDTH][SORT_GRID_HEIGHT] = {};
+    for(u32 NodeIndexA = 0; NodeIndexA < InputNodeCount; ++NodeIndexA)
+    {
+        sort_sprite_bound *A = InputNodes + NodeIndexA;
+        Assert(A->Flags == 0);
+
+        rectangle2i GridSpan;
+        if(GetGridSpan(TotalScreen, InvCellDim, A->ScreenArea, &GridSpan))
+        {
+            for(s32 GridX = GridSpan.MinX; GridX <= GridSpan.MaxX; ++GridX)
+            {
+                for(s32 GridY = GridSpan.MinY; GridY <= GridSpan.MaxY; ++GridY)
+                {
+                    sort_grid_entry *Entry = PushStruct(Arena, sort_grid_entry);
+                    Entry->Next = Grid[GridX][GridY];
+                    Entry->OccupantIndex = NodeIndexA;
+
+                    Grid[GridX][GridY] = Entry;
+                }
+            }
+        }
+    }
 
     if(InputNodeCount)
     {
@@ -1537,7 +1600,7 @@ SortEntries(game_render_commands *Commands, memory_arena *TempArena)
     u32 *Result = PushArray(TempArena, Count, u32);
 
 #if 1
-    BuildSpriteGraph(Count, Entries, TempArena);
+    BuildSpriteGraph(Count, Entries, TempArena, Commands->Width, Commands->Height);
     WalkSpriteGraph(Count, Entries, Result);
 #else
     for(u32 NodeIndexA = 0; NodeIndexA < Count; ++NodeIndexA)
