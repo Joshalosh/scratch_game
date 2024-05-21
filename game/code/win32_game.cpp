@@ -34,7 +34,7 @@ enum win32_rendering_type
 global_variable win32_rendering_type GlobalRenderingType; // = Win32RenderType_RenderSoftware_DisplayGDI;
 global_variable b32 GlobalRunning;
 global_variable b32 GlobalPause;
-global_variable b32 GlobalShowSortGroups = true;
+global_variable b32 GlobalShowSortGroups;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable s64 GlobalPerfCountFrequency;
@@ -755,7 +755,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
         OutputTarget.Height = GlobalBackbuffer.Height;
         OutputTarget.Pitch = GlobalBackbuffer.Pitch;
 
-        SoftwareRenderCommands(RenderQueue, &Prep, Commands, &OutputTarget);
+        SoftwareRenderCommands(RenderQueue, Commands, &Prep, &OutputTarget);
 
         if(GlobalRenderingType == Win32RenderType_RenderSoftware_DisplayOpenGL)
         {
@@ -929,7 +929,7 @@ Win32ClearBuffer(win32_sound_output *SoundOutput)
         {
             *DestSample++ = 0;
         }
-    
+
         DestSample = (uint8_t *)Region2;
         for(DWORD ByteIndex = 0; ByteIndex < Region2Size; ++ByteIndex)
         {
@@ -1148,6 +1148,7 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
     for(;;)
     {
         BOOL GotMessage = FALSE;
+
         {
             TIMED_BLOCK("PeekMessage");
             GotMessage = PeekMessage(&Message, 0, 0, 0, PM_REMOVE);
@@ -1156,7 +1157,7 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
         if(!GotMessage)
         {
             break;
-        } 
+        }
 
         switch(Message.message)
         {
@@ -1245,7 +1246,7 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
                             {
                                 Win32BeginInputPlayback(State, 1);
                             }
-                            else 
+                            else
                             {
                                 if(State->InputPlayingIndex == 0)
                                 {
@@ -1409,18 +1410,18 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
         int Bottom = PadY + LineHeight;
         if(MarkerIndex == CurrentMarkerIndex)
         {
-            Top += LineHeight + PadY;
-            Bottom += LineHeight + PadY;
+            Top += LineHeight+PadY;
+            Bottom += LineHeight+PadY;
 
-            int FirstTop = Bottom;
+            int FirstTop = Top;
 
             Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                        ThisMarker->OutputPlayCursor, PlayColor);
             Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                        ThisMarker->OutputWriteCursor, WriteColor);
 
-            Top += LineHeight + PadY;
-            Bottom += LineHeight + PadY;
+            Top += LineHeight+PadY;
+            Bottom += LineHeight+PadY;
 
             Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
                                        ThisMarker->OutputLocation, PlayColor);
@@ -1428,8 +1429,8 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
                                        ThisMarker->OutputLocation + ThisMarker->OutputByteCount,
                                        WriteColor);
 
-            Top += LineHeight + PadY;
-            Bottom += LineHeight + PadY;
+            Top += LineHeight+PadY;
+            Bottom += LineHeight+PadY;
 
             Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, FirstTop, Bottom,
                                        ThisMarker->ExpectedFlipPlayCursor, ExpectedFlipColor);
@@ -1732,13 +1733,13 @@ Win32FullRestart(char *SourceEXE, char *DestEXE, char *DeleteEXE)
                              FALSE,
                              0,
                              0,
-                             "w:\\game\\data",
+                             "w:\\game\\data\\",
                              &StartupInfo,
                              &ProcessInfo))
             {
                 CloseHandle(ProcessInfo.hProcess);
             }
-            else 
+            else
             {
                 // TODO: Error!
             }
@@ -1959,7 +1960,7 @@ WinMain(HINSTANCE Instance,
             for(int ReplayIndex = 1; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
             {
                 win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
-                 
+
                 Win32GetInputFileLocation(&Win32State, false, ReplayIndex,
                                           sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
 
@@ -2321,7 +2322,7 @@ WinMain(HINSTANCE Instance,
                             SafeWriteCursor += SoundOutput.SafetyBytes;
 
                             bool32 AudioCardIsLowLatency = (SafeWriteCursor < ExpectedFrameBoundaryByte);
-                            
+
                             DWORD TargetCursor = 0;
                             if(AudioCardIsLowLatency)
                             {

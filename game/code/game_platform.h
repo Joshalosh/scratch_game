@@ -1,4 +1,3 @@
-#if !defined(GAME_PLATFORM_H)
 
 // TODO: Have the meta-parser ignore its own #define
 #define introspect(IGNORED)
@@ -340,6 +339,7 @@ typedef struct game_render_commands
 
     v4 ClearColor;
 
+    // NOTE: Shoud PushBufferElementCount be renamed?
     u32 PushBufferElementCount;
     u32 SortEntryAt;
 
@@ -644,6 +644,3 @@ inline u32 GetThreadID(void)
 #endif
 
 #include "game_debug_interface.h"
-
-#define GAME_PLATFORM_H
-#endif

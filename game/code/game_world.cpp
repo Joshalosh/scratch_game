@@ -139,7 +139,7 @@ RecanonicaliseCoord(real32 ChunkDim, int32_t *Tile, real32 *TileRel)
 {
     int32_t Offset = RoundReal32ToInt32(*TileRel / ChunkDim);
     *Tile += Offset;
-    *TileRel -= Offset*ChunkDim;
+    *TileRel -= (r32)Offset*ChunkDim;
 
     Assert(IsCanonical(ChunkDim, *TileRel));
 }
@@ -186,7 +186,7 @@ PackEntityReference(sim_region *SimRegion, entity_reference *Ref)
         {
             Ref->Index.Value = 0;
         }
-        else 
+        else
         {
             Ref->Index = Ref->Ptr->ID;
         }
@@ -219,7 +219,7 @@ PackEntityIntoChunk(world *World, sim_region *SimRegion, entity *Source, world_c
             World->FirstFreeBlock = PushStruct(&World->Arena, world_entity_block);
             World->FirstFreeBlock->Next = 0;
         }
-        
+
         Chunk->FirstBlock = World->FirstFreeBlock;
         World->FirstFreeBlock = Chunk->FirstBlock->Next;
 
@@ -233,7 +233,7 @@ PackEntityIntoChunk(world *World, sim_region *SimRegion, entity *Source, world_c
     Block->EntityDataSize += PackSize;
     ++Block->EntityCount;
 
-    entity *DestE = (entity *)Dest;;
+    entity *DestE = (entity *)Dest;
     *DestE = *Source;
     PackTraversableReference(SimRegion, &DestE->Occupying);
     PackTraversableReference(SimRegion, &DestE->CameFrom);

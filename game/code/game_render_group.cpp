@@ -47,7 +47,7 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransf
             Result.Valid = true;
         }
     }
-    
+
     return(Result);
 }
 
@@ -65,24 +65,44 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
     if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_sprite_bound)))
     {
         render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + Commands->PushBufferSize);
+        Header->NextOffset = 0;
         Header->Type = (u16)Type;
         Header->ClipRectIndex = SafeTruncateToU16(Group->CurrentClipRectIndex);
         Result = (uint8_t *)Header + sizeof(*Header);
-
-        Commands->SortEntryAt -= sizeof(sort_sprite_bound);
-        sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
-        Entry->FirstEdgeWithMeAsFront = 0;
-        Entry->SortKey = SortKey;
-        Entry->Offset = Commands->PushBufferSize;
-        Entry->ScreenArea = ScreenArea;
-        Entry->Flags = 0;
-
 #if GAME_SLOW
         Header->DebugTag = Group->DebugTag;
-        Entry->DebugTag = Group->DebugTag;
 #endif
+
+        b32 NewElement = true;
+        if(NewElement)
+        {
+            Commands->SortEntryAt -= sizeof(sort_sprite_bound);
+            sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
+            Entry->FirstEdgeWithMeAsFront = 0;
+            Entry->SortKey = SortKey;
+            Entry->Offset = Commands->PushBufferSize;
+            Entry->ScreenArea = ScreenArea;
+            Entry->Flags = 0;
+#if GAME_SLOW
+            Entry->DebugTag = Group->DebugTag;
+#endif
+            Assert(Entry->Offset != 0);
+
+            ++Commands->PushBufferElementCount;
+        }
+        else 
+        {
+#if 0
+            Existing->NextOffset = Commands->PushBufferSize;
+            Existing->Bound.YMin = Minimum(Exisiting->Bound.YMin, SortKey.YMin);
+            Existing->Bound.YMax = Minimum(Exisiting->Bound.YMax, SortKey.YMax);
+            Existing->Bound.ZMax = Minimum(Exisiting->Bound.ZMax, SortKey.ZMax);
+            Existing->ScreenArea = Union(Exisiting->ScreenArea, ScreenArea);
+            Exisiting = us;
+#endif
+        }
+
         Commands->PushBufferSize += Size;
-        ++Commands->PushBufferElementCount;
 
         //Assert(GetArea(ScreenArea) < (2000.0f*2000.0f));
     }
@@ -126,7 +146,7 @@ StoreColor(render_group *Group, v4 Source)
     return(Dest);
 }
 
-inline sprite_bound 
+inline sprite_bound
 GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
 {
     sprite_bound SpriteBound;
@@ -138,7 +158,7 @@ GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
         // alignment, rotation, or axis shear/scale
         SpriteBound.ZMax += 0.5f*Height;
     }
-    else 
+    else
     {
         // TODO: More accurate ZMax calculations - this doesn't handle
         // alignment, rotation, or axis shear/scale
@@ -299,7 +319,7 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H, clip_rect_fx FX = 
     game_render_commands *Commands = Group->Commands;
 
     u32 Size = sizeof(render_entry_cliprect);
-    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_sprite_bound)))
+    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_entry)))
     {
         render_entry_cliprect *Rect = (render_entry_cliprect *)
             (Commands->PushBufferBase + Commands->PushBufferSize);
@@ -441,7 +461,7 @@ Perspective(render_group *RenderGroup,
     r32 PixelWidth = GetDim(RenderGroup->ScreenArea).x;
     r32 PixelHeight = GetDim(RenderGroup->ScreenArea).y;
 
-    RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres, 
+    RenderGroup->MonitorHalfDimInMetres = {0.5f*PixelWidth*PixelsToMetres,
                                            0.5f*PixelHeight*PixelsToMetres};
 
     RenderGroup->CameraTransform.MetresToPixels = MetresToPixels;

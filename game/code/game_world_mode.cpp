@@ -107,7 +107,7 @@ AddMonster(game_mode_world *WorldMode, world_position P, traversable_reference S
 }
 
 internal void
-AddSnakeSegment(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn, 
+AddSnakeSegment(game_mode_world *WorldMode, world_position P, traversable_reference StandingOn,
                 brain_id BrainID, u32 SegmentIndex)
 {
     entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->MonsterCollision);
@@ -170,7 +170,7 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
             {
                 // NOTE: Hole down to floor below.
             }
-            else 
+            else
             {
                 if((OffsetX == 3) &&
                    (OffsetY >= -2) &&
@@ -515,6 +515,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                              ScreenX*TilesPerWidth + TilesPerWidth/2,
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
                                              AbsTileZ, Series);
+
 #if 1
         AddMonster(WorldMode, Room.P[3][6], Room.Ground[3][6]);
         AddFamiliar(WorldMode, Room.P[4][3], Room.Ground[4][3]);
@@ -715,7 +716,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP, DrawBuffer, BackgroundColor,
                             dt, TranState, MouseP);
-
 
     RenderGroup->tGlobalColor = V4(0, 0, 0, 0);
 

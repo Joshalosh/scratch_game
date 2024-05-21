@@ -1109,86 +1109,90 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
     u32 *Entry = Prep->SortedIndices;
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
-        render_group_entry_header *Header = (render_group_entry_header *)
-            (Commands->PushBufferBase + *Entry);
-        if(ClipRectIndex != Header->ClipRectIndex)
+        u32 HeaderOffset = *Entry;
+        while(HeaderOffset)
         {
-            ClipRectIndex = Header->ClipRectIndex;
-            Assert(ClipRectIndex < Commands->ClipRectCount);
-
-            render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
-            ClipRect = Intersect(BaseClipRect, Clip->Rect);
-        }
-
-        void *Data = (uint8_t *)Header + sizeof(*Header);
-        switch(Header->Type)
-        {
-            case RenderGroupEntryType_render_entry_bitmap:
+            render_group_entry_header *Header = (render_group_entry_header *)
+                (Commands->PushBufferBase + *Entry);
+            if(ClipRectIndex != Header->ClipRectIndex)
             {
-                render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
-                Assert(Entry->Bitmap);
+                ClipRectIndex = Header->ClipRectIndex;
+                Assert(ClipRectIndex < Commands->ClipRectCount);
 
-#if 0
-//                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
-                DrawRectangleSlowly(OutputTarget, Entry->P,
-                                    V2(Entry->Size.x, 0),
-                                    V2(0, Entry->Size.y), Entry->Color,
-                                    Entry->Bitmap, 0, 0, 0, 0, NullPixelsToMetres);
-#else
-                DrawRectangleQuickly(OutputTarget, Entry->P,
-                                     Entry->XAxis,
-                                     Entry->YAxis, Entry->PremulColor,
-                                     Entry->Bitmap, NullPixelsToMetres, ClipRect);
-#endif
-            } break;
+                render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
+                ClipRect = Intersect(BaseClipRect, Clip->Rect);
+            }
 
-            case RenderGroupEntryType_render_entry_rectangle:
+            void *Data = (uint8_t *)Header + sizeof(*Header);
+            switch(Header->Type)
             {
-                render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
-                DrawRectangle(OutputTarget, Entry->P, Entry->P + Entry->Dim, Entry->PremulColor, ClipRect);
-            } break;
-
-            case RenderGroupEntryType_render_entry_coordinate_system:
-            {
-                render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
-
-#if 0
-                v2 vMax = (Entry->Origin + Entry->XAxis + Entry->YAxis);
-                DrawRectangleSlowly(OutputTarget,
-                                    Entry->Origin,
-                                    Entry->XAxis,
-                                    Entry->YAxis,
-                                    Entry->Color,
-                                    Entry->Texture,
-                                    Entry->NormalMap,
-                                    Entry->Top, Entry->Middle, Entry->Bottom,
-                                    PixelsToMetres);
-
-                v4 Color = {1, 1, 0, 1};
-                v2 Dim = {2, 2};
-                v2 P = Entry->Origin;
-                DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
-
-                P = Entry->Origin + Entry->XAxis;
-                DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
-
-                P = Entry->Origin + Entry->YAxis;
-                DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
-
-                DrawRectangle(OutputTarget, vMax - Dim, vMax + Dim, Color);
-
-#if 0
-                for(uint32_t PIndex = 0; PIndex < ArrayCount(Entry->Points); ++PIndex)
+                case RenderGroupEntryType_render_entry_bitmap:
                 {
-                    v2 P = Entry->Points[PIndex];
-                    P = Entry->Origin + P.x*Entry->XAxis + P.y*Entry->YAxis;
-                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Entry->Color.r, Entry->Color.g, Entry->Color.b);
-                }
-#endif
-#endif
-            } break;
+                    render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
+                    Assert(Entry->Bitmap);
 
-            InvalidDefaultCase;
+#if 0
+    //                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
+                    DrawRectangleSlowly(OutputTarget, Entry->P,
+                                        V2(Entry->Size.x, 0),
+                                        V2(0, Entry->Size.y), Entry->Color,
+                                        Entry->Bitmap, 0, 0, 0, 0, NullPixelsToMetres);
+#else
+                    DrawRectangleQuickly(OutputTarget, Entry->P,
+                                         Entry->XAxis,
+                                         Entry->YAxis, Entry->PremulColor,
+                                         Entry->Bitmap, NullPixelsToMetres, ClipRect);
+#endif
+                } break;
+
+                case RenderGroupEntryType_render_entry_rectangle:
+                {
+                    render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
+                    DrawRectangle(OutputTarget, Entry->P, Entry->P + Entry->Dim, Entry->PremulColor, ClipRect);
+                } break;
+
+                case RenderGroupEntryType_render_entry_coordinate_system:
+                {
+                    render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
+
+#if 0
+                    v2 vMax = (Entry->Origin + Entry->XAxis + Entry->YAxis);
+                    DrawRectangleSlowly(OutputTarget,
+                                        Entry->Origin,
+                                        Entry->XAxis,
+                                        Entry->YAxis,
+                                        Entry->Color,
+                                        Entry->Texture,
+                                        Entry->NormalMap,
+                                        Entry->Top, Entry->Middle, Entry->Bottom,
+                                        PixelsToMetres);
+
+                    v4 Color = {1, 1, 0, 1};
+                    v2 Dim = {2, 2};
+                    v2 P = Entry->Origin;
+                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
+
+                    P = Entry->Origin + Entry->XAxis;
+                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
+
+                    P = Entry->Origin + Entry->YAxis;
+                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
+
+                    DrawRectangle(OutputTarget, vMax - Dim, vMax + Dim, Color);
+
+#if 0
+                    for(uint32_t PIndex = 0; PIndex < ArrayCount(Entry->Points); ++PIndex)
+                    {
+                        v2 P = Entry->Points[PIndex];
+                        P = Entry->Origin + P.x*Entry->XAxis + P.y*Entry->YAxis;
+                        DrawRectangle(OutputTarget, P - Dim, P + Dim, Entry->Color.r, Entry->Color.g, Entry->Color.b);
+                    }
+#endif
+#endif
+                } break;
+
+                InvalidDefaultCase;
+            }
         }
     }
 }
@@ -1204,7 +1208,7 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 
 internal void
 SoftwareRenderCommands(platform_work_queue *RenderQueue,
-                       game_render_prep *Prep, game_render_commands *Commands, loaded_bitmap *OutputTarget)
+                       game_render_commands *Commands, game_render_prep *Prep, loaded_bitmap *OutputTarget)
 {
     TIMED_FUNCTION();
 
@@ -1288,174 +1292,6 @@ Swap(sort_sprite_bound *A, sort_sprite_bound *B)
     *A = Temp;
 }
 
-internal void
-MergeSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
-{
-    if(Count == 1)
-    {
-        // NOTE: Nothing to do
-    }
-    else if(Count == 2)
-    {
-        sort_sprite_bound *EntryA = First;
-        sort_sprite_bound *EntryB = First + 1;
-        if(IsInFrontOf(EntryA->SortKey, EntryB->SortKey))
-        {
-            Swap(EntryA, EntryB);
-        }
-    }
-    else
-    {
-        u32 Half0 = Count / 2;
-        u32 Half1 = Count - Half0;
-
-        Assert(Half0 >= 1);
-        Assert(Half1 >= 1);
-
-        sort_sprite_bound *InHalf0 = First;
-        sort_sprite_bound *InHalf1 = First + Half0;
-        sort_sprite_bound *End = First + Count;
-
-        MergeSort(Half0, InHalf0, Temp);
-        MergeSort(Half1, InHalf1, Temp);
-
-        sort_sprite_bound *ReadHalf0 = InHalf0;
-        sort_sprite_bound *ReadHalf1 = InHalf1;
-
-        sort_sprite_bound *Out = Temp;
-        for(u32 Index = 0; Index < Count; ++Index)
-        {
-            if(ReadHalf0 == InHalf1)
-            {
-                *Out++ = *ReadHalf1++;
-            }
-            else if(ReadHalf1 == End)
-            {
-                *Out++ = *ReadHalf0++;
-            }
-            else if(IsInFrontOf(ReadHalf1->SortKey, ReadHalf0->SortKey))
-            {
-                *Out++ = *ReadHalf0++;
-            }
-            else
-            {
-                *Out++ = *ReadHalf1++;
-            }
-        }
-        Assert(Out == (Temp + Count));
-        Assert(ReadHalf0 == InHalf1);
-        Assert(ReadHalf1 == End);
-
-        // TODO: Not necessary if we ping-pong
-        for(u32 Index = 0; Index < Count; ++Index)
-        {
-            First[Index] = Temp[Index];
-        }
-    }
-}
-
-inline b32
-IsZSprite(sprite_bound Bound)
-{
-    b32 Result = (Bound.YMin != Bound.YMax);
-    return(Result);
-}
-
-internal void 
-VerifyBuffer(u32 Count, sort_sprite_bound *Buffer, b32 ZSprite)
-{
-    for(u32 Index = 0; Index < Count; ++Index)
-    {
-        Assert(IsZSprite(Buffer[Index].SortKey) == ZSprite);
-        if(Index > 0)
-        {
-            Assert(IsInFrontOf(Buffer[Index].SortKey, Buffer[Index - 1].SortKey));
-        }
-    }
-}
-
-internal void
-SeperatedSort(u32 Count, sort_sprite_bound *First, sort_sprite_bound *Temp)
-{
-    u32 YCount = 0;
-    u32 ZCount = 0;
-    for(u32 Index = 0; Index < Count; ++Index)
-    {
-        sort_sprite_bound *This = First + Index;
-        if(IsZSprite(This->SortKey))
-        {
-            Temp[ZCount++] = *This;
-        }
-        else 
-        {
-            First[YCount++] = *This;
-        }
-    }
-
-#if GAME_SLOW 
-    VerifyBuffer(YCount, First, false);
-    VerifyBuffer(ZCount, Temp, true);
-#endif
-
-    MergeSort(YCount, First, Temp + ZCount);
-    MergeSort(ZCount, Temp, First + YCount);
-    if(YCount == 1)
-    {
-        Temp[ZCount] = First[0];
-    }
-    else if(YCount == 2)
-    {
-        Temp[ZCount] = First[0];
-        Temp[ZCount + 1] = First[1];
-    }
-
-    sort_sprite_bound *InHalf0 = Temp;
-    sort_sprite_bound *InHalf1 = Temp + ZCount;
-
-#if GAME_SLOW 
-    VerifyBuffer(YCount, InHalf1, false);
-    VerifyBuffer(ZCount, InHalf0, true);
-#endif
-
-    sort_sprite_bound *End = InHalf1 + YCount;
-    sort_sprite_bound *ReadHalf0 = InHalf0;
-    sort_sprite_bound *ReadHalf1 = InHalf1;
-
-    sort_sprite_bound *Out = First;
-    for(u32 Index = 0; Index < Count; ++Index)
-    {
-        if(ReadHalf0 == InHalf1)
-        {
-            *Out++ = *ReadHalf1++;
-        }
-        else if(ReadHalf1 == End)
-        {
-            *Out++ = *ReadHalf0++;
-        }
-        //TODO: This merge comparison can be simpler now since we know
-        // which sprite is a Z sprite and which is a Y sprite
-        else if(IsInFrontOf(ReadHalf1->SortKey, ReadHalf0->SortKey))
-        {
-            *Out++ = *ReadHalf0++;
-        }
-        else
-        {
-            *Out++ = *ReadHalf1++;
-        }
-    }
-    Assert(Out == (First + Count));
-    Assert(ReadHalf0 == InHalf1);
-    Assert(ReadHalf1 == End);
-}
-
-#define SORT_GRID_WIDTH 16 
-#define SORT_GRID_HEIGHT 9
-struct sort_grid_entry
-{
-    sort_grid_entry *Next;
-    u32 OccupantIndex;
-};
-
 internal b32
 GetGridSpan(rectangle2 TotalScreen, v2 InvCellDim, rectangle2 Source, rectangle2i *Dest)
 {
@@ -1476,18 +1312,19 @@ GetGridSpan(rectangle2 TotalScreen, v2 InvCellDim, rectangle2 Source, rectangle2
         if(Dest->MaxX >= SORT_GRID_WIDTH) {Dest->MaxX = (SORT_GRID_WIDTH - 1);}
         if(Dest->MinY < 0) {Dest->MinY = 0;}
         if(Dest->MinY >= SORT_GRID_HEIGHT) {Dest->MinY = (SORT_GRID_HEIGHT - 1);}
-        if(Dest->MaxY < 0) {Dest->MaxX = 0;}
+        if(Dest->MaxY < 0) {Dest->MaxY = 0;}
         if(Dest->MaxY >= SORT_GRID_HEIGHT) {Dest->MaxY = (SORT_GRID_HEIGHT - 1);}
     }
 
     return(Inside);
 }
 
-internal void 
+internal void
 BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena,
                  u32 ScreenWidth, u32 ScreenHeight)
 {
     TIMED_FUNCTION();
+
 
     rectangle2 TotalScreen = RectMinMax(V2(0, 0), V2((r32)ScreenWidth, (r32)ScreenHeight));
     v2 InvCellDim = {(r32)SORT_GRID_WIDTH / (r32)ScreenWidth,
@@ -1506,46 +1343,42 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
             {
                 for(s32 GridY = GridSpan.MinY; GridY <= GridSpan.MaxY; ++GridY)
                 {
-                    sort_grid_entry *Entry = PushStruct(Arena, sort_grid_entry);
+                    sort_grid_entry *Entry = PushStruct(Arena, sort_grid_entry, NoClear());
                     Entry->Next = Grid[GridX][GridY];
                     Entry->OccupantIndex = NodeIndexA;
 
-                    Grid[GridX][GridY] = Entry;
-                }
-            }
-        }
-    }
-
-    if(InputNodeCount)
-    {
-        for(u32 NodeIndexA = 0; NodeIndexA < (InputNodeCount - 1); ++NodeIndexA)
-        {
-            sort_sprite_bound *A = InputNodes + NodeIndexA;
-            Assert(A->Flags == 0);
-
-            for(u32 NodeIndexB = (NodeIndexA + 1); NodeIndexB < InputNodeCount; ++NodeIndexB)
-            {
-                sort_sprite_bound *B = InputNodes + NodeIndexB;
-
-                if(RectanglesIntersect(A->ScreenArea, B->ScreenArea))
-                {
-                    u32 FrontIndex = NodeIndexA;
-                    u32 BackIndex = NodeIndexB;
-                    if(IsInFrontOf(B->SortKey, A->SortKey))
+                    for(sort_grid_entry *EntryB = Grid[GridX][GridY]; EntryB; EntryB = EntryB->Next)
                     {
-                        u32 Temp = FrontIndex;
-                        FrontIndex = BackIndex;
-                        BackIndex = Temp;
+                        u32 NodeIndexB = EntryB->OccupantIndex;
+                        
+                        sort_sprite_bound *B = InputNodes + NodeIndexB;
+                        if((B->Flags != NodeIndexA) &&
+                            RectanglesIntersect(A->ScreenArea, B->ScreenArea))
+                        {
+                            Assert((NodeIndexA & Sprite_IndexMask) == NodeIndexA);
+                            Assert((B->Flags & ~Sprite_IndexMask) == 0);
+                            B->Flags = NodeIndexA;
+
+                            u32 FrontIndex = NodeIndexA;
+                            u32 BackIndex = NodeIndexB;
+                            if(IsInFrontOf(B->SortKey, A->SortKey))
+                            {
+                                u32 Temp = FrontIndex;
+                                FrontIndex = BackIndex;
+                                BackIndex = Temp;
+                            }
+
+                            sprite_edge *Edge = PushStruct(Arena, sprite_edge, NoClear());
+                            sort_sprite_bound *Front = InputNodes + FrontIndex;
+                            Edge->Front = FrontIndex;
+                            Edge->Behind = BackIndex;
+
+                            Edge->NextEdgeWithSameFront = Front->FirstEdgeWithMeAsFront;
+                            Front->FirstEdgeWithMeAsFront = Edge;
+                        }
                     }
 
-                    // TODO: Reenable the push
-                    sprite_edge *Edge = PushStruct(Arena, sprite_edge);
-                    sort_sprite_bound *Front = InputNodes + FrontIndex;
-                    Edge->Front = FrontIndex;
-                    Edge->Behind = BackIndex;
-
-                    Edge->NextEdgeWithSameFront = Front->FirstEdgeWithMeAsFront;
-                    Front->FirstEdgeWithMeAsFront = Edge;
+                    Grid[GridX][GridY] = Entry;
                 }
             }
         }
@@ -1556,7 +1389,7 @@ internal void
 RecursiveFrontToBack(sprite_graph_walk *Walk, u32 AtIndex)
 {
     sort_sprite_bound *At = Walk->InputNodes + AtIndex;
-        Walk->HitCycle = Walk->HitCycle || (At->Flags & Sprite_Cycle);
+    Walk->HitCycle = Walk->HitCycle || (At->Flags & Sprite_Cycle);
     if(!(At->Flags & Sprite_Visited))
     {
         At->Flags |= Sprite_Visited|Sprite_Cycle;
@@ -1579,6 +1412,8 @@ RecursiveFrontToBack(sprite_graph_walk *Walk, u32 AtIndex)
 internal void
 WalkSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, u32 *OutIndexArray)
 {
+    TIMED_FUNCTION();
+
     sprite_graph_walk Walk = {};
     Walk.InputNodes = InputNodes;
     Walk.OutIndex = OutIndexArray;
@@ -1644,8 +1479,9 @@ SortEntries(game_render_commands *Commands, memory_arena *TempArena)
 internal render_entry_cliprect *
 LineariseClipRects(game_render_commands *Commands, memory_arena *TempArena)
 {
-    render_entry_cliprect *Result = PushArray(TempArena, Commands->PushBufferElementCount, 
+    render_entry_cliprect *Result = PushArray(TempArena, Commands->ClipRectCount,
                                               render_entry_cliprect);
+
     render_entry_cliprect *Out = Result;
     for(render_entry_cliprect *Rect = Commands->FirstRect; Rect; Rect = Rect->Next)
     {
@@ -1665,4 +1501,3 @@ PrepForRender(game_render_commands *Commands, memory_arena *TempArena)
 
     return(Prep);
 }
-

@@ -15,11 +15,12 @@ struct sprite_edge
 
 enum sprite_flag
 {
-    Sprite_Visited = 0x1,
-    Sprite_Drawn = 0x2,
+    Sprite_Visited  = 0x10000000,
+    Sprite_Drawn    = 0x20000000,
+    Sprite_DebugBox = 0x40000000,
+    Sprite_Cycle    = 0x80000000,
 
-    Sprite_DebugBox = 0x4,
-    Sprite_Cycle = 0x10,
+    Sprite_IndexMask = 0x0FFFFFFF,
 };
 struct sort_sprite_bound
 {
@@ -55,4 +56,11 @@ GetSortEntries(game_render_commands *Commands)
     return(SortEntries);
 }
 
+#define SORT_GRID_WIDTH  64
+#define SORT_GRID_HEIGHT 36
+struct sort_grid_entry
+{
+    sort_grid_entry *Next;
+    u32 OccupantIndex;
+};
 
