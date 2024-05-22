@@ -73,38 +73,25 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
         Header->DebugTag = Group->DebugTag;
 #endif
 
-        b32 NewElement = true;
-        if(NewElement)
-        {
-            Commands->SortEntryAt -= sizeof(sort_sprite_bound);
-            sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
-            Entry->FirstEdgeWithMeAsFront = 0;
-            Entry->SortKey = SortKey;
-            Entry->Offset = Commands->PushBufferSize;
-            Entry->ScreenArea = ScreenArea;
-            Entry->Flags = 0;
+        Commands->SortEntryAt -= sizeof(sort_sprite_bound);
+        sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
+        Entry->FirstEdgeWithMeAsFront = 0;
+        Entry->SortKey = SortKey;
+        Entry->Offset = Commands->PushBufferSize;
+        Entry->ScreenArea = ScreenArea;
+        Entry->Flags = 0;
 #if GAME_SLOW
-            Entry->DebugTag = Group->DebugTag;
+        Entry->DebugTag = Group->DebugTag;
 #endif
-            Assert(Entry->Offset != 0);
+        Assert(Entry->Offset != 0);
 
-            ++Commands->PushBufferElementCount;
-        }
-        else 
-        {
-#if 0
-            Existing->NextOffset = Commands->PushBufferSize;
-            Existing->Bound.YMin = Minimum(Exisiting->Bound.YMin, SortKey.YMin);
-            Existing->Bound.YMax = Minimum(Exisiting->Bound.YMax, SortKey.YMax);
-            Existing->Bound.ZMax = Minimum(Exisiting->Bound.ZMax, SortKey.ZMax);
-            Existing->ScreenArea = Union(Exisiting->ScreenArea, ScreenArea);
-            Exisiting = us;
-#endif
-        }
-
+        ++Commands->PushBufferElementCount;
         Commands->PushBufferSize += Size;
 
-        //Assert(GetArea(ScreenArea) < (2000.0f*2000.0f));
+        Group->AggregateBound.YMin = Minimum(Group->AggregateBound.YMin, SortKey.YMin);
+        Group->AggregateBound.YMax = Maximum(Group->AggregateBound.YMax, SortKey.YMax);
+        Group->AggregateBound.ZMax = Maximum(Group->AggregateBound.ZMax, SortKey.ZMax);
+        ++Group->AggregateCount;
     }
     else
     {
@@ -112,6 +99,28 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
     }
 
     return(Result);
+}
+
+inline void
+BeginAggregateSortKey(render_group *RenderGroup)
+{
+    game_render_commands *Commands = RenderGroup->Commands;
+    RenderGroup->FirstAggregateAt = (Commands->SortEntryAt - sizeof(sort_sprite_bound));
+    RenderGroup->AggregateBound.YMin = R32Maximum;
+    RenderGroup->AggregateBound.YMax = R32Minimum;
+    RenderGroup->AggregateBound.ZMax = R32Minimum;
+    RenderGroup->AggregateCount = 0;
+}
+
+inline void
+EndAggregateSortKey(render_group *RenderGroup)
+{
+    game_render_commands *Commands = RenderGroup->Commands;
+    sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + RenderGroup->FirstAggregateAt);
+    for(u32 Index = 0; Index < RenderGroup->AggregateCount; ++Index, --Entry)
+    {
+        Entry->SortKey = RenderGroup->AggregateBound;
+    }
 }
 
 inline used_bitmap_dim

@@ -163,6 +163,10 @@ struct render_group
 
     u32 GenerationID;
     game_render_commands *Commands;
+
+    u32 AggregateCount;
+    sprite_bound AggregateBound;
+    u32 FirstAggregateAt;
 };
 
 struct entity_basis_p_result

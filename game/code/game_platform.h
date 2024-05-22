@@ -213,6 +213,8 @@ introspect(category:"math") struct rectangle3
 
 #define Real32Maximum FLT_MAX
 #define Real32Minimum -FLT_MAX
+#define R32Maximum FLT_MAX
+#define R32Minimum -FLT_MAX
 
 #if !defined(internal)
 #define internal static
