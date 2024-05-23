@@ -48,7 +48,6 @@ enum render_group_entry_type
 };
 struct render_group_entry_header // TODO: Don't store type here, perhaps better to store in sort index
 {
-    u32 NextOffset; // NOTE: If non-zero, then jump here and continue rendering entries
     u16 Type;
     u16 ClipRectIndex;
 
@@ -164,6 +163,7 @@ struct render_group
     u32 GenerationID;
     game_render_commands *Commands;
 
+    b32 IsAggregating;
     u32 AggregateCount;
     sprite_bound AggregateBound;
     u32 FirstAggregateAt;

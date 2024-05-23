@@ -65,7 +65,6 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
     if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_sprite_bound)))
     {
         render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + Commands->PushBufferSize);
-        Header->NextOffset = 0;
         Header->Type = (u16)Type;
         Header->ClipRectIndex = SafeTruncateToU16(Group->CurrentClipRectIndex);
         Result = (uint8_t *)Header + sizeof(*Header);
@@ -88,10 +87,30 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
         ++Commands->PushBufferElementCount;
         Commands->PushBufferSize += Size;
 
-        Group->AggregateBound.YMin = Minimum(Group->AggregateBound.YMin, SortKey.YMin);
-        Group->AggregateBound.YMax = Maximum(Group->AggregateBound.YMax, SortKey.YMax);
-        Group->AggregateBound.ZMax = Maximum(Group->AggregateBound.ZMax, SortKey.ZMax);
-        ++Group->AggregateCount;
+        if(Group->IsAggregating)
+        {
+            if(Group->AggregateCount == 0)
+            {
+                Group->AggregateBound = SortKey;
+            }
+            else if(IsZSprite(Group->AggregateBound))
+            {
+                Assert(IsZSprite(SortKey));
+                Group->AggregateBound.YMin = Minimum(Group->AggregateBound.YMin, SortKey.YMin);
+                Group->AggregateBound.YMax = Maximum(Group->AggregateBound.YMax, SortKey.YMax);
+                Group->AggregateBound.ZMax = Maximum(Group->AggregateBound.ZMax, SortKey.ZMax);
+            }
+            else 
+            {
+                Assert(!IsZSprite(SortKey));
+                // TODO: Should I try to let the user specify what should happen for 
+                // y selection here?
+                //Group->AggregateBound.YMin = Minimum(Group->AggregateBound.YMin, SortKey.YMin);
+                //Group->AggregateBound.YMax = Maximum(Group->AggregateBound.YMax, SortKey.YMax);
+                Group->AggregateBound.ZMax = Maximum(Group->AggregateBound.ZMax, SortKey.ZMax);
+            }
+            ++Group->AggregateCount;
+        }
     }
     else
     {
@@ -104,6 +123,9 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 inline void
 BeginAggregateSortKey(render_group *RenderGroup)
 {
+    Assert(!RenderGroup->IsAggregating);
+    RenderGroup->IsAggregating = true;
+
     game_render_commands *Commands = RenderGroup->Commands;
     RenderGroup->FirstAggregateAt = (Commands->SortEntryAt - sizeof(sort_sprite_bound));
     RenderGroup->AggregateBound.YMin = R32Maximum;
@@ -115,6 +137,9 @@ BeginAggregateSortKey(render_group *RenderGroup)
 inline void
 EndAggregateSortKey(render_group *RenderGroup)
 {
+    Assert(RenderGroup->IsAggregating);
+    RenderGroup->IsAggregating = false;
+
     game_render_commands *Commands = RenderGroup->Commands;
     sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + RenderGroup->FirstAggregateAt);
     for(u32 Index = 0; Index < RenderGroup->AggregateCount; ++Index, --Entry)

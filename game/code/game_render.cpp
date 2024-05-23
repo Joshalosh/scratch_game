@@ -1110,89 +1110,87 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
     for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
     {
         u32 HeaderOffset = *Entry;
-        while(HeaderOffset)
+
+        render_group_entry_header *Header = (render_group_entry_header *)
+            (Commands->PushBufferBase + *Entry);
+        if(ClipRectIndex != Header->ClipRectIndex)
         {
-            render_group_entry_header *Header = (render_group_entry_header *)
-                (Commands->PushBufferBase + *Entry);
-            if(ClipRectIndex != Header->ClipRectIndex)
-            {
-                ClipRectIndex = Header->ClipRectIndex;
-                Assert(ClipRectIndex < Commands->ClipRectCount);
+            ClipRectIndex = Header->ClipRectIndex;
+            Assert(ClipRectIndex < Commands->ClipRectCount);
 
-                render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
-                ClipRect = Intersect(BaseClipRect, Clip->Rect);
-            }
+            render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
+            ClipRect = Intersect(BaseClipRect, Clip->Rect);
+        }
 
-            void *Data = (uint8_t *)Header + sizeof(*Header);
-            switch(Header->Type)
+        void *Data = (uint8_t *)Header + sizeof(*Header);
+        switch(Header->Type)
+        {
+            case RenderGroupEntryType_render_entry_bitmap:
             {
-                case RenderGroupEntryType_render_entry_bitmap:
-                {
-                    render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
-                    Assert(Entry->Bitmap);
+                render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
+                Assert(Entry->Bitmap);
 
 #if 0
-    //                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
-                    DrawRectangleSlowly(OutputTarget, Entry->P,
-                                        V2(Entry->Size.x, 0),
-                                        V2(0, Entry->Size.y), Entry->Color,
-                                        Entry->Bitmap, 0, 0, 0, 0, NullPixelsToMetres);
+//                DrawBitmap(OutputTarget, Entry->Bitmap, P.x, P.y, Entry->Color.a);
+                DrawRectangleSlowly(OutputTarget, Entry->P,
+                                    V2(Entry->Size.x, 0),
+                                    V2(0, Entry->Size.y), Entry->Color,
+                                    Entry->Bitmap, 0, 0, 0, 0, NullPixelsToMetres);
 #else
-                    DrawRectangleQuickly(OutputTarget, Entry->P,
-                                         Entry->XAxis,
-                                         Entry->YAxis, Entry->PremulColor,
-                                         Entry->Bitmap, NullPixelsToMetres, ClipRect);
+                DrawRectangleQuickly(OutputTarget, Entry->P,
+                                     Entry->XAxis,
+                                     Entry->YAxis, Entry->PremulColor,
+                                     Entry->Bitmap, NullPixelsToMetres, ClipRect);
 #endif
-                } break;
+            } break;
 
-                case RenderGroupEntryType_render_entry_rectangle:
-                {
-                    render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
-                    DrawRectangle(OutputTarget, Entry->P, Entry->P + Entry->Dim, Entry->PremulColor, ClipRect);
-                } break;
+            case RenderGroupEntryType_render_entry_rectangle:
+            {
+                render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
+                DrawRectangle(OutputTarget, Entry->P, Entry->P + Entry->Dim, Entry->PremulColor, ClipRect);
+            } break;
 
-                case RenderGroupEntryType_render_entry_coordinate_system:
-                {
-                    render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
+            case RenderGroupEntryType_render_entry_coordinate_system:
+            {
+                render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
 
 #if 0
-                    v2 vMax = (Entry->Origin + Entry->XAxis + Entry->YAxis);
-                    DrawRectangleSlowly(OutputTarget,
-                                        Entry->Origin,
-                                        Entry->XAxis,
-                                        Entry->YAxis,
-                                        Entry->Color,
-                                        Entry->Texture,
-                                        Entry->NormalMap,
-                                        Entry->Top, Entry->Middle, Entry->Bottom,
-                                        PixelsToMetres);
+                v2 vMax = (Entry->Origin + Entry->XAxis + Entry->YAxis);
+                DrawRectangleSlowly(OutputTarget,
+                                    Entry->Origin,
+                                    Entry->XAxis,
+                                    Entry->YAxis,
+                                    Entry->Color,
+                                    Entry->Texture,
+                                    Entry->NormalMap,
+                                    Entry->Top, Entry->Middle, Entry->Bottom,
+                                    PixelsToMetres);
 
-                    v4 Color = {1, 1, 0, 1};
-                    v2 Dim = {2, 2};
-                    v2 P = Entry->Origin;
-                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
+                v4 Color = {1, 1, 0, 1};
+                v2 Dim = {2, 2};
+                v2 P = Entry->Origin;
+                DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
 
-                    P = Entry->Origin + Entry->XAxis;
-                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
+                P = Entry->Origin + Entry->XAxis;
+                DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
 
-                    P = Entry->Origin + Entry->YAxis;
-                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
+                P = Entry->Origin + Entry->YAxis;
+                DrawRectangle(OutputTarget, P - Dim, P + Dim, Color);
 
-                    DrawRectangle(OutputTarget, vMax - Dim, vMax + Dim, Color);
+                DrawRectangle(OutputTarget, vMax - Dim, vMax + Dim, Color);
 
 #if 0
-                    for(uint32_t PIndex = 0; PIndex < ArrayCount(Entry->Points); ++PIndex)
-                    {
-                        v2 P = Entry->Points[PIndex];
-                        P = Entry->Origin + P.x*Entry->XAxis + P.y*Entry->YAxis;
-                        DrawRectangle(OutputTarget, P - Dim, P + Dim, Entry->Color.r, Entry->Color.g, Entry->Color.b);
-                    }
+                for(uint32_t PIndex = 0; PIndex < ArrayCount(Entry->Points); ++PIndex)
+                {
+                    v2 P = Entry->Points[PIndex];
+                    P = Entry->Origin + P.x*Entry->XAxis + P.y*Entry->YAxis;
+                    DrawRectangle(OutputTarget, P - Dim, P + Dim, Entry->Color.r, Entry->Color.g, Entry->Color.b);
+                }
 #endif
 #endif
-                } break;
+            } break;
 
-                InvalidDefaultCase;
-            }
+            InvalidDefaultCase;
         }
     }
 }

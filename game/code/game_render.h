@@ -64,3 +64,10 @@ struct sort_grid_entry
     u32 OccupantIndex;
 };
 
+inline b32
+IsZSprite(sprite_bound A)
+{
+    b32 Result = (A.YMin != A.YMax);
+    return(Result);
+}
+
