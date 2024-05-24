@@ -275,9 +275,9 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
 
     v4 Color = {1, 1, 1, 1};
     real32 HeroSizeC = 3.0f;
+    AddPiece(Body, Asset_Cape, HeroSizeC*1.2f, V3(0, -0.1f, 0), Color, PieceMove_AxesDeform|PieceMove_BobOffset);
+    AddPiece(Body, Asset_Torso, HeroSizeC*1.2f, V3(0, 0.0f, 0), Color, PieceMove_AxesDeform);
     AddPiece(Body, Asset_Shadow, HeroSizeC*1.0f, V3(0, 0, 0), V4(1, 1, 1, ShadowAlpha));
-    AddPiece(Body, Asset_Torso, HeroSizeC*1.2f, V3(0, 0.0f, -0.002f), Color, PieceMove_AxesDeform);
-    AddPiece(Body, Asset_Cape, HeroSizeC*1.2f, V3(0, -0.1f, -0.001f), Color, PieceMove_AxesDeform|PieceMove_BobOffset);
 
     AddPiece(Head, Asset_Head, HeroSizeC*1.2f, V3(0, -0.7f, 0), Color);
 
