@@ -129,6 +129,13 @@ struct entity
     brain_id BrainID;
 
     //
+    // NOTE: Tansient
+    //
+
+    u32 AlwaysInFrontOf;
+    u32 AlwaysBehind;
+
+    //
     // NOTE: Everything below here is not worked out
     //
 
@@ -181,7 +188,7 @@ struct entity
     entity_traversable_point Traversables[16];
 
     u32 PieceCount;
-    entity_visible_piece Pieces[4];
+    entity_visible_piece Pieces[4]; // NOTE: 0 is the most "on top" piece, N is the "on bottom" piece
 
     // TODO: Generation index so I know how "up to date" this entity is
 };

@@ -237,6 +237,9 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                 {
                                     // TODO: This should really be a decompression step, not a copy.
                                     *Dest = *Source;
+
+                                    Dest->AlwaysInFrontOf = 0;
+                                    Dest->AlwaysBehind = 0;
                                 }
 
                                 Dest->ID = ID;

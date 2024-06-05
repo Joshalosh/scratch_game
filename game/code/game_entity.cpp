@@ -235,7 +235,10 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                  * or maybe I just use a stable sort.
                  */
 
-                BeginAggregateSortKey(RenderGroup);
+                if(Entity->PieceCount > 1)
+                {
+                    BeginAggregateSortKey(RenderGroup);
+                }
                 for(u32 PieceIndex = 0; PieceIndex < Entity->PieceCount; ++PieceIndex)
                 {
                     entity_visible_piece *Piece = Entity->Pieces + PieceIndex;
@@ -260,7 +263,10 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
                     PushBitmap(RenderGroup, EntityTransform, BitmapID, Piece->Height, Offset + Piece->Offset, Piece->Color, 1.0f, XAxis, YAxis);
                 }
-                EndAggregateSortKey(RenderGroup);
+                if(Entity->PieceCount > 1)
+                {
+                    EndAggregateSortKey(RenderGroup);
+                }
 
                 DrawHitPoints(Entity, RenderGroup, EntityTransform);
 

@@ -1,7 +1,7 @@
 
 inline void
 ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Input, 
-             sim_region *SimRegion, brain *Brain, r32 dt)
+             render_group *RenderGroup, sim_region *SimRegion, brain *Brain, r32 dt)
 {
     switch(Brain->Type)
     {
@@ -167,6 +167,12 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                 {
                     Head->FacingDirection = ATan2(dSword.y, dSword.x);
                 }
+            }
+
+            // TODO: Check that we I am attached as well (eg., not floating head)
+            if(Head && Body)
+            {
+                Body->AlwaysBehind = Head->AlwaysInFrontOf = ReserveSortKey(RenderGroup);
             }
 
             traversable_reference Traversable;

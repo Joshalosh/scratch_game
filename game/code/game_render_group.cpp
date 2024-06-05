@@ -6,6 +6,15 @@ ComputeSortKey(camera_transform CameraTransform, object_transform ObjectTransfor
     return(Result);
 }
 
+inline u16
+ReserveSortKey(render_group *RenderGroup)
+{
+    game_render_commands *Commands = RenderGroup->Commands;
+    Assert(Commands->LastUsedManualSortKey < U16Maximum);
+    u16 Result = (u16)++Commands->LastUsedManualSortKey;
+    return(Result);
+}
+
 inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransform,
                                                    object_transform ObjectTransform,
                                                    v3 OriginalP)

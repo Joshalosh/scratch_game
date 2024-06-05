@@ -1272,13 +1272,23 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue,
 inline b32
 IsInFrontOf(sprite_bound A, sprite_bound B)
 {
-    b32 BothZSprites = ((A.YMin != A.YMax) && (B.YMin != B.YMax));
-    b32 AIncludesB = ((B.YMin >= A.YMin) && (B.YMin < A.YMax));
-    b32 BIncludesA = ((A.YMin >= B.YMin) && (A.YMin < B.YMax));
+    b32 Result;
 
-    b32 SortByZ = (BothZSprites || AIncludesB || BIncludesA);
+    if((A.AlwaysInFrontOf > 0) &&
+       (A.AlwaysInFrontOf == B.AlwaysInFrontOf))
+    {
+        Result = true;
+    }
+    else 
+    {
+        b32 BothZSprites = ((A.YMin != A.YMax) && (B.YMin != B.YMax));
+        b32 AIncludesB = ((B.YMin >= A.YMin) && (B.YMin < A.YMax));
+        b32 BIncludesA = ((A.YMin >= B.YMin) && (A.YMin < B.YMax));
 
-    b32 Result = (SortByZ ? (A.ZMax > B.ZMax) : (A.YMin < B.YMin));
+        b32 SortByZ = (BothZSprites || AIncludesB || BIncludesA);
+
+        Result = (SortByZ ? (A.ZMax > B.ZMax) : (A.YMin < B.YMin));
+    }
     return(Result);
 }
 

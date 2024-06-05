@@ -211,6 +211,7 @@ introspect(category:"math") struct rectangle3
     v3 Max;
 };
 
+#define U16Maximum 65535
 #define Real32Maximum FLT_MAX
 #define Real32Minimum -FLT_MAX
 #define R32Maximum FLT_MAX
@@ -345,6 +346,7 @@ typedef struct game_render_commands
     u32 PushBufferElementCount;
     u32 SortEntryAt;
 
+    u32 LastUsedManualSortKey;
     u32 ClipRectCount;
 
     struct render_entry_cliprect *FirstRect;
