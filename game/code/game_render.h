@@ -4,8 +4,7 @@ struct sprite_bound
     r32 YMin;
     r32 YMax;
     r32 ZMax;
-    u16 AlwaysInFrontOf;
-    u16 AlwaysBehind;
+    manual_sort_key Manual;
 };
 
 struct sprite_edge

@@ -172,7 +172,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
             // TODO: Check that we I am attached as well (eg., not floating head)
             if(Head && Body)
             {
-                Body->AlwaysBehind = Head->AlwaysInFrontOf = ReserveSortKey(RenderGroup);
+                Body->ManualSort.AlwaysBehind = Head->ManualSort.AlwaysInFrontOf = ReserveSortKey(RenderGroup);
             }
 
             traversable_reference Traversable;

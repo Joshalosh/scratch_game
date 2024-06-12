@@ -1,11 +1,4 @@
 
-inline r32
-ComputeSortKey(camera_transform CameraTransform, object_transform ObjectTransform, v4 OriginalP)
-{
-    r32 Result = 0;
-    return(Result);
-}
-
 inline u16
 ReserveSortKey(render_group *RenderGroup)
 {
@@ -193,6 +186,7 @@ inline sprite_bound
 GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
 {
     sprite_bound SpriteBound;
+    SpriteBound.Manual = ObjectTransform.ManualSort;
     SpriteBound.YMin = SpriteBound.YMax = ObjectTransform.OffsetP.y + Offset.y;
     SpriteBound.ZMax = ObjectTransform.OffsetP.z + Offset.z + ObjectTransform.SortBias;
     if(ObjectTransform.Upright)

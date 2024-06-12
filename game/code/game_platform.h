@@ -321,6 +321,12 @@ extern struct game_memory *DebugGlobalMemory;
 
 // FOUR THINGS - timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
 
+struct manual_sort_key
+{
+    u16 AlwaysInFrontOf;
+    u16 AlwaysBehind;
+};
+
 #define BITMAP_BYTES_PER_PIXEL 4
 typedef struct game_offscreen_buffer
 {

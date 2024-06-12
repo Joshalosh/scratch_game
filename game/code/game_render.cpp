@@ -1274,10 +1274,15 @@ IsInFrontOf(sprite_bound A, sprite_bound B)
 {
     b32 Result;
 
-    if((A.AlwaysInFrontOf > 0) &&
-       (A.AlwaysInFrontOf == B.AlwaysInFrontOf))
+    if((A.Manual.AlwaysInFrontOf != 0) &&
+       (A.Manual.AlwaysInFrontOf == B.Manual.AlwaysBehind))
     {
         Result = true;
+    }
+    else if((A.Manual.AlwaysBehind != 0) &&
+            (A.Manual.AlwaysBehind == B.Manual.AlwaysInFrontOf))
+    {
+        Result = false;
     }
     else 
     {

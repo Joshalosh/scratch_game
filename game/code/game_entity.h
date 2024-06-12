@@ -132,8 +132,7 @@ struct entity
     // NOTE: Tansient
     //
 
-    u32 AlwaysInFrontOf;
-    u32 AlwaysBehind;
+    manual_sort_key ManualSort;
 
     //
     // NOTE: Everything below here is not worked out

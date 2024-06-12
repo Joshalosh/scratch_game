@@ -124,6 +124,7 @@ struct object_transform
     v3 OffsetP;
     r32 Scale;
     r32 SortBias;
+    manual_sort_key ManualSort;
 };
 
 struct camera_transform

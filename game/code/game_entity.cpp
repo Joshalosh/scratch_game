@@ -205,6 +205,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             r32 TempZ = EntityTransform.OffsetP.z;
             s32 RelativeLayer = ConvertToLayerRelative(WorldMode, &TempZ);
 
+            EntityTransform.ManualSort = Entity->ManualSort;
+
             if((RelativeLayer >= MinimumLevelIndex) &&
                (RelativeLayer <= MaximumLevelIndex))
             {
