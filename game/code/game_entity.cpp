@@ -51,7 +51,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 {
     TIMED_FUNCTION();
 
-    real32 FadeTopEndZ = 0.75f*WorldMode->TypicalFloorHeight;
+    real32 FadeTopEndZ = 1.0f*WorldMode->TypicalFloorHeight;
     real32 FadeTopStartZ = 0.5f*WorldMode->TypicalFloorHeight;
     real32 FadeBottomStartZ = -1.0f*WorldMode->TypicalFloorHeight;
     real32 FadeBottomEndZ = -4.0f*WorldMode->TypicalFloorHeight;
@@ -59,12 +59,13 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 #define MinimumLevelIndex -4 
 #define MaximumLevelIndex 1 
     u32 ClipRectIndex[(MaximumLevelIndex - MinimumLevelIndex + 1)];
+    r32 TestAlpha[ArrayCount(ClipRectIndex)];
     for(u32 LevelIndex = 0; LevelIndex < ArrayCount(ClipRectIndex); ++LevelIndex)
     {
         // TODO: Probably indicates I want to seperate update and render
         // for entities sometime soon.
         s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex; 
-        r32 CameraRelativeGroundZ = SimRegion->Origin.Offset_.z + (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight;
+        r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - WorldMode->CameraOffset.z;
 
         clip_rect_fx FX = {};
         if(CameraRelativeGroundZ > FadeTopStartZ)
@@ -90,6 +91,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
         }
 
         ClipRectIndex[LevelIndex] = PushClipRect(RenderGroup, 0, 0, DrawBuffer->Width, DrawBuffer->Height, FX);
+        TestAlpha[LevelIndex] = 1.0f - FX.tColor.w;
     }
 
     transient_clip_rect Rect(RenderGroup);
@@ -205,11 +207,18 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             r32 TempZ = EntityTransform.OffsetP.z;
             s32 RelativeLayer = ConvertToLayerRelative(WorldMode, &TempZ);
 
+            // TODO: It's the chunkz difference that tells us what the relative 
+            // layer is - and we no longer care about the camera z delta because things
+            // inside a layer aren't transformed perspectively anymore
+
+            // (Entity.WorldPosition.ChunkZ - SimRegion->Origin.ChunkZ)
+
             EntityTransform.ManualSort = Entity->ManualSort;
 
             if((RelativeLayer >= MinimumLevelIndex) &&
                (RelativeLayer <= MaximumLevelIndex))
             {
+                r32 Alpha = TestAlpha[RelativeLayer - MinimumLevelIndex];
                 RenderGroup->CurrentClipRectIndex = ClipRectIndex[RelativeLayer - MinimumLevelIndex];
 
                 //
@@ -263,7 +272,9 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                         Offset.y += Entity->tBob;
                     }
 
-                    PushBitmap(RenderGroup, EntityTransform, BitmapID, Piece->Height, Offset + Piece->Offset, Piece->Color, 1.0f, XAxis, YAxis);
+                    v4 Color = Piece->Color;
+                    Color.a *= Alpha;
+                    PushBitmap(RenderGroup, EntityTransform, BitmapID, Piece->Height, Offset + Piece->Offset, Color, 1.0f, XAxis, YAxis);
                 }
                 if(Entity->PieceCount > 1)
                 {
@@ -278,7 +289,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
                     PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                    Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1));
+                                    Volume->Dim.xy, V4(0, 0.5f, 1.0f, Alpha));
                 }
 #endif
 
@@ -290,7 +301,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                     entity_traversable_point *Traversable =
                         Entity->Traversables + TraversableIndex;
                     PushRect(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), 
-                             Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1) : V4(0.05f, 0.25f, 0.05f, 1));
+                             Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, Alpha) : V4(0.05f, 0.25f, 0.05f, Alpha));
                     //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
                 }
                 END_BLOCK();

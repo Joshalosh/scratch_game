@@ -327,7 +327,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                 glDisable(GL_TEXTURE_2D);
                 OpenGLRectangle(Entry->P, Entry->P + Entry->Dim, Entry->PremulColor);
                 glBegin(GL_LINES);
-                glColor4f(0, 0, 0, 1);
+                glColor4f(0, 0, 0, Entry->PremulColor.a);
                 OpenGLLineVertices(Entry->P, Entry->P + Entry->Dim);
                 glEnd();
                 glEnable(GL_TEXTURE_2D);

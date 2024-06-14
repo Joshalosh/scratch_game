@@ -64,10 +64,11 @@ ChunkPositionFromTilePosition(world *World, int32_t AbsTileX, int32_t AbsTileY, 
     world_position BasePos = {};
 
     real32 TileSideInMeters = 1.4f;
-    real32 TileDepthInMeters = 3.0f;
+    real32 TileDepthInMeters = World->ChunkDimInMeters.z;
 
     v3 TileDim = V3(TileSideInMeters, TileSideInMeters, TileDepthInMeters);
     v3 Offset = Hadamard(TileDim, V3((real32)AbsTileX, (real32)AbsTileY, (real32)AbsTileZ));
+    Offset.z -= 0.4f*TileDepthInMeters;
     world_position Result = MapIntoChunkSpace(World, BasePos, AdditionalOffset + Offset);
 
     Assert(IsCanonical(World, Result.Offset_));
@@ -481,7 +482,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 1; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
