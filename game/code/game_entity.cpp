@@ -205,13 +205,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             object_transform EntityTransform = DefaultUprightTransform();
             EntityTransform.OffsetP = GetEntityGroundPoint(Entity) - CameraP;
             r32 TempZ = EntityTransform.OffsetP.z;
-            s32 RelativeLayer = ConvertToLayerRelative(WorldMode, &TempZ);
-
-            // TODO: It's the chunkz difference that tells us what the relative 
-            // layer is - and we no longer care about the camera z delta because things
-            // inside a layer aren't transformed perspectively anymore
-
-            // (Entity.WorldPosition.ChunkZ - SimRegion->Origin.ChunkZ)
+            s32 RelativeLayer = (Entity.WorldPosition.ChunkZ - SimRegion->Origin.ChunkZ);
 
             EntityTransform.ManualSort = Entity->ManualSort;
 
