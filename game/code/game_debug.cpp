@@ -1993,11 +1993,11 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->UITransform = DefaultFlatTransform();
     DebugState->BackingTransform = DefaultFlatTransform();
 
-    DebugState->BackingTransform.SortBias = 100000.0f;
-    DebugState->ShadowTransform.SortBias = 200000.0f;
-    DebugState->UITransform.SortBias = 300000.0f;
-    DebugState->TextTransform.SortBias = 400000.0f;
-    DebugState->ToolTipTransform.SortBias = 500000.0f;
+    DebugState->BackingTransform.ChunkZ = 100000;
+    DebugState->ShadowTransform.ChunkZ = 200000;
+    DebugState->UITransform.ChunkZ = 300000;
+    DebugState->TextTransform.ChunkZ = 400000;
+    DebugState->ToolTipTransform.ChunkZ = 500000;
 
     DebugState->DefaultClipRect = DebugState->RenderGroup.CurrentClipRectIndex;
 

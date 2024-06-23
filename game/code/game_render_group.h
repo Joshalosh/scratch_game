@@ -123,7 +123,7 @@ struct object_transform
     b32 Upright;
     v3 OffsetP;
     r32 Scale;
-    r32 SortBias;
+    s32 ChunkZ;
     manual_sort_key ManualSort;
 };
 

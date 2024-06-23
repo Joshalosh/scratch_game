@@ -1,6 +1,7 @@
 
 struct sprite_bound 
 {
+    s32 ChunkZ;
     r32 YMin;
     r32 YMax;
     r32 ZMax;

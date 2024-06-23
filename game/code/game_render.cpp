@@ -1274,8 +1274,12 @@ IsInFrontOf(sprite_bound A, sprite_bound B)
 {
     b32 Result;
 
-    if((A.Manual.AlwaysInFrontOf != 0) &&
-       (A.Manual.AlwaysInFrontOf == B.Manual.AlwaysBehind))
+    if(A.ChunkZ != B.ChunkZ)
+    {
+        Result = (A.ChunkZ > B.ChunkZ);
+    }
+    else if((A.Manual.AlwaysInFrontOf != 0) &&
+            (A.Manual.AlwaysInFrontOf == B.Manual.AlwaysBehind))
     {
         Result = true;
     }
@@ -1364,9 +1368,11 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
                     {
                         u32 NodeIndexB = EntryB->OccupantIndex;
                         
+                        v2 Shrink = {-4.0f, -4.0f};
                         sort_sprite_bound *B = InputNodes + NodeIndexB;
                         if((B->Flags != NodeIndexA) &&
-                            RectanglesIntersect(A->ScreenArea, B->ScreenArea))
+                            RectanglesIntersect(AddRadiusTo(A->ScreenArea, Shrink),
+                                                AddRadiusTo(B->ScreenArea, Shrink)))
                         {
                             Assert((NodeIndexA & Sprite_IndexMask) == NodeIndexA);
                             Assert((B->Flags & ~Sprite_IndexMask) == 0);

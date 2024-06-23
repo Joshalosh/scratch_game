@@ -187,8 +187,9 @@ GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
 {
     sprite_bound SpriteBound;
     SpriteBound.Manual = ObjectTransform.ManualSort;
+    SpriteBound.ChunkZ = ObjectTransform.ChunkZ;
     SpriteBound.YMin = SpriteBound.YMax = ObjectTransform.OffsetP.y + Offset.y;
-    SpriteBound.ZMax = ObjectTransform.OffsetP.z + Offset.z + ObjectTransform.SortBias;
+    SpriteBound.ZMax = ObjectTransform.OffsetP.z + Offset.z;
     if(ObjectTransform.Upright)
     {
         // TODO: More accurate ZMax calculations - this doesn't handle

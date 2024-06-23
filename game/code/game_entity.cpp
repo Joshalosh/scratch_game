@@ -204,10 +204,12 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
             object_transform EntityTransform = DefaultUprightTransform();
             EntityTransform.OffsetP = GetEntityGroundPoint(Entity) - CameraP;
-            r32 TempZ = EntityTransform.OffsetP.z;
-            s32 RelativeLayer = (Entity.WorldPosition.ChunkZ - SimRegion->Origin.ChunkZ);
+
+            world_position WorldPos = MapIntoChunkSpace(WorldMode->World, SimRegion->Origin, Entity->P);
+            s32 RelativeLayer = (WorldPos.ChunkZ - SimRegion->Origin.ChunkZ);
 
             EntityTransform.ManualSort = Entity->ManualSort;
+            EntityTransform.ChunkZ = WorldPos.ChunkZ;
 
             if((RelativeLayer >= MinimumLevelIndex) &&
                (RelativeLayer <= MaximumLevelIndex))
@@ -294,7 +296,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     entity_traversable_point *Traversable =
                         Entity->Traversables + TraversableIndex;
-                    PushRect(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), 
+                    PushRect(RenderGroup, EntityTransform, Traversable->P, V2(1.4f, 1.4f), 
                              Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, Alpha) : V4(0.05f, 0.25f, 0.05f, Alpha));
                     //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
                 }
