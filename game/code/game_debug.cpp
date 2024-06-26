@@ -515,9 +515,9 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
         rectangle2 RegionRect = RectMinMax(V2(ThisMinX, LaneY - LaneHeight),
                                            V2(ThisMaxX, LaneY));
 
-        PushRect(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+        PushRect(&DebugState->RenderGroup, &DebugState->UITransform, RegionRect,
                  BaseZ, V4(Color, 1));
-        PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+        PushRectOutline(&DebugState->RenderGroup, &DebugState->UITransform, RegionRect,
                         BaseZ+1.0f, V4(0, 0, 0, 1), 2.0f);
 
         // TODO: Pull this out so all profilers share it
@@ -557,12 +557,12 @@ DrawArenaOccupancy(debug_state *DebugState, debug_id GraphID, rectangle2 FrameRe
         rectangle2 UsedRect = RectMinMax(V2(FrameRect.Min.x, FrameRect.Min.y), V2(SplitPoint, FrameRect.Max.y));
         rectangle2 UnusedRect = RectMinMax(V2(SplitPoint, FrameRect.Min.y), V2(FrameRect.Max.x, FrameRect.Max.y));
 
-        PushRect(&DebugState->RenderGroup, DebugState->UITransform, UsedRect, 0.0f, V4(1, 0.5f, 0, 1));
-        PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, UsedRect, 
+        PushRect(&DebugState->RenderGroup, &DebugState->UITransform, UsedRect, 0.0f, V4(1, 0.5f, 0, 1));
+        PushRectOutline(&DebugState->RenderGroup, &DebugState->UITransform, UsedRect, 
                         1.0f, V4(0, 0, 0, 1), 2.0f);
 
-        PushRect(&DebugState->RenderGroup, DebugState->UITransform, UnusedRect, 0.0f, V4(0, 1, 0, 1));
-        PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, UnusedRect, 
+        PushRect(&DebugState->RenderGroup, &DebugState->UITransform, UnusedRect, 0.0f, V4(0, 1, 0, 1));
+        PushRectOutline(&DebugState->RenderGroup, &DebugState->UITransform, UnusedRect, 
                         1.0f, V4(0, 0, 0, 1), 2.0f);
     }
 }
@@ -643,9 +643,9 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
 
                     rectangle2 RegionRect = RectMinMax(V2(AtX, ThisMinY), V2(AtX + BarWidth, ThisMaxY));
 
-                    PushRect(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+                    PushRect(&DebugState->RenderGroup, &DebugState->UITransform, RegionRect,
                              0.0f, V4(HighDim*Color, 1));
-                    PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+                    PushRectOutline(&DebugState->RenderGroup, &DebugState->UITransform, RegionRect,
                                     1.0f, V4(0, 0, 0, 1), 2.0f);
 
                     if(IsInRectangle(RegionRect, MouseP))
@@ -778,7 +778,7 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
     if(FrameCount > 0)
     {
         object_transform NoTransform = DefaultFlatTransform();
-        PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, TotalRect, 0.0f, V4(0, 0, 0, 0.25f));
+        PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, TotalRect, 0.0f, V4(0, 0, 0, 0.25f));
 
         r32 BarWidth = (GetDim(TotalRect).x / (r32)FrameCount);
         r32 AtX = TotalRect.Min.x;
@@ -815,9 +815,9 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
 
             if(Highlight)
             {
-                PushRect(&DebugState->RenderGroup, DebugState->UITransform, RegionRect, 0.0f, HiColor);
+                PushRect(&DebugState->RenderGroup, &DebugState->UITransform, RegionRect, 0.0f, HiColor);
             }
-            PushRectOutline(&DebugState->RenderGroup, DebugState->UITransform, RegionRect,
+            PushRectOutline(&DebugState->RenderGroup, &DebugState->UITransform, RegionRect,
                             1.0f, V4(0.5f,0.5f,0.5f, 1), 2.0f);
 
             if(IsInRectangle(RegionRect, MouseP))
@@ -866,7 +866,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                 Bitmap = GetBitmap(RenderGroup->Assets, Event->Value_bitmap_id, RenderGroup->GenerationID);
                 if(Bitmap)
                 {
-                    used_bitmap_dim Dim = GetBitmapDim(RenderGroup, NoTransform, Bitmap, BitmapScale, V3(0.0f, 0.0f, 0.0f), 1.0f);
+                    used_bitmap_dim Dim = GetBitmapDim(RenderGroup, &NoTransform, Bitmap, BitmapScale, V3(0.0f, 0.0f, 0.0f), 1.0f);
                     View->InlineBlock.Dim.x = Dim.Size.x;
                 }
 
@@ -876,11 +876,11 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             MakeElementSizable(&LayEl);
             DefaultInteraction(&LayEl, ItemInteraction);
             EndElement(&LayEl);
-            PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, LayEl.Bounds, 0.0f, V4(0, 0, 0, 1.0f));
+            PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, LayEl.Bounds, 0.0f, V4(0, 0, 0, 1.0f));
             
             if(Bitmap)
             {
-                PushBitmap(&DebugState->RenderGroup, DebugState->BackingTransform, Event->Value_bitmap_id, BitmapScale,
+                PushBitmap(&DebugState->RenderGroup, &DebugState->BackingTransform, Event->Value_bitmap_id, BitmapScale,
                            V3(GetMinCorner(LayEl.Bounds), 1.0f), V4(1, 1, 1, 1), 0.0f);
             }
         } break;
@@ -907,12 +907,12 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             // DefaultInteraction(&LayEl, ItemInteraction);
             EndElement(&LayEl);
 
-            PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, 
+            PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, 
                      LayEl.Bounds, 0.0f, V4(0, 0, 0, 0.75f));
 
             u32 OldClipRect = RenderGroup->CurrentClipRectIndex;
             RenderGroup->CurrentClipRectIndex = 
-                PushClipRect(RenderGroup, DebugState->BackingTransform, LayEl.Bounds, 0.0f);
+                PushClipRect(RenderGroup, &DebugState->BackingTransform, LayEl.Bounds, 0.0f);
 
             switch(Element->Type)
             {
@@ -952,10 +952,10 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             //DefaultInteraction(&LayEl, ItemInteraction);
             EndElement(&LayEl);
 
-            PushRect(&DebugState->RenderGroup, DebugState->BackingTransform, LayEl.Bounds, 0.0f, V4(0, 0, 0, 0.75f));
+            PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, LayEl.Bounds, 0.0f, V4(0, 0, 0, 0.75f));
 
             u32 OldClipRect = RenderGroup->CurrentClipRectIndex;
-            RenderGroup->CurrentClipRectIndex = PushClipRect(RenderGroup, DebugState->BackingTransform, 
+            RenderGroup->CurrentClipRectIndex = PushClipRect(RenderGroup, &DebugState->BackingTransform, 
                                                              LayEl.Bounds, 0.0f);
 
             debug_stored_event *RootNode = 0;
@@ -1136,7 +1136,7 @@ DrawTrees(debug_state *DebugState, v2 MouseP)
         MoveInteraction.P = &Tree->UIP;
 
         rectangle2 MoveBox = RectCenterHalfDim(Tree->UIP - V2(4.0f, 4.0f), V2(4.0f, 4.0f));
-        PushRect(RenderGroup, NoTransform, MoveBox, 0.0f,
+        PushRect(RenderGroup, &NoTransform, MoveBox, 0.0f,
                  InteractionIsHot(DebugState, MoveInteraction) ? V4(1, 1, 0, 1) : V4(1, 1, 1, 1));
 
         if(IsInRectangle(MoveBox, MouseP))

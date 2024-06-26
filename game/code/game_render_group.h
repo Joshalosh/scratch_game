@@ -56,17 +56,10 @@ struct render_group_entry_header // TODO: Don't store type here, perhaps better 
 #endif
 };
 
-struct clip_rect_fx
-{
-    v4 tColor;
-    v4 Color;
-};
-
 struct render_entry_cliprect
 {
     render_entry_cliprect *Next;
     rectangle2i Rect;
-    clip_rect_fx FX;
 };
 
 struct render_entry_clear
@@ -125,6 +118,8 @@ struct object_transform
     r32 Scale;
     s32 ChunkZ;
     manual_sort_key ManualSort;
+    v4 tColor;
+    v4 Color;
 };
 
 struct camera_transform
@@ -144,9 +139,6 @@ struct render_group
     struct game_assets *Assets;
 
     rectangle2 ScreenArea;
-
-    v4 tGlobalColor;
-    v4 GlobalColor;
 
 #if GAME_SLOW
     u32 DebugTag;

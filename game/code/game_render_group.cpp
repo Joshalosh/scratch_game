@@ -8,28 +8,28 @@ ReserveSortKey(render_group *RenderGroup)
     return(Result);
 }
 
-inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransform,
-                                                   object_transform ObjectTransform,
+inline entity_basis_p_result GetRenderEntityBasisP(camera_transform *CameraTransform,
+                                                   object_transform *ObjectTransform,
                                                    v3 OriginalP)
 {
     entity_basis_p_result Result = {};
 
-    v3 P = OriginalP + ObjectTransform.OffsetP;
+    v3 P = OriginalP + ObjectTransform->OffsetP;
     //v3 P = OriginalP.xyz + ObjectTransform.OffsetP.xyz;
     //r32 Pw = OriginalP.w + ObjectTransform.OffsetP.w;
     r32 Pw = 0;
 
-    if(CameraTransform.Orthographic)
+    if(CameraTransform->Orthographic)
     {
-        Result.P = CameraTransform.ScreenCentre + CameraTransform.MetresToPixels*P.xy;
-        Result.Scale = CameraTransform.MetresToPixels;
+        Result.P = CameraTransform->ScreenCentre + CameraTransform->MetresToPixels*P.xy;
+        Result.Scale = CameraTransform->MetresToPixels;
         Result.Valid = true;
     }
     else
     {
         real32 OffsetZ = 0.0f;
 
-        real32 DistanceAboveTarget = CameraTransform.DistanceAboveTarget;
+        real32 DistanceAboveTarget = CameraTransform->DistanceAboveTarget;
 
         if(Global_Renderer_Camera_UseDebug)
         {
@@ -43,9 +43,9 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform CameraTransf
 
         if(DistanceToPZ > NearClipPlane)
         {
-            v3 ProjectedXY = (1.0f / DistanceToPZ) * CameraTransform.FocalLength*RawXY;
-            Result.Scale = CameraTransform.MetresToPixels*ProjectedXY.z;
-            Result.P = CameraTransform.ScreenCentre + CameraTransform.MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
+            v3 ProjectedXY = (1.0f / DistanceToPZ) * CameraTransform->FocalLength*RawXY;
+            Result.Scale = CameraTransform->MetresToPixels*ProjectedXY.z;
+            Result.P = CameraTransform->ScreenCentre + CameraTransform->MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
             Result.Valid = true;
         }
     }
@@ -151,7 +151,7 @@ EndAggregateSortKey(render_group *RenderGroup)
 }
 
 inline used_bitmap_dim
-GetBitmapDim(render_group *Group, object_transform ObjectTransform,
+GetBitmapDim(render_group *Group, object_transform *ObjectTransform,
              loaded_bitmap *Bitmap, r32 Height, v3 Offset, r32 CAlign,
              v2 XAxis = V2(1, 0), v2 YAxis = V2(0, 1))
 {
@@ -161,17 +161,17 @@ GetBitmapDim(render_group *Group, object_transform ObjectTransform,
     Dim.Align = CAlign*Hadamard(Bitmap->AlignPercentage, Dim.Size);
     Dim.P.z = Offset.z;
     Dim.P.xy = Offset.xy - Dim.Align.x*XAxis - Dim.Align.y*YAxis;
-    Dim.Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, Dim.P);
+    Dim.Basis = GetRenderEntityBasisP(&Group->CameraTransform, ObjectTransform, Dim.P);
 
     return(Dim);
 }
 
 inline v4
-StoreColor(render_group *Group, v4 Source)
+StoreColor(object_transform *Transform, v4 Source)
 {
     v4 Dest;
-    v4 t = Group->tGlobalColor;
-    v4 C = Group->GlobalColor;
+    v4 t = Transform->tColor;
+    v4 C = Transform->Color;
 
     Dest.a = Lerp(Source.a, t.a, C.a);
 
@@ -183,14 +183,14 @@ StoreColor(render_group *Group, v4 Source)
 }
 
 inline sprite_bound
-GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
+GetBoundFor(object_transform *ObjectTransform, v3 Offset, r32 Height)
 {
     sprite_bound SpriteBound;
-    SpriteBound.Manual = ObjectTransform.ManualSort;
-    SpriteBound.ChunkZ = ObjectTransform.ChunkZ;
-    SpriteBound.YMin = SpriteBound.YMax = ObjectTransform.OffsetP.y + Offset.y;
-    SpriteBound.ZMax = ObjectTransform.OffsetP.z + Offset.z;
-    if(ObjectTransform.Upright)
+    SpriteBound.Manual = ObjectTransform->ManualSort;
+    SpriteBound.ChunkZ = ObjectTransform->ChunkZ;
+    SpriteBound.YMin = SpriteBound.YMax = ObjectTransform->OffsetP.y + Offset.y;
+    SpriteBound.ZMax = ObjectTransform->OffsetP.z + Offset.z;
+    if(ObjectTransform->Upright)
     {
         // TODO: More accurate ZMax calculations - this doesn't handle
         // alignment, rotation, or axis shear/scale
@@ -208,7 +208,7 @@ GetBoundFor(object_transform ObjectTransform, v3 Offset, r32 Height)
 }
 
 inline void
-PushBitmap(render_group *Group, object_transform ObjectTransform,
+PushBitmap(render_group *Group, object_transform *ObjectTransform,
            loaded_bitmap *Bitmap, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f,
            v2 XAxis = V2(1, 0), v2 YAxis = V2(0, 1))
 {
@@ -224,7 +224,7 @@ PushBitmap(render_group *Group, object_transform ObjectTransform,
         {
             Entry->Bitmap = Bitmap;
             Entry->P = Dim.Basis.P;
-            Entry->PremulColor = StoreColor(Group, Color);
+            Entry->PremulColor = StoreColor(ObjectTransform, Color);
             Entry->XAxis = Size.x*XAxis;
             Entry->YAxis = Size.y*YAxis;
         }
@@ -232,7 +232,7 @@ PushBitmap(render_group *Group, object_transform ObjectTransform,
 }
 
 inline void
-PushBitmap(render_group *Group, object_transform ObjectTransform,
+PushBitmap(render_group *Group, object_transform *ObjectTransform,
            bitmap_id ID, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f,
            v2 XAxis = V2(1, 0), v2 YAxis = V2(0, 1))
 {
@@ -274,10 +274,10 @@ PushFont(render_group *Group, font_id ID)
 }
 
 inline void
-PushRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
+PushRect(render_group *Group, object_transform *ObjectTransform, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1))
 {
     v3 P = (Offset - V3(0.5f*Dim, 0));
-    entity_basis_p_result Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, P);
+    entity_basis_p_result Basis = GetRenderEntityBasisP(&Group->CameraTransform, ObjectTransform, P);
     if(Basis.Valid)
     {
         v2 ScaledDim = Basis.Scale*Dim;
@@ -287,20 +287,20 @@ PushRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Di
         if(Rect)
         {
             Rect->P = Basis.P;
-            Rect->PremulColor = StoreColor(Group, Color);
+            Rect->PremulColor = StoreColor(ObjectTransform, Color);
             Rect->Dim = ScaledDim;
         }
     }
 }
 
 inline void
-PushRect(render_group *Group, object_transform ObjectTransform, rectangle2 Rectangle, r32 Z, v4 Color = V4(1, 1, 1, 1))
+PushRect(render_group *Group, object_transform *ObjectTransform, rectangle2 Rectangle, r32 Z, v4 Color = V4(1, 1, 1, 1))
 {
     PushRect(Group, ObjectTransform, V3(GetCenter(Rectangle), Z), GetDim(Rectangle), Color);
 }
 
 inline void
-PushRectOutline(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1), real32 Thickness = 0.1f)
+PushRectOutline(render_group *Group, object_transform *ObjectTransform, v3 Offset, v2 Dim, v4 Color = V4(1, 1, 1, 1), real32 Thickness = 0.1f)
 {
     // Top and Bottom.
     PushRect(Group, ObjectTransform, Offset - V3(0, 0.5f*Dim.y, 0), V2(Dim.x-Thickness-0.01f, Thickness), Color);
@@ -312,7 +312,7 @@ PushRectOutline(render_group *Group, object_transform ObjectTransform, v3 Offset
 }
 
 inline void
-PushRectOutline(render_group *Group, object_transform ObjectTransform, rectangle2 Rectangle, r32 Z, v4 Color = V4(1, 1, 1, 1), real32 Thickness = 0.1f)
+PushRectOutline(render_group *Group, object_transform *ObjectTransform, rectangle2 Rectangle, r32 Z, v4 Color = V4(1, 1, 1, 1), real32 Thickness = 0.1f)
 {
     PushRectOutline(Group, ObjectTransform, V3(GetCenter(Rectangle), Z), GetDim(Rectangle), Color, Thickness);
 }
@@ -350,7 +350,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
 }
 
 inline u32
-PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H, clip_rect_fx FX = {})
+PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H)
 {
     u32 Result = 0;
 
@@ -385,12 +385,12 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H, clip_rect_fx FX = 
 }
 
 inline u32
-PushClipRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v2 Dim)
+PushClipRect(render_group *Group, object_transform *ObjectTransform, v3 Offset, v2 Dim)
 {
     u32 Result = 0;
 
     v3 P = (Offset - V3(0.5f*Dim, 0));
-    entity_basis_p_result Basis = GetRenderEntityBasisP(Group->CameraTransform, ObjectTransform, P);
+    entity_basis_p_result Basis = GetRenderEntityBasisP(&Group->CameraTransform, ObjectTransform, P);
     if(Basis.Valid)
     {
         v2 P = Basis.P;
@@ -405,7 +405,7 @@ PushClipRect(render_group *Group, object_transform ObjectTransform, v3 Offset, v
 }
 
 inline u32
-PushClipRect(render_group *Group, object_transform ObjectTransform, rectangle2 Rectangle, r32 Z)
+PushClipRect(render_group *Group, object_transform *ObjectTransform, rectangle2 Rectangle, r32 Z)
 {
     u32 Result = PushClipRect(Group, ObjectTransform, V3(GetCenter(Rectangle), Z), GetDim(Rectangle));
     return(Result);

@@ -482,7 +482,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 6; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -647,7 +647,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     Perspective(RenderGroup, MetresToPixels, FocalLength, DistanceAboveGround);
 
     v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 1.0f);
-    //Clear(RenderGroup, BackgroundColor);
+    Clear(RenderGroup, BackgroundColor);
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
                        0.5f*(real32)DrawBuffer->Height};
@@ -671,10 +671,10 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     object_transform WorldTransform = DefaultUprightTransform();
     WorldTransform.OffsetP -= CameraP;
 
-    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
+    PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
 //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
-    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
-    PushRectOutline(RenderGroup, WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
+    PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
+    PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
 
     r32 dt = Input->dtForFrame;
 
@@ -718,11 +718,10 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP, DrawBuffer, BackgroundColor,
                             dt, TranState, MouseP);
 
-    RenderGroup->tGlobalColor = V4(0, 0, 0, 0);
-
     Orthographic(RenderGroup, 1.0f);
 
-    PushRectOutline(RenderGroup, DefaultFlatTransform(), V3(MouseP, 0.0f), V2(2.0f, 2.0f));
+    object_transform Flat = DefaultFlatTransform();
+    PushRectOutline(RenderGroup, &Flat, V3(MouseP, 0.0f), V2(2.0f, 2.0f));
 
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the

@@ -1336,8 +1336,8 @@ GetGridSpan(rectangle2 TotalScreen, v2 InvCellDim, rectangle2 Source, rectangle2
     return(Inside);
 }
 
-internal void
-BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena,
+internal u32
+BuildSpriteGraph(u32 NodeIndexA, u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena,
                  u32 ScreenWidth, u32 ScreenHeight)
 {
     TIMED_FUNCTION();
@@ -1348,10 +1348,15 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
                      (r32)SORT_GRID_HEIGHT / (r32)ScreenHeight};
 
     sort_grid_entry *Grid[SORT_GRID_WIDTH][SORT_GRID_HEIGHT] = {};
-    for(u32 NodeIndexA = 0; NodeIndexA < InputNodeCount; ++NodeIndexA)
+    for(; NodeIndexA < InputNodeCount; ++NodeIndexA)
     {
         sort_sprite_bound *A = InputNodes + NodeIndexA;
         Assert(A->Flags == 0);
+
+        if(A->Offset == SPRITE_BARRIER_OFFSET_VALUE)
+        {
+            break;
+        }
 
         rectangle2i GridSpan;
         if(GetGridSpan(TotalScreen, InvCellDim, A->ScreenArea, &GridSpan))
@@ -1402,6 +1407,8 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
             }
         }
     }
+
+    return(NodeIndexA);
 }
 
 internal void
@@ -1454,8 +1461,11 @@ SortEntries(game_render_commands *Commands, memory_arena *TempArena)
     u32 *Result = PushArray(TempArena, Count, u32);
 
 #if 1
-    BuildSpriteGraph(Count, Entries, TempArena, Commands->Width, Commands->Height);
-    WalkSpriteGraph(Count, Entries, Result);
+    for(u32 FirstIndex = 0; FirstIndex < Count;)
+    {
+        FirstIndex = BuildSpriteGraph(FirstIndex, Count, Entries, TempArena, Commands->Width, Commands->Height);
+        WalkSpriteGraph(Count, Entries, Result);
+    }
 #else
     for(u32 NodeIndexA = 0; NodeIndexA < Count; ++NodeIndexA)
     {

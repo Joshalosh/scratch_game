@@ -12,7 +12,7 @@ DefaultMoveSpec(void)
 }
 
 internal void
-DrawHitPoints(entity *Entity, render_group *PieceGroup, object_transform Transform)
+DrawHitPoints(entity *Entity, render_group *PieceGroup, object_transform *Transform)
 {
     if(Entity->HitPointMax >= 1)
     {
@@ -58,40 +58,18 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
 #define MinimumLevelIndex -4 
 #define MaximumLevelIndex 1 
-    u32 ClipRectIndex[(MaximumLevelIndex - MinimumLevelIndex + 1)];
-    r32 TestAlpha[ArrayCount(ClipRectIndex)];
-    for(u32 LevelIndex = 0; LevelIndex < ArrayCount(ClipRectIndex); ++LevelIndex)
+    r32 FogAmount[(MaximumLevelIndex - MinimumLevelIndex + 1)];
+    r32 TestAlpha[ArrayCount(FogAmount)];
+    for(u32 LevelIndex = 0; LevelIndex < ArrayCount(FogAmount); ++LevelIndex)
     {
         // TODO: Probably indicates I want to seperate update and render
         // for entities sometime soon.
         s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex; 
         r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - WorldMode->CameraOffset.z;
 
-        clip_rect_fx FX = {};
-        if(CameraRelativeGroundZ > FadeTopStartZ)
-        {
-            RenderGroup->CurrentClipRectIndex = ClipRectIndex[0];
+        TestAlpha[LevelIndex] = Clamp01MapToRange(FadeTopStartZ, CameraRelativeGroundZ, FadeTopEndZ);
+        FogAmount[LevelIndex] = Clamp01MapToRange(FadeBottomStartZ, CameraRelativeGroundZ, FadeBottomEndZ);
 
-            r32 t = Clamp01MapToRange(FadeTopStartZ, CameraRelativeGroundZ, FadeTopEndZ);
-            FX.tColor = V4(0, 0, 0, t);
-        }
-        else if(CameraRelativeGroundZ < FadeBottomStartZ)
-        {
-            RenderGroup->CurrentClipRectIndex = ClipRectIndex[1];
-
-            r32 t = Clamp01MapToRange(FadeBottomStartZ, CameraRelativeGroundZ, FadeBottomEndZ);
-            FX.tColor = V4(t, t, t, 0.0f);
-            FX.Color = BackgroundColor;
-        }
-        else 
-        {
-            RenderGroup->CurrentClipRectIndex = ClipRectIndex[2];
-
-            RenderGroup->tGlobalColor = V4(0, 0, 0, 0);
-        }
-
-        ClipRectIndex[LevelIndex] = PushClipRect(RenderGroup, 0, 0, DrawBuffer->Width, DrawBuffer->Height, FX);
-        TestAlpha[LevelIndex] = 1.0f - FX.tColor.w;
     }
 
     transient_clip_rect Rect(RenderGroup);
@@ -214,8 +192,16 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             if((RelativeLayer >= MinimumLevelIndex) &&
                (RelativeLayer <= MaximumLevelIndex))
             {
-                r32 Alpha = TestAlpha[RelativeLayer - MinimumLevelIndex];
-                RenderGroup->CurrentClipRectIndex = ClipRectIndex[RelativeLayer - MinimumLevelIndex];
+                s32 LayerIndex = RelativeLayer - MinimumLevelIndex;
+                if(RelativeLayer == MaximumLevelIndex)
+                {
+                    EntityTransform.tColor = V4(0, 0, 0, TestAlpha[LayerIndex]);
+                }
+                else 
+                {
+                    EntityTransform.Color = BackgroundColor;
+                    EntityTransform.tColor = FogAmount[LayerIndex]*V4(1, 1, 1, 0);
+                }
 
                 //
                 // NOTE: Rendering
@@ -269,15 +255,14 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                     }
 
                     v4 Color = Piece->Color;
-                    Color.a *= Alpha;
-                    PushBitmap(RenderGroup, EntityTransform, BitmapID, Piece->Height, Offset + Piece->Offset, Color, 1.0f, XAxis, YAxis);
+                    PushBitmap(RenderGroup, &EntityTransform, BitmapID, Piece->Height, Offset + Piece->Offset, Color, 1.0f, XAxis, YAxis);
                 }
                 if(Entity->PieceCount > 1)
                 {
                     EndAggregateSortKey(RenderGroup);
                 }
 
-                DrawHitPoints(Entity, RenderGroup, EntityTransform);
+                DrawHitPoints(Entity, RenderGroup, &EntityTransform);
 
                 EntityTransform.Upright = false;
 #if 0
@@ -285,7 +270,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
                     PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                    Volume->Dim.xy, V4(0, 0.5f, 1.0f, Alpha));
+                                    Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1.0f));
                 }
 #endif
 
@@ -296,8 +281,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     entity_traversable_point *Traversable =
                         Entity->Traversables + TraversableIndex;
-                    PushRect(RenderGroup, EntityTransform, Traversable->P, V2(1.4f, 1.4f), 
-                             Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, Alpha) : V4(0.05f, 0.25f, 0.05f, Alpha));
+                    PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(1.4f, 1.4f), 
+                             Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1.0f) : V4(0.05f, 0.25f, 0.05f, 1.0f));
                     //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
                 }
                 END_BLOCK();
@@ -321,7 +306,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                         v4 OutlineColour;
                         if(DEBUG_HIGHLIGHTED(EntityDebugID, &OutlineColour))
                         {
-                            PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                            PushRectOutline(RenderGroup, &EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
                                             Volume->Dim.xy, OutlineColour, 0.05f);
                         }
                     }

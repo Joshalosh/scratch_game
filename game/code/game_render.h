@@ -24,6 +24,8 @@ enum sprite_flag
 
     Sprite_IndexMask = 0x0FFFFFFF,
 };
+
+#define SPRITE_BARRIER_OFFSET_VALUE 0xFFFFFFFF
 struct sort_sprite_bound
 {
     sprite_edge *FirstEdgeWithMeAsFront;
