@@ -343,14 +343,11 @@ typedef struct game_render_commands
     u32 Height;
 
     u32 MaxPushBufferSize;
-    u32 PushBufferSize;
+    u32 SortEntryCount;
     u8 *PushBufferBase;
+    u8 *PushBufferDataAt;
 
     v4 ClearColor;
-
-    // NOTE: Shoud PushBufferElementCount be renamed?
-    u32 PushBufferElementCount;
-    u32 SortEntryAt;
 
     u32 LastUsedManualSortKey;
     u32 ClipRectCount;
@@ -359,11 +356,18 @@ typedef struct game_render_commands
     struct render_entry_cliprect *LastRect;
 } game_render_commands;
 #define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
-    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, {0, 0, 0, 0}, 0, MaxPushBufferSize};
+    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, ((u8 *)PushBuffer) + MaxPushBufferSize};
+
+inline struct sort_sprite_bound *GetSortEntries(game_render_commands *Commands)
+{
+    sort_sprite_bound *Result = (sort_sprite_bound *)Commands->PushBufferBase;
+    return(Result);
+}
 
 typedef struct game_render_prep
 {
     struct render_entry_cliprect *ClipRects;
+    u32 SortedIndexCount;
     u32 *SortedIndices;
 } game_render_prep;
 

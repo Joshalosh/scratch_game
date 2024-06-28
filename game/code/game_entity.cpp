@@ -69,8 +69,9 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
         TestAlpha[LevelIndex] = Clamp01MapToRange(FadeTopStartZ, CameraRelativeGroundZ, FadeTopEndZ);
         FogAmount[LevelIndex] = Clamp01MapToRange(FadeBottomStartZ, CameraRelativeGroundZ, FadeBottomEndZ);
-
     }
+
+    s32 CurrentAbsoluteZLayer = (SimRegion->EntityCount ? SimRegion->Entities[0].ZLayer : 0);
 
     transient_clip_rect Rect(RenderGroup);
     for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
@@ -183,15 +184,21 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             object_transform EntityTransform = DefaultUprightTransform();
             EntityTransform.OffsetP = GetEntityGroundPoint(Entity) - CameraP;
 
-            world_position WorldPos = MapIntoChunkSpace(WorldMode->World, SimRegion->Origin, Entity->P);
-            s32 RelativeLayer = (WorldPos.ChunkZ - SimRegion->Origin.ChunkZ);
+            s32 RelativeLayer = Entity->ZLayer - SimRegion->Origin.ChunkZ;
 
             EntityTransform.ManualSort = Entity->ManualSort;
-            EntityTransform.ChunkZ = WorldPos.ChunkZ;
+            EntityTransform.ChunkZ = Entity->ZLayer;
 
             if((RelativeLayer >= MinimumLevelIndex) &&
                (RelativeLayer <= MaximumLevelIndex))
             {
+                if(CurrentAbsoluteZLayer != Entity->ZLayer)
+                {
+                    Assert(CurrentAbsoluteZLayer < Entity->ZLayer);
+                    CurrentAbsoluteZLayer = Entity->ZLayer;
+                    PushSortBarrier(RenderGroup);
+                }
+
                 s32 LayerIndex = RelativeLayer - MinimumLevelIndex;
                 if(RelativeLayer == MaximumLevelIndex)
                 {

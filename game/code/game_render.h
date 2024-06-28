@@ -53,13 +53,6 @@ struct tile_render_work
     rectangle2i ClipRect;
 };
 
-inline sort_sprite_bound *
-GetSortEntries(game_render_commands *Commands)
-{
-    sort_sprite_bound *SortEntries = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
-    return(SortEntries);
-}
-
 #define SORT_GRID_WIDTH  64
 #define SORT_GRID_HEIGHT 36
 struct sort_grid_entry

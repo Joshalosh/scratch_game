@@ -157,7 +157,6 @@ struct render_group
     game_render_commands *Commands;
 
     b32 IsAggregating;
-    u32 AggregateCount;
     sprite_bound AggregateBound;
     u32 FirstAggregateAt;
 };

@@ -53,6 +53,46 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform *CameraTrans
     return(Result);
 }
 
+struct push_buffer_result
+{
+    sort_sprite_bound *SortEntry;
+    render_group_entry_header *Header;
+};
+inline push_buffer_result
+PushBuffer(render_group *RenderGroup, u32 SortEntryCount, u32 DataSize)
+{
+    game_render_commands *Commands = RenderGroup->Commands;
+    sort_sprite_bound *SpriteBounds = GetSortEntries(Commands);
+
+    push_buffer_result Result = {};
+
+    if((u8 *)(SpriteBounds + (Commands->SortEntryCount + SortEntryCount)) <=
+       (Commands->PushBufferDataAt - DataSize))
+    {
+        Commands->PushBufferDataAt -= DataSize;
+        Result.Header = (render_group_entry_header *)Commands->PushBufferDataAt;
+
+        Result.SortEntry = SpriteBounds + Commands->SortEntryCount;
+        Commands->SortEntryCount += SortEntryCount;
+    }
+    else 
+    {
+        InvalidCodePath;
+    }
+
+    return(Result);
+}
+
+inline void
+PushSortBarrier(render_group *RenderGroup)
+{
+    push_buffer_result Push = PushBuffer(RenderGroup, 1, 0);
+    if(Push.SortEntry)
+    {
+        Push.SortEntry->Offset = SPRITE_BARRIER_OFFSET_VALUE;
+    }
+}
+
 #define PushRenderElement(Group, type, SortKey, ScreenArea) (type *)PushRenderElement_(Group, sizeof(type), RenderGroupEntryType_##type, SortKey, ScreenArea)
 inline void *
 PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type Type, 
@@ -63,10 +103,10 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
     void *Result = 0;
 
     Size += sizeof(render_group_entry_header);
-
-    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_sprite_bound)))
+    push_buffer_result Push = PushBuffer(Group, 1, Size);
+    if(Push.SortEntry)
     {
-        render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + Commands->PushBufferSize);
+        render_group_entry_header *Header = Push.Header;
         Header->Type = (u16)Type;
         Header->ClipRectIndex = SafeTruncateToU16(Group->CurrentClipRectIndex);
         Result = (uint8_t *)Header + sizeof(*Header);
@@ -74,11 +114,10 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
         Header->DebugTag = Group->DebugTag;
 #endif
 
-        Commands->SortEntryAt -= sizeof(sort_sprite_bound);
-        sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + Commands->SortEntryAt);
+        sort_sprite_bound *Entry = Push.SortEntry;
         Entry->FirstEdgeWithMeAsFront = 0;
         Entry->SortKey = SortKey;
-        Entry->Offset = Commands->PushBufferSize;
+        Entry->Offset = Commands->MaxPushBufferSize - (u32)(Commands->PushBufferDataAt - Commands->PushBufferBase);
         Entry->ScreenArea = ScreenArea;
         Entry->Flags = 0;
 #if GAME_SLOW
@@ -86,12 +125,9 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 #endif
         Assert(Entry->Offset != 0);
 
-        ++Commands->PushBufferElementCount;
-        Commands->PushBufferSize += Size;
-
         if(Group->IsAggregating)
         {
-            if(Group->AggregateCount == 0)
+            if(Group->FirstAggregateAt == (Commands->SortEntryCount - 1))
             {
                 Group->AggregateBound = SortKey;
             }
@@ -111,7 +147,6 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
                 //Group->AggregateBound.YMax = Maximum(Group->AggregateBound.YMax, SortKey.YMax);
                 Group->AggregateBound.ZMax = Maximum(Group->AggregateBound.ZMax, SortKey.ZMax);
             }
-            ++Group->AggregateCount;
         }
     }
     else
@@ -129,11 +164,10 @@ BeginAggregateSortKey(render_group *RenderGroup)
     RenderGroup->IsAggregating = true;
 
     game_render_commands *Commands = RenderGroup->Commands;
-    RenderGroup->FirstAggregateAt = (Commands->SortEntryAt - sizeof(sort_sprite_bound));
+    RenderGroup->FirstAggregateAt = Commands->SortEntryCount;
     RenderGroup->AggregateBound.YMin = R32Maximum;
     RenderGroup->AggregateBound.YMax = R32Minimum;
     RenderGroup->AggregateBound.ZMax = R32Minimum;
-    RenderGroup->AggregateCount = 0;
 }
 
 inline void
@@ -143,8 +177,11 @@ EndAggregateSortKey(render_group *RenderGroup)
     RenderGroup->IsAggregating = false;
 
     game_render_commands *Commands = RenderGroup->Commands;
-    sort_sprite_bound *Entry = (sort_sprite_bound *)(Commands->PushBufferBase + RenderGroup->FirstAggregateAt);
-    for(u32 Index = 0; Index < RenderGroup->AggregateCount; ++Index, --Entry)
+
+    u32 AggregateCount = Commands->SortEntryCount - RenderGroup->FirstAggregateAt;
+
+    sort_sprite_bound *Entry = GetSortEntries(Commands) + RenderGroup->FirstAggregateAt;
+    for(u32 Index = 0; Index < AggregateCount; ++Index, --Entry)
     {
         Entry->SortKey = RenderGroup->AggregateBound;
     }
@@ -354,14 +391,11 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H)
 {
     u32 Result = 0;
 
-    game_render_commands *Commands = Group->Commands;
-
     u32 Size = sizeof(render_entry_cliprect);
-    if((Commands->PushBufferSize + Size) < (Commands->SortEntryAt - sizeof(sort_entry)))
+    push_buffer_result Push = PushBuffer(Group, 0, Size);
+    if(Push.Header)
     {
-        render_entry_cliprect *Rect = (render_entry_cliprect *)
-            (Commands->PushBufferBase + Commands->PushBufferSize);
-        Commands->PushBufferSize += Size;
+        render_entry_cliprect *Rect = (render_entry_cliprect *)Push.Header;
 
         Result = Group->Commands->ClipRectCount++;
 

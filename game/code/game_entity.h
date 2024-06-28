@@ -128,6 +128,8 @@ struct entity
     brain_slot BrainSlot;
     brain_id BrainID;
 
+    s32 ZLayer;
+
     //
     // NOTE: Tansient
     //

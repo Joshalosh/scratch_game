@@ -238,11 +238,9 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
 
     OpenGLSetScreenspace(Commands->Width, Commands->Height);
 
-    u32 SortEntryCount = Commands->PushBufferElementCount;
-
     u32 ClipRectIndex = 0xFFFFFFFF;
     u32 *Entry = Prep->SortedIndices;
-    for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
+    for (u32 SortEntryIndex = 0; SortEntryIndex < Prep->SortedIndexCount; ++SortEntryIndex, ++Entry)
     {
         u32 HeaderOffset = *Entry;
 
@@ -345,13 +343,14 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
     if(GlobalShowSortGroups)
     {
         glDisable(GL_TEXTURE_2D);
-        u32 BoundCount = Commands->PushBufferElementCount;
+        u32 BoundCount = Commands->SortEntryCount;
         sort_sprite_bound *Bounds = GetSortEntries(Commands);
         u32 GroupIndex = 0;
         for(u32 BoundIndex = 0; BoundIndex < BoundCount; ++BoundIndex)
         {
             sort_sprite_bound *Bound = Bounds + BoundIndex;
-            if(!(Bound->Flags & Sprite_DebugBox))
+            if((Bounds->Offset != SPRITE_BARRIER_OFFSET_VALUE) &&
+               !(Bound->Flags & Sprite_DebugBox))
             {
                 v4 Color = V4(DebugColorTable[GroupIndex++ % ArrayCount(DebugColorTable)], 0.1f);
                 if(Bound->Flags & Sprite_Cycle)

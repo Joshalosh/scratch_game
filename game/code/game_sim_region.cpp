@@ -238,6 +238,8 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                     // TODO: This should really be a decompression step, not a copy.
                                     *Dest = *Source;
 
+                                    Dest->ZLayer = ChunkZ;
+
                                     manual_sort_key Zero = {};
                                     Dest->ManualSort = Zero;
                                 }

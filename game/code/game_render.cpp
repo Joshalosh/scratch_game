@@ -1096,7 +1096,6 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
 {
     IGNORED_TIMED_FUNCTION();
 
-    u32 SortEntryCount = Commands->PushBufferElementCount;
 
     real32 NullPixelsToMetres = 1.0f;
 
@@ -1107,7 +1106,7 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
                   V4(Commands->ClearColor.xyz, 1.0f), ClipRect);
 
     u32 *Entry = Prep->SortedIndices;
-    for (u32 SortEntryIndex = 0; SortEntryIndex < SortEntryCount; ++SortEntryIndex, ++Entry)
+    for (u32 SortEntryIndex = 0; SortEntryIndex < Prep->SortedIndexCount; ++SortEntryIndex, ++Entry)
     {
         u32 HeaderOffset = *Entry;
 
@@ -1337,7 +1336,7 @@ GetGridSpan(rectangle2 TotalScreen, v2 InvCellDim, rectangle2 Source, rectangle2
 }
 
 internal u32
-BuildSpriteGraph(u32 NodeIndexA, u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena,
+BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena *Arena,
                  u32 ScreenWidth, u32 ScreenHeight)
 {
     TIMED_FUNCTION();
@@ -1348,16 +1347,17 @@ BuildSpriteGraph(u32 NodeIndexA, u32 InputNodeCount, sort_sprite_bound *InputNod
                      (r32)SORT_GRID_HEIGHT / (r32)ScreenHeight};
 
     sort_grid_entry *Grid[SORT_GRID_WIDTH][SORT_GRID_HEIGHT] = {};
+    u32 NodeIndexA = 0;
     for(; NodeIndexA < InputNodeCount; ++NodeIndexA)
     {
         sort_sprite_bound *A = InputNodes + NodeIndexA;
-        Assert(A->Flags == 0);
 
         if(A->Offset == SPRITE_BARRIER_OFFSET_VALUE)
         {
             break;
         }
 
+        Assert(A->Flags == 0);
         rectangle2i GridSpan;
         if(GetGridSpan(TotalScreen, InvCellDim, A->ScreenArea, &GridSpan))
         {
@@ -1435,37 +1435,38 @@ RecursiveFrontToBack(sprite_graph_walk *Walk, u32 AtIndex)
     }
 }
 
-internal void
-WalkSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, u32 *OutIndexArray)
-{
-    TIMED_FUNCTION();
-
-    sprite_graph_walk Walk = {};
-    Walk.InputNodes = InputNodes;
-    Walk.OutIndex = OutIndexArray;
-    for(u32 NodeIndexA = 0; NodeIndexA < InputNodeCount; ++NodeIndexA)
-    {
-        Walk.HitCycle = false;
-        RecursiveFrontToBack(&Walk, NodeIndexA);
-    }
-    Assert((Walk.OutIndex - OutIndexArray) == InputNodeCount);
-}
-
 internal u32 *
-SortEntries(game_render_commands *Commands, memory_arena *TempArena)
+SortEntries(game_render_commands *Commands, memory_arena *TempArena, game_render_prep *Prep)
 {
     TIMED_FUNCTION();
 
-    u32 Count = Commands->PushBufferElementCount;
+    u32 Count = Commands->SortEntryCount;
     sort_sprite_bound *Entries = GetSortEntries(Commands);
     u32 *Result = PushArray(TempArena, Count, u32);
 
 #if 1
+    sprite_graph_walk Walk = {};
+    Walk.OutIndex = Result;
     for(u32 FirstIndex = 0; FirstIndex < Count;)
     {
-        FirstIndex = BuildSpriteGraph(FirstIndex, Count, Entries, TempArena, Commands->Width, Commands->Height);
-        WalkSpriteGraph(Count, Entries, Result);
+        sort_sprite_bound *SubEntries = Entries + FirstIndex;
+        u32 SubCount = BuildSpriteGraph(Count - FirstIndex, 
+                                        SubEntries, 
+                                        TempArena, Commands->Width, Commands->Height);
+        Walk.InputNodes = SubEntries;
+        for(u32 NodeIndexA = 0; NodeIndexA < SubCount; ++NodeIndexA)
+        {
+            Walk.HitCycle = false;
+            RecursiveFrontToBack(&Walk, NodeIndexA);
+        }
+
+        FirstIndex += SubCount + 1;
     }
+
+    // NOTE: Change the total number of things to reflect how many there are without barriers
+    Prep->SortedIndices = Result;
+    Prep->SortedIndexCount = (u32)(Walk.OutIndex - Result);
+
 #else
     for(u32 NodeIndexA = 0; NodeIndexA < Count; ++NodeIndexA)
     {
@@ -1525,7 +1526,7 @@ PrepForRender(game_render_commands *Commands, memory_arena *TempArena)
 {
     game_render_prep Prep;
 
-    Prep.SortedIndices = SortEntries(Commands, TempArena);
+    SortEntries(Commands, TempArena, &Prep);
     Prep.ClipRects = LineariseClipRects(Commands, TempArena);
 
     return(Prep);
