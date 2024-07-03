@@ -912,7 +912,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
             u32 OldClipRect = RenderGroup->CurrentClipRectIndex;
             RenderGroup->CurrentClipRectIndex = 
-                PushClipRect(RenderGroup, &DebugState->BackingTransform, LayEl.Bounds, 0.0f);
+                PushClipRect(RenderGroup, &DebugState->BackingTransform, LayEl.Bounds, 0.0f, DebugState->RenderTarget);
 
             switch(Element->Type)
             {

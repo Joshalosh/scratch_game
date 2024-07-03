@@ -1204,8 +1204,8 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 }
 
 internal void
-SoftwareRenderCommands(platform_work_queue *RenderQueue,
-                       game_render_commands *Commands, game_render_prep *Prep, loaded_bitmap *OutputTarget)
+SoftwareRenderCommands(platform_work_queue *RenderQueue, game_render_commands *Commands, 
+                       game_render_prep *Prep, loaded_bitmap *OutputTarget, memory_arena *TempArena)
 {
     TIMED_FUNCTION();
 
@@ -1218,6 +1218,10 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue,
       - Actually ballpark the memory bandwidth for our DrawRectangleQuickly
       - Re-Test some of our instruction choices
     */
+    loaded_bitmap *OutputTarget = PushStruct(TempArena, loaded_bitmap);
+    *OutputTarget = *FinalOutputTarget;
+    Assert(OutputTarget->Pitch > 0);
+    OutputTarget->Memory = PushSize(TempArena, OutputTarget->Pitch*OutputTarget->Height, AlignNoClear(16));
 
     int const TileCountX = 4;
     int const TileCountY = 4;
@@ -1266,6 +1270,8 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue,
     }
 
     Platform.CompleteAllWork(RenderQueue);
+
+    Copy(OutputTarget->Pitch*OutputTarget->Height, OutputTarget->Memory, FinalOutputTarget->Memory);
 }
 
 inline b32

@@ -60,6 +60,7 @@ struct render_entry_cliprect
 {
     render_entry_cliprect *Next;
     rectangle2i Rect;
+    u32 RenderTargetIndex;
 };
 
 struct render_entry_clear
@@ -156,9 +157,8 @@ struct render_group
     u32 GenerationID;
     game_render_commands *Commands;
 
-    b32 IsAggregating;
     sprite_bound AggregateBound;
-    u32 FirstAggregateAt;
+    sort_sprite_bound *FirstAggregate;
 };
 
 struct entity_basis_p_result

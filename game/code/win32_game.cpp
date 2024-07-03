@@ -755,7 +755,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
         OutputTarget.Height = GlobalBackbuffer.Height;
         OutputTarget.Pitch = GlobalBackbuffer.Pitch;
 
-        SoftwareRenderCommands(RenderQueue, Commands, &Prep, &OutputTarget);
+        SoftwareRenderCommands(RenderQueue, Commands, &Prep, &OutputTarget, TempArena);
 
         if(GlobalRenderingType == Win32RenderType_RenderSoftware_DisplayOpenGL)
         {

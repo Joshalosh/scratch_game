@@ -117,7 +117,7 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
         sort_sprite_bound *Entry = Push.SortEntry;
         Entry->FirstEdgeWithMeAsFront = 0;
         Entry->SortKey = SortKey;
-        Entry->Offset = Commands->MaxPushBufferSize - (u32)(Commands->PushBufferDataAt - Commands->PushBufferBase);
+        Entry->Offset = (u32)((u8 *)Header - Commands->PushBufferBase);
         Entry->ScreenArea = ScreenArea;
         Entry->Flags = 0;
 #if GAME_SLOW
@@ -125,9 +125,9 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 #endif
         Assert(Entry->Offset != 0);
 
-        if(Group->IsAggregating)
+        if(Group->FirstAggregate)
         {
-            if(Group->FirstAggregateAt == (Commands->SortEntryCount - 1))
+            if(Group->FirstAggregate == Push.SortEntry)
             {
                 Group->AggregateBound = SortKey;
             }
@@ -160,11 +160,10 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
 inline void
 BeginAggregateSortKey(render_group *RenderGroup)
 {
-    Assert(!RenderGroup->IsAggregating);
-    RenderGroup->IsAggregating = true;
+    Assert(!RenderGroup->FirstAggregate);
 
     game_render_commands *Commands = RenderGroup->Commands;
-    RenderGroup->FirstAggregateAt = Commands->SortEntryCount;
+    RenderGroup->FirstAggregate = GetSortEntries(Commands) + Commands->SortEntryCount;
     RenderGroup->AggregateBound.YMin = R32Maximum;
     RenderGroup->AggregateBound.YMax = R32Minimum;
     RenderGroup->AggregateBound.ZMax = R32Minimum;
@@ -173,18 +172,16 @@ BeginAggregateSortKey(render_group *RenderGroup)
 inline void
 EndAggregateSortKey(render_group *RenderGroup)
 {
-    Assert(RenderGroup->IsAggregating);
-    RenderGroup->IsAggregating = false;
+    Assert(RenderGroup->FirstAggregate);
 
     game_render_commands *Commands = RenderGroup->Commands;
-
-    u32 AggregateCount = Commands->SortEntryCount - RenderGroup->FirstAggregateAt;
-
-    sort_sprite_bound *Entry = GetSortEntries(Commands) + RenderGroup->FirstAggregateAt;
-    for(u32 Index = 0; Index < AggregateCount; ++Index, --Entry)
+    sort_sprite_bound *OnePastLastEntry = GetSortEntries(Commands) + Commands->SortEntryCount;
+    for(sort_sprite_bound *Entry = RenderGroup->FirstAggregate; Entry != OnePastLastEntry; ++Entry)
     {
         Entry->SortKey = RenderGroup->AggregateBound;
     }
+
+    RenderGroup->FirstAggregate = 0;
 }
 
 inline used_bitmap_dim
@@ -387,7 +384,7 @@ CoordinateSystem(render_group *Group, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
 }
 
 inline u32
-PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H)
+PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H, u32 RenderTargetIndex)
 {
     u32 Result = 0;
 
@@ -413,13 +410,15 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H)
         Rect->Rect.MinY = Y;
         Rect->Rect.MaxX = X + W;
         Rect->Rect.MaxY = Y + H;
+
+        Rect->RenderTargetIndex = RenderTargetIndex;
     }
 
     return(Result);
 }
 
 inline u32
-PushClipRect(render_group *Group, object_transform *ObjectTransform, v3 Offset, v2 Dim)
+PushClipRect(render_group *Group, object_transform *ObjectTransform, v3 Offset, v2 Dim, u32 RenderTargetIndex)
 {
     u32 Result = 0;
 
@@ -432,16 +431,16 @@ PushClipRect(render_group *Group, object_transform *ObjectTransform, v3 Offset, 
 
         Result = PushClipRect(Group,
                               RoundReal32ToInt32(P.x), RoundReal32ToInt32(P.y),
-                              RoundReal32ToInt32(DimB.x), RoundReal32ToInt32(DimB.y));
+                              RoundReal32ToInt32(DimB.x), RoundReal32ToInt32(DimB.y), RenderTargetIndex);
     }
 
     return(Result);
 }
 
 inline u32
-PushClipRect(render_group *Group, object_transform *ObjectTransform, rectangle2 Rectangle, r32 Z)
+PushClipRect(render_group *Group, object_transform *ObjectTransform, rectangle2 Rectangle, r32 Z, u32 RenderTargetIndex)
 {
-    u32 Result = PushClipRect(Group, ObjectTransform, V3(GetCenter(Rectangle), Z), GetDim(Rectangle));
+    u32 Result = PushClipRect(Group, ObjectTransform, V3(GetCenter(Rectangle), Z), GetDim(Rectangle), RenderTargetIndex);
     return(Result);
 }
 
@@ -512,7 +511,7 @@ BeginRenderGroup(game_assets *Assets, game_render_commands *Commands, u32 Genera
     Result.GenerationID = GenerationID;
     Result.Commands = Commands;
     Result.ScreenArea = RectMinDim(V2(0, 0), V2i(PixelWidth, PixelHeight));
-    Result.CurrentClipRectIndex = PushClipRect(&Result, 0, 0, PixelWidth, PixelHeight);
+    Result.CurrentClipRectIndex = PushClipRect(&Result, 0, 0, PixelWidth, PixelHeight, 0);
 
     return(Result);
 }
