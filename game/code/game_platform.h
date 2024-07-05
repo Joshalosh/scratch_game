@@ -351,6 +351,7 @@ typedef struct game_render_commands
 
     u32 LastUsedManualSortKey;
     u32 ClipRectCount;
+    u32 MaxRenderTargetIndex;
 
     struct render_entry_cliprect *FirstRect;
     struct render_entry_cliprect *LastRect;

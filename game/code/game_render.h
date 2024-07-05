@@ -49,7 +49,7 @@ struct tile_render_work
 {
     game_render_commands *Commands;
     game_render_prep *Prep;
-    struct loaded_bitmap *OutputTarget;
+    struct loaded_bitmap *RenderTargets;
     rectangle2i ClipRect;
 };
 

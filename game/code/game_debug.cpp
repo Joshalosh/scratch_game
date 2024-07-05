@@ -842,9 +842,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
     debug_state *DebugState = Layout->DebugState;
     render_group *RenderGroup = &DebugState->RenderGroup;
-    debug_stored_event *StoredEvent = Element->Frames[FrameOrdinal].MostRecentEvent;
 
-    debug_event *Event = &StoredEvent->Event;
     debug_interaction ItemInteraction =
         ElementInteraction(DebugState, DebugID, DebugInteraction_AutoModifyVariable, Element);
 
@@ -869,7 +867,6 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
                     used_bitmap_dim Dim = GetBitmapDim(RenderGroup, &NoTransform, Bitmap, BitmapScale, V3(0.0f, 0.0f, 0.0f), 1.0f);
                     View->InlineBlock.Dim.x = Dim.Size.x;
                 }
-
             }
 
             layout_element LayEl = BeginElementRectangle(Layout, &View->InlineBlock.Dim);
@@ -877,7 +874,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             DefaultInteraction(&LayEl, ItemInteraction);
             EndElement(&LayEl);
             PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, LayEl.Bounds, 0.0f, V4(0, 0, 0, 1.0f));
-            
+
             if(Bitmap)
             {
                 PushBitmap(&DebugState->RenderGroup, &DebugState->BackingTransform, Event->Value_bitmap_id, BitmapScale,
@@ -907,7 +904,7 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             // DefaultInteraction(&LayEl, ItemInteraction);
             EndElement(&LayEl);
 
-            PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, 
+            PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform,
                      LayEl.Bounds, 0.0f, V4(0, 0, 0, 0.75f));
 
             u32 OldClipRect = RenderGroup->CurrentClipRectIndex;
@@ -955,8 +952,8 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, LayEl.Bounds, 0.0f, V4(0, 0, 0, 0.75f));
 
             u32 OldClipRect = RenderGroup->CurrentClipRectIndex;
-            RenderGroup->CurrentClipRectIndex = PushClipRect(RenderGroup, &DebugState->BackingTransform, 
-                                                             LayEl.Bounds, 0.0f);
+            RenderGroup->CurrentClipRectIndex = PushClipRect(RenderGroup, &DebugState->BackingTransform,
+                                                             LayEl.Bounds, 0.0f, DebugState->RenderTarget);
 
             debug_stored_event *RootNode = 0;
 
@@ -1106,7 +1103,7 @@ DrawTreeLink(debug_state *DebugState, layout *Layout, debug_tree *Tree, debug_va
             --Layout->Depth;
         }
     }
-    else 
+    else
     {
         debug_id DebugID = DebugIDFromLink(Tree, Link);
         DEBUGDrawElement(Layout, Tree, Link->Element, DebugID, FrameOrdinal);
@@ -1318,7 +1315,7 @@ DEBUGInteract(debug_state *DebugState, game_input *Input, v2 MouseP)
         u32 FrameOrdinal = DebugState->MostRecentFrameOrdinal;
         debug_tree *Tree = DebugState->Interaction.Tree;
         v2 *P = DebugState->Interaction.P;
-        
+
         // Mouse move interaction.
         switch(DebugState->Interaction.Type)
         {
@@ -1911,7 +1908,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
 
         memory_index TotalMemorySize = DebugGlobalMemory->DebugStorageSize - sizeof(debug_state);
         InitialiseArena(&DebugState->DebugArena, TotalMemorySize, DebugState + 1);
-#if 0
+#if 1
         SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, (TotalMemorySize / 2));
 #else
         // This is the stress-testing case to make sure the memory recycling works
@@ -1951,7 +1948,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
         bitmap_id ID = GetBestMatchBitmapFrom(Assets, Asset_Head, &MatchVector, &WeightVector);
 
         DEBUGAddVariable(&Context, "Test Bitmap", ID);
-        
+
         DEBUGEndVariableGroup(&Context);
         DEBUGEndVariableGroup(&Context);
         Assert(Context.GroupDepth == 0);
@@ -2000,6 +1997,7 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->ToolTipTransform.ChunkZ = 500000;
 
     DebugState->DefaultClipRect = DebugState->RenderGroup.CurrentClipRectIndex;
+    DebugState->RenderTarget = 0;
 
     if(!DebugState->Paused)
     {
@@ -2017,7 +2015,7 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
     debug_event *HotEvent = 0;
 
     debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
-    _snprintf_s(DebugState->RootInfo, DebugState->RootInfoSize, DebugState->RootInfoSize, 
+    _snprintf_s(DebugState->RootInfo, DebugState->RootInfoSize, DebugState->RootInfoSize,
                 "%.02fms %de %dp %dd",
                 MostRecentFrame->WallSecondsElapsed * 1000.0f,
                 MostRecentFrame->StoredEventCount,

@@ -45,7 +45,7 @@ ConvertToLayerRelative(game_mode_world *WorldMode, r32 *Z)
     return(RelativeIndex);
 }
 
-internal void 
+internal void
 UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, render_group *RenderGroup, v3 CameraP,
                         loaded_bitmap *DrawBuffer, v4 BackgroundColor, r32 dt, transient_state *TranState, v2 MouseP)
 {
@@ -56,15 +56,15 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
     real32 FadeBottomStartZ = -1.0f*WorldMode->TypicalFloorHeight;
     real32 FadeBottomEndZ = -4.0f*WorldMode->TypicalFloorHeight;
 
-#define MinimumLevelIndex -4 
-#define MaximumLevelIndex 1 
+#define MinimumLevelIndex -4
+#define MaximumLevelIndex 1
     r32 FogAmount[(MaximumLevelIndex - MinimumLevelIndex + 1)];
     r32 TestAlpha[ArrayCount(FogAmount)];
     for(u32 LevelIndex = 0; LevelIndex < ArrayCount(FogAmount); ++LevelIndex)
     {
         // TODO: Probably indicates I want to seperate update and render
         // for entities sometime soon.
-        s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex; 
+        s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex;
         r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - WorldMode->CameraOffset.z;
 
         TestAlpha[LevelIndex] = Clamp01MapToRange(FadeTopStartZ, CameraRelativeGroundZ, FadeTopEndZ);
@@ -146,7 +146,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                                                             Triangle01(Entity->tMovement),
                                                             Entity->AngleSwipeDistance);
                     }
-                    else 
+                    else
                     {
                         Entity->MovementMode = MovementMode_AngleOffset;
                         Entity->AngleCurrent = Entity->AngleTarget;
@@ -158,9 +158,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                     {
                         Entity->tMovement = 1.0f;
                     }
-
                 }
-
                 case MovementMode_AngleOffset:
                 {
                     v2 Arm = Entity->AngleCurrentDistance*Arm2(Entity->AngleCurrent + Entity->FacingDirection);
@@ -204,7 +202,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     EntityTransform.tColor = V4(0, 0, 0, TestAlpha[LayerIndex]);
                 }
-                else 
+                else
                 {
                     EntityTransform.Color = BackgroundColor;
                     EntityTransform.tColor = FogAmount[LayerIndex]*V4(1, 1, 1, 0);
@@ -290,6 +288,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                         Entity->Traversables + TraversableIndex;
                     PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(0.5f/*1.4f)*/, 1.4f), 
                              Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1.0f) : V4(0.05f, 0.25f, 0.05f, 1.0f));
+
                     //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
                 }
                 END_BLOCK();

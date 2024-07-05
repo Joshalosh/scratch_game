@@ -138,7 +138,7 @@ PushRenderElement_(render_group *Group, uint32_t Size, render_group_entry_type T
                 Group->AggregateBound.YMax = Maximum(Group->AggregateBound.YMax, SortKey.YMax);
                 Group->AggregateBound.ZMax = Maximum(Group->AggregateBound.ZMax, SortKey.ZMax);
             }
-            else 
+            else
             {
                 Assert(!IsZSprite(SortKey));
                 // TODO: Should I try to let the user specify what should happen for 
@@ -412,6 +412,10 @@ PushClipRect(render_group *Group, u32 X, u32 Y, u32 W, u32 H, u32 RenderTargetIn
         Rect->Rect.MaxY = Y + H;
 
         Rect->RenderTargetIndex = RenderTargetIndex;
+        if(Group->Commands->MaxRenderTargetIndex < RenderTargetIndex)
+        {
+            Group->Commands->MaxRenderTargetIndex = RenderTargetIndex;
+        }
     }
 
     return(Result);

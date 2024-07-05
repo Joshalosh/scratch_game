@@ -1092,16 +1092,16 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 
 internal void
 RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
-                       loaded_bitmap *OutputTarget, rectangle2i BaseClipRect)
+                       loaded_bitmap *RenderTargets, rectangle2i BaseClipRect)
 {
     IGNORED_TIMED_FUNCTION();
-
 
     real32 NullPixelsToMetres = 1.0f;
 
     u32 ClipRectIndex = 0xFFFFFFFF;
     rectangle2i ClipRect = BaseClipRect;
 
+    loaded_bitmap *OutputTarget = RenderTargets;
     DrawRectangle(OutputTarget, V2(0.0f, 0.0f), V2((real32)OutputTarget->Width, (real32)OutputTarget->Height), 
                   V4(Commands->ClearColor.xyz, 1.0f), ClipRect);
 
@@ -1119,6 +1119,8 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
 
             render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
             ClipRect = Intersect(BaseClipRect, Clip->Rect);
+
+            OutputTarget = RenderTargets + Clip->RenderTargetIndex;
         }
 
         void *Data = (uint8_t *)Header + sizeof(*Header);
@@ -1200,12 +1202,12 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoTiledRenderWork)
 
     tile_render_work *Work = (tile_render_work *)Data;
 
-    RenderCommandsToBitmap(Work->Commands, Work->Prep, Work->OutputTarget, Work->ClipRect);
+    RenderCommandsToBitmap(Work->Commands, Work->Prep, Work->RenderTargets, Work->ClipRect);
 }
 
 internal void
 SoftwareRenderCommands(platform_work_queue *RenderQueue, game_render_commands *Commands, 
-                       game_render_prep *Prep, loaded_bitmap *OutputTarget, memory_arena *TempArena)
+                       game_render_prep *Prep, loaded_bitmap *FinalOutputTarget, memory_arena *TempArena)
 {
     TIMED_FUNCTION();
 
@@ -1218,18 +1220,24 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue, game_render_commands *C
       - Actually ballpark the memory bandwidth for our DrawRectangleQuickly
       - Re-Test some of our instruction choices
     */
-    loaded_bitmap *OutputTarget = PushStruct(TempArena, loaded_bitmap);
-    *OutputTarget = *FinalOutputTarget;
-    Assert(OutputTarget->Pitch > 0);
-    OutputTarget->Memory = PushSize(TempArena, OutputTarget->Pitch*OutputTarget->Height, AlignNoClear(16));
+    u32 RenderTargetCount = Commands->MaxRenderTargetIndex + 1;
+    loaded_bitmap *RenderTargets = PushArray(TempArena, RenderTargetCount, loaded_bitmap);
+    RenderTargets[0] = *FinalOutputTarget;
+    Assert(FinalOutputTarget->Pitch > 0);
+    for(u32 TargetIndex = 1; TargetIndex < RenderTargetCount; ++TargetIndex)
+    {
+        loaded_bitmap *Target = RenderTargets + TargetIndex;
+        *Target = *FinalOutputTarget;
+        Target->Memory = PushSize(TempArena, Target->Pitch*Target->Height, AlignNoClear(16));
+    }
 
     int const TileCountX = 4;
     int const TileCountY = 4;
     tile_render_work WorkArray[TileCountX*TileCountY];
 
-    Assert(((uintptr_t)OutputTarget->Memory & 15) == 0);
-    int TileWidth = OutputTarget->Width / TileCountX;
-    int TileHeight = OutputTarget->Height / TileCountY;
+    Assert(((uintptr_t)FinalOutputTarget->Memory & 15) == 0);
+    int TileWidth = FinalOutputTarget->Width / TileCountX;
+    int TileHeight = FinalOutputTarget->Height / TileCountY;
 
     TileWidth = ((TileWidth + 3) / 4) * 4;
 
@@ -1248,16 +1256,16 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue, game_render_commands *C
 
             if(TileX == (TileCountX - 1))
             {
-                ClipRect.MaxX = OutputTarget->Width;
+                ClipRect.MaxX = FinalOutputTarget->Width;
             }
             if(TileY == (TileCountY - 1))
             {
-                ClipRect.MaxY = OutputTarget->Height;
+                ClipRect.MaxY = FinalOutputTarget->Height;
             }
 
             Work->Commands = Commands;
             Work->Prep = Prep;
-            Work->OutputTarget = OutputTarget;
+            Work->RenderTargets = RenderTargets;
             Work->ClipRect = ClipRect;
 #if 1
             // This is the multi-threaded path.
@@ -1270,8 +1278,6 @@ SoftwareRenderCommands(platform_work_queue *RenderQueue, game_render_commands *C
     }
 
     Platform.CompleteAllWork(RenderQueue);
-
-    Copy(OutputTarget->Pitch*OutputTarget->Height, OutputTarget->Memory, FinalOutputTarget->Memory);
 }
 
 inline b32
@@ -1293,7 +1299,7 @@ IsInFrontOf(sprite_bound A, sprite_bound B)
     {
         Result = false;
     }
-    else 
+    else
     {
         b32 BothZSprites = ((A.YMin != A.YMax) && (B.YMin != B.YMax));
         b32 AIncludesB = ((B.YMin >= A.YMin) && (B.YMin < A.YMax));
@@ -1303,6 +1309,7 @@ IsInFrontOf(sprite_bound A, sprite_bound B)
 
         Result = (SortByZ ? (A.ZMax > B.ZMax) : (A.YMin < B.YMin));
     }
+
     return(Result);
 }
 
@@ -1347,7 +1354,6 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
 {
     TIMED_FUNCTION();
 
-
     rectangle2 TotalScreen = RectMinMax(V2(0, 0), V2((r32)ScreenWidth, (r32)ScreenHeight));
     v2 InvCellDim = {(r32)SORT_GRID_WIDTH / (r32)ScreenWidth,
                      (r32)SORT_GRID_HEIGHT / (r32)ScreenHeight};
@@ -1382,8 +1388,8 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
                         v2 Shrink = {-4.0f, -4.0f};
                         sort_sprite_bound *B = InputNodes + NodeIndexB;
                         if((B->Flags != NodeIndexA) &&
-                            RectanglesIntersect(AddRadiusTo(A->ScreenArea, Shrink),
-                                                AddRadiusTo(B->ScreenArea, Shrink)))
+                           RectanglesIntersect(AddRadiusTo(A->ScreenArea, Shrink),
+                                               AddRadiusTo(B->ScreenArea, Shrink)))
                         {
                             Assert((NodeIndexA & Sprite_IndexMask) == NodeIndexA);
                             Assert((B->Flags & ~Sprite_IndexMask) == 0);
@@ -1457,7 +1463,7 @@ SortEntries(game_render_commands *Commands, memory_arena *TempArena, game_render
     {
         sort_sprite_bound *SubEntries = Entries + FirstIndex;
         u32 SubCount = BuildSpriteGraph(Count - FirstIndex, 
-                                        SubEntries, 
+                                        SubEntries,
                                         TempArena, Commands->Width, Commands->Height);
         Walk.InputNodes = SubEntries;
         for(u32 NodeIndexA = 0; NodeIndexA < SubCount; ++NodeIndexA)
@@ -1490,7 +1496,7 @@ SortEntries(game_render_commands *Commands, memory_arena *TempArena, game_render
             // NOTE: This is the O(n) partial ordering check - only neighbors are verified
             u32 IndexB = Index + 1;
             {
-#else 
+#else
             // NOTE: This is the O(n^2) total ordering check - all pairs verified
             for(u32 IndexB = Index + 1; IndexB < Count; ++IndexB)
             {
