@@ -448,6 +448,21 @@ PushClipRect(render_group *Group, object_transform *ObjectTransform, rectangle2 
     return(Result);
 }
 
+inline void
+PushBlendRenderTarget(render_group *Group, r32 Alpha, u32 SourceRenderTargetIndex)
+{
+    PushSortBarrier(Group);
+
+    sprite_bound SortKey = {};
+    rectangle2 ScreenArea = {};
+    render_entry_blend_render_target *Blend = PushRenderElement(Group, render_entry_blend_render_target, 
+                                                                SortKey, ScreenArea);
+    Blend->SourceTargetIndex = SourceRenderTargetIndex;
+    Blend->Alpha = Alpha;
+
+    PushSortBarrier(Group);
+}
+
 inline v3
 Unproject(render_group *Group, object_transform ObjectTransform, v2 PixelsXY)
 {

@@ -59,7 +59,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 #define MinimumLevelIndex -4
 #define MaximumLevelIndex 1
     r32 FogAmount[(MaximumLevelIndex - MinimumLevelIndex + 1)];
-    r32 TestAlpha[ArrayCount(FogAmount)];
+    r32 TestAlpha = 0.0f;
     for(u32 LevelIndex = 0; LevelIndex < ArrayCount(FogAmount); ++LevelIndex)
     {
         // TODO: Probably indicates I want to seperate update and render
@@ -67,13 +67,21 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
         s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex;
         r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - WorldMode->CameraOffset.z;
 
-        TestAlpha[LevelIndex] = Clamp01MapToRange(FadeTopStartZ, CameraRelativeGroundZ, FadeTopEndZ);
+        TestAlpha = Clamp01MapToRange(FadeTopEndZ, CameraRelativeGroundZ, FadeTopStartZ);
         FogAmount[LevelIndex] = Clamp01MapToRange(FadeBottomStartZ, CameraRelativeGroundZ, FadeBottomEndZ);
+    }
+
+    s32 StopLevelIndex = MaximumLevelIndex - 1;
+    u32 AlphaFloorRenderTarget = 1;
+    u32 NormalFloorClipRect = RenderGroup->CurrentClipRectIndex;
+    u32 AlphaFloorClipRect = RenderGroup->CurrentClipRectIndex;
+    if(TestAlpha > 0)
+    {
+        AlphaFloorClipRect = PushClipRect(RenderGroup, 0, 0, DrawBuffer->Width, DrawBuffer->Height, AlphaFloorRenderTarget);
     }
 
     s32 CurrentAbsoluteZLayer = (SimRegion->EntityCount ? SimRegion->Entities[0].ZLayer : 0);
 
-    transient_clip_rect Rect(RenderGroup);
     for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
     {
         entity *Entity = SimRegion->Entities + EntityIndex;
@@ -188,7 +196,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             EntityTransform.ChunkZ = Entity->ZLayer;
 
             if((RelativeLayer >= MinimumLevelIndex) &&
-               (RelativeLayer <= MaximumLevelIndex))
+               (RelativeLayer <= StopLevelIndex))
             {
                 if(CurrentAbsoluteZLayer != Entity->ZLayer)
                 {
@@ -200,10 +208,12 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 s32 LayerIndex = RelativeLayer - MinimumLevelIndex;
                 if(RelativeLayer == MaximumLevelIndex)
                 {
-                    EntityTransform.tColor = V4(0, 0, 0, TestAlpha[LayerIndex]);
+                    RenderGroup->CurrentClipRectIndex = AlphaFloorClipRect;
+                    EntityTransform.tColor = V4(0, 0, 0, 0);
                 }
                 else
                 {
+                    RenderGroup->CurrentClipRectIndex = NormalFloorClipRect;
                     EntityTransform.Color = BackgroundColor;
                     EntityTransform.tColor = FogAmount[LayerIndex]*V4(1, 1, 1, 0);
                 }
@@ -347,4 +357,10 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
         }
     }
     END_BLOCK();
+
+    RenderGroup->CurrentClipRectIndex = NormalFloorClipRect;
+    if(TestAlpha > 0)
+    {
+        PushBlendRenderTarget(RenderGroup, TestAlpha, AlphaFloorRenderTarget);
+    }
 }

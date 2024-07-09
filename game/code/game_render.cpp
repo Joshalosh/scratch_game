@@ -26,6 +26,16 @@ Unpack4x8(uint32_t Packed)
     return(Result);
 }
 
+inline u32
+Pack4x8(v4 Unpacked)
+{
+    u32 Result = ((RoundReal32ToUInt32(Unpacked.a) << 24) |
+                  (RoundReal32ToUInt32(Unpacked.r) << 16) |
+                  (RoundReal32ToUInt32(Unpacked.g) << 8) |
+                  (RoundReal32ToUInt32(Unpacked.b) << 0));
+    return(Result);
+}
+
 inline v4
 UnscaleAndBiasNormal(v4 Normal)
 {
@@ -1090,6 +1100,43 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
     }
 }
 
+internal void 
+BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded_bitmap *SourceTarget)
+{
+    IGNORED_TIMED_FUNCTION();
+
+#if 1 
+    u8 *DestRow = ((u8 *)DestTarget->Memory + 
+                   Rect.MinX*BITMAP_BYTES_PER_PIXEL + 
+                   Rect.MinY*DestTarget->Pitch);
+    u8 *SourceRow = ((u8 *)SourceTarget->Memory +
+                     Rect.MinX*BITMAP_BYTES_PER_PIXEL + 
+                     Rect.MinY*SourceTarget->Pitch);
+    for(s32 Y = Rect.MinY; Y < Rect.MaxY; ++Y)
+    {
+        u32 *DestPixel = (u32 *)DestRow;
+        u32 *SourcePixel = (u32 *)SourceRow;
+
+        for(s32 X = Rect.MinX; X < Rect.MaxX; ++X)
+        {
+            v4 SourceColor = SRGB255ToLinear1(Unpack4x8(*SourcePixel));
+            v4 DestColor = SRGB255ToLinear1(Unpack4x8(*DestPixel));
+
+            v4 Result = (1.0f - Alpha)*DestColor + Alpha*SourceColor;
+
+            *DestPixel = Pack4x8(Linear1ToSRGB255(Result));
+
+            ++DestPixel;
+            ++SourcePixel;
+        }
+
+        DestRow += DestTarget->Pitch;
+        SourceRow += SourceTarget->Pitch;
+    }
+#endif
+}
+
+
 internal void
 RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
                        loaded_bitmap *RenderTargets, rectangle2i BaseClipRect)
@@ -1101,10 +1148,17 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
     u32 ClipRectIndex = 0xFFFFFFFF;
     rectangle2i ClipRect = BaseClipRect;
 
-    loaded_bitmap *OutputTarget = RenderTargets;
-    DrawRectangle(OutputTarget, V2(0.0f, 0.0f), V2((real32)OutputTarget->Width, (real32)OutputTarget->Height), 
-                  V4(Commands->ClearColor.xyz, 1.0f), ClipRect);
+    // TODO: Put clears back into the list. Just use sort barriers to isolate them
+    for(u32 TargetIndex = 0; TargetIndex <= Commands->MaxRenderTargetIndex; ++TargetIndex)
+    {
+        loaded_bitmap *OutputTarget = RenderTargets + TargetIndex;
+        // TODO: Clear also has to actuall clear not blend because the alpha is wrong
+        DrawRectangle(OutputTarget, V2(0.0f, 0.0f),
+                      V2((real32)OutputTarget->Width, (real32)OutputTarget->Height),
+                      V4(Commands->ClearColor.xyz, 1.0f), ClipRect);
+    }
 
+    loaded_bitmap *OutputTarget = RenderTargets;
     u32 *Entry = Prep->SortedIndices;
     for (u32 SortEntryIndex = 0; SortEntryIndex < Prep->SortedIndexCount; ++SortEntryIndex, ++Entry)
     {
@@ -1189,6 +1243,13 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
                 }
 #endif
 #endif
+            } break;
+
+            case RenderGroupEntryType_render_entry_blend_render_target:
+            {
+                render_entry_blend_render_target *Entry = (render_entry_blend_render_target *)Data;
+                loaded_bitmap *SourceTarget = RenderTargets + Entry->SourceTargetIndex;
+                BlendRenderTarget(ClipRect, OutputTarget, Entry->Alpha, SourceTarget);
             } break;
 
             InvalidDefaultCase;

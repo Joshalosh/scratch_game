@@ -45,6 +45,7 @@ enum render_group_entry_type
     RenderGroupEntryType_render_entry_rectangle,
     RenderGroupEntryType_render_entry_cliprect,
     RenderGroupEntryType_render_entry_coordinate_system,
+    RenderGroupEntryType_render_entry_blend_render_target,
 };
 struct render_group_entry_header // TODO: Don't store type here, perhaps better to store in sort index
 {
@@ -111,6 +112,12 @@ struct render_entry_coordinate_system
     environment_map *Bottom;
 };
 // }
+
+struct render_entry_blend_render_target 
+{
+    u32 SourceTargetIndex;
+    r32 Alpha;
+};
 
 struct object_transform
 {
