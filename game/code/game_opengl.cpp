@@ -336,7 +336,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                 render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
             } break;
 
-            InvalidDefaultCase;
+            InvalidDefaultCase
         }
     }
 

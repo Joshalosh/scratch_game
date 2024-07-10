@@ -1105,7 +1105,7 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
 {
     IGNORED_TIMED_FUNCTION();
 
-#if 1 
+#if 0 
     u8 *DestRow = ((u8 *)DestTarget->Memory + 
                    Rect.MinX*BITMAP_BYTES_PER_PIXEL + 
                    Rect.MinY*DestTarget->Pitch);
@@ -1134,6 +1134,156 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
         SourceRow += SourceTarget->Pitch;
     }
 #endif
+    if(HasArea(Rect))
+    {
+        __m128i StartClipMask = _mm_set1_epi8(-1);
+        __m128i EndClipMask = _mm_set1_epi8(-1);
+
+        __m128i StartClipMasks[] =
+        {
+            _mm_slli_si128(StartClipMask, 0*4),
+            _mm_slli_si128(StartClipMask, 1*4),
+            _mm_slli_si128(StartClipMask, 2*4),
+            _mm_slli_si128(StartClipMask, 3*4),
+        };
+
+        __m128i EndClipMasks[] =
+        {
+            _mm_srli_si128(EndClipMask, 0*4),
+            _mm_srli_si128(EndClipMask, 3*4),
+            _mm_srli_si128(EndClipMask, 2*4),
+            _mm_srli_si128(EndClipMask, 1*4),
+        };
+
+        if(Rect.MinX & 3)
+        {
+            StartClipMask = StartClipMasks[Rect.MinX & 3];
+            Rect.MinX = Rect.MinX & ~3;
+        }
+
+        if(Rect.MaxX & 3)
+        {
+            EndClipMask = EndClipMasks[Rect.MaxX & 3];
+            Rect.MaxX = (Rect.MaxX & ~3) + 4;
+        }
+
+        real32 Inv255 = 1.0f / 255.0f;
+        __m128 Inv255_4x = _mm_set1_ps(Inv255);
+        real32 One255 = 255.0f;
+
+        __m128 One = _mm_set1_ps(1.0f);
+        __m128 Half = _mm_set1_ps(0.5f);
+        __m128 Four_4x = _mm_set1_ps(4.0f);
+        __m128 One255_4x = _mm_set1_ps(255.0f);
+        __m128 Zero = _mm_set1_ps(0.0f);
+        __m128i MaskFF = _mm_set1_epi32(0xFF);
+        __m128i MaskFFFF = _mm_set1_epi32(0xFFFF);
+        __m128i MaskFF00FF = _mm_set1_epi32(0x00FF00FF);
+        __m128 Alpha_4x = _mm_set1_ps(Alpha);
+        __m128 InvAlpha_4x = _mm_set1_ps(1.0f - Alpha);
+        __m128 MaxColorValue = _mm_set1_ps(255.0f*255.0f);
+
+        u8 *DestRow = ((u8 *)DestTarget->Memory +
+                       Rect.MinX*BITMAP_BYTES_PER_PIXEL +
+                       Rect.MinY*DestTarget->Pitch);
+        u8 *SourceRow = ((u8 *)SourceTarget->Memory +
+                         Rect.MinX*BITMAP_BYTES_PER_PIXEL +
+                         Rect.MinY*SourceTarget->Pitch);
+
+        s32 DestRowAdvance = DestTarget->Pitch;
+        s32 SourceRowAdvance = DestTarget->Pitch;
+
+        int MinY = Rect.MinY;
+        int MaxY = Rect.MaxY;
+        int MinX = Rect.MinX;
+        int MaxX = Rect.MaxX;
+
+        IGNORED_TIMED_BLOCK("Pixel Fill", GetClampedRectArea(Rect) / 2);
+        for(int Y = MinY; Y < MaxY; Y++)
+        {
+            __m128i ClipMask = StartClipMask;
+
+            uint32_t *DestPixel = (uint32_t *)DestRow;
+            uint32_t *SourcePixel = (uint32_t *)SourceRow;
+            for(int XI = MinX; XI < MaxX; XI += 4)
+            {
+
+                IACA_VC64_START;
+                __m128i WriteMask = ClipMask;
+
+    // TODO: Check this later and see if it helps.
+    //            if(_mm_movemask_epi8(WriteMask))
+                {
+                    __m128i OriginalDest = _mm_load_si128((__m128i *)DestPixel);
+                    __m128i OriginalSource = _mm_load_si128((__m128i *)SourcePixel);
+
+                    // This loads the destination.
+                    __m128 Destb = _mm_cvtepi32_ps(_mm_and_si128(OriginalDest, MaskFF));
+                    __m128 Destg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 8), MaskFF));
+                    __m128 Destr = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 16), MaskFF));
+                    __m128 Desta = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalDest, 24), MaskFF));
+
+                    // This loads the source.
+                    __m128 Sourceb = _mm_cvtepi32_ps(_mm_and_si128(OriginalSource, MaskFF));
+                    __m128 Sourceg = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalSource, 8), MaskFF));
+                    __m128 Sourcer = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalSource, 16), MaskFF));
+                    __m128 Sourcea = _mm_cvtepi32_ps(_mm_and_si128(_mm_srli_epi32(OriginalSource, 24), MaskFF));
+
+                    // Go from sRGB to "linear" brightness space.
+                    Destr = mmSquare(Destr);
+                    Destg = mmSquare(Destg);
+                    Destb = mmSquare(Destb);
+                    Sourcer = mmSquare(Sourcer);
+                    Sourceg = mmSquare(Sourceg);
+                    Sourceb = mmSquare(Sourceb);
+
+                    // This is destination blend.
+                    __m128 Blendedr = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Destr), _mm_mul_ps(Alpha_4x, Sourcer));
+                    __m128 Blendedg = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Destg), _mm_mul_ps(Alpha_4x, Sourceg));
+                    __m128 Blendedb = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Destb), _mm_mul_ps(Alpha_4x, Sourceb));
+                    __m128 Blendeda = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Desta), _mm_mul_ps(Alpha_4x, Sourcea));
+
+                    // Go from "linear" 0-1 brightness space to sRGB 0-255.
+                    Blendedr = _mm_mul_ps(Blendedr, _mm_rsqrt_ps(Blendedr));
+                    Blendedg = _mm_mul_ps(Blendedg, _mm_rsqrt_ps(Blendedg));
+                    Blendedb = _mm_mul_ps(Blendedb, _mm_rsqrt_ps(Blendedb));
+
+                    __m128i Intr = _mm_cvtps_epi32(Blendedr);
+                    __m128i Intg = _mm_cvtps_epi32(Blendedg);
+                    __m128i Intb = _mm_cvtps_epi32(Blendedb);
+                    __m128i Inta = _mm_cvtps_epi32(Blendeda);
+
+                    __m128i Sr = _mm_slli_epi32(Intr, 16);
+                    __m128i Sg = _mm_slli_epi32(Intg, 8);
+                    __m128i Sb = Intb;
+                    __m128i Sa = _mm_slli_epi32(Inta, 24);
+
+                    __m128i Out = _mm_or_si128(_mm_or_si128(Sr, Sg), _mm_or_si128(Sb, Sa));
+
+                    __m128i MaskedOut = _mm_or_si128(_mm_and_si128(WriteMask, Out),
+                                                     _mm_andnot_si128(WriteMask, OriginalDest));
+                    _mm_store_si128((__m128i *)DestPixel, MaskedOut);
+                }
+
+                SourcePixel += 4;
+                DestPixel += 4;
+
+                if((XI + 8) < MaxX)
+                {
+                    ClipMask = _mm_set1_epi8(-1);
+                }
+                else
+                {
+                    ClipMask = EndClipMask;
+                }
+
+                IACA_VC64_END;
+            }
+
+            SourceRow += SourceRowAdvance;
+            DestRow += DestRowAdvance;
+        }
+    }
 }
 
 
