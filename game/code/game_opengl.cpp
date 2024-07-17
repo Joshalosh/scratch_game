@@ -162,6 +162,7 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
     glViewport(0, 0, Width, Height);
 
     glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
     glBindTexture(GL_TEXTURE_2D, BlitTexture);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, Width, Height, 0,
@@ -192,6 +193,7 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
     OpenGLRectangle(MinP, MaxP, Color);
 
     glBindTexture(GL_TEXTURE_2D, 0);
+    glEnable(GL_BLEND);
 }
 
 internal void

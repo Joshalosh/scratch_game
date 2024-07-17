@@ -646,7 +646,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     real32 DistanceAboveGround = 9.0f;
     Perspective(RenderGroup, MetresToPixels, FocalLength, DistanceAboveGround);
 
-    v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 1.0f);
+    v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 0.0f);
     Clear(RenderGroup, BackgroundColor);
 
     v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,

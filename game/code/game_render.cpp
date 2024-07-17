@@ -767,19 +767,8 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
 {
     IGNORED_TIMED_FUNCTION();
 
-    real32 XAxisLength = Length(XAxis);
-    real32 YAxisLength = Length(YAxis);
-
-    v2 NxAxis = (YAxisLength / XAxisLength) * XAxis;
-    v2 NyAxis = (XAxisLength / YAxisLength) * YAxis;
-
-    // NzScale could be a parameter if I want people to have
-    // control over the amount of scaling in the Z direction
-    // that the normals appear to have.
-    real32 NzScale = 0.5f*(XAxisLength + YAxisLength);
-
-    real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
-    real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
+    // TODO: There is a bug in the texel lookup here, where it's not properly 
+    // computing the texel or fill values (not sure which) when it's skewing
 
     rectangle2i FillRect = InvertedInfinityRectangle2i();
 
@@ -834,6 +823,9 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
             EndClipMask = EndClipMasks[FillRect.MaxX & 3];
             FillRect.MaxX = (FillRect.MaxX & ~3) + 4;
         }
+
+        real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
+        real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
 
         v2 nXAxis = InvXAxisLengthSq*XAxis;
         v2 nYAxis = InvYAxisLengthSq*YAxis;
@@ -1105,12 +1097,12 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
 {
     IGNORED_TIMED_FUNCTION();
 
-#if 0 
-    u8 *DestRow = ((u8 *)DestTarget->Memory + 
-                   Rect.MinX*BITMAP_BYTES_PER_PIXEL + 
+#if 0
+    u8 *DestRow = ((u8 *)DestTarget->Memory +
+                   Rect.MinX*BITMAP_BYTES_PER_PIXEL +
                    Rect.MinY*DestTarget->Pitch);
     u8 *SourceRow = ((u8 *)SourceTarget->Memory +
-                     Rect.MinX*BITMAP_BYTES_PER_PIXEL + 
+                     Rect.MinX*BITMAP_BYTES_PER_PIXEL +
                      Rect.MinY*SourceTarget->Pitch);
     for(s32 Y = Rect.MinY; Y < Rect.MaxY; ++Y)
     {
@@ -1122,7 +1114,9 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
             v4 SourceColor = SRGB255ToLinear1(Unpack4x8(*SourcePixel));
             v4 DestColor = SRGB255ToLinear1(Unpack4x8(*DestPixel));
 
-            v4 Result = (1.0f - Alpha)*DestColor + Alpha*SourceColor;
+            r32 PixelAlpha = Alpha*SourceColor.a;
+
+            v4 Result = (1.0f - PixelAlpha)*DestColor + PixelAlpha*SourceColor;
 
             *DestPixel = Pack4x8(Linear1ToSRGB255(Result));
 
@@ -1133,7 +1127,7 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
         DestRow += DestTarget->Pitch;
         SourceRow += SourceTarget->Pitch;
     }
-#endif
+#else
     if(HasArea(Rect))
     {
         __m128i StartClipMask = _mm_set1_epi8(-1);
@@ -1238,10 +1232,13 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
                     Sourceb = mmSquare(Sourceb);
 
                     // This is destination blend.
-                    __m128 Blendedr = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Destr), _mm_mul_ps(Alpha_4x, Sourcer));
-                    __m128 Blendedg = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Destg), _mm_mul_ps(Alpha_4x, Sourceg));
-                    __m128 Blendedb = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Destb), _mm_mul_ps(Alpha_4x, Sourceb));
-                    __m128 Blendeda = _mm_add_ps(_mm_mul_ps(InvAlpha_4x, Desta), _mm_mul_ps(Alpha_4x, Sourcea));
+                    __m128 PixelAlpha_4x = _mm_mul_ps(Alpha_4x, _mm_mul_ps(Inv255_4x, Sourcea));
+                    __m128 InvPixelAlpha_4x = _mm_sub_ps(One, PixelAlpha_4x);
+
+                    __m128 Blendedr = _mm_add_ps(_mm_mul_ps(InvPixelAlpha_4x, Destr), _mm_mul_ps(PixelAlpha_4x, Sourcer));
+                    __m128 Blendedg = _mm_add_ps(_mm_mul_ps(InvPixelAlpha_4x, Destg), _mm_mul_ps(PixelAlpha_4x, Sourceg));
+                    __m128 Blendedb = _mm_add_ps(_mm_mul_ps(InvPixelAlpha_4x, Destb), _mm_mul_ps(PixelAlpha_4x, Sourceb));
+                    __m128 Blendeda = _mm_add_ps(_mm_mul_ps(InvPixelAlpha_4x, Desta), _mm_mul_ps(PixelAlpha_4x, Sourcea));
 
                     // Go from "linear" 0-1 brightness space to sRGB 0-255.
                     Blendedr = _mm_mul_ps(Blendedr, _mm_rsqrt_ps(Blendedr));
@@ -1284,9 +1281,10 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
             DestRow += DestRowAdvance;
         }
     }
+#endif
 }
 
-internal void 
+internal void
 ClearRectangle(rectangle2i Rect, loaded_bitmap *DestTarget, v4 Color)
 {
     IGNORED_TIMED_FUNCTION();
@@ -1332,7 +1330,6 @@ ClearRectangle(rectangle2i Rect, loaded_bitmap *DestTarget, v4 Color)
         __m128 One = _mm_set1_ps(1.0f);
         __m128 Half = _mm_set1_ps(0.5f);
         __m128 Four_4x = _mm_set1_ps(4.0f);
-        __m128 One255_4x = _mm_set1_ps(255.0f);
         __m128 Zero = _mm_set1_ps(0.0f);
         __m128i MaskFF = _mm_set1_epi32(0xFF);
         __m128i MaskFFFF = _mm_set1_epi32(0xFFFF);
@@ -1342,12 +1339,14 @@ ClearRectangle(rectangle2i Rect, loaded_bitmap *DestTarget, v4 Color)
         __m128 MaxColorValue = _mm_set1_ps(255.0f*255.0f);
 #endif
 
-        __m128 Colorr = _mm_set1_ps(Color.r);
-        __m128 Colorg = _mm_set1_ps(Color.g);
-        __m128 Colorb = _mm_set1_ps(Color.b);
-        __m128 Colora = _mm_set1_ps(Color.a);
+        __m128 Colorr = _mm_set1_ps(255.0f*255.0f*Color.r);
+        __m128 Colorg = _mm_set1_ps(255.0f*255.0f*Color.g);
+        __m128 Colorb = _mm_set1_ps(255.0f*255.0f*Color.b);
+        __m128 Colora = _mm_set1_ps(255.0f*255.0f*Color.a);
 
-        // NOTE: Go from "linear" 0-1 brightness space to sRGB 0-255
+        // NOTE: OpenGL et al specify clear colors as linear, so they must 
+        // be converted to sRGB before storing.
+
         __m128 Blendedr = _mm_mul_ps(Colorr, _mm_rsqrt_ps(Colorr));
         __m128 Blendedg = _mm_mul_ps(Colorg, _mm_rsqrt_ps(Colorg));
         __m128 Blendedb = _mm_mul_ps(Colorb, _mm_rsqrt_ps(Colorb));
@@ -1382,6 +1381,7 @@ ClearRectangle(rectangle2i Rect, loaded_bitmap *DestTarget, v4 Color)
             for(int XI = MinX; XI < MaxX; XI += 4)
             {
                 __m128i WriteMask = ClipMask;
+
                 __m128i OriginalDest = _mm_load_si128((__m128i *)DestPixel);
                 __m128i MaskedOut = _mm_or_si128(_mm_and_si128(WriteMask, Out),
                                                  _mm_andnot_si128(WriteMask, OriginalDest));
@@ -1403,8 +1403,6 @@ ClearRectangle(rectangle2i Rect, loaded_bitmap *DestTarget, v4 Color)
         }
     }
 }
-
-
 
 internal void
 RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
@@ -1438,7 +1436,7 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
         u32 HeaderOffset = *Entry;
 
         render_group_entry_header *Header = (render_group_entry_header *)
-            (Commands->PushBufferBase + *Entry);
+            (Commands->PushBufferBase + HeaderOffset);
         if(ClipRectIndex != Header->ClipRectIndex)
         {
             ClipRectIndex = Header->ClipRectIndex;

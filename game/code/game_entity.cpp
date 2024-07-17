@@ -296,7 +296,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     entity_traversable_point *Traversable =
                         Entity->Traversables + TraversableIndex;
-                    PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(0.5f/*1.4f)*/, 1.4f), 
+                    PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(1.4f, 1.4f), 
                              Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1.0f) : V4(0.05f, 0.25f, 0.05f, 1.0f));
 
                     //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
