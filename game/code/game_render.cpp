@@ -824,11 +824,15 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
             FillRect.MaxX = (FillRect.MaxX & ~3) + 4;
         }
 
-        real32 InvXAxisLengthSq = 1.0f / LengthSq(XAxis);
-        real32 InvYAxisLengthSq = 1.0f / LengthSq(YAxis);
+        // TODO: Just don't draw if the Det is close to 0
+        r32 Det = XAxis.x*YAxis.y - XAxis.y*YAxis.x;
+        if(Det == 0.0f)
+        {
+            Det = 1.0f;
+        }
 
-        v2 nXAxis = InvXAxisLengthSq*XAxis;
-        v2 nYAxis = InvYAxisLengthSq*YAxis;
+        v2 nXAxis = { YAxis.y/Det, -YAxis.x/Det}; 
+        v2 nYAxis = {-XAxis.y/Det,  XAxis.x/Det};
 
         real32 Inv255 = 1.0f / 255.0f;
         __m128 Inv255_4x = _mm_set1_ps(Inv255);
