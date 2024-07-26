@@ -1423,14 +1423,7 @@ RenderCommandsToBitmap(game_render_commands *Commands, game_render_prep *Prep,
     for(u32 TargetIndex = 0; TargetIndex <= Commands->MaxRenderTargetIndex; ++TargetIndex)
     {
         loaded_bitmap *OutputTarget = RenderTargets + TargetIndex;
-#if 0
-        // TODO: Clear also has to actuall clear not blend because the alpha is wrong
-        DrawRectangle(OutputTarget, V2(0.0f, 0.0f),
-                      V2((real32)OutputTarget->Width, (real32)OutputTarget->Height),
-                      V4(Commands->ClearColor.xyz, 1.0f), ClipRect);
-#else 
         ClearRectangle(ClipRect, OutputTarget, Commands->ClearColor);
-#endif
     }
 
     loaded_bitmap *OutputTarget = RenderTargets;

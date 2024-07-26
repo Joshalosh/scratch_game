@@ -31,6 +31,7 @@ struct opengl_info
 
     b32 GL_EXT_texture_sRGB;
     b32 GL_EXT_framebuffer_sRGB;
+    b32 GL_ARB_framebuffer_object;
 };
 
 internal opengl_info
@@ -66,6 +67,7 @@ OpenGLGetInfo(b32 ModernContext)
         else if(StringsAreEqual(Count, At, "GL_EXT_texture_sRGB")) {Result.GL_EXT_texture_sRGB=true;}
         else if(StringsAreEqual(Count, At, "GL_EXT_framebuffer_sRGB")) {Result.GL_EXT_framebuffer_sRGB=true;}
         else if(StringsAreEqual(Count, At, "GL_ARB_framebuffer_sRGB")) {Result.GL_EXT_framebuffer_sRGB=true;}
+        else if(StringsAreEqual(Count, At, "GL_ARB_framebuffer_object")) {Result.GL_EXT_framebuffer_object=true;}
 
         At = End;
     }
@@ -220,6 +222,8 @@ OpenGLDrawBoundsRecursive(sort_sprite_bound *Bounds, u32 BoundIndex)
     }
 }
 
+global_variable u32 GlobalFramebufferCount = 1;
+global_variable GLuint GlobalFramebufferHandles[256] = {0};
 internal void
 OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                      s32 WindowWidth, s32 WindowHeight)
@@ -234,9 +238,25 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
     glMatrixMode(GL_TEXTURE);
     glLoadIdentity();
 
-    glClearColor(Commands->ClearColor.r, Commands->ClearColor.g, 
-                 Commands->ClearColor.b, Commands->ClearColor.a);
-    glClear(GL_COLOR_BUFFER_BIT);
+    if(Commands->MaxRenderTargetIndex >= GlobalFramebufferCount)
+    {
+        u32 NewFramebufferCount = Commands->MaxRenderTargetIndex + 1;
+        Assert(NewFramebufferCount < ArrayCount(GlobalFramebufferHandles));
+        glGenFramebuffers(NewFramebufferCount - GlobalFramebufferCount, 
+                          GlobalFramebufferHandles + GlobalFramebufferCount);
+        GlobalFramebufferCount = NewFramebufferCount;
+    }
+
+    for(u32 TargetIndex = 0; TargetIndex <= Commands->MaxRenderTargetIndex; ++TargetIndex)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
+        glClearColor(Commands->ClearColor.r, Commands->ClearColor.g, 
+                     Commands->ClearColor.b, Commands->ClearColor.a);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+
+    GLuint CurrentFramebuffer = 0;
+    glBindFramebuffer(GL_FRAMEBUFFER, CurrentFramebuffer);
 
     OpenGLSetScreenspace(Commands->Width, Commands->Height);
 
@@ -256,6 +276,12 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
             glScissor(Clip->Rect.MinX, Clip->Rect.MinY, 
                       Clip->Rect.MaxX - Clip->Rect.MinX, 
                       Clip->Rect.MaxY - Clip->Rect.MinY);
+
+            if(CurrentFramebuffer != Clip->RenderTargetIndex)
+            {
+                CurrentFramebuffer = Clip->RenderTargetIndex;
+                glBindFramebuffer(GL_FRAMEBUFFER, CurrentFramebuffer);
+            }
         }
 
         if(Header->DebugTag == 1)
@@ -338,9 +364,15 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                 render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
             } break;
 
+            case RenderGroupEntryType_render_entry_blend_render_target:
+            {
+            } break;
+
             InvalidDefaultCase;
         }
     }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     if(GlobalShowSortGroups)
     {
