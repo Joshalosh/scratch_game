@@ -6,6 +6,10 @@
 
 #define GL_SHADING_LANGUAGE_VERSION               0x8B8C
 
+#define GL_FRAMEBUFFER                            0x8D40
+#define GL_COLOR_ATTACHMENT0                      0x8CE0
+#define GL_FRAMEBUFFER_COMPLETE                   0x8CD5
+
 // NOTE: Windows specific
 #define WGL_CONTEXT_MAJOR_VERSION_ARB             0x2091
 #define WGL_CONTEXT_MINOR_VERSION_ARB             0x2092
@@ -67,7 +71,7 @@ OpenGLGetInfo(b32 ModernContext)
         else if(StringsAreEqual(Count, At, "GL_EXT_texture_sRGB")) {Result.GL_EXT_texture_sRGB=true;}
         else if(StringsAreEqual(Count, At, "GL_EXT_framebuffer_sRGB")) {Result.GL_EXT_framebuffer_sRGB=true;}
         else if(StringsAreEqual(Count, At, "GL_ARB_framebuffer_sRGB")) {Result.GL_EXT_framebuffer_sRGB=true;}
-        else if(StringsAreEqual(Count, At, "GL_ARB_framebuffer_object")) {Result.GL_EXT_framebuffer_object=true;}
+        else if(StringsAreEqual(Count, At, "GL_ARB_framebuffer_object")) {Result.GL_ARB_framebuffer_object=true;}
 
         At = End;
     }
@@ -75,7 +79,7 @@ OpenGLGetInfo(b32 ModernContext)
     return(Result);
 }
 
-internal void
+internal opengl_info
 OpenGLInit(b32 ModernContext, b32 FramebufferSupportsSRGB)
 {
     opengl_info Info = OpenGLGetInfo(ModernContext);
@@ -89,6 +93,8 @@ OpenGLInit(b32 ModernContext, b32 FramebufferSupportsSRGB)
         OpenGLDefaultInternalTextureFormat = GL_SRGB8_ALPHA8;
         glEnable(GL_FRAMEBUFFER_SRGB);
     }
+
+    return(Info);
 }
 
 inline void
@@ -222,8 +228,38 @@ OpenGLDrawBoundsRecursive(sort_sprite_bound *Bounds, u32 BoundIndex)
     }
 }
 
+PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
+{
+    GLuint Handle;
+    glGenTextures(1, &Handle);
+    glBindTexture(GL_TEXTURE_2D, Handle);
+    glTexImage2D(GL_TEXTURE_2D, 0, OpenGLDefaultInternalTextureFormat,
+                 Width, Height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, Data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // TODO: This should be removed
+    glFlush();
+
+    Assert(sizeof(Handle) <= sizeof(void *));
+    return(PointerFromU32(void, Handle));
+}
+
+PLATFORM_DEALLOCATE_TEXTURE(DeallocateTexture)
+{
+    GLuint Handle = U32FromPointer(Texture);
+    glDeleteTextures(1, &Handle);
+}
+
 global_variable u32 GlobalFramebufferCount = 1;
 global_variable GLuint GlobalFramebufferHandles[256] = {0};
+global_variable GLuint GlobalFramebufferTextures[256] = {0};
 internal void
 OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                      s32 WindowWidth, s32 WindowHeight)
@@ -238,16 +274,29 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
     glMatrixMode(GL_TEXTURE);
     glLoadIdentity();
 
-    if(Commands->MaxRenderTargetIndex >= GlobalFramebufferCount)
+    b32 UseRenderTargets = (glBindFramebuffer != 0);
+
+    u32 MaxRenderTargetIndex = UseRenderTargets ? Commands->MaxRenderTargetIndex : 1;
+    if(MaxRenderTargetIndex >= GlobalFramebufferCount)
     {
         u32 NewFramebufferCount = Commands->MaxRenderTargetIndex + 1;
         Assert(NewFramebufferCount < ArrayCount(GlobalFramebufferHandles));
-        glGenFramebuffers(NewFramebufferCount - GlobalFramebufferCount, 
-                          GlobalFramebufferHandles + GlobalFramebufferCount);
+        u32 NewCount = NewFramebufferCount - GlobalFramebufferCount;
+        glGenFramebuffers(NewCount, GlobalFramebufferHandles + GlobalFramebufferCount);
+        for(u32 TargetIndex = GlobalFramebufferCount; TargetIndex <= NewFramebufferCount; ++TargetIndex)
+        {
+            GLuint TextureHandle = U32FromPointer(AllocateTexture(Commands->Width, Commands->Height, 0));
+            GlobalFramebufferTextures[TargetIndex] = TextureHandle;
+            glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TextureHandle, 0);
+            GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            Assert(Status == GL_FRAMEBUFFER_COMPLETE);
+        }
+
         GlobalFramebufferCount = NewFramebufferCount;
     }
 
-    for(u32 TargetIndex = 0; TargetIndex <= Commands->MaxRenderTargetIndex; ++TargetIndex)
+    for(u32 TargetIndex = 0; TargetIndex <= MaxRenderTargetIndex; ++TargetIndex)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
         glClearColor(Commands->ClearColor.r, Commands->ClearColor.g, 
@@ -277,16 +326,12 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                       Clip->Rect.MaxX - Clip->Rect.MinX, 
                       Clip->Rect.MaxY - Clip->Rect.MinY);
 
-            if(CurrentFramebuffer != Clip->RenderTargetIndex)
+            if((CurrentFramebuffer != Clip->RenderTargetIndex) &&
+               (Clip->RenderTargetIndex <= MaxRenderTargetIndex))
             {
                 CurrentFramebuffer = Clip->RenderTargetIndex;
                 glBindFramebuffer(GL_FRAMEBUFFER, CurrentFramebuffer);
             }
-        }
-
-        if(Header->DebugTag == 1)
-        {
-            int BreakHere = true;
         }
 
         void *Data = (uint8_t *)Header + sizeof(*Header);
@@ -366,6 +411,15 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
 
             case RenderGroupEntryType_render_entry_blend_render_target:
             {
+                render_entry_blend_render_target *Entry = (render_entry_blend_render_target *)Data;
+                if(UseRenderTargets)
+                {
+                    glBindTexture(GL_TEXTURE_2D, GlobalFramebufferTextures[Entry->SourceTargetIndex]);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                    OpenGLRectangle(V2(0, 0), V2((r32)Commands->Width, (r32)Commands->Height),
+                                    V4(1, 1, 1, Entry->Alpha));
+                    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                }
             } break;
 
             InvalidDefaultCase;
@@ -402,34 +456,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
             }
         }
     }
-}
-
-PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
-{
-    GLuint Handle;
-    glGenTextures(1, &Handle);
-    glBindTexture(GL_TEXTURE_2D, Handle);
-    glTexImage2D(GL_TEXTURE_2D, 0, OpenGLDefaultInternalTextureFormat,
-                 Width, Height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, Data);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glFlush();
-
-    Assert(sizeof(Handle) <= sizeof(void *));
-    return(PointerFromU32(void, Handle));
-}
-
-PLATFORM_DEALLOCATE_TEXTURE(DeallocateTexture)
-{
-    GLuint Handle = U32FromPointer(Texture);
-    glDeleteTextures(1, &Handle);
 #pragma warning(pop)
 }
+
 

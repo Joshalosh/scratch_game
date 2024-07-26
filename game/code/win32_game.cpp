@@ -76,6 +76,16 @@ typedef BOOL WINAPI wgl_choose_pixel_format_arb(HDC hdc,
         int *piFormats,
         UINT *nNumFormats);
 
+typedef void WINAPI gl_bind_framebuffer(GLenum target, GLuint framebuffer);
+typedef void WINAPI gl_gen_framebuffers(GLsizei n, GLuint *framebuffers);
+typedef void WINAPI gl_framebuffer_texture_2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef GLenum WINAPI gl_check_framebuffer_status(GLenum target);
+
+global_variable gl_bind_framebuffer *glBindFramebuffer;
+global_variable gl_gen_framebuffers *glGenFramebuffers;
+global_variable gl_framebuffer_texture_2D *glFramebufferTexture2D;
+global_variable gl_check_framebuffer_status *glCheckFramebufferStatus;
+
 typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
 typedef const char * WINAPI wgl_get_extensions_string_ext(void);
 
@@ -662,7 +672,15 @@ Win32InitOpenGL(HDC WindowDC)
 
     if(wglMakeCurrent(WindowDC, OpenGLRC))
     {
-        OpenGLInit(ModernContext, OpenGLSupportsSRGBFramebuffer);
+        opengl_info Info = OpenGLInit(ModernContext, OpenGLSupportsSRGBFramebuffer);
+        if(Info.GL_ARB_framebuffer_object)
+        {
+            glBindFramebuffer = (gl_bind_framebuffer *)wglGetProcAddress("glBindFramebuffer");
+            glGenFramebuffers = (gl_gen_framebuffers *)wglGetProcAddress("glGenFramebuffers");
+            glFramebufferTexture2D = (gl_framebuffer_texture_2D *)wglGetProcAddress("glFramebufferTexture2D");
+            glCheckFramebufferStatus = (gl_check_framebuffer_status *)wglGetProcAddress("glCheckFramebufferStatus");
+        }
+
         if(wglSwapIntervalEXT)
         {
             wglSwapIntervalEXT(1);
