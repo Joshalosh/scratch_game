@@ -183,6 +183,12 @@ struct used_bitmap_dim
     v3 P;
 };
 
+struct push_buffer_result
+{
+    sort_sprite_bound *SortEntry;
+    render_group_entry_header *Header;
+};
+
 void DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
                           loaded_bitmap *Texture, real32 PixelsToMetres,
                           rectangle2i ClipRect);

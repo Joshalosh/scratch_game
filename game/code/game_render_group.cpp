@@ -3,7 +3,7 @@ inline u16
 ReserveSortKey(render_group *RenderGroup)
 {
     game_render_commands *Commands = RenderGroup->Commands;
-    Assert(Commands->LastUsedManualSortKey < U16Maximum);
+    Assert(Commands->LastUsedManualSortKey < U16Maximum)
     u16 Result = (u16)++Commands->LastUsedManualSortKey;
     return(Result);
 }
@@ -53,11 +53,6 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform *CameraTrans
     return(Result);
 }
 
-struct push_buffer_result
-{
-    sort_sprite_bound *SortEntry;
-    render_group_entry_header *Header;
-};
 inline push_buffer_result
 PushBuffer(render_group *RenderGroup, u32 SortEntryCount, u32 DataSize)
 {
@@ -75,7 +70,7 @@ PushBuffer(render_group *RenderGroup, u32 SortEntryCount, u32 DataSize)
         Result.SortEntry = SpriteBounds + Commands->SortEntryCount;
         Commands->SortEntryCount += SortEntryCount;
     }
-    else 
+    else
     {
         InvalidCodePath;
     }

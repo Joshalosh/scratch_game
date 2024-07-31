@@ -33,6 +33,7 @@ Pack4x8(v4 Unpacked)
                   (RoundReal32ToUInt32(Unpacked.r) << 16) |
                   (RoundReal32ToUInt32(Unpacked.g) << 8) |
                   (RoundReal32ToUInt32(Unpacked.b) << 0));
+
     return(Result);
 }
 
@@ -831,7 +832,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
             Det = 1.0f;
         }
 
-        v2 nXAxis = { YAxis.y/Det, -YAxis.x/Det}; 
+        v2 nXAxis = { YAxis.y/Det, -YAxis.x/Det};
         v2 nYAxis = {-XAxis.y/Det,  XAxis.x/Det};
 
         real32 Inv255 = 1.0f / 255.0f;
@@ -1196,7 +1197,7 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
         int MinX = Rect.MinX;
         int MaxX = Rect.MaxX;
 
-        IGNORED_TIMED_BLOCK("Pixel Fill", GetClampedRectArea(Rect) / 2);
+        IGNORED_TIMED_BLOCK("Pixel Fill", GetClampedRectArea(FillRect) / 2);
         for(int Y = MinY; Y < MaxY; Y++)
         {
             __m128i ClipMask = StartClipMask;
