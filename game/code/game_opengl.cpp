@@ -167,7 +167,7 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
                     s32 WindowWidth, s32 WindowHeight, GLuint BlitTexture)
 {
     Assert(Pitch == (Width*4));
-    glViewport(0, 0, Width, Height);
+    glViewport(0, 0, WindowWidth, WindowHeight);
 
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_BLEND);
@@ -264,7 +264,7 @@ internal void
 OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                      s32 WindowWidth, s32 WindowHeight)
 {
-    glViewport(0, 0, Commands->Width, Commands->Height);
+    glViewport(0, 0, WindowWidth, WindowHeight);
 
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_SCISSOR_TEST);
@@ -285,7 +285,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
         glGenFramebuffers(NewCount, GlobalFramebufferHandles + GlobalFramebufferCount);
         for(u32 TargetIndex = GlobalFramebufferCount; TargetIndex <= NewFramebufferCount; ++TargetIndex)
         {
-            GLuint TextureHandle = U32FromPointer(AllocateTexture(Commands->Width, Commands->Height, 0));
+            GLuint TextureHandle = U32FromPointer(AllocateTexture(WindowWidth, WindowHeight, 0));
             GlobalFramebufferTextures[TargetIndex] = TextureHandle;
             glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TextureHandle, 0);

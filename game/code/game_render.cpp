@@ -1873,3 +1873,27 @@ PrepForRender(game_render_commands *Commands, memory_arena *TempArena)
 
     return(Prep);
 }
+
+internal rectangle2i
+AspectRationFit(u32 RenderWidth, u32 RenderHeight, u32 WindowWidth, u32 WindowHeight)
+{
+    rectangle2i Result = {};
+
+    if((RenderWidth > 0) &&
+       (RenderHeight > 0) &&
+       (WindowWidth > 0) &&
+       (WindowHeight > 0))
+    {
+        r32 OptimalWindowWidth = (r32)WindowHeight * ((r32)RenderWidth / (r32)RenderHeight);
+        r32 OptimalWindowHeight = (r32)WindowWidth * ((r32)RenderHeight / (r32)RenderWidth);
+
+        if(OptimalWindowWidth > (r32)WindowWidth)
+        {
+        }
+        else 
+        {
+        }
+    }
+
+    return(Result);
+}
