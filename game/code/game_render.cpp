@@ -1875,7 +1875,7 @@ PrepForRender(game_render_commands *Commands, memory_arena *TempArena)
 }
 
 internal rectangle2i
-AspectRationFit(u32 RenderWidth, u32 RenderHeight, u32 WindowWidth, u32 WindowHeight)
+AspectRatioFit(u32 RenderWidth, u32 RenderHeight, u32 WindowWidth, u32 WindowHeight)
 {
     rectangle2i Result = {};
 
@@ -1889,9 +1889,29 @@ AspectRationFit(u32 RenderWidth, u32 RenderHeight, u32 WindowWidth, u32 WindowHe
 
         if(OptimalWindowWidth > (r32)WindowWidth)
         {
+            // NOTE: Width-constrained display - top and bottom black bars
+            Result.MinX = 0;
+            Result.MaxX = WindowWidth;
+
+            r32 Empty = (r32)WindowHeight - OptimalWindowHeight;
+            s32 HalfEmpty = RoundReal32ToInt32(0.5f*Empty);
+            s32 UseHeight = RoundReal32ToInt32(OptimalWindowHeight);
+
+            Result.MinY = HalfEmpty;
+            Result.MaxY = Result.MinY + UseHeight;
         }
         else 
         {
+            // NOTE: Height-constrained display - left and right black bars
+            Result.MinY = 0;
+            Result.MaxY = WindowHeight;
+
+            r32 Empty = (r32)WindowWidth - OptimalWindowWidth;
+            s32 HalfEmpty = RoundReal32ToInt32(0.5f*Empty);
+            s32 UseWidth = RoundReal32ToInt32(OptimalWindowWidth);
+
+            Result.MinX = HalfEmpty;
+            Result.MaxX = Result.MinX + UseWidth;
         }
     }
 

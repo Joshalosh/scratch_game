@@ -24,14 +24,7 @@ TODO: Additional Platform Layer Code
 
 global_variable platform_api Platform;
 
-// TODO: This is a global for now
-enum win32_rendering_type
-{
-    Win32RenderType_RenderOpenGL_DisplayOpenGL,
-    Win32RenderType_RenderSoftware_DisplayOpenGL,
-    Win32RenderType_RenderSoftware_DisplayGDI,
-};
-global_variable win32_rendering_type GlobalRenderingType; // = Win32RenderType_RenderSoftware_DisplayGDI;
+global_variable b32 GlobalSoftwareRendering;
 global_variable b32 GlobalRunning;
 global_variable b32 GlobalPause;
 global_variable b32 GlobalShowSortGroups;
@@ -742,7 +735,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 internal void
 Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_commands *Commands,
-                           HDC DeviceContext, s32 WindowWidth, s32 WindowHeight, memory_arena *TempArena)
+                           HDC DeviceContext, rectangle2i DrawRegion, memory_arena *TempArena)
 {
     temporary_memory TempMem = BeginTemporaryMemory(TempArena);
 
@@ -755,17 +748,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
     }
     */
 
-    if(GlobalRenderingType == Win32RenderType_RenderOpenGL_DisplayOpenGL)
-    {
-        BEGIN_BLOCK("OpenGLRenderCommands");
-        OpenGLRenderCommands(Commands, &Prep, WindowWidth, WindowHeight);
-        END_BLOCK();
-
-        BEGIN_BLOCK("SwapBuffers");
-        SwapBuffers(DeviceContext);
-        END_BLOCK();
-    }
-    else
+    if(GlobalSoftwareRendering)
     {
         loaded_bitmap OutputTarget;
         OutputTarget.Memory = GlobalBackbuffer.Memory;
@@ -775,51 +758,20 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
 
         SoftwareRenderCommands(RenderQueue, Commands, &Prep, &OutputTarget, TempArena);
 
-        if(GlobalRenderingType == Win32RenderType_RenderSoftware_DisplayOpenGL)
-        {
-            OpenGLDisplayBitmap(GlobalBackbuffer.Width, GlobalBackbuffer.Height, GlobalBackbuffer.Memory,
-                                GlobalBackbuffer.Pitch, WindowWidth, WindowHeight, OpenGLReservedBlitTexture);
-            SwapBuffers(DeviceContext);
-        }
-        else
-        {
-            Assert(GlobalRenderingType == Win32RenderType_RenderSoftware_DisplayGDI);
+        OpenGLDisplayBitmap(GlobalBackbuffer.Width, GlobalBackbuffer.Height, GlobalBackbuffer.Memory,
+                            GlobalBackbuffer.Pitch, DrawRegion, Commands->ClearColor,
+                            OpenGLReservedBlitTexture);
+        SwapBuffers(DeviceContext);
+    }
+    else
+    {
+        BEGIN_BLOCK("OpenGLRenderCommands");
+        OpenGLRenderCommands(Commands, &Prep, DrawRegion);
+        END_BLOCK();
 
-            // TODO: Am I gonna do centering or black bars?
-
-            if((WindowWidth >= GlobalBackbuffer.Width*2) &&
-               (WindowHeight >= GlobalBackbuffer.Height*2))
-            {
-                StretchDIBits(DeviceContext,
-                              0, 0, 2*GlobalBackbuffer.Width, 2*GlobalBackbuffer.Height,
-                              0, 0, GlobalBackbuffer.Width, GlobalBackbuffer.Height,
-                              GlobalBackbuffer.Memory,
-                              &GlobalBackbuffer.Info,
-                              DIB_RGB_COLORS, SRCCOPY);
-            }
-            else
-            {
-#if 0
-                int OffsetX = 10;
-                int OffsetY = 10;
-
-                PatBlt(DeviceContext, 0, 0, WindowWidth, OffsetY, BLACKNESS);
-                PatBlt(DeviceContext, 0, OffsetY + Buffer->Height, WindowWidth, WindowHeight, BLACKNESS);
-                PatBlt(DeviceContext, 0, 0, OffsetX, WindowHeight, BLACKNESS);
-                PatBlt(DeviceContext, OffsetX + Buffer->Width, 0, WindowWidth, WindowHeight, BLACKNESS);
-#else
-                int OffsetX = 0;
-                int OffsetY = 0;
-#endif
-
-                StretchDIBits(DeviceContext,
-                              OffsetX, OffsetY, GlobalBackbuffer.Width, GlobalBackbuffer.Height,
-                              0, 0, GlobalBackbuffer.Width, GlobalBackbuffer.Height,
-                              GlobalBackbuffer.Memory,
-                              &GlobalBackbuffer.Info,
-                              DIB_RGB_COLORS, SRCCOPY);
-            }
-        }
+        BEGIN_BLOCK("SwapBuffers");
+        SwapBuffers(DeviceContext);
+        END_BLOCK();
     }
 
     EndTemporaryMemory(TempMem);
@@ -867,6 +819,44 @@ Win32MainWindowCallback(HWND Window,
         {
             // TODO: Handle this with a message to the user
             GlobalRunning = false;
+        } break;
+
+        case WM_WINDOWPOSCHANGING:
+        {
+            if(GetKeyState(VK_SHIFT) & 0x8000)
+            {
+                WINDOWPOS *NewPos = (WINDOWPOS *)LParam;
+
+                RECT WindowRect;
+                RECT ClientRect;
+                GetWindowRect(Window, &WindowRect);
+                GetClientRect(Window, &ClientRect);
+
+                s32 ClientWidth = (ClientRect.right - ClientRect.left);
+                s32 ClientHeight = (ClientRect.bottom - ClientRect.top);
+                s32 WidthAdd = ((WindowRect.right - WindowRect.left) - ClientWidth);
+                s32 HeightAdd = ((WindowRect.bottom - WindowRect.top) - ClientHeight);
+
+                s32 RenderWidth = GlobalBackbuffer.Width;
+                s32 RenderHeight = GlobalBackbuffer.Height;
+
+                s32 SugX = NewPos->cx;
+                s32 SugY = NewPos->cy;
+
+                s32 NewCx = (RenderWidth * (NewPos->cy - HeightAdd)) / RenderHeight;
+                s32 NewCy = (RenderHeight * (NewPos->cx - WidthAdd)) / RenderWidth;
+
+                if(AbsoluteValue((r32)(NewPos->cx - NewCx)) < AbsoluteValue((r32)(NewPos->cy - NewCy)))
+                {
+                    NewPos->cx = NewCx + WidthAdd;
+                }
+                else 
+                {
+                    NewPos->cy = NewCy + HeightAdd;
+                }
+            }
+
+            Result = DefWindowProcA(Window, Message, WParam, LParam);
         } break;
 
         case WM_SETCURSOR:
@@ -2032,7 +2022,7 @@ WinMain(HINSTANCE Instance,
                 {
                     {DEBUG_DATA_BLOCK("Platform/Controls");
                         DEBUG_B32(GlobalPause);
-                        DEBUG_B32(GlobalRenderingType);
+                        DEBUG_B32(GlobalSoftwareRendering);
                         DEBUG_B32(GlobalShowSortGroups);
                     }
 
@@ -2047,6 +2037,13 @@ WinMain(HINSTANCE Instance,
                     //
 
                     BEGIN_BLOCK("Input Processing");
+
+                    game_render_commands RenderCommands = RenderCommandStruct(PushBufferSize, PushBuffer,
+                                                                              GlobalBackbuffer.Width,
+                                                                              GlobalBackbuffer.Height);
+                    win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+                    rectangle2i DrawRegion = AspectRatioFit(RenderCommands.Width, RenderCommands.Height, 
+                                                            Dimension.Width, Dimension.Height);
 
                     // TODO: Zeroing macro
                     // TODO: We can't zero everything because the up/down state will be
@@ -2075,8 +2072,15 @@ WinMain(HINSTANCE Instance,
                             POINT MouseP;
                             GetCursorPos(&MouseP);
                             ScreenToClient(Window, &MouseP);
-                            NewInput->MouseX = (r32)MouseP.x;
-                            NewInput->MouseY = (r32)((GlobalBackbuffer.Height - 1) - MouseP.y);
+                            r32 MouseX = (r32)MouseP.x;
+                            r32 MouseY = (r32)((Dimension.Height - 1) - MouseP.y);
+
+                            r32 MouseU = Clamp01MapToRange((r32)DrawRegion.MinX, MouseX, (r32)DrawRegion.MaxX);
+                            r32 MouseV = Clamp01MapToRange((r32)DrawRegion.MinY, MouseY, (r32)DrawRegion.MaxY);
+
+                            NewInput->MouseX = (r32)RenderCommands.Width*MouseU;
+                            NewInput->MouseY = (r32)RenderCommands.Height*MouseV;
+
                             NewInput->MouseZ = 0; //TODO: Support mousewheel.
                             
                             NewInput->ShiftDown = (GetKeyState(VK_SHIFT) & (1 << 15));
@@ -2230,10 +2234,6 @@ WinMain(HINSTANCE Instance,
                     //
 
                     BEGIN_BLOCK("Game Update");
-
-                    game_render_commands RenderCommands = RenderCommandStruct(PushBufferSize, PushBuffer,
-                                                                              GlobalBackbuffer.Width,
-                                                                              GlobalBackbuffer.Height);
 
                     game_offscreen_buffer Buffer = {};
                     Buffer.Memory = GlobalBackbuffer.Memory;
@@ -2526,10 +2526,9 @@ WinMain(HINSTANCE Instance,
 
                     BEGIN_BLOCK("Frame Display");
 
-                    win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                     HDC DeviceContext = GetDC(Window);
                     Win32DisplayBufferInWindow(&HighPriorityQueue, &RenderCommands, DeviceContext,
-                                               Dimension.Width, Dimension.Height, &FrameTempArena);
+                                               DrawRegion, &FrameTempArena);
                     ReleaseDC(Window, DeviceContext);
 
                     FlipWallClock = Win32GetWallClock();

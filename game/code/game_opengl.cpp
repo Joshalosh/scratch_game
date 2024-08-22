@@ -97,6 +97,26 @@ OpenGLInit(b32 ModernContext, b32 FramebufferSupportsSRGB)
     return(Info);
 }
 
+global_variable u32 GlobalFramebufferCount = 1;
+global_variable GLuint GlobalFramebufferHandles[256] = {0};
+global_variable GLuint GlobalFramebufferTextures[256] = {0};
+internal void
+OpenGLBindFramebuffer(u32 TargetIndex, rectangle2i DrawRegion)
+{
+    u32 WindowWidth = GetWidth(DrawRegion);
+    u32 WindowHeight = GetHeight(DrawRegion);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
+    if(TargetIndex > 0)
+    {
+        glViewport(0, 0, WindowWidth, WindowHeight);
+    }
+    else 
+    {
+        glViewport(DrawRegion.MinX, DrawRegion.MinY, WindowWidth, WindowHeight);
+    }
+}
+
 inline void
 OpenGLSetScreenspace(s32 Width, s32 Height)
 {
@@ -164,10 +184,10 @@ OpenGLRectangle(v2 MinP, v2 MaxP, v4 PremulColor, v2 MinUV = V2(0, 0), v2 MaxUV 
 
 inline void
 OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
-                    s32 WindowWidth, s32 WindowHeight, GLuint BlitTexture)
+                    rectangle2i DrawRegion, v4 ClearColor, GLuint BlitTexture)
 {
     Assert(Pitch == (Width*4));
-    glViewport(0, 0, WindowWidth, WindowHeight);
+    OpenGLBindFramebuffer(0, DrawRegion);
 
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_BLEND);
@@ -184,7 +204,7 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
 
     glEnable(GL_TEXTURE_2D);
 
-    glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
+    glClearColor(ClearColor.r, ClearColor.g, ClearColor.b, ClearColor.a);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glMatrixMode(GL_TEXTURE);
@@ -257,14 +277,11 @@ PLATFORM_DEALLOCATE_TEXTURE(DeallocateTexture)
     glDeleteTextures(1, &Handle);
 }
 
-global_variable u32 GlobalFramebufferCount = 1;
-global_variable GLuint GlobalFramebufferHandles[256] = {0};
-global_variable GLuint GlobalFramebufferTextures[256] = {0};
 internal void
-OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
-                     s32 WindowWidth, s32 WindowHeight)
+OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rectangle2i DrawRegion)
 {
-    glViewport(0, 0, WindowWidth, WindowHeight);
+    u32 WindowWidth  = GetWidth(DrawRegion);
+    u32 WindowHeight = GetHeight(DrawRegion);
 
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_SCISSOR_TEST);
@@ -298,7 +315,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
 
     for(u32 TargetIndex = 0; TargetIndex <= MaxRenderTargetIndex; ++TargetIndex)
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
+        OpenGLBindFramebuffer(TargetIndex, DrawRegion);
         glClearColor(Commands->ClearColor.r, Commands->ClearColor.g, 
                      Commands->ClearColor.b, Commands->ClearColor.a);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -330,7 +347,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                (Clip->RenderTargetIndex <= MaxRenderTargetIndex))
             {
                 CurrentFramebuffer = Clip->RenderTargetIndex;
-                glBindFramebuffer(GL_FRAMEBUFFER, CurrentFramebuffer);
+                OpenGLBindFramebuffer(CurrentFramebuffer, DrawRegion);
             }
         }
 
@@ -397,10 +414,12 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                 render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
                 glDisable(GL_TEXTURE_2D);
                 OpenGLRectangle(Entry->P, Entry->P + Entry->Dim, Entry->PremulColor);
+#if 0
                 glBegin(GL_LINES);
                 glColor4f(0, 0, 0, Entry->PremulColor.a);
                 OpenGLLineVertices(Entry->P, Entry->P + Entry->Dim);
                 glEnd();
+#endif
                 glEnable(GL_TEXTURE_2D);
             } break;
 

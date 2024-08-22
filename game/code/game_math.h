@@ -938,6 +938,20 @@ struct rectangle2i
     int32_t MaxX, MaxY;
 };
 
+inline s32
+GetWidth(rectangle2i A)
+{
+    s32 Result = A.MaxX - A.MinX;
+    return(Result);
+}
+
+inline s32
+GetHeight(rectangle2i A)
+{
+    s32 Result = A.MaxY - A.MinY;
+    return(Result);
+}
+
 inline rectangle2i
 Intersect(rectangle2i A, rectangle2i B)
 {
