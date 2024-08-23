@@ -1,5 +1,5 @@
 
-struct sprite_bound 
+struct sprite_bound
 {
     s32 ChunkZ;
     r32 YMin;
@@ -53,8 +53,8 @@ struct tile_render_work
     rectangle2i ClipRect;
 };
 
-#define SORT_GRID_WIDTH  64
-#define SORT_GRID_HEIGHT 36
+#define SORT_GRID_WIDTH   64
+#define SORT_GRID_HEIGHT  36
 struct sort_grid_entry
 {
     sort_grid_entry *Next;

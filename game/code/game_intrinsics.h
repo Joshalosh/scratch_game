@@ -1,4 +1,3 @@
-#if !defined(GAME_INTRINSICS_H)
 
 #include "math.h"
 
@@ -140,6 +139,3 @@ FindLeastSignificantSetBit(uint32_t Value)
 
     return(Result);
 }
-
-#define GAME_INSTRINSICS_H
-#endif

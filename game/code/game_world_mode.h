@@ -1,4 +1,3 @@
-#if !defined(GAME_WORLD_MODE_H)
 
 struct game_mode_world;
 
@@ -63,7 +62,7 @@ struct game_mode_world
     u32 NextParticle;
     particle Particles[256];
 
-    b32 CreationBufferIndex;
+    u32 CreationBufferIndex;
     entity CreationBuffer[4];
     u32 LastUsedEntityStorageIndex; // TODO: Worry about this wrapping - free list for IDs?
 
@@ -71,6 +70,3 @@ struct game_mode_world
 };
 
 internal void PlayWorld(game_state *GameState, transient_state *TranState);
-
-#define GAME_WORLD_MODE_H
-#endif

@@ -80,7 +80,6 @@ struct render_entry_bitmap
 
     v4 PremulColor;
     v2 P;
-    v2 Size;
 
     // NOTE: X and Y axes are already scaled by the dimension
     v2 XAxis;
@@ -113,7 +112,7 @@ struct render_entry_coordinate_system
 };
 // }
 
-struct render_entry_blend_render_target 
+struct render_entry_blend_render_target
 {
     u32 SourceTargetIndex;
     r32 Alpha;
@@ -151,7 +150,6 @@ struct render_group
 #if GAME_SLOW
     u32 DebugTag;
 #endif
-
     v2 MonitorHalfDimInMetres;
 
     camera_transform CameraTransform;
@@ -237,4 +235,3 @@ struct transient_clip_rect
     render_group *RenderGroup;
     u32 OldClipRect;
 };
-

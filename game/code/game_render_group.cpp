@@ -265,6 +265,7 @@ PushBitmap(render_group *Group, object_transform *ObjectTransform,
            bitmap_id ID, real32 Height, v3 Offset, v4 Color = V4(1, 1, 1, 1), r32 CAlign = 1.0f,
            v2 XAxis = V2(1, 0), v2 YAxis = V2(0, 1))
 {
+
     loaded_bitmap *Bitmap = GetBitmap(Group->Assets, ID, Group->GenerationID);
     if(Group->RendersInBackground && !Bitmap)
     {
@@ -572,4 +573,3 @@ Orthographic(render_group *RenderGroup, r32 MetresToPixels)
     RenderGroup->CameraTransform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
     RenderGroup->CameraTransform.Orthographic = true;
 }
-

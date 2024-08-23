@@ -111,7 +111,7 @@ OpenGLBindFramebuffer(u32 TargetIndex, rectangle2i DrawRegion)
     {
         glViewport(0, 0, WindowWidth, WindowHeight);
     }
-    else 
+    else
     {
         glViewport(DrawRegion.MinX, DrawRegion.MinY, WindowWidth, WindowHeight);
     }
@@ -211,8 +211,8 @@ OpenGLDisplayBitmap(s32 Width, s32 Height, void *Memory, int Pitch,
     glLoadIdentity();
 
     OpenGLSetScreenspace(Width, Height);
-    
-    // TODO: Decide how I want to handle aspect ration - black bars or crop?
+
+    // TODO: Decide how I want to handle aspect ratio - black bars or crop?
 
     v2 MinP = {0, 0};
     v2 MaxP = {(r32)Width, (r32)Height};
@@ -328,11 +328,12 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rec
 
     u32 ClipRectIndex = 0xFFFFFFFF;
     u32 *Entry = Prep->SortedIndices;
-    for (u32 SortEntryIndex = 0; SortEntryIndex < Prep->SortedIndexCount; ++SortEntryIndex, ++Entry)
+    for(u32 SortEntryIndex = 0; SortEntryIndex < Prep->SortedIndexCount; ++SortEntryIndex, ++Entry)
     {
         u32 HeaderOffset = *Entry;
 
-        render_group_entry_header *Header = (render_group_entry_header *)(Commands->PushBufferBase + HeaderOffset);
+        render_group_entry_header *Header = (render_group_entry_header *)
+                                            (Commands->PushBufferBase + HeaderOffset);
         if(ClipRectIndex != Header->ClipRectIndex)
         {
             ClipRectIndex = Header->ClipRectIndex;
@@ -415,6 +416,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rec
                 glDisable(GL_TEXTURE_2D);
                 OpenGLRectangle(Entry->P, Entry->P + Entry->Dim, Entry->PremulColor);
 #if 0
+                // NOTE: Debug outlining
                 glBegin(GL_LINES);
                 glColor4f(0, 0, 0, Entry->PremulColor.a);
                 OpenGLLineVertices(Entry->P, Entry->P + Entry->Dim);
@@ -477,5 +479,3 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rec
     }
 #pragma warning(pop)
 }
-
-

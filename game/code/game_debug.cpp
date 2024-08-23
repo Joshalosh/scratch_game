@@ -34,6 +34,7 @@ DebugParseName(char *GUID)
             }
             else if(PipeCount == 1)
             {
+
             }
             else
             {
@@ -787,6 +788,7 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
         for(u32 FrameIndex = 0; FrameIndex < FrameCount; ++FrameIndex)
         {
             rectangle2 RegionRect = RectMinMax(V2(AtX, ThisMinY), V2(AtX + BarWidth, ThisMaxY));
+
             v4 HiColor = V4(1, 1, 1, 1);
             b32 Highlight = false;
             if(FrameIndex == DebugState->ViewingFrameOrdinal)

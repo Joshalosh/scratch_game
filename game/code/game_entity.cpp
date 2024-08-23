@@ -77,6 +77,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
     u32 AlphaFloorClipRect = RenderGroup->CurrentClipRectIndex;
     if(TestAlpha > 0)
     {
+        StopLevelIndex = MaximumLevelIndex;
         AlphaFloorClipRect = PushClipRect(RenderGroup, 0, 0, DrawBuffer->Width, DrawBuffer->Height, AlphaFloorRenderTarget);
     }
 
@@ -95,6 +96,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
         if(Entity->Updatable)
         {
+
             //
             // NOTE: Physics 
             //

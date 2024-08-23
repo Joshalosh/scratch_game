@@ -220,7 +220,7 @@ internal void DEBUGEditEventData(char *GUID, debug_event *Event);
 #define DEBUG_VALUE(Value)                                                                   \
 {                                                                                            \
          RecordDebugEvent(DebugType_Unknown, DEBUG_NAME(#Value));                            \
-         DEBUGValueSetEventData(Event, Value, (void *)&Value);                               \
+         DEBUGValueSetEventData(Event, Value, (void *)&(Value));                             \
 }
 
 #define DEBUG_NAMED_VALUE(Value)                                                             \
@@ -232,7 +232,7 @@ internal void DEBUGEditEventData(char *GUID, debug_event *Event);
 #define DEBUG_B32(Value)                                                                \
 {                                                                                       \
     RecordDebugEvent(DebugType_Unknown, DEBUG_NAME(#Value));                            \
-    DEBUGValueSetEventData(Event, (s32)0, (void *)&(Value));                            \
+    DEBUGValueSetEventData(Event, (s32)0, (void *)&Value);                            \
     Event->Type = DebugType_b32;                                                        \
 }
 

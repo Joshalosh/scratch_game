@@ -1,4 +1,3 @@
-#if !defined(GAME_ENTITY_H)
 
 struct entity;
 
@@ -20,11 +19,12 @@ enum entity_type
 #define HIT_POINT_SUB_COUNT 4
 struct hit_point
 {
+    // TODO: Bake this down into one variable
     uint8_t Flags;
     uint8_t FilledAmount;
 };
 
-struct entity_id 
+struct entity_id
 {
     u32 Value;
 };
@@ -39,7 +39,7 @@ inline b32 ReferencesAreEqual(entity_reference A, entity_reference B)
     b32 Result = ((A.Ptr == B.Ptr) &&
                   (A.Index.Value == B.Index.Value));
     return(Result);
-};
+}
 
 struct traversable_reference
 {
@@ -56,7 +56,6 @@ inline b32 IsEqual(traversable_reference A, traversable_reference B)
 
 enum entity_flags
 {
-    // TODO Collides and ZSupported can prabably be removed.
     EntityFlag_Collides = (1 << 0),
     EntityFlag_Deleted = (1 << 1),
 };
@@ -160,6 +159,7 @@ struct entity
 
     s32 dAbsTileZ;
 
+    // TODO: Should hitpoints themselves be entities?
     u32 HitPointMax;
     hit_point HitPoint[16];
 
@@ -206,7 +206,7 @@ IsSet(entity *Entity, uint32_t Flag)
 
 inline b32 IsDeleted(entity *E) {b32 Result = IsSet(E, EntityFlag_Deleted); return(Result);}
 
-inline void 
+inline void
 AddFlags(entity *Entity, uint32_t Flag)
 {
     Entity->Flags |= Flag;
@@ -250,6 +250,3 @@ GetStairGround(entity *Entity, v3 AtGroundPoint)
 
     return(Result);
 }
-
-#define GAME_ENTITY_H
-#endif

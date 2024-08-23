@@ -1,4 +1,3 @@
-#if !defined(GAME_MATH_H)
 
 inline v2
 V2i(int32_t X, int32_t Y)
@@ -158,7 +157,6 @@ inline r32
 ClampAboveZero(r32 Value)
 {
     r32 Result = (Value < 0) ? 0.0f : Value;
-
     return(Result);
 }
 
@@ -179,7 +177,7 @@ inline real32
 SafeRatio0(real32 Numerator, real32 Divisor)
 {
     real32 Result = SafeRatioN(Numerator, Divisor, 0.0f);
-    
+
     return(Result);
 }
 
@@ -187,7 +185,7 @@ inline real32
 SafeRatio1(real32 Numerator, real32 Divisor)
 {
     real32 Result = SafeRatioN(Numerator, Divisor, 1.0f);
-    
+
     return(Result);
 }
 
@@ -199,7 +197,6 @@ inline v2
 Perp(v2 A)
 {
     v2 Result = {-A.y, A.x};
-
     return(Result);
 }
 
@@ -602,7 +599,6 @@ inline real32
 Length(v4 A)
 {
     real32 Result = SquareRoot(LengthSq(A));
-
     return(Result);
 }
 
@@ -756,7 +752,7 @@ IsInRectangle(rectangle2 Rectangle, v2 Test)
     return(Result);
 }
 
-inline b32 
+inline b32
 RectanglesIntersect(rectangle2 A, rectangle2 B)
 {
     b32 Result = !((B.Max.x <= A.Min.x) ||
@@ -1040,10 +1036,3 @@ Linear1ToSRGB255(v4 C)
 
     return(Result);
 }
-
-//
-//
-//
-
-#define GAME_MATH_H
-#endif

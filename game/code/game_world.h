@@ -1,4 +1,3 @@
-#if !defined(GAME_WORLD_H)
 
 struct world_position
 {
@@ -49,6 +48,3 @@ struct world
     world_chunk *FirstFreeChunk;
     world_entity_block *FirstFreeBlock;
 };
-
-#define GAME_WORLD_H
-#endif

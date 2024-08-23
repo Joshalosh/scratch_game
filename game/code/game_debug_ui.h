@@ -1,4 +1,3 @@
-#if !defined(GAME_DEBUG_UI_H)
 
 struct debug_state;
 
@@ -79,6 +78,3 @@ struct layout_element
     // Out
     rectangle2 Bounds;
 };
-
-#define GAME_DEBUG_UI_H
-#endif

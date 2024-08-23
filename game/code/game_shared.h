@@ -1,4 +1,3 @@
-#if !defined(GAME_SHARED_H)
 
 #include "game_intrinsics.h"
 #include "game_math.h"
@@ -78,7 +77,7 @@ StringsAreEqual(umm ALength, char *A, char *B)
 
         Result = (*At == 0);
     }
-    else 
+    else
     {
         Result = (ALength == 0);
     }
@@ -107,5 +106,3 @@ StringsAreEqual(memory_index ALength, char *A, memory_index BLength, char *B)
     return(Result);
 }
 
-#define GAME_SHARED_H
-#endif

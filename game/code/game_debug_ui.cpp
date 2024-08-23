@@ -49,7 +49,7 @@ GetHex(char Char)
     return(Result);
 }
 
-    internal rectangle2
+internal rectangle2
 TextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String, v4 Color = V4(1, 1, 1, 1),
        r32 AtZ = 0.0f)
 {
@@ -224,7 +224,6 @@ BeginLayout(debug_state *DebugState, v2 MouseP, v2 UpperLeftCorner)
 inline void
 EndLayout(layout *Layout)
 {
-    
 }
 
 inline layout_element
@@ -259,7 +258,7 @@ AdvanceElement(layout *Layout, rectangle2 ElRect)
     {
         Layout->At.x = GetMaxCorner(ElRect).x + Layout->SpacingX;
     }
-    else 
+    else
     {
         Layout->At.y += Layout->NextYDelta - Layout->SpacingY;
         Layout->LineInitialised = false;
@@ -339,7 +338,7 @@ EndElement(layout_element *Element)
 }
 
 internal v2
-BasicTextElement(layout *Layout, char *Text, debug_interaction ItemInteraction, 
+BasicTextElement(layout *Layout, char *Text, debug_interaction ItemInteraction,
                  v4 ItemColor = V4(0.8f, 0.8f, 0.8f, 1), v4 HotColor = V4(1, 1, 1, 1),
                  r32 Border = 0.0f, v4 BackdropColor = V4(0, 0, 0, 0))
 {
@@ -420,7 +419,8 @@ AddTooltip(debug_state *DebugState, char *Text)
     layout_element Element = BeginElementRectangle(Layout, &Dim);
     EndElement(&Element);
 
-    PushRect(&DebugState->RenderGroup, &DebugState->BackingTransform, AddRadiusTo(Element.Bounds, V2(4.0f, 4.0f)), 
+    PushRect(&DebugState->RenderGroup, 
+             &DebugState->ToolTipTransform, AddRadiusTo(Element.Bounds, V2(4.0f, 4.0f)),
              0.0f, V4(0, 0, 0, 0.75f));
 
     TextOutAt(DebugState, V2(GetMinCorner(Element.Bounds).x,

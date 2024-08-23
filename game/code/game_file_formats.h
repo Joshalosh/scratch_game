@@ -1,4 +1,3 @@
-#if !defined(GAME_FILE_FORMATS_H)
 
 enum asset_font_type
 {
@@ -170,6 +169,3 @@ struct ga_asset
 };
 
 #pragma pack(pop)
-
-#define GAME_FILE_FORMATS_H
-#endif

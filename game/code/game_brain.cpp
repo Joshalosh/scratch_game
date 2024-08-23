@@ -221,7 +221,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                         Recentre[E] = true;
                         ddP.E[E] = Cp*(ClosestP.E[E] - Head->P.E[E]) - 30.0f*Head->dP.E[E];
                     }
-                    else 
+                    else
                     {
                         // TODO: ODE here
                         ddP.E[E] += -Drag*Head->dP.E[E];
@@ -300,8 +300,8 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                                 Head->tMovement = 0.0f;
                                 Head->MovementMode = MovementMode_Hopping;
 
-                                for(u32 SegmentIndex = 1; 
-                                    SegmentIndex < ArrayCount(Parts->Segments); 
+                                for(u32 SegmentIndex = 1;
+                                    SegmentIndex < ArrayCount(Parts->Segments);
                                     ++SegmentIndex)
                                 {
                                     entity *Segment = Parts->Segments[SegmentIndex];
@@ -328,9 +328,6 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
             entity *Head = Parts->Head;
             if(Head)
             {
-                entity *ClosestHero = 0;
-                real32 ClosestHeroDSq = Square(10.0f);
-
                 b32 Blocked = true;
                 
                 traversable_reference Traversable;
@@ -356,7 +353,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                     if(Closest.Entity) // && (ClosestHeroDSq > Square(3.0f)))
                     {
                         traversable_reference TargetTraversable;
-                        if(GetClosestTraversableAlongRay(SimRegion, Head->P, NOZ(Closest.Delta), 
+                        if(GetClosestTraversableAlongRay(SimRegion, Head->P, NOZ(Closest.Delta),
                                                          Head->Occupying, &TargetTraversable))
                         {
                             if(!IsOccupied(TargetTraversable))

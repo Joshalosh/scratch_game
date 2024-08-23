@@ -1,4 +1,3 @@
-#if !defined(WIN32_GAME_H)
 struct win32_offscreen_buffer
 {
     BITMAPINFO Info;
@@ -118,6 +117,3 @@ struct win32_thread_startup
     HGLRC OpenGLRC;
     platform_work_queue *Queue;
 };
-
-#define WIN32_GAME_H
-#endif

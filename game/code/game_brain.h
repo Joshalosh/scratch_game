@@ -94,4 +94,3 @@ enum reserved_brain_id
 
     ReservedBrainID_FirstFree,
 };
-

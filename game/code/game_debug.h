@@ -1,4 +1,3 @@
-#if !defined(GAME_DEBUG_H)
 
 #define DEBUG_FRAME_COUNT 256
 #define DEBUG_MAX_VARIABLE_STACK_DEPTH 64
@@ -86,7 +85,7 @@ struct debug_stored_event
     };
 
     u32 FrameIndex;
-    
+
     union
     {
         debug_event Event;
@@ -139,7 +138,6 @@ inline b32 HasChildren(debug_variable_link *Link)
     b32 Result = (Link->FirstChild != GetSentinel(Link));
     return(Result);
 }
-
 
 struct debug_tree
 {
@@ -319,5 +317,3 @@ enum debug_element_add_op
     DebugElement_AddToGroup = 0x1,
     DebugElement_CreateHierarchy = 0x2,
 };
-#define GAME_DEBUG_H
-#endif

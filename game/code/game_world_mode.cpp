@@ -156,7 +156,7 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
     {
         for(s32 OffsetX = -8; OffsetX <= 8; ++OffsetX)
         {
-            world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX, 
+            world_position P = ChunkPositionFromTilePosition(WorldMode->World, AbsTileX + OffsetX,
                                                              AbsTileY + OffsetY, AbsTileZ);
             traversable_reference StandingOn = {};
 #if 0
@@ -715,8 +715,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     }
     END_BLOCK();
 
-    UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP, DrawBuffer, BackgroundColor,
-                            dt, TranState, MouseP);
+    UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP,
+                            DrawBuffer, BackgroundColor, dt, TranState, MouseP);
 
     Orthographic(RenderGroup, 1.0f);
 
@@ -746,9 +746,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     return(Result);
 }
 
+
 //
 // NOTE: Old code below here 
 //
+
+
 
 #if 0
     WorldMode->Time += Input->dtForFrame;
@@ -790,9 +793,11 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
                &TranState->GroundBuffers[TranState->GroundBufferCount - 1].Bitmap,
                125.0f, 50.0f, 1.0f);
 
+
 //    Angle = 0.0f;
 
     v2 Origin = ScreenCentre;
+
 
     real32 Angle = 0.1f*WorldMode->Time;
 #if 1

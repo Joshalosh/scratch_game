@@ -1,7 +1,6 @@
-#if !defined(GAME_RANDOM_H)
 
 #define MaxRandomNumber 0x05f5c21f
-#define MinRadnomNumber 0x000025a0
+#define MinRandomNumber 0x000025a0
 
 global_variable uint32_t RandomNumberTable[] =
 {
@@ -579,6 +578,3 @@ inline int32_t RandomBetween(random_series *Series, int32_t Min, int32_t Max)
 
     return(Result);
 }
-
-#define GAME_RANDOM_H
-#endif

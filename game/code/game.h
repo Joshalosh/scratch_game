@@ -1,4 +1,3 @@
-#if !defined(GAME_H)
 
 #include "game_platform.h"
 #include "game_config.h"
@@ -126,6 +125,3 @@ internal void SetGameMode(game_state *GameState, transient_state *TranState, gam
 // TODO: Get these into a more reasonable location
 #define GroundBufferWidth 256
 #define GroundBufferHeight 256
-
-#define GAME_H
-#endif

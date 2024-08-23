@@ -345,4 +345,3 @@ PlayTitleScreen(game_state *GameState, transient_state *TranState)
 
     GameState->TitleScreen = Result;
 }
-

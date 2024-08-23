@@ -118,6 +118,7 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
+
 internal void
 CatStrings(size_t SourceACount, char *SourceA,
            size_t SourceBCount, char *SourceB,
@@ -194,6 +195,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
                 }
                 else
                 {
+
                     DEBUGPlatformFreeFileMemory(Result.Contents);
                     Result.Contents = 0;
                 }
@@ -846,11 +848,12 @@ Win32MainWindowCallback(HWND Window,
                 s32 NewCx = (RenderWidth * (NewPos->cy - HeightAdd)) / RenderHeight;
                 s32 NewCy = (RenderHeight * (NewPos->cx - WidthAdd)) / RenderWidth;
 
-                if(AbsoluteValue((r32)(NewPos->cx - NewCx)) < AbsoluteValue((r32)(NewPos->cy - NewCy)))
+                if(AbsoluteValue((r32)(NewPos->cx - NewCx)) <
+                   AbsoluteValue((r32)(NewPos->cy - NewCy)))
                 {
                     NewPos->cx = NewCx + WidthAdd;
                 }
-                else 
+                else
                 {
                     NewPos->cy = NewCy + HeightAdd;
                 }
@@ -1697,10 +1700,12 @@ internal PLATFORM_READ_DATA_FROM_FILE(Win32ReadDataFromFile)
 }
 
 /*
+
 internal PLATFORM_FILE_ERROR(Win32CloseFile)
 {
     CloseHandle(FileHandle);
 }
+
 */
 
 PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
@@ -1839,7 +1844,8 @@ WinMain(HINSTANCE Instance,
                 0);
         if(Window)
         {
-            ToggleFullScreen(Window);
+            // NOTE: I've toggled this off as I think my large monitor makes large window sizes fuck up
+            //ToggleFullScreen(Window); 
             HDC OpenGLDC = GetDC(Window);
             HGLRC OpenGLRC = 0;
 #if 1
@@ -1912,7 +1918,7 @@ WinMain(HINSTANCE Instance,
             // TODO: Probably remove MaxPossibleOverrun.
             u32 MaxPossibleOverrun = 2*8*sizeof(u16); 
             int16_t *Samples = (int16_t *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize + MaxPossibleOverrun,
-                                MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+                                                       MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 
 #if GAME_INTERNAL
             LPVOID BaseAddress = (LPVOID)Terabytes(2);
@@ -2042,7 +2048,7 @@ WinMain(HINSTANCE Instance,
                                                                               GlobalBackbuffer.Width,
                                                                               GlobalBackbuffer.Height);
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
-                    rectangle2i DrawRegion = AspectRatioFit(RenderCommands.Width, RenderCommands.Height, 
+                    rectangle2i DrawRegion = AspectRatioFit(RenderCommands.Width, RenderCommands.Height,
                                                             Dimension.Width, Dimension.Height);
 
                     // TODO: Zeroing macro

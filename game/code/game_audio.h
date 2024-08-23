@@ -1,4 +1,3 @@
-#if !defined(GAME_AUDIO_H)
 
 struct playing_sound
 {
@@ -21,6 +20,3 @@ struct audio_state
 
     v2 MasterVolume;
 };
-
-#define GAME_AUDIO_H
-#endif

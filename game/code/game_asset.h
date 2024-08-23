@@ -1,4 +1,3 @@
-#if !defined(GAME_ASSET_H)
 
 struct loaded_sound
 {
@@ -332,6 +331,3 @@ EndGeneration(game_assets *Assets, u32 GenerationID)
 
     EndAssetLock(Assets);
 }
-
-#define GAME_ASSET_H
-#endif

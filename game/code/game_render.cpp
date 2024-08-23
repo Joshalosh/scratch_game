@@ -2,6 +2,7 @@
 #define IGNORED_TIMED_FUNCTION(...)
 #define IGNORED_TIMED_BLOCK(...)
 
+
 #if 0
 #include <iacaMarks.h>
 #else
@@ -12,6 +13,7 @@
 #define mmSquare(a) _mm_mul_ps(a, a)
 #define M(a, i) ((float *)&(a))[i]
 #define Mi(a, i) ((uint32_t *)&(a))[i]
+
 
 global_variable b32 Global_Renderer_ShowLightingSamples = false;
 
@@ -141,7 +143,7 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i Cli
         __m128 MaxColorValue = _mm_set1_ps(255.0f*255.0f);
 
         uint8_t *Row = ((uint8_t *)Buffer->Memory + 
-                        FillRect.MinX*BITMAP_BYTES_PER_PIXEL + 
+                        FillRect.MinX*BITMAP_BYTES_PER_PIXEL +
                         FillRect.MinY*Buffer->Pitch);
         int32_t RowAdvance = Buffer->Pitch;
 
@@ -151,7 +153,7 @@ DrawRectangle(loaded_bitmap *Buffer, v2 vMin, v2 vMax, v4 Color, rectangle2i Cli
         int MaxX = FillRect.MaxX;
 
         IGNORED_TIMED_BLOCK("Pixel Fill", GetClampedRectArea(FillRect) / 2);
-        for(int Y = MinY; Y < MaxY; Y++)
+        for(int Y = MinY; Y < MaxY; ++Y)
         {
             __m128i ClipMask = StartClipMask;
 
@@ -763,12 +765,12 @@ DrawMatte(loaded_bitmap *Buffer, loaded_bitmap *Bitmap,
 
 void
 DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Color,
-                     loaded_bitmap *Texture, real32 PixelsToMetres, 
+                     loaded_bitmap *Texture, real32 PixelsToMetres,
                      rectangle2i ClipRect)
 {
     IGNORED_TIMED_FUNCTION();
 
-    // TODO: There is a bug in the texel lookup here, where it's not properly 
+    // TODO: There is a bug in the texel lookup here, where it's not properly
     // computing the texel or fill values (not sure which) when it's skewing
 
     rectangle2i FillRect = InvertedInfinityRectangle2i();
@@ -1097,7 +1099,7 @@ DrawRectangleQuickly(loaded_bitmap *Buffer, v2 Origin, v2 XAxis, v2 YAxis, v4 Co
     }
 }
 
-internal void 
+internal void
 BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded_bitmap *SourceTarget)
 {
     IGNORED_TIMED_FUNCTION();
@@ -1284,10 +1286,12 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
 
             SourceRow += SourceRowAdvance;
             DestRow += DestRowAdvance;
+
         }
     }
 #endif
 }
+
 
 internal void
 ClearRectangle(rectangle2i Rect, loaded_bitmap *DestTarget, v4 Color)
@@ -1688,6 +1692,7 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
     v2 InvCellDim = {(r32)SORT_GRID_WIDTH / (r32)ScreenWidth,
                      (r32)SORT_GRID_HEIGHT / (r32)ScreenHeight};
 
+
     sort_grid_entry *Grid[SORT_GRID_WIDTH][SORT_GRID_HEIGHT] = {};
     u32 NodeIndexA = 0;
     for(; NodeIndexA < InputNodeCount; ++NodeIndexA)
@@ -1795,6 +1800,7 @@ SortEntries(game_render_commands *Commands, memory_arena *TempArena, game_render
         u32 SubCount = BuildSpriteGraph(Count - FirstIndex, 
                                         SubEntries,
                                         TempArena, Commands->Width, Commands->Height);
+
         Walk.InputNodes = SubEntries;
         for(u32 NodeIndexA = 0; NodeIndexA < SubCount; ++NodeIndexA)
         {
@@ -1900,7 +1906,7 @@ AspectRatioFit(u32 RenderWidth, u32 RenderHeight, u32 WindowWidth, u32 WindowHei
             Result.MinY = HalfEmpty;
             Result.MaxY = Result.MinY + UseHeight;
         }
-        else 
+        else
         {
             // NOTE: Height-constrained display - left and right black bars
             Result.MinY = 0;

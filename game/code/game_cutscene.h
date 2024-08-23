@@ -1,4 +1,3 @@
-#if !defined(GAME_CUTSCENE_H)
 
 enum scene_layer_flags
 {
@@ -50,6 +49,3 @@ struct game_state;
 struct transient_state;
 internal void PlayIntroCutscene(game_state *GameState, transient_state *TranState);
 internal void PlayTitleScreen(game_state *GameState, transient_state *TranState);
-
-#define GAME_CUTSCENE_H
-#endif
