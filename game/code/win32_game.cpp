@@ -576,6 +576,8 @@ Win32SetPixelFormat(HDC WindowDC)
     }
 
     PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
+    // NOTE: Technically I don't need to call DescribePixelFormat here, as 
+    // SetPixelFormat doesn't actually need it to be filled out properly
     DescribePixelFormat(WindowDC, SuggestedPixelFormatIndex,
                         sizeof(SuggestedPixelFormat), &SuggestedPixelFormat);
     SetPixelFormat(WindowDC, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
@@ -632,6 +634,7 @@ Win32LoadWGLExtensions()
 
                     if(0) {}
                     else if(StringsAreEqual(Count, At, "WGL_EXT_framebuffer_sRGB")) {OpenGLSupportsSRGBFramebuffer = true;}
+                    else if(StringsAreEqual(Count, At, "WGL_ARB_framebuffer_sRGB")) {OpenGLSupportsSRGBFramebuffer = true;}
 
                     At = End;
                 }
@@ -651,11 +654,12 @@ Win32InitOpenGL(HDC WindowDC)
 {
     Win32LoadWGLExtensions();
 
+    Win32SetPixelFormat(WindowDC);
+
     b32 ModernContext = true;
     HGLRC OpenGLRC = 0;
     if(wglCreateContextAttribsARB)
     {
-        Win32SetPixelFormat(WindowDC);
         OpenGLRC = wglCreateContextAttribsARB(WindowDC, 0, Win32OpenGLAttribs);
     }
 
@@ -737,7 +741,8 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 internal void
 Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_commands *Commands,
-                           HDC DeviceContext, rectangle2i DrawRegion, memory_arena *TempArena)
+                           HDC DeviceContext, rectangle2i DrawRegion, u32 WindowWidth, u32 WindowHeight,
+                           memory_arena *TempArena)
 {
     temporary_memory TempMem = BeginTemporaryMemory(TempArena);
 
@@ -768,7 +773,7 @@ Win32DisplayBufferInWindow(platform_work_queue *RenderQueue, game_render_command
     else
     {
         BEGIN_BLOCK("OpenGLRenderCommands");
-        OpenGLRenderCommands(Commands, &Prep, DrawRegion);
+        OpenGLRenderCommands(Commands, &Prep, DrawRegion, WindowWidth, WindowHeight);
         END_BLOCK();
 
         BEGIN_BLOCK("SwapBuffers");
@@ -2534,7 +2539,7 @@ WinMain(HINSTANCE Instance,
 
                     HDC DeviceContext = GetDC(Window);
                     Win32DisplayBufferInWindow(&HighPriorityQueue, &RenderCommands, DeviceContext,
-                                               DrawRegion, &FrameTempArena);
+                                               DrawRegion, Dimension.Width, Dimension.Height, &FrameTempArena);
                     ReleaseDC(Window, DeviceContext);
 
                     FlipWallClock = Win32GetWallClock();

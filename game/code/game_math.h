@@ -1007,6 +1007,19 @@ InvertedInfinityRectangle2i(void)
     return(Result);
 }
 
+inline rectangle2i
+Offset(rectangle2i A, s32 X, s32 Y)
+{
+    rectangle2i Result = A;
+
+    Result.MinX += X;
+    Result.MaxX += X;
+    Result.MaxY += Y;
+    Result.MinY += Y;
+
+    return(Result);
+}
+
 inline v4
 SRGB255ToLinear1(v4 C)
 {

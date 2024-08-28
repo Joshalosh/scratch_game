@@ -38,6 +38,21 @@ struct opengl_info
     b32 GL_ARB_framebuffer_object;
 };
 
+internal s32
+OpenGLParseNumber(char *At)
+{
+    s32 Result = 0;
+
+    while((*At >= '0') && (*At <= '9'))
+    {
+        Result *= 10;
+        Result += (*At - '0');
+        ++At;
+    }
+
+    return(Result);
+}
+
 internal opengl_info
 OpenGLGetInfo(b32 ModernContext)
 {
@@ -74,6 +89,31 @@ OpenGLGetInfo(b32 ModernContext)
         else if(StringsAreEqual(Count, At, "GL_ARB_framebuffer_object")) {Result.GL_ARB_framebuffer_object=true;}
 
         At = End;
+    }
+
+    char *MajorAt = Result.Version;
+    char *MinorAt = 0;
+    for(char *At = Result.Version; *At; ++At)
+    {
+        if(At[0] == '.')
+        {
+            MinorAt = At + 1;
+            break;
+        }
+    }
+
+    s32 Major = 1;
+    s32 Minor = 0;
+    if(MinorAt)
+    {
+        Major = OpenGLParseNumber(MajorAt);
+        Minor = OpenGLParseNumber(MinorAt);
+    }
+
+    if((Major > 2) || ((Major == 2) && (Minor >= 1)))
+    {
+        // NOTE: I believe there are sRGB textures in 2.1 and above automatically
+        Result.GL_EXT_texture_sRGB = true;
     }
 
     return(Result);
@@ -278,11 +318,9 @@ PLATFORM_DEALLOCATE_TEXTURE(DeallocateTexture)
 }
 
 internal void
-OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rectangle2i DrawRegion)
+OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
+                     rectangle2i DrawRegion, u32 WindowWidth, u32 WindowHeight)
 {
-    u32 WindowWidth  = GetWidth(DrawRegion);
-    u32 WindowHeight = GetHeight(DrawRegion);
-
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_SCISSOR_TEST);
     glEnable(GL_BLEND);
@@ -293,7 +331,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rec
 
     b32 UseRenderTargets = (glBindFramebuffer != 0);
 
-    u32 MaxRenderTargetIndex = UseRenderTargets ? Commands->MaxRenderTargetIndex : 1;
+    u32 MaxRenderTargetIndex = UseRenderTargets ? Commands->MaxRenderTargetIndex : 0;
     if(MaxRenderTargetIndex >= GlobalFramebufferCount)
     {
         u32 NewFramebufferCount = Commands->MaxRenderTargetIndex + 1;
@@ -302,7 +340,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rec
         glGenFramebuffers(NewCount, GlobalFramebufferHandles + GlobalFramebufferCount);
         for(u32 TargetIndex = GlobalFramebufferCount; TargetIndex <= NewFramebufferCount; ++TargetIndex)
         {
-            GLuint TextureHandle = U32FromPointer(AllocateTexture(WindowWidth, WindowHeight, 0));
+            GLuint TextureHandle = U32FromPointer(AllocateTexture(GetWidth(DrawRegion), GetHeight(DrawRegion), 0));
             GlobalFramebufferTextures[TargetIndex] = TextureHandle;
             glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TextureHandle, 0);
@@ -315,18 +353,28 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rec
 
     for(u32 TargetIndex = 0; TargetIndex <= MaxRenderTargetIndex; ++TargetIndex)
     {
-        OpenGLBindFramebuffer(TargetIndex, DrawRegion);
+        if(UseRenderTargets)
+        {
+            OpenGLBindFramebuffer(TargetIndex, DrawRegion);
+        }
+
+        if(TargetIndex == 0)
+        {
+            glScissor(0, 0, WindowWidth, WindowHeight);
+        }
+        else
+        {
+            glScissor(0, 0, GetWidth(DrawRegion), GetHeight(DrawRegion));
+        }
         glClearColor(Commands->ClearColor.r, Commands->ClearColor.g, 
                      Commands->ClearColor.b, Commands->ClearColor.a);
         glClear(GL_COLOR_BUFFER_BIT);
     }
 
-    GLuint CurrentFramebuffer = 0;
-    glBindFramebuffer(GL_FRAMEBUFFER, CurrentFramebuffer);
-
     OpenGLSetScreenspace(Commands->Width, Commands->Height);
 
     u32 ClipRectIndex = 0xFFFFFFFF;
+    u32 CurrentRenderTargetIndex = 0xFFFFFFFF;
     u32 *Entry = Prep->SortedIndices;
     for(u32 SortEntryIndex = 0; SortEntryIndex < Prep->SortedIndexCount; ++SortEntryIndex, ++Entry)
     {
@@ -334,120 +382,137 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep, rec
 
         render_group_entry_header *Header = (render_group_entry_header *)
                                             (Commands->PushBufferBase + HeaderOffset);
-        if(ClipRectIndex != Header->ClipRectIndex)
+        if(UseRenderTargets ||
+           (Prep->ClipRects[Header->ClipRectIndex].RenderTargetIndex <= MaxRenderTargetIndex))
         {
-            ClipRectIndex = Header->ClipRectIndex;
-            Assert(ClipRectIndex < Commands->ClipRectCount);
-
-            render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
-            glScissor(Clip->Rect.MinX, Clip->Rect.MinY, 
-                      Clip->Rect.MaxX - Clip->Rect.MinX, 
-                      Clip->Rect.MaxY - Clip->Rect.MinY);
-
-            if((CurrentFramebuffer != Clip->RenderTargetIndex) &&
-               (Clip->RenderTargetIndex <= MaxRenderTargetIndex))
+            if(ClipRectIndex != Header->ClipRectIndex)
             {
-                CurrentFramebuffer = Clip->RenderTargetIndex;
-                OpenGLBindFramebuffer(CurrentFramebuffer, DrawRegion);
-            }
-        }
+                ClipRectIndex = Header->ClipRectIndex;
+                Assert(ClipRectIndex < Commands->ClipRectCount);
 
-        void *Data = (uint8_t *)Header + sizeof(*Header);
-        switch(Header->Type)
-        {
-            case RenderGroupEntryType_render_entry_bitmap:
-            {
-                render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
-                Assert(Entry->Bitmap);
+                render_entry_cliprect *Clip = Prep->ClipRects + ClipRectIndex;
 
-                if(Entry->Bitmap->Width && Entry->Bitmap->Height)
+                rectangle2i ClipRect = Clip->Rect;
+                if(CurrentRenderTargetIndex != Clip->RenderTargetIndex)
                 {
-                    v2 XAxis = Entry->XAxis;
-                    v2 YAxis = Entry->YAxis;
-                    v2 MinP = Entry->P;
+                    CurrentRenderTargetIndex = Clip->RenderTargetIndex;
+                    Assert(CurrentRenderTargetIndex <= MaxRenderTargetIndex);
+                    if(UseRenderTargets)
+                    {
+                        OpenGLBindFramebuffer(CurrentRenderTargetIndex, DrawRegion);
+                    }
+                }
 
-                    // TODO: Hold the frame if it is not ready with the texture?
+                if(!UseRenderTargets || (Clip->RenderTargetIndex == 0))
+                {
+                    ClipRect = Offset(ClipRect, DrawRegion.MinX, DrawRegion.MinY);
+                }
+
+                glScissor(ClipRect.MinX, ClipRect.MinY, 
+                          ClipRect.MaxX - ClipRect.MinX, 
+                          ClipRect.MaxY - ClipRect.MinY);
+            }
+
+            void *Data = (uint8_t *)Header + sizeof(*Header);
+            switch(Header->Type)
+            {
+                case RenderGroupEntryType_render_entry_bitmap:
+                {
+                    render_entry_bitmap *Entry = (render_entry_bitmap *)Data;
+                    Assert(Entry->Bitmap);
+
+                    if(Entry->Bitmap->Width && Entry->Bitmap->Height)
+                    {
+                        v2 XAxis = Entry->XAxis;
+                        v2 YAxis = Entry->YAxis;
+                        v2 MinP = Entry->P;
+
+                        // TODO: Hold the frame if it is not ready with the texture?
 #pragma warning(push)
 #pragma warning(disable : 4312 4311 4302)
-                    glBindTexture(GL_TEXTURE_2D, (GLuint)U32FromPointer(Entry->Bitmap->TextureHandle));
-                    r32 OneTexelU = 1.0f / (r32)Entry->Bitmap->Width;
-                    r32 OneTexelV = 1.0f / (r32)Entry->Bitmap->Height;
-                    v2 MinUV = V2(OneTexelU, OneTexelV);
-                    v2 MaxUV = V2(1.0f - OneTexelU, 1.0f - OneTexelV);
+                        glBindTexture(GL_TEXTURE_2D, (GLuint)U32FromPointer(Entry->Bitmap->TextureHandle));
+                        r32 OneTexelU = 1.0f / (r32)Entry->Bitmap->Width;
+                        r32 OneTexelV = 1.0f / (r32)Entry->Bitmap->Height;
+                        v2 MinUV = V2(OneTexelU, OneTexelV);
+                        v2 MaxUV = V2(1.0f - OneTexelU, 1.0f - OneTexelV);
 
-                    glBegin(GL_TRIANGLES);
+                        glBegin(GL_TRIANGLES);
 
-                    // NOTE: This Value is not gamma corrected by OpenGL
-                    
-                    glColor4fv(Entry->PremulColor.E);
+                        // NOTE: This Value is not gamma corrected by OpenGL
+                        
+                        glColor4fv(Entry->PremulColor.E);
 
-                    v2 MinXMinY = MinP;
-                    v2 MinXMaxY = MinP + YAxis;
-                    v2 MaxXMinY = MinP + XAxis;
-                    v2 MaxXMaxY = MinP + XAxis + YAxis;
+                        v2 MinXMinY = MinP;
+                        v2 MinXMaxY = MinP + YAxis;
+                        v2 MaxXMinY = MinP + XAxis;
+                        v2 MaxXMaxY = MinP + XAxis + YAxis;
 
-                    // NOTE: Lower triangle
-                    glTexCoord2f(MinUV.x, MinUV.y);
-                    glVertex2fv(MinXMinY.E);
+                        // NOTE: Lower triangle
+                        glTexCoord2f(MinUV.x, MinUV.y);
+                        glVertex2fv(MinXMinY.E);
 
-                    glTexCoord2f(MaxUV.x, MinUV.y);
-                    glVertex2fv(MaxXMinY.E);
+                        glTexCoord2f(MaxUV.x, MinUV.y);
+                        glVertex2fv(MaxXMinY.E);
 
-                    glTexCoord2f(MaxUV.x, MaxUV.y);
-                    glVertex2fv(MaxXMaxY.E);
-                    
-                    // NOTE: Upper triangle
-                    glTexCoord2f(MinUV.x, MinUV.y);
-                    glVertex2fv(MinXMinY.E);
+                        glTexCoord2f(MaxUV.x, MaxUV.y);
+                        glVertex2fv(MaxXMaxY.E);
+                        
+                        // NOTE: Upper triangle
+                        glTexCoord2f(MinUV.x, MinUV.y);
+                        glVertex2fv(MinXMinY.E);
 
-                    glTexCoord2f(MaxUV.x, MaxUV.y);
-                    glVertex2fv(MaxXMaxY.E);
+                        glTexCoord2f(MaxUV.x, MaxUV.y);
+                        glVertex2fv(MaxXMaxY.E);
 
-                    glTexCoord2f(MinUV.x, MaxUV.y);
-                    glVertex2fv(MinXMaxY.E);
+                        glTexCoord2f(MinUV.x, MaxUV.y);
+                        glVertex2fv(MinXMaxY.E);
 
-                    glEnd();
-                }
-            } break;
+                        glEnd();
+                    }
+                } break;
 
-            case RenderGroupEntryType_render_entry_rectangle:
-            {
-                render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
-                glDisable(GL_TEXTURE_2D);
-                OpenGLRectangle(Entry->P, Entry->P + Entry->Dim, Entry->PremulColor);
-#if 0
-                // NOTE: Debug outlining
-                glBegin(GL_LINES);
-                glColor4f(0, 0, 0, Entry->PremulColor.a);
-                OpenGLLineVertices(Entry->P, Entry->P + Entry->Dim);
-                glEnd();
-#endif
-                glEnable(GL_TEXTURE_2D);
-            } break;
-
-            case RenderGroupEntryType_render_entry_coordinate_system:
-            {
-                render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
-            } break;
-
-            case RenderGroupEntryType_render_entry_blend_render_target:
-            {
-                render_entry_blend_render_target *Entry = (render_entry_blend_render_target *)Data;
-                if(UseRenderTargets)
+                case RenderGroupEntryType_render_entry_rectangle:
                 {
-                    glBindTexture(GL_TEXTURE_2D, GlobalFramebufferTextures[Entry->SourceTargetIndex]);
-                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                    OpenGLRectangle(V2(0, 0), V2((r32)Commands->Width, (r32)Commands->Height),
-                                    V4(1, 1, 1, Entry->Alpha));
-                    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-                }
-            } break;
+                    render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
+                    glDisable(GL_TEXTURE_2D);
+                    OpenGLRectangle(Entry->P, Entry->P + Entry->Dim, Entry->PremulColor);
+#if 0
+                    // NOTE: Debug outlining
+                    glBegin(GL_LINES);
+                    glColor4f(0, 0, 0, Entry->PremulColor.a);
+                    OpenGLLineVertices(Entry->P, Entry->P + Entry->Dim);
+                    glEnd();
+#endif
+                    glEnable(GL_TEXTURE_2D);
+                } break;
 
-            InvalidDefaultCase;
+                case RenderGroupEntryType_render_entry_coordinate_system:
+                {
+                    render_entry_coordinate_system *Entry = (render_entry_coordinate_system *)Data;
+                } break;
+
+                case RenderGroupEntryType_render_entry_blend_render_target:
+                {
+                    render_entry_blend_render_target *Entry = (render_entry_blend_render_target *)Data;
+                    if(UseRenderTargets)
+                    {
+                        glBindTexture(GL_TEXTURE_2D, GlobalFramebufferTextures[Entry->SourceTargetIndex]);
+                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                        OpenGLRectangle(V2(0, 0), V2((r32)Commands->Width, (r32)Commands->Height),
+                                        V4(1, 1, 1, Entry->Alpha));
+                        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                    }
+                } break;
+
+                InvalidDefaultCase;
+            }
         }
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if(UseRenderTargets)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 
     if(GlobalShowSortGroups)
     {

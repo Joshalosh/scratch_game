@@ -1192,7 +1192,7 @@ BlendRenderTarget(rectangle2i Rect, loaded_bitmap *DestTarget, r32 Alpha, loaded
                          Rect.MinY*SourceTarget->Pitch);
 
         s32 DestRowAdvance = DestTarget->Pitch;
-        s32 SourceRowAdvance = DestTarget->Pitch;
+        s32 SourceRowAdvance = SourceTarget->Pitch;
 
         int MinY = Rect.MinY;
         int MaxY = Rect.MaxY;
