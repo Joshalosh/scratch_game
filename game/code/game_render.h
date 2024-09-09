@@ -68,3 +68,25 @@ IsZSprite(sprite_bound A)
     return(Result);
 }
 
+struct texture_op_allocate
+{
+    u32 Width;
+    u32 Height;
+    void *Data;
+
+    void **ResultHandle;
+};
+struct texture_op_deallocate
+{
+    void *Handle;
+};
+struct texture_op
+{
+    texture_op *Next;
+    b32 IsAllocate;
+    union 
+    {
+        texture_op_allocate Allocate;
+        texture_op_deallocate Deallocate;
+    };
+};

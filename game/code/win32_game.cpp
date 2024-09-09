@@ -1853,11 +1853,8 @@ WinMain(HINSTANCE Instance,
             //ToggleFullScreen(Window); 
             HDC OpenGLDC = GetDC(Window);
             HGLRC OpenGLRC = 0;
-#if 1
+
             OpenGLRC = Win32InitOpenGL(OpenGLDC);
-#else
-            GlobalRenderingType = Win32RenderType_RenderSoftware_DisplayGDI;
-#endif
 
             win32_thread_startup HighPriStartups[6] = {};
             platform_work_queue HighPriorityQueue = {};
@@ -1949,8 +1946,6 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.ReadDataFromFile = Win32ReadDataFromFile;
             GameMemory.PlatformAPI.FileError = Win32FileError;
 
-            GameMemory.PlatformAPI.AllocateTexture = AllocateTexture;
-            GameMemory.PlatformAPI.DeallocateTexture = DeallocateTexture;
             GameMemory.PlatformAPI.AllocateMemory = Win32AllocateMemory;
             GameMemory.PlatformAPI.DeallocateMemory = Win32DeallocateMemory;
 

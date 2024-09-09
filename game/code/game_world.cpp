@@ -224,10 +224,10 @@ PackEntityIntoChunk(world *World, sim_region *SimRegion, entity *Source, world_c
         world_entity_block *NewBlock = World->FirstFreeBlock;
         World->FirstFreeBlock = NewBlock->Next;
 
+        ClearWorldEntityBlock(NewBlock);
+
         NewBlock->Next = Chunk->FirstBlock;
         Chunk->FirstBlock = NewBlock;
-
-        ClearWorldEntityBlock(Chunk->FirstBlock);
     }
 
     world_entity_block *Block = Chunk->FirstBlock;

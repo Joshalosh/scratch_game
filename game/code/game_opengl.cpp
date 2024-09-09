@@ -288,7 +288,8 @@ OpenGLDrawBoundsRecursive(sort_sprite_bound *Bounds, u32 BoundIndex)
     }
 }
 
-PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
+internal void *
+OpenGLAllocateTexture(u32 Width, u32 Height, void *Data)
 {
     GLuint Handle;
     glGenTextures(1, &Handle);
@@ -304,17 +305,9 @@ PLATFORM_ALLOCATE_TEXTURE(AllocateTexture)
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    // TODO: This should be removed
-    glFlush();
-
     Assert(sizeof(Handle) <= sizeof(void *));
-    return(PointerFromU32(void, Handle));
-}
-
-PLATFORM_DEALLOCATE_TEXTURE(DeallocateTexture)
-{
-    GLuint Handle = U32FromPointer(Texture);
-    glDeleteTextures(1, &Handle);
+    void *Result = PointerFromU32(void, Handle);
+    return(Result);
 }
 
 internal void
@@ -340,7 +333,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
         glGenFramebuffers(NewCount, GlobalFramebufferHandles + GlobalFramebufferCount);
         for(u32 TargetIndex = GlobalFramebufferCount; TargetIndex <= NewFramebufferCount; ++TargetIndex)
         {
-            GLuint TextureHandle = U32FromPointer(AllocateTexture(GetWidth(DrawRegion), GetHeight(DrawRegion), 0));
+            GLuint TextureHandle = U32FromPointer(OpenGLAllocateTexture(GetWidth(DrawRegion), GetHeight(DrawRegion), 0));
             GlobalFramebufferTextures[TargetIndex] = TextureHandle;
             glBindFramebuffer(GL_FRAMEBUFFER, GlobalFramebufferHandles[TargetIndex]);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TextureHandle, 0);
@@ -476,7 +469,7 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
                     render_entry_rectangle *Entry = (render_entry_rectangle *)Data;
                     glDisable(GL_TEXTURE_2D);
                     OpenGLRectangle(Entry->P, Entry->P + Entry->Dim, Entry->PremulColor);
-#if 0
+#if 1
                     // NOTE: Debug outlining
                     glBegin(GL_LINES);
                     glColor4f(0, 0, 0, Entry->PremulColor.a);
@@ -543,4 +536,23 @@ OpenGLRenderCommands(game_render_commands *Commands, game_render_prep *Prep,
         }
     }
 #pragma warning(pop)
+}
+
+internal void
+OpenGLManageTextures(texture_op *First)
+{
+    for(texture_op *Op = First; Op; Op = Op->Next)
+    {
+        if(Op->IsAllocate)
+        {
+            *Op->Allocate.ResultHandle = OpenGLAllocateTexture(Op->Allocate.Width, Op->Allocate.Height, 
+                                                               Op->Allocate.Data);
+        }
+        else 
+        {
+
+            GLuint Handle = U32FromPointer(Op->Deallocate.Handle);
+            glDeleteTextures(1, &Handle);
+        }
+    }
 }

@@ -640,10 +640,10 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     v2 MouseP = {Input->MouseX, Input->MouseY};
 
     real32 WidthOfMonitor = 0.635f; // Horizontal measurement of monitor in metres
-    real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
+    real32 MetresToPixels = (real32)DrawBuffer->Width/WidthOfMonitor;
 
-    real32 FocalLength = 0.6f;
-    real32 DistanceAboveGround = 9.0f;
+    real32 FocalLength = 0.3f;
+    real32 DistanceAboveGround = 11.0f;
     Perspective(RenderGroup, MetresToPixels, FocalLength, DistanceAboveGround);
 
     v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 0.0f);

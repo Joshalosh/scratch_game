@@ -51,7 +51,9 @@ LoadAssetWorkDirectly(load_asset_work *Work)
             case FinaliseAsset_Bitmap:
             {
                 loaded_bitmap *Bitmap = &Work->Asset->Header->Bitmap;
+#if 0
                 Bitmap->TextureHandle = Platform.AllocateTexture(Bitmap->Width, Bitmap->Height, Bitmap->Memory);
+#endif
             } break;
         }
     }
@@ -224,7 +226,9 @@ AcquireAssetMemory(game_assets *Assets, u32 Size, u32 Index, asset_header_type A
 
                     if(Asset->Header->AssetType == AssetType_Bitmap)
                     {
+#if 0
                         Platform.DeallocateTexture(Asset->Header->Bitmap.TextureHandle);
+#endif
                     }
 
                     Block = (asset_memory_block *)Asset->Header - 1;
