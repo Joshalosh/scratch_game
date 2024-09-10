@@ -19,6 +19,21 @@ struct load_asset_work
     finalise_asset_operation FinaliseOperation;
     u32 FinalState;
 };
+
+internal void
+AddOp(platform_texture_op_queue *Queue, texture_op Op)
+{
+    BeginTicketMutex(&TextureOpMutex);
+
+    // TODO: Perhaps I should device a soft failure case for running out of ops
+    Assert(Queue->FirstFree);
+
+    GetFromFreeList();
+    AddToPendingList();
+
+    EndTicketMutex(&TextureOpMutex);
+}
+
 internal void
 LoadAssetWorkDirectly(load_asset_work *Work)
 {
@@ -51,9 +66,13 @@ LoadAssetWorkDirectly(load_asset_work *Work)
             case FinaliseAsset_Bitmap:
             {
                 loaded_bitmap *Bitmap = &Work->Asset->Header->Bitmap;
-#if 0
-                Bitmap->TextureHandle = Platform.AllocateTexture(Bitmap->Width, Bitmap->Height, Bitmap->Memory);
-#endif
+                texture_op Op = {};
+                Op.IsAllocate = true;
+                Op.Allocate.Width = Bitmap->Width;
+                Op.Allocate.Height = Bitmap->Height;
+                Op.Allocate.Data = Bitmap->Memory;
+                Op.Allocate.ResultHandle = &Bitmap->TextureHandle;
+                AddOp(Op);
             } break;
         }
     }
@@ -65,6 +84,8 @@ LoadAssetWorkDirectly(load_asset_work *Work)
         ZeroSize(Work->Size, Work->Destination);
     }
 
+    // TODO: Probably don't want to set this here, but rather on the 
+    // queue, for textures
     Work->Asset->State = Work->FinalState;
 }
 internal PLATFORM_WORK_QUEUE_CALLBACK(LoadAssetWork)
@@ -226,9 +247,10 @@ AcquireAssetMemory(game_assets *Assets, u32 Size, u32 Index, asset_header_type A
 
                     if(Asset->Header->AssetType == AssetType_Bitmap)
                     {
-#if 0
-                        Platform.DeallocateTexture(Asset->Header->Bitmap.TextureHandle);
-#endif
+                        texture_op Op = {};
+                        Op.IsAllocate = false;
+                        Op.Deallocate.Handle = Asset->Header->Bitmap.TextureHandle;
+                        AddOp(Op);
                     }
 
                     Block = (asset_memory_block *)Asset->Header - 1;

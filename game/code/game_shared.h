@@ -19,6 +19,25 @@ global_variable v3 DebugColorTable[] =
     //{0, 0.5f, 1},
 };
 
+struct ticket_mutex
+{
+    u64 volatile Ticket;
+    u64 volatile Serving;
+};
+
+inline void
+BeginTicketMutex(ticket_mutex *Mutex)
+{
+    u64 Ticket = AtomicAddU64(&Mutex->Ticket, 1);
+    while(Ticket != Mutex->Serving);
+}
+
+inline void
+EndTicketMutex(ticket_mutex *Mutex)
+{
+    AtomicAddU64(&Mutex->Serving, 1);
+}
+
 inline b32
 IsEndOfLine(char C)
 {

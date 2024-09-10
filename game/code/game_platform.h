@@ -521,6 +521,13 @@ typedef PLATFORM_DEALLOCATE_MEMORY(platform_deallocate_memory);
 typedef void platform_add_entry(platform_work_queue *Queue, platform_work_queue_callback *Callback, void *Data);
 typedef void platform_complete_all_work(platform_work_queue *Queue);
 
+struct platform_texture_op_queue
+{
+    struct texture_op *First;
+    texture_op *Last;
+    texture_op *FirstFree;
+};
+
 typedef struct platform_api
 {
     platform_add_entry *AddEntry;
@@ -562,6 +569,7 @@ typedef struct game_memory
 
     platform_work_queue *HighPriorityQueue;
     platform_work_queue *LowPriorityQueue;
+    platform_texture_op_queue *TextureOpQueue;
 
     b32 ExecutableReloaded;
     platform_api PlatformAPI;
