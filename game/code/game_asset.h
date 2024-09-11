@@ -94,6 +94,8 @@ struct asset_memory_block
 
 struct game_assets
 {
+    platform_texture_op_queue *TextureOpQueue;
+
     u32 NextGenerationID;
 
     // TODO: This back pointer kind of sucks.

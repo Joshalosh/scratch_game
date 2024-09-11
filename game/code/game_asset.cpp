@@ -18,20 +18,33 @@ struct load_asset_work
 
     finalise_asset_operation FinaliseOperation;
     u32 FinalState;
+
+    platform_texture_op_queue *TextureOpQueue;
 };
 
 internal void
-AddOp(platform_texture_op_queue *Queue, texture_op Op)
+AddOp(platform_texture_op_queue *Queue, texture_op *Source)
 {
-    BeginTicketMutex(&TextureOpMutex);
+    BeginTicketMutex(&Queue->Mutex);
 
     // TODO: Perhaps I should device a soft failure case for running out of ops
     Assert(Queue->FirstFree);
+    texture_op *Dest = Queue->FirstFree;
+    Queue->FirstFree = Dest->Next;
 
-    GetFromFreeList();
-    AddToPendingList();
+    *Dest = *Source;
+    Assert(Dest->Next == 0);
 
-    EndTicketMutex(&TextureOpMutex);
+    if(Queue->Last)
+    {
+        Queue->Last = Queue->Last->Next = Dest;
+    }
+    else 
+    {
+        Queue->First = Queue->Last = Dest;
+    }
+
+    EndTicketMutex(&Queue->Mutex);
 }
 
 internal void
@@ -72,7 +85,7 @@ LoadAssetWorkDirectly(load_asset_work *Work)
                 Op.Allocate.Height = Bitmap->Height;
                 Op.Allocate.Data = Bitmap->Memory;
                 Op.Allocate.ResultHandle = &Bitmap->TextureHandle;
-                AddOp(Op);
+                AddOp(Work->TextureOpQueue, &Op);
             } break;
         }
     }
@@ -250,7 +263,7 @@ AcquireAssetMemory(game_assets *Assets, u32 Size, u32 Index, asset_header_type A
                         texture_op Op = {};
                         Op.IsAllocate = false;
                         Op.Deallocate.Handle = Asset->Header->Bitmap.TextureHandle;
-                        AddOp(Op);
+                        AddOp(Assets->TextureOpQueue, &Op);
                     }
 
                     Block = (asset_memory_block *)Asset->Header - 1;
@@ -341,6 +354,7 @@ LoadBitmap(game_assets *Assets, bitmap_id ID, b32 Immediate)
                 Work.Destination = Bitmap->Memory;
                 Work.FinaliseOperation = FinaliseAsset_Bitmap;
                 Work.FinalState = AssetState_Loaded;
+                Work.TextureOpQueue = Assets->TextureOpQueue;
                 if(Task)
                 {
                     load_asset_work *TaskWork = PushStruct(&Task->Arena, load_asset_work, NoClear());
@@ -625,7 +639,8 @@ GetBestMatchFontFrom(game_assets *Assets, asset_type_id TypeID, asset_vector *Ma
 }
 
 internal game_assets *
-AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState)
+AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState,
+                   platform_texture_op_queue *TextureOpQueue)
 {
     TIMED_FUNCTION();
 

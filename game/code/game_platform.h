@@ -266,6 +266,52 @@ SafeTruncateToU16(u32 Value)
     return(Result);
 }
 
+inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
+{
+    uint32_t Result = _InterlockedCompareExchange((long volatile *)Value, New, Expected);
+
+    return(Result);
+}
+inline u64 AtomicExchangeU64(u64 volatile *Value, u64 New)
+{
+    u64 Result = _InterlockedExchange64((__int64 volatile *)Value, New);
+
+    return(Result);
+}
+inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
+{
+    // Returns the original value _prior_ to adding.
+    u64 Result = _InterlockedExchangeAdd64((__int64 volatile *)Value, Addend);
+
+    return(Result);
+}
+inline u32 GetThreadID(void)
+{
+    u8 *ThreadLocalStorage = (u8 *)__readgsqword(0x30);
+    u32 ThreadID = *(u32 *)(ThreadLocalStorage + 0x48);
+
+    return(ThreadID);
+}
+
+struct ticket_mutex
+{
+    u64 volatile Ticket;
+    u64 volatile Serving;
+};
+
+inline void
+BeginTicketMutex(ticket_mutex *Mutex)
+{
+    u64 Ticket = AtomicAddU64(&Mutex->Ticket, 1);
+    while(Ticket != Mutex->Serving);
+}
+
+inline void
+EndTicketMutex(ticket_mutex *Mutex)
+{
+    AtomicAddU64(&Mutex->Serving, 1);
+}
+
 /*
   Services that the platform layer provides to the game
 */
@@ -523,6 +569,8 @@ typedef void platform_complete_all_work(platform_work_queue *Queue);
 
 struct platform_texture_op_queue
 {
+    ticket_mutex Mutex;
+
     struct texture_op *First;
     texture_op *Last;
     texture_op *FirstFree;
@@ -588,33 +636,6 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 #if COMPILER_MSVC
 #define CompletePreviousReadsBeforeFutureReads _ReadBarrier()
 #define CompletePreviousWritesBeforeFutureWrites _WriteBarrier()
-inline uint32_t AtomicCompareExchangeUInt32(uint32_t volatile *Value, uint32_t New, uint32_t Expected)
-{
-    uint32_t Result = _InterlockedCompareExchange((long volatile *)Value, New, Expected);
-
-    return(Result);
-}
-inline u64 AtomicExchangeU64(u64 volatile *Value, u64 New)
-{
-    u64 Result = _InterlockedExchange64((__int64 volatile *)Value, New);
-
-    return(Result);
-}
-inline u64 AtomicAddU64(u64 volatile *Value, u64 Addend)
-{
-    // Returns the original value _prior_ to adding.
-    u64 Result = _InterlockedExchangeAdd64((__int64 volatile *)Value, Addend);
-
-    return(Result);
-}
-inline u32 GetThreadID(void)
-{
-    u8 *ThreadLocalStorage = (u8 *)__readgsqword(0x30);
-    u32 ThreadID = *(u32 *)(ThreadLocalStorage + 0x48);
-
-    return(ThreadID);
-}
-
 #elif COMPILER_LLVM
 // TODO: Does LLVM have real read-specific barriers yet?
 #define CompletePreviousReadsBeforeFutureReads asm volatile("" ::: "memory")
