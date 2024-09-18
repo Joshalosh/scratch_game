@@ -38,21 +38,6 @@ struct opengl_info
     b32 GL_ARB_framebuffer_object;
 };
 
-internal s32
-OpenGLParseNumber(char *At)
-{
-    s32 Result = 0;
-
-    while((*At >= '0') && (*At <= '9'))
-    {
-        Result *= 10;
-        Result += (*At - '0');
-        ++At;
-    }
-
-    return(Result);
-}
-
 internal opengl_info
 OpenGLGetInfo(b32 ModernContext)
 {
@@ -106,8 +91,8 @@ OpenGLGetInfo(b32 ModernContext)
     s32 Minor = 0;
     if(MinorAt)
     {
-        Major = OpenGLParseNumber(MajorAt);
-        Minor = OpenGLParseNumber(MinorAt);
+        Major = S32FromZ(MajorAt);
+        Minor = S32FromZ(MinorAt);
     }
 
     if((Major > 2) || ((Major == 2) && (Minor >= 1)))

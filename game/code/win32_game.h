@@ -113,7 +113,5 @@ struct platform_work_queue
 
 struct win32_thread_startup
 {
-    HDC OpenGLDC;
-    HGLRC OpenGLRC;
     platform_work_queue *Queue;
 };

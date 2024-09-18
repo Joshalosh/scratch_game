@@ -510,20 +510,6 @@ int Win32OpenGLAttribs[] =
     0,
 };
 
-internal win32_thread_startup
-Win32GetThreadStartupForGL(HDC OpenGLDC, HGLRC ShareContext)
-{
-    win32_thread_startup Result = {};
-
-    Result.OpenGLDC = OpenGLDC;
-    if(wglCreateContextAttribsARB)
-    {
-        Result.OpenGLRC = wglCreateContextAttribsARB(OpenGLDC, ShareContext, Win32OpenGLAttribs);
-    }
-
-    return(Result);
-}
-
 internal void
 Win32SetPixelFormat(HDC WindowDC)
 {
@@ -1327,142 +1313,6 @@ Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
     return(Result);
 }
 
-#if 0
-internal void
-HandleDebugCycleCounters(game_memory *Memory)
-{
-#if GAME_INTERNAL
-    OutputDebugStringA("DEBUG CYCLE COUNTS:\n");
-    for(int CounterIndex = 0; CounterIndex < ArrayCount(Memory->Counters); ++CounterIndex)
-    {
-        debug_cycle_counter *Counter = Memory->Counters + CounterIndex;
-
-        if(Counter->HitCount)
-        {
-            char TextBuffer[256];
-            _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "  %d: %I64ucy %uh %I64ucy/h\n",
-                        CounterIndex,
-                        Counter->CycleCount,
-                        Counter->HitCount,
-                        Counter->CycleCount / Counter->HitCount);
-            OutputDebugStringA(TextBuffer);
-            Counter->HitCount = 0;
-            Counter->CycleCount = 0;
-        }
-    }
-#endif
-}
-#endif
-
-#if 0
-
-internal void
-Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
-                       int X, int Top, int Bottom, uint32_t Colour)
-{
-    if(Top <= 0)
-    {
-        Top = 0;
-    }
-
-    if(Bottom > Backbuffer->Height)
-    {
-        Bottom = Backbuffer->Height;
-    }
-
-    if((X >= 0) && (X < Backbuffer->Width))
-    {
-        uint8_t *Pixel = ((uint8_t *)Backbuffer->Memory +
-                          X*Backbuffer->BytesPerPixel +
-                          Top*Backbuffer->Pitch);
-        for(int Y = Top; Y < Bottom; ++Y);
-        {
-            *(uint32_t *)Pixel = Colour;
-            Pixel += Backbuffer->Pitch;
-        }
-    }
-}
-
-inline void
-Win32DrawSoundBufferMarker(win32_offscreen_buffer *Backbuffer,
-                           win32_sound_output *SoundOutput,
-                           real32 C, int PadX, int Top, int Bottom,
-                           DWORD Value, uint32_t Colour)
-{
-    real32 XReal32 = (C * (real32)Value);
-    int X = PadX + (int)XReal32;
-    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, Colour);
-}
-
-internal void
-Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
-                      int MarkerCount, win32_debug_time_marker *Markers,
-                      int CurrentMarkerIndex,
-                      win32_sound_output *SoundOutput, real32 TargetSecondsPerFrame)
-{
-    int PadX = 16;
-    int PadY = 16;
-
-    int LineHeight = 64;
-
-    real32 C = (real32)(Backbuffer->Width - 2*PadX) / (real32)SoundOutput->SecondaryBufferSize;
-    for(int MarkerIndex = 0; MarkerIndex < MarkerCount; ++MarkerIndex)
-    {
-        win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
-        Assert(ThisMarker->OutputPlayCursor < SoundOutput->SecondaryBufferSize);
-        Assert(ThisMarker->OutputWriteCursor < SoundOutput->SecondaryBufferSize);
-        Assert(ThisMarker->OutputLocation < SoundOutput->SecondaryBufferSize);
-        Assert(ThisMarker->OutputByteCount < SoundOutput->SecondaryBufferSize);
-        Assert(ThisMarker->FlipPlayCursor < SoundOutput->SecondaryBufferSize);
-        Assert(ThisMarker->FlipWriteCursor < SoundOutput->SecondaryBufferSize);
-
-        DWORD PlayColor = 0xFFFFFFFF;
-        DWORD WriteColor = 0xFFFF0000;
-        DWORD ExpectedFlipColor = 0xFFFFFF00;
-        DWORD PlayWindowColor = 0xFFFF00FF;
-
-        int Top = PadY;
-        int Bottom = PadY + LineHeight;
-        if(MarkerIndex == CurrentMarkerIndex)
-        {
-            Top += LineHeight+PadY;
-            Bottom += LineHeight+PadY;
-
-            int FirstTop = Top;
-
-            Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                       ThisMarker->OutputPlayCursor, PlayColor);
-            Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                       ThisMarker->OutputWriteCursor, WriteColor);
-
-            Top += LineHeight+PadY;
-            Bottom += LineHeight+PadY;
-
-            Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                       ThisMarker->OutputLocation, PlayColor);
-            Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                       ThisMarker->OutputLocation + ThisMarker->OutputByteCount,
-                                       WriteColor);
-
-            Top += LineHeight+PadY;
-            Bottom += LineHeight+PadY;
-
-            Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, FirstTop, Bottom,
-                                       ThisMarker->ExpectedFlipPlayCursor, ExpectedFlipColor);
-        }
-
-        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                   ThisMarker->FlipPlayCursor, PlayColor);
-        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                   ThisMarker->FlipPlayCursor + 480*SoundOutput->BytesPerSample, PlayWindowColor);
-        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
-                                   ThisMarker->FlipWriteCursor, WriteColor);
-    }
-}
-
-#endif
-
 internal void
 Win32AddEntry(platform_work_queue *Queue, platform_work_queue_callback *Callback, void *Data)
 {
@@ -1525,11 +1375,6 @@ ThreadProc(LPVOID lpParameter)
 
     u32 TestThreadID = GetThreadID();
     Assert(TestThreadID == GetCurrentThreadId());
-
-    if(Thread->OpenGLRC)
-    {
-        wglMakeCurrent(Thread->OpenGLDC, Thread->OpenGLRC);
-    }
 
     for(;;)
     {
@@ -1861,8 +1706,6 @@ WinMain(HINSTANCE Instance,
             Win32MakeQueue(&HighPriorityQueue, ArrayCount(HighPriStartups), HighPriStartups);
 
             win32_thread_startup LowPriStartups[2] = {};
-            LowPriStartups[0] = Win32GetThreadStartupForGL(OpenGLDC, OpenGLRC);
-            LowPriStartups[1] = Win32GetThreadStartupForGL(OpenGLDC, OpenGLRC);
             platform_work_queue LowPriorityQueue = {};
             Win32MakeQueue(&LowPriorityQueue, ArrayCount(LowPriStartups), LowPriStartups);
 
@@ -1900,22 +1743,6 @@ WinMain(HINSTANCE Instance,
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(64);
             void *PushBuffer = Win32AllocateMemory(PushBufferSize);
-
-#if 0
-            // This tests the PlayCursor/WriteCursor update frequency
-            // on the game machine, it was 480 samples
-            while(GlobalRunning)
-            {
-                DWORD PlayCursor;
-                DWORD WriteCursor;
-                GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
-
-                char TextBuffer[256];
-                _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                            "PC:%u WC:%u\n", PlayCursor, WriteCursor);
-                OutputDebugStringA(TextBuffer);
-            }
-#endif
 
             // TODO: Probably remove MaxPossibleOverrun.
             u32 MaxPossibleOverrun = 2*8*sizeof(u16); 
@@ -1956,6 +1783,15 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.DEBUGExecuteSystemCommand = DEBUGExecuteSystemCommand;
             GameMemory.PlatformAPI.DEBUGGetProcessState = DEBUGGetProcessState;
 #endif
+            u32 TextureOpCount = 1024;
+            platform_texture_op_queue *TextureOpQueue = &GameMemory.TextureOpQueue;
+            TextureOpQueue->FirstFree = (texture_op *)VirtualAlloc(0, sizeof(texture_op)*TextureOpCount,
+                                                                   MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            for(u32 TextureOpIndex = 0; TextureOpIndex < (TextureOpCount - 1); ++TextureOpIndex)
+            {
+                texture_op *Op = TextureOpQueue->FirstFree + TextureOpIndex;
+                Op->Next = TextureOpQueue->FirstFree + TextureOpIndex + 1;
+            }
 
             Platform = GameMemory.PlatformAPI;
 
@@ -2398,14 +2234,6 @@ WinMain(HINSTANCE Instance,
                                 (((real32)AudioLatencyBytes / (real32)SoundOutput.BytesPerSample) /
                                  (real32)SoundOutput.SamplesPerSecond);
 
-#if 0
-                            char TextBuffer[256];
-                            _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                                        "BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%fs)\n",
-                                        ByteToLock, TargetCursor, BytesToWrite,
-                                        PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
-                            OutputDebugStringA(TextBuffer);
-#endif
 #endif
                             Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
                         }
@@ -2531,6 +2359,22 @@ WinMain(HINSTANCE Instance,
                     //
 
                     BEGIN_BLOCK("Frame Display");
+
+                    BeginTicketMutex(&TextureOpQueue->Mutex);
+                    texture_op *FirstTextureOp = TextureOpQueue->First;
+                    texture_op *LastTextureOp = TextureOpQueue->Last;
+                    TextureOpQueue->Last = TextureOpQueue->First = 0;
+                    EndTicketMutex(&TextureOpQueue->Mutex);
+
+                    if(FirstTextureOp)
+                    {
+                        Assert(LastTextureOp);
+                        OpenGLManageTextures(FirstTextureOp);
+                        BeginTicketMutex(&TextureOpQueue->Mutex);
+                        LastTextureOp->Next = TextureOpQueue->FirstFree;
+                        TextureOpQueue->FirstFree = FirstTextureOp;
+                        EndTicketMutex(&TextureOpQueue->Mutex);
+                    }
 
                     HDC DeviceContext = GetDC(Window);
                     Win32DisplayBufferInWindow(&HighPriorityQueue, &RenderCommands, DeviceContext,

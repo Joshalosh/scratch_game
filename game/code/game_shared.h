@@ -3,6 +3,8 @@
 #include "game_math.h"
 #include "game_memory.h"
 
+#include <stdarg.h>
+
 global_variable v3 DebugColorTable[] =
 {
     {1, 0, 0},
@@ -106,3 +108,79 @@ StringsAreEqual(memory_index ALength, char *A, memory_index BLength, char *B)
     return(Result);
 }
 
+internal s32
+S32FromZ(char *At)
+{
+    s32 Result = 0;
+
+    while((*At >= '0') && (*At <= '9'))
+    {
+        Result *= 10;
+        Result += (*At - '0');
+        ++At;
+    }
+
+    return(Result);
+}
+
+struct format_dest
+{
+    umm Size;
+    char *At;
+};
+
+inline void
+OutChar(format_dest *Dest, char Value)
+{
+    if(Dest->Size)
+    {
+        --Dest->Size;
+        *Dest->At++ = Value;
+    }
+}
+
+internal umm
+FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
+{
+    format_dest Dest = {DestSize, DestInit};
+    if(Dest.Size)
+    {
+        char *At = Format;
+        while(At[0])
+        {
+            if(At[0] == '%')
+            {
+                // va_arg();
+                ++At;
+            }
+            else 
+            {
+                OutChar(&Dest, *At++);
+            }
+        }
+
+        if(Dest.Size)
+        {
+            Dest.At[0] = 0;
+        }
+        else 
+        {
+            Dest.At[-1] = 0;
+        }
+    }
+
+    umm Result = Dest.At - DestInit;
+    return(Result);
+}
+
+internal umm
+FormatString(umm DestSize, char *Dest, char *Format, ...)
+{
+    va_list ArgList;
+
+    va_start(ArgList, Format);
+    umm Result = FormatStringList(DestSize, Dest, Format, ArgList);
+    va_end(ArgList);
+
+    return(Result);
+}

@@ -645,6 +645,7 @@ AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *Tran
     TIMED_FUNCTION();
 
     game_assets *Assets = PushStruct(Arena, game_assets);
+    Assets->TextureOpQueue = TextureOpQueue;
 
     Assets->NextGenerationID = 0;
     Assets->InFlightGenerationCount = 0;

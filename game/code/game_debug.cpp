@@ -1,7 +1,4 @@
 
-// TODO: Stop using stdio
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "game_debug.h"
 #include "game_debug_ui.cpp"
@@ -30,10 +27,11 @@ DebugParseName(char *GUID)
             if(PipeCount == 0)
             {
                 Result.FilenameCount = (u32)(Scan - GUID);
-                Result.LineNumber = atoi(Scan + 1);
+                Result.LineNumber = S32FromZ(Scan + 1);
             }
             else if(PipeCount == 1)
             {
+                // TODO: Why is this a blank line?
 
             }
             else
@@ -198,8 +196,7 @@ DEBUGEventToText(char *Buffer, char *End, debug_element *Element, debug_event *E
 
     if(Flags & DEBUGVarToText_AddDebugUI)
     {
-        At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                          "#define DEBUGUI_");
+        At += FormatString(End - At, At, "#define DEBUGUI_");
     }
 
     if(Flags & DEBUGVarToText_AddName)
@@ -217,8 +214,7 @@ DEBUGEventToText(char *Buffer, char *End, debug_element *Element, debug_event *E
             }
         }
 
-        At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                          "%s%s ", UseName, (Flags & DEBUGVarToText_Colon) ? ":" : "");
+        At += FormatString((End - At), At, "%s%s ", UseName, (Flags & DEBUGVarToText_Colon) ? ":" : "");
     }
 
     if(Flags & DEBUGVarToText_AddValue)
@@ -227,8 +223,7 @@ DEBUGEventToText(char *Buffer, char *End, debug_element *Element, debug_event *E
         {
             case DebugType_r32:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "%f", Event->Value_r32);
+                At += FormatString(End - At, At, "%f", Event->Value_r32);
                 if(Flags & DEBUGVarToText_FloatSuffix)
                 {
                     *At++ = 'f';
@@ -239,68 +234,60 @@ DEBUGEventToText(char *Buffer, char *End, debug_element *Element, debug_event *E
             {
                 if(Flags & DEBUGVarToText_PrettyBools)
                 {
-                    At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                      "%s", Event->Value_b32 ? "true" : "false");
+                    At += FormatString(End - At, At, "%s", Event->Value_b32 ? "true" : "false");
                 }
                 else
                 {
-                    At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                      "%d", Event->Value_b32);
+                    At += FormatString(End - At, At, "%d", Event->Value_b32);
                 }
             } break;
 
             case DebugType_s32:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "%d", Event->Value_s32);
+                At += FormatString(End - At, At, "%d", Event->Value_s32);
             } break;
 
             case DebugType_u32:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "%u", Event->Value_u32);
+                At += FormatString(End - At, At, "%u", Event->Value_u32);
             } break;
 
             case DebugType_v2:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "V2(%f, %f)", Event->Value_v2.x, Event->Value_v2.y);
+                At += FormatString(End - At, At, "V2(%f, %f)", Event->Value_v2.x, Event->Value_v2.y);
             } break;
 
             case DebugType_v3:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "V3(%f, %f, %f)", Event->Value_v3.x, Event->Value_v3.y, Event->Value_v3.z);
+                At += FormatString(End - At, At,
+                                   "V3(%f, %f, %f)", Event->Value_v3.x, Event->Value_v3.y, Event->Value_v3.z);
             } break;
 
             case DebugType_v4:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "V4(%f, %f, %f, %f)",
-                                  Event->Value_v4.x, Event->Value_v4.y,
-                                  Event->Value_v4.z, Event->Value_v4.w);
+                At += FormatString(End - At, At, "V4(%f, %f, %f, %f)",
+                                   Event->Value_v4.x, Event->Value_v4.y,
+                                   Event->Value_v4.z, Event->Value_v4.w);
             } break;
 
             case DebugType_rectangle2:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "Rect2(%f, %f -> %f, %f)",
-                                  Event->Value_rectangle2.Min.x,
-                                  Event->Value_rectangle2.Min.y,
-                                  Event->Value_rectangle2.Max.x,
-                                  Event->Value_rectangle2.Max.y);
+                At += FormatString(End - At, At, "Rect2(%f, %f -> %f, %f)",
+                                   Event->Value_rectangle2.Min.x,
+                                   Event->Value_rectangle2.Min.y,
+                                   Event->Value_rectangle2.Max.x,
+                                   Event->Value_rectangle2.Max.y);
             } break;
             
             case DebugType_rectangle3:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "Rect3(%f, %f, %f -> %f, %f, %f)",
-                                  Event->Value_rectangle3.Min.x,
-                                  Event->Value_rectangle3.Min.y,
-                                  Event->Value_rectangle3.Min.z,
-                                  Event->Value_rectangle3.Max.x,
-                                  Event->Value_rectangle3.Max.y,
-                                  Event->Value_rectangle3.Max.z);
+                At += FormatString(End - At, At, "Rect3(%f, %f, %f -> %f, %f, %f)",
+                                   Event->Value_rectangle3.Min.x,
+                                   Event->Value_rectangle3.Min.y,
+                                   Event->Value_rectangle3.Min.z,
+                                   Event->Value_rectangle3.Max.x,
+                                   Event->Value_rectangle3.Max.y,
+                                   Event->Value_rectangle3.Max.z);
             } break;
 
             case DebugType_bitmap_id:
@@ -309,8 +296,7 @@ DEBUGEventToText(char *Buffer, char *End, debug_element *Element, debug_event *E
 
             default:
             {
-                At += _snprintf_s(At, (size_t)(End - At), (size_t)(End - At),
-                                  "UNHANDLED: %s", Event->GUID);
+                At += FormatString(End - At, At, "UNHANDLED: %s", Event->GUID);
             } break;
         }
     }
@@ -525,9 +511,7 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
         if(IsInRectangle(RegionRect, MouseP))
         {
             char TextBuffer[256];
-            _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "%s: %10ucy",
-                        Element->GUID, (u32)Node->Duration);
+            FormatString(sizeof(TextBuffer), TextBuffer, "%s: %10ucy", Element->GUID, (u32)Node->Duration);
             AddTooltip(DebugState, TextBuffer);
 
             // TODO: It would be better to generate a graph+element debug ID here
@@ -652,9 +636,8 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
                     if(IsInRectangle(RegionRect, MouseP))
                     {
                         char TextBuffer[256];
-                        _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                                    "%s: %10ucy",
-                                    Element->GUID, (u32)Node->Duration);
+                        FormatString(sizeof(TextBuffer), TextBuffer, "%s: %10ucy",
+                                     Element->GUID, (u32)Node->Duration);
                         AddTooltip(DebugState, TextBuffer);
 
                         debug_view *View = GetOrCreateDebugViewFor(DebugState, GraphID);
@@ -742,19 +725,17 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
         RunningSum += Stats->Sum;
 
         char TextBuffer[256];
-        _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                    "%10ucy %02.02f%% %4d %s",
-                    (u32)Stats->Sum, (PC*Stats->Sum), Stats->Count, 
-                    Element->GUID + Element->NameStartsAt);
+        FormatString(sizeof(TextBuffer), TextBuffer, "%10ucy %02.02f%% %4d %s",
+                     (u32)Stats->Sum, (PC*Stats->Sum), Stats->Count, 
+                     Element->GUID + Element->NameStartsAt);
         TextOutAt(DebugState, At, TextBuffer);
         rectangle2 TextRect = GetTextSize(DebugState, At, TextBuffer);
 
         if(IsInRectangle(TextRect, MouseP))
         {
             char TextBuffer[256];
-            _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                        "Cumulative to this point: %02.02f%%",
-                        (PC*RunningSum));
+            FormatString(sizeof(TextBuffer), TextBuffer, "Cumulative to this point: %02.02f%%",
+                         (PC*RunningSum));
             AddTooltip(DebugState, TextBuffer);
         }
 
@@ -825,7 +806,7 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
             if(IsInRectangle(RegionRect, MouseP))
             {
                 char TextBuffer[256];
-                _snprintf_s(TextBuffer, sizeof(TextBuffer), "%u", FrameIndex);
+                FormatString(sizeof(TextBuffer), TextBuffer, "%u", FrameIndex);
                 AddTooltip(DebugState, TextBuffer);
 
                 DebugState->NextHotInteraction = 
@@ -1019,12 +1000,11 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
             char Text[256];
 
             debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
-            _snprintf_s(Text, sizeof(Text),
-                        "Viewing frame time: %.02fms %de %dp %dd",
-                        MostRecentFrame->WallSecondsElapsed * 1000.0f,
-                        MostRecentFrame->StoredEventCount,
-                        MostRecentFrame->ProfileBlockCount,
-                        MostRecentFrame->DataBlockCount);
+            FormatString(sizeof(Text), Text, "Viewing frame time: %.02fms %de %dp %dd",
+                         MostRecentFrame->WallSecondsElapsed * 1000.0f,
+                         MostRecentFrame->StoredEventCount,
+                         MostRecentFrame->ProfileBlockCount,
+                         MostRecentFrame->DataBlockCount);
 
             BasicTextElement(Layout, Text, ItemInteraction);
         } break;
@@ -1032,9 +1012,8 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
         case DebugType_DebugMemoryInfo:
         {
             char Text[256];
-            _snprintf_s(Text, sizeof(Text),
-                        "Per-frame arena space remaining: %ukb",
-                        (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, AlignNoClear(1)) / 1024));
+            FormatString(sizeof(Text), Text, "Per-frame arena space remaining: %ukb",
+                         (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, AlignNoClear(1)) / 1024));
 
             BasicTextElement(Layout, Text, ItemInteraction);
         } break;
@@ -2017,12 +1996,11 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
     debug_event *HotEvent = 0;
 
     debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
-    _snprintf_s(DebugState->RootInfo, DebugState->RootInfoSize, DebugState->RootInfoSize,
-                "%.02fms %de %dp %dd",
-                MostRecentFrame->WallSecondsElapsed * 1000.0f,
-                MostRecentFrame->StoredEventCount,
-                MostRecentFrame->ProfileBlockCount,
-                MostRecentFrame->DataBlockCount);
+    FormatString(DebugState->RootInfoSize, DebugState->RootInfo, "%.02fms %de %dp %dd",
+                 MostRecentFrame->WallSecondsElapsed * 1000.0f,
+                 MostRecentFrame->StoredEventCount,
+                 MostRecentFrame->ProfileBlockCount,
+                 MostRecentFrame->DataBlockCount);
 
     DebugState->AltUI = Input->MouseButtons[PlatformMouseButton_Right].EndedDown;
     v2 MouseP = Unproject(RenderGroup, DefaultFlatTransform(), V2(Input->MouseX, Input->MouseY)).xy;
