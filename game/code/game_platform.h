@@ -77,6 +77,8 @@ typedef uint64_t u64;
 
 typedef real32 r32;
 typedef real64 r64;
+typedef real32 f32;
+typedef real64 f64;
 
 typedef uintptr_t umm;
 
