@@ -208,6 +208,21 @@ ReadVarArgFloat(u32 Length, va_list *ArgList)
     return(Result);
 }
 
+internal void
+U64ToASCII(format_dest *Dest, u64 Value, u32 Base, char *Digits)
+{
+    Assert(Base != 0);
+
+    do 
+    {
+        u64 DigitIndex = (Value % Base);
+        char Digit = Digits[DigitIndex];
+        OutChar(Dest, Digit);
+
+        Value /= Base;
+    } while (Value != 0);
+}
+
 internal umm
 FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
 {
@@ -333,32 +348,61 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     ++At;
                 }
 
+                char Temp[64];
+                format_dest TempDest = {ArrayCount(Temp), Temp};
+
+                char DecChars[] = "0123456789";
+                char LowerHexChars[] = "0123456789abcdef";
+                char UpperHexChars[] = "0123456789ABCDEF";
                 switch(*At)
                 {
                     case 'd':
                     case 'i':
                     {
                         s64 Value = ReadVarArgSignedInteger(IntegerLength, &ArgList);
+                        b32 WasNegative = (Value < 0);
+                        if(WasNegative)
+                        {
+                            Value = -Value;
+                        }
+                        U64ToASCII(&TempDest, (u64)Value, 10, DecChars);
+                        if(WasNegative)
+                        {
+                            OutChar(&TempDest, '-');
+                        }
+                        else if(ForceSign)
+                        {
+                            Assert(!PositiveSignIsBlank);
+                            OutChar(&TempDest, '+');
+                        }
+                        else if(PositiveSignIsBlank)
+                        {
+                            OutChar(&TempDest, ' ');
+                        }
                     } break;
 
                     case 'u':
                     {
                         u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        U64ToASCII(&TempDest, Value, 10, DecChars);
                     } break;
 
                     case 'o':
                     {
                         u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        U64ToASCII(&TempDest, Value, 8, DecChars);
                     } break;
 
                     case 'x':
                     {
                         u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        U64ToASCII(&TempDest, Value, 16, LowerHexChars);
                     } break;
 
                     case 'X':
                     {
                         u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        U64ToASCII(&TempDest, Value, 16, UpperHexChars);
                     } break;
 
                     case 'f':
@@ -405,11 +449,14 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     {
                         // TODO: How much is suppose to be read here?
                         int Value = va_arg(ArgList, int);
+                        OutChar(&TempDest, (char)Value);
                     } break;
 
                     case 's':
                     {
                         char *String = va_arg(ArgList, char *);
+
+                        // TODO: Obey precision, width, etc
 
                         for(char *Source = String; *Source; ++Source)
                         {
@@ -420,11 +467,13 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     case 'p':
                     {
                         void *Value = va_arg(ArgList, void *);
+                        U64ToASCII(&TempDest, *(umm *)&Value, 16, LowerHexChars);
                     } break;
 
                     case 'n':
                     {
                         int *TabDest = va_arg(ArgList, int *);
+                        *TabDest = (int)(Dest.At - DestInit);
                     } break;
 
                     case '%':
@@ -436,6 +485,12 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     {
                         Assert(!"Unrecognised format specifier");
                     } break;
+                }
+
+                while(TempDest.At != Temp)
+                {
+                    --TempDest.At;
+                    OutChar(&Dest, *TempDest.At);
                 }
 
                 if(*At)
