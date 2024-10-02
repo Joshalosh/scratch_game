@@ -150,6 +150,16 @@ OutChar(format_dest *Dest, char Value)
     }
 }
 
+inline void 
+OutChars(format_dest *Dest, char *Value)
+{
+    // TODO: This isn't a very fast way to do this
+    while(*Value)
+    {
+        OutChar(Dest, *Value++);
+    }
+}
+
 inline u64
 ReadVarArgUnsignedInteger(u32 Length, va_list *ArgList)
 {
@@ -223,6 +233,7 @@ U64ToASCII(format_dest *Dest, u64 Value, u32 Base, char *Digits)
     } while (Value != 0);
 }
 
+// NOTE: A custom printf implementation
 internal umm
 FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
 {
@@ -243,6 +254,7 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                 b32 AnnotateIfNotZero = false;
 
                 b32 Parsing = true;
+                b32 Reverse = true;
 
                 //
                 // NOTE: Handle the flags
@@ -348,8 +360,10 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     ++At;
                 }
 
-                char Temp[64];
-                format_dest TempDest = {ArrayCount(Temp), Temp};
+                char TempBuffer[64];
+                char *Temp = TempBuffer;
+                format_dest TempDest = {ArrayCount(TempBuffer), Temp};
+                char *Prefix = "";
 
                 char DecChars[] = "0123456789";
                 char LowerHexChars[] = "0123456789abcdef";
@@ -366,18 +380,20 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                             Value = -Value;
                         }
                         U64ToASCII(&TempDest, (u64)Value, 10, DecChars);
+
+                        // TODO: Make this a common routine once floating point is available
                         if(WasNegative)
                         {
-                            OutChar(&TempDest, '-');
+                            Prefix = "-";
                         }
                         else if(ForceSign)
                         {
                             Assert(!PositiveSignIsBlank);
-                            OutChar(&TempDest, '+');
+                            Prefix = "+";
                         }
                         else if(PositiveSignIsBlank)
                         {
-                            OutChar(&TempDest, ' ');
+                            Prefix = " ";
                         }
                     } break;
 
@@ -391,18 +407,30 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     {
                         u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
                         U64ToASCII(&TempDest, Value, 8, DecChars);
+                        if(AnnotateIfNotZero && (Value != 0))
+                        {
+                            Prefix = "0";
+                        }
                     } break;
 
                     case 'x':
                     {
                         u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
                         U64ToASCII(&TempDest, Value, 16, LowerHexChars);
+                        if(AnnotateIfNotZero && (Value != 0))
+                        {
+                            Prefix = "0x";
+                        }
                     } break;
 
                     case 'X':
                     {
                         u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
                         U64ToASCII(&TempDest, Value, 16, UpperHexChars);
+                        if(AnnotateIfNotZero && (Value != 0))
+                        {
+                            Prefix = "0X";
+                        }
                     } break;
 
                     case 'f':
@@ -450,18 +478,30 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                         // TODO: How much is suppose to be read here?
                         int Value = va_arg(ArgList, int);
                         OutChar(&TempDest, (char)Value);
+                        Reverse = false;
                     } break;
 
                     case 's':
                     {
                         char *String = va_arg(ArgList, char *);
+                        Reverse = false;
 
                         // TODO: Obey precision, width, etc
 
-                        for(char *Source = String; *Source; ++Source)
+                        Temp = String;
+                        if(PrecisionSpecified)
                         {
-                            OutChar(&Dest, *Source);
+                            TempDest.Size = 0;
+                            for(char *Scan = String; *Scan && (TempDest.Size < Precision); ++Scan)
+                            {
+                                ++TempDest.Size;
+                            }
                         }
+                        else 
+                        {
+                            TempDest.Size = StringLength(String);
+                        }
+                        TempDest.At = String + TempDest.Size;
                     } break;
 
                     case 'p':
@@ -487,10 +527,80 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     } break;
                 }
 
-                while(TempDest.At != Temp)
+                if(TempDest.At - Temp)
                 {
-                    --TempDest.At;
-                    OutChar(&Dest, *TempDest.At);
+                    smm UsePrecision = Precision;
+                    if(!PrecisionSpecified)
+                    {
+                        UsePrecision = (TempDest.At - Temp);
+                    }
+
+                    smm PrefixLength = StringLength(Prefix);
+                    smm UseWidth = Width;
+                    if(!WidthSpecified)
+                    {
+                        UseWidth = UsePrecision + PrefixLength;
+                    }
+
+                    if(PadWithZeros)
+                    {
+                        Assert(!LeftJustify); // NOTE: Not a problem, but no way to do it?
+                        LeftJustify = false;
+                    }
+
+                    if(!LeftJustify)
+                    {
+                        while(UseWidth > (UsePrecision + PrefixLength))
+                        {
+                            OutChar(&Dest, PadWithZeros ? '0' : ' ');
+                            --UseWidth;
+                        }
+                    }
+
+                    for(char *Pre = Prefix; *Pre; ++Pre)
+                    {
+                        OutChar(&Dest, *Pre);
+                        --UseWidth;
+                    }
+
+                    if(UsePrecision > UseWidth)
+                    {
+                        UsePrecision = UseWidth;
+                    }
+                    while(UsePrecision > (TempDest.At - Temp))
+                    {
+                        OutChar(&Dest, '0');
+                        --UsePrecision;
+                        --UseWidth;
+                    }
+                    if(Reverse)
+                    {
+                        while(UsePrecision && (TempDest.At != Temp))
+                        {
+                            --TempDest.At;
+                            OutChar(&Dest, *TempDest.At);
+                            --UsePrecision;
+                            --UseWidth;
+                        }
+                    }
+                    else 
+                    {
+                        while(UsePrecision && (TempDest.At != Temp))
+                        {
+                            OutChar(&Dest, *Temp++);
+                            --UsePrecision;
+                            --UseWidth;
+                        }
+                    }
+
+                    if(LeftJustify)
+                    {
+                        while(UseWidth)
+                        {
+                            OutChar(&Dest, ' ');
+                            --UseWidth;
+                        }
+                    }
                 }
 
                 if(*At)
