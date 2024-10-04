@@ -218,11 +218,18 @@ ReadVarArgFloat(u32 Length, va_list *ArgList)
     return(Result);
 }
 
+char DecChars[] = "0123456789";
+char LowerHexChars[] = "0123456789abcdef";
+char UpperHexChars[] = "0123456789ABCDEF";
 internal void
 U64ToASCII(format_dest *Dest, u64 Value, u32 Base, char *Digits)
 {
     Assert(Base != 0);
 
+    // TODO: Put reversal here instead. Seems like it makes more sense
+    // to be here
+
+    char *Start = Dest->At;
     do 
     {
         u64 DigitIndex = (Value % Base);
@@ -231,7 +238,42 @@ U64ToASCII(format_dest *Dest, u64 Value, u32 Base, char *Digits)
 
         Value /= Base;
     } while (Value != 0);
+    char *End = Dest->At;
+
+    while(Start < End)
+    {
+        --End;
+        char Temp = *End;
+        *End = *Start;
+        *Start = Temp;
+        ++Start;
+    }
 }
+
+internal void
+F64ToASCII(format_dest *Dest, f64 Value, u32 Precision)
+{
+    if(Value < 0)
+    {
+        OutChar(Dest, '-');
+        Value = -Value;
+    }
+
+    u64 IntegerPart = (u64)Value;
+    Value -= (f64)IntegerPart;
+    U64ToASCII(Dest, IntegerPart, 10, DecChars);
+
+    OutChar(Dest, '.');
+
+    // NOTE: This is not an accurate way to do this
+    for(u32 PrecisionIndex = 0; PrecisionIndex < Precision; ++PrecisionIndex)
+    {
+        Value *= 10.0f;
+        u32 Integer = (u32)Value;
+        Value -= (f32)Integer;
+        OutChar(Dest, DecChars[Integer]);
+    }
+};
 
 // NOTE: A custom printf implementation
 internal umm
@@ -254,7 +296,6 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                 b32 AnnotateIfNotZero = false;
 
                 b32 Parsing = true;
-                b32 Reverse = true;
 
                 //
                 // NOTE: Handle the flags
@@ -321,6 +362,13 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     }
                 }
 
+                // TODO: Right now our routine doesn't allow non-specified
+                // precisions, so we just set non-specified precisions to a specified value
+                if(!PrecisionSpecified)
+                {
+                    Precision = 6;
+                }
+
                 //
                 // NOTE: Handle the length
                 //
@@ -365,9 +413,6 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                 format_dest TempDest = {ArrayCount(TempBuffer), Temp};
                 char *Prefix = "";
 
-                char DecChars[] = "0123456789";
-                char LowerHexChars[] = "0123456789abcdef";
-                char UpperHexChars[] = "0123456789ABCDEF";
                 switch(*At)
                 {
                     case 'd':
@@ -436,41 +481,49 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     case 'f':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'F':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'e':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'E':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'g':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'G':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'a':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'A':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        F64ToASCII(&TempDest, Value, Precision);
                     } break;
 
                     case 'c':
@@ -478,13 +531,11 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                         // TODO: How much is suppose to be read here?
                         int Value = va_arg(ArgList, int);
                         OutChar(&TempDest, (char)Value);
-                        Reverse = false;
                     } break;
 
                     case 's':
                     {
                         char *String = va_arg(ArgList, char *);
-                        Reverse = false;
 
                         // TODO: Obey precision, width, etc
 
@@ -573,24 +624,11 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                         --UsePrecision;
                         --UseWidth;
                     }
-                    if(Reverse)
+                    while(UsePrecision && (TempDest.At != Temp))
                     {
-                        while(UsePrecision && (TempDest.At != Temp))
-                        {
-                            --TempDest.At;
-                            OutChar(&Dest, *TempDest.At);
-                            --UsePrecision;
-                            --UseWidth;
-                        }
-                    }
-                    else 
-                    {
-                        while(UsePrecision && (TempDest.At != Temp))
-                        {
-                            OutChar(&Dest, *Temp++);
-                            --UsePrecision;
-                            --UseWidth;
-                        }
+                        OutChar(&Dest, *Temp++);
+                        --UsePrecision;
+                        --UseWidth;
                     }
 
                     if(LeftJustify)
