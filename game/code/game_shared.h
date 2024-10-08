@@ -412,6 +412,7 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                 char *Temp = TempBuffer;
                 format_dest TempDest = {ArrayCount(TempBuffer), Temp};
                 char *Prefix = "";
+                b32 IsFloat = false;
 
                 switch(*At)
                 {
@@ -478,52 +479,20 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                         }
                     } break;
 
+                    // TODO: Support other kinds of floating point prints
+                    // right now this is only supporting basic decimal output
                     case 'f':
-                    {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
-                        F64ToASCII(&TempDest, Value, Precision);
-                    } break;
-
                     case 'F':
-                    {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
-                        F64ToASCII(&TempDest, Value, Precision);
-                    } break;
-
                     case 'e':
-                    {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
-                        F64ToASCII(&TempDest, Value, Precision);
-                    } break;
-
                     case 'E':
-                    {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
-                        F64ToASCII(&TempDest, Value, Precision);
-                    } break;
-
                     case 'g':
-                    {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
-                        F64ToASCII(&TempDest, Value, Precision);
-                    } break;
-
                     case 'G':
-                    {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
-                        F64ToASCII(&TempDest, Value, Precision);
-                    } break;
-
                     case 'a':
-                    {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
-                        F64ToASCII(&TempDest, Value, Precision);
-                    } break;
-
                     case 'A':
                     {
                         f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
                         F64ToASCII(&TempDest, Value, Precision);
+                        IsFloat = true;
                     } break;
 
                     case 'c':
@@ -581,16 +550,17 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                 if(TempDest.At - Temp)
                 {
                     smm UsePrecision = Precision;
-                    if(!PrecisionSpecified)
+                    if(IsFloat || !PrecisionSpecified)
                     {
                         UsePrecision = (TempDest.At - Temp);
                     }
 
                     smm PrefixLength = StringLength(Prefix);
                     smm UseWidth = Width;
-                    if(!WidthSpecified)
+                    smm ComputedWidth = UsePrecision + PrefixLength;
+                    if(UseWidth < ComputedWidth)
                     {
-                        UseWidth = UsePrecision + PrefixLength;
+                        UseWidth = ComputedWidth;
                     }
 
                     if(PadWithZeros)
