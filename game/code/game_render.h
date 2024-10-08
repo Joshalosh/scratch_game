@@ -90,3 +90,23 @@ struct texture_op
         texture_op_deallocate Deallocate;
     };
 };
+
+struct camera_params
+{
+    f32 WidthOfMonitor;
+    f32 MetersToPixels;
+    f32 FocalLength;
+};
+inline camera_params
+GetStandardCameraParams(u32 WidthInPixels, f32 FocalLength)
+{
+    camera_params Result;
+
+    // NOTE: Horizontal measurement of monitor in meters
+    Result.WidthOfMonitor = 0.635f;
+    Result.MetersToPixels = (f32)WidthInPixels / Result.WidthOfMonitor;
+    Result.FocalLength = FocalLength;
+
+    return(Result);
+}
+

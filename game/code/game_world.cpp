@@ -97,7 +97,15 @@ GetWorldChunk(world *World, s32 ChunkX, s32 ChunkY, s32 ChunkZ, memory_arena *Ar
     world_chunk *Result = *ChunkPtr;
     if(!Result && Arena)
     {
-        Result = PushStruct(Arena, world_chunk, NoClear());
+        if(!World->FirstFreeChunk)
+        {
+            World->FirstFreeChunk = PushStruct(Arena, world_chunk, NoClear());
+            World->FirstFreeChunk->NextInHash = 0;
+        }
+
+        Result = World->FirstFreeChunk;
+        World->FirstFreeChunk = Result->NextInHash;
+
         Result->FirstBlock = 0;
         Result->ChunkX = ChunkX;
         Result->ChunkY = ChunkY;

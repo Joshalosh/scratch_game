@@ -306,7 +306,7 @@ inline void
 BeginTicketMutex(ticket_mutex *Mutex)
 {
     u64 Ticket = AtomicAddU64(&Mutex->Ticket, 1);
-    while(Ticket != Mutex->Serving);
+    while(Ticket != Mutex->Serving) {_mm_pause();}
 }
 
 inline void

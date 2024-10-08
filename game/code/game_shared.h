@@ -160,63 +160,9 @@ OutChars(format_dest *Dest, char *Value)
     }
 }
 
-inline u64
-ReadVarArgUnsignedInteger(u32 Length, va_list *ArgList)
-{
-    u64 Result = 0;
-    switch(Length)
-    {
-        case 1:
-        {
-            Result = va_arg(*ArgList, u8);
-        } break;
-
-        case 2:
-        {
-            Result = va_arg(*ArgList, u16);
-        } break;
-
-        case 4:
-        {
-            Result = va_arg(*ArgList, u32);
-        } break;
-
-        case 8:
-        {
-            Result = va_arg(*ArgList, u64);
-        } break;
-    }
-
-    return(Result);
-}
-
-inline s64
-ReadVarArgSignedInteger(u32 Length, va_list *ArgList)
-{
-    u64 Temp = ReadVarArgUnsignedInteger(Length, ArgList);
-    s64 Result = *(s64 *)&Temp;
-    return(Result);
-}
-
-inline f64
-ReadVarArgFloat(u32 Length, va_list *ArgList)
-{
-    f64 Result = 0;
-    switch(Length)
-    {
-        case 4:
-        {
-            Result = va_arg(*ArgList, f32);
-        } break;
-
-        case 8:
-        {
-            Result = va_arg(*ArgList, f64);
-        } break;
-    }
-
-    return(Result);
-}
+#define ReadVarArgUnsignedInteger(Length, ArgList) ((Length) == 8) ? va_arg(ArgList, u64) : (u64)va_arg(ArgList, u32)
+#define ReadVarArgSignedInteger(Length, ArgList) ((Length) == 8) ? va_arg(ArgList, s64) : (s64)va_arg(ArgList, s32)
+#define ReadVarArgFloat(Length, ArgList) ((Length) == 8) ? va_arg(ArgList, f64) : (f64)va_arg(ArgList, f32)
 
 char DecChars[] = "0123456789";
 char LowerHexChars[] = "0123456789abcdef";
@@ -419,7 +365,7 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     case 'd':
                     case 'i':
                     {
-                        s64 Value = ReadVarArgSignedInteger(IntegerLength, &ArgList);
+                        s64 Value = ReadVarArgSignedInteger(IntegerLength, ArgList);
                         b32 WasNegative = (Value < 0);
                         if(WasNegative)
                         {
@@ -445,13 +391,13 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
 
                     case 'u':
                     {
-                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, ArgList);
                         U64ToASCII(&TempDest, Value, 10, DecChars);
                     } break;
 
                     case 'o':
                     {
-                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, ArgList);
                         U64ToASCII(&TempDest, Value, 8, DecChars);
                         if(AnnotateIfNotZero && (Value != 0))
                         {
@@ -461,7 +407,7 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
 
                     case 'x':
                     {
-                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, ArgList);
                         U64ToASCII(&TempDest, Value, 16, LowerHexChars);
                         if(AnnotateIfNotZero && (Value != 0))
                         {
@@ -471,7 +417,7 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
 
                     case 'X':
                     {
-                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, &ArgList);
+                        u64 Value = ReadVarArgUnsignedInteger(IntegerLength, ArgList);
                         U64ToASCII(&TempDest, Value, 16, UpperHexChars);
                         if(AnnotateIfNotZero && (Value != 0))
                         {
@@ -490,14 +436,13 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                     case 'a':
                     case 'A':
                     {
-                        f64 Value = ReadVarArgFloat(FloatLength, &ArgList);
+                        f64 Value = ReadVarArgFloat(FloatLength, ArgList);
                         F64ToASCII(&TempDest, Value, Precision);
                         IsFloat = true;
                     } break;
 
                     case 'c':
                     {
-                        // TODO: How much is suppose to be read here?
                         int Value = va_arg(ArgList, int);
                         OutChar(&TempDest, (char)Value);
                     } break;

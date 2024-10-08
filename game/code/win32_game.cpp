@@ -353,7 +353,8 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName, char *LockFilename)
                 GetProcAddress(Result.GameCodeDLL, "DEBUGGameFrameEnd");
 
             Result.IsValid = (Result.UpdateAndRender &&
-                              Result.GetSoundSamples);
+                              Result.GetSoundSamples &&
+                              Result.DEBUGFrameEnd);
         }
     }
 
@@ -361,6 +362,7 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName, char *LockFilename)
     {
         Result.UpdateAndRender = 0;
         Result.GetSoundSamples = 0;
+        Result.DEBUGFrameEnd = 0;
     }
 
     return(Result);
@@ -1859,6 +1861,8 @@ WinMain(HINSTANCE Instance,
                 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
                                                          TempGameCodeDLLFullPath,
                                                          GameCodeLockFullPath);
+                DEBUGSetEventRecording(Game.IsValid);
+
                 ShowWindow(Window, SW_SHOW);
                 while(GlobalRunning)
                 {

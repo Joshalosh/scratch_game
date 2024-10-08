@@ -5,10 +5,7 @@ internal void
 RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap *DrawBuffer,
                    layered_scene *Scene, r32 tNormal)
 {
-    // TODO: Unify this stuff?
-    real32 WidthOfMonitor = 0.635f; // Horizontal measurement of monitor in metres
-    real32 MetresToPixels = (real32)DrawBuffer->Width*WidthOfMonitor;
-    real32 FocalLength = 0.6f;
+    camera_params CameraParams = GetStandardCameraParams(DrawBuffer->Width, 0.25f);
 
     r32 SceneFadeValue = 1.0f;
     if(tNormal < Scene->tFadeIn)
@@ -23,7 +20,7 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
     v3 CameraOffset = Lerp(CameraStart, tNormal, CameraEnd);
     if(RenderGroup)
     {
-        Perspective(RenderGroup, MetresToPixels, FocalLength, 0.0f);
+        Perspective(RenderGroup, CameraParams.MetersToPixels, CameraParams.FocalLength, 0.0f);
     }
 
     asset_vector MatchVector = {};
