@@ -94,7 +94,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             DEBUG_BEGIN_DATA_BLOCK("Simulation/Entity");
         }
 
-        if(Entity->Updatable)
+        if(Entity->Flags & EntityFlag_Active)
         {
 
             //
@@ -334,7 +334,6 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
             if(DEBUG_REQUESTED(EntityDebugID))
             {
                 DEBUG_VALUE(Entity->ID.Value);
-                DEBUG_VALUE(Entity->Updatable);
                 DEBUG_VALUE(Entity->P);
                 DEBUG_VALUE(Entity->dP);
                 DEBUG_VALUE(Entity->DistanceLimit);

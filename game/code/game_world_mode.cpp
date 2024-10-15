@@ -709,6 +709,11 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
     {
         brain *Brain = SimRegion->Brains + BrainIndex;
+        MarkBrainActives(Brain);
+    }
+    for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
+    {
+        brain *Brain = SimRegion->Brains + BrainIndex;
         ExecuteBrain(GameState, WorldMode, Input, RenderGroup, SimRegion, Brain, dt);
     }
     END_BLOCK();

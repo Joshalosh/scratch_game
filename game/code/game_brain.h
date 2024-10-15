@@ -86,6 +86,14 @@ struct brain
         brain_snake Snake;
     };
 };
+#define MAX_BRAIN_SLOT_COUNT ((sizeof(brain) - OffsetOf(brain, Array)) / sizeof(entity *))
+inline entity *
+GetEntityInSlot(brain *Brain, u32 SlotIndex)
+{
+    Assert(SlotIndex < MAX_BRAIN_SLOT_COUNT);
+    entity *Result = (&Brain->Array)[SlotIndex];
+    return(Result);
+}
 
 enum reserved_brain_id
 {

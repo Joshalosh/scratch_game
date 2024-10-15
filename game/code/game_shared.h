@@ -162,7 +162,7 @@ OutChars(format_dest *Dest, char *Value)
 
 #define ReadVarArgUnsignedInteger(Length, ArgList) ((Length) == 8) ? va_arg(ArgList, u64) : (u64)va_arg(ArgList, u32)
 #define ReadVarArgSignedInteger(Length, ArgList) ((Length) == 8) ? va_arg(ArgList, s64) : (s64)va_arg(ArgList, s32)
-#define ReadVarArgFloat(Length, ArgList) ((Length) == 8) ? va_arg(ArgList, f64) : (f64)va_arg(ArgList, f32)
+#define ReadVarArgFloat(Length, ArgList) va_arg(ArgList, f64)
 
 char DecChars[] = "0123456789";
 char LowerHexChars[] = "0123456789abcdef";

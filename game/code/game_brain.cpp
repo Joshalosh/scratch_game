@@ -1,5 +1,31 @@
 
 inline void
+MarkBrainActives(brain *Brain)
+{
+    u32 BrainFlags = 0;
+    for(u32 SlotIndex = 0; SlotIndex < MAX_BRAIN_SLOT_COUNT; ++SlotIndex)
+    {
+        entity *Entity = GetEntityInSlot(Brain, SlotIndex);
+        if(Entity)
+        {
+            BrainFlags |= Entity->Flags;
+        }
+    }
+
+    if(BrainFlags & EntityFlag_Active)
+    {
+        for(u32 SlotIndex = 0; SlotIndex < MAX_BRAIN_SLOT_COUNT; ++SlotIndex)
+        {
+            entity *Entity = GetEntityInSlot(Brain, SlotIndex);
+            if(Entity)
+            {
+                Entity->Flags |= EntityFlag_Active;
+            }
+        }
+    }
+}
+
+inline void
 ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Input, 
              render_group *RenderGroup, sim_region *SimRegion, brain *Brain, r32 dt)
 {

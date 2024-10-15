@@ -58,6 +58,7 @@ enum entity_flags
 {
     EntityFlag_Collides = (1 << 0),
     EntityFlag_Deleted = (1 << 1),
+    EntityFlag_Active = (1 << 2),
 };
 
 struct entity_collision_volume
@@ -138,8 +139,6 @@ struct entity
     //
     // NOTE: Everything below here is not worked out
     //
-
-    b32 Updatable;
 
     //entity_type Type;
     u32 Flags;

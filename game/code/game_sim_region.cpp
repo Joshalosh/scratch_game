@@ -247,7 +247,10 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                 Dest->ID = ID;
                                 Dest->P += ChunkDelta;
 
-                                Dest->Updatable = EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds);
+                                if(EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds))
+                                {
+                                    Dest->Flags |= EntityFlag_Active;
+                                }
 
                                 if(Dest->BrainID.Value)
                                 {

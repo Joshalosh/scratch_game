@@ -86,6 +86,8 @@ typedef intptr_t smm;
 #define U32FromPointer(Pointer) ((u32)(memory_index)(Pointer))
 #define PointerFromU32(type, Value) (type *)((memory_index)Value)
 
+#define OffsetOf(type, Member) (umm)&(((type *)0)->Member)
+
 #pragma pack(push, 1)
 struct bitmap_id
 {
