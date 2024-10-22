@@ -1758,6 +1758,28 @@ BuildSpriteGraph(u32 InputNodeCount, sort_sprite_bound *InputNodes, memory_arena
     return(NodeIndexA);
 }
 
+internal u32
+UnsortedOutput(sprite_graph_walk *Walk, u32 InputNodeCount, sort_sprite_bound *InputNodes)
+{
+    TIMED_FUNCTION();
+
+    u32 NodeIndexA = 0;
+    for(; NodeIndexA < InputNodeCount; ++NodeIndexA)
+    {
+        sort_sprite_bound *A = InputNodes + NodeIndexA;
+
+        if(A->Offset == SPRITE_BARRIER_OFFSET_VALUE)
+        {
+            break;
+        }
+
+        Assert(A->Flags == 0);
+        *Walk->OutIndex++ = A->Offset;
+    }
+
+    return(NodeIndexA);
+}
+
 internal void
 RecursiveFrontToBack(sprite_graph_walk *Walk, u32 AtIndex)
 {
@@ -1794,21 +1816,35 @@ SortEntries(game_render_commands *Commands, memory_arena *TempArena, game_render
 #if 1
     sprite_graph_walk Walk = {};
     Walk.OutIndex = Result;
+    b32 ShouldSort = true;
     for(u32 FirstIndex = 0; FirstIndex < Count;)
     {
         sort_sprite_bound *SubEntries = Entries + FirstIndex;
-        u32 SubCount = BuildSpriteGraph(Count - FirstIndex, 
+        u32 SubCount = 0;
+        if(ShouldSort)
+        {
+            SubCount = BuildSpriteGraph(Count - FirstIndex, 
                                         SubEntries,
                                         TempArena, Commands->Width, Commands->Height);
 
-        Walk.InputNodes = SubEntries;
-        for(u32 NodeIndexA = 0; NodeIndexA < SubCount; ++NodeIndexA)
+            Walk.InputNodes = SubEntries;
+            for(u32 NodeIndexA = 0; NodeIndexA < SubCount; ++NodeIndexA)
+            {
+                Walk.HitCycle = false;
+                RecursiveFrontToBack(&Walk, NodeIndexA);
+            }
+        }
+        else 
         {
-            Walk.HitCycle = false;
-            RecursiveFrontToBack(&Walk, NodeIndexA);
+            SubCount = UnsortedOutput(&Walk, Count - FirstIndex, SubEntries);
         }
 
+        sort_sprite_bound *Terminator = SubEntries + SubCount;
         FirstIndex += SubCount + 1;
+        if(FirstIndex < Count)
+        {
+            ShouldSort = !(Terminator->Flags & Sprite_BarrierTurnsOffSorting);
+        }
     }
 
     // NOTE: Change the total number of things to reflect how many there are without barriers

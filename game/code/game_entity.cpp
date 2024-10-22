@@ -204,7 +204,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     Assert(CurrentAbsoluteZLayer < Entity->ZLayer);
                     CurrentAbsoluteZLayer = Entity->ZLayer;
-                    PushSortBarrier(RenderGroup);
+                    PushSortBarrier(RenderGroup, false);
                 }
 
                 s32 LayerIndex = RelativeLayer - MinimumLevelIndex;

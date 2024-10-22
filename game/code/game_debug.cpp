@@ -1992,6 +1992,7 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
     TIMED_FUNCTION();
 
     render_group *RenderGroup = &DebugState->RenderGroup;
+    PushSortBarrier(RenderGroup, true);
 
     debug_event *HotEvent = 0;
 

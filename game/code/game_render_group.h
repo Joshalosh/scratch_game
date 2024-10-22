@@ -235,3 +235,4 @@ struct transient_clip_rect
     render_group *RenderGroup;
     u32 OldClipRect;
 };
+

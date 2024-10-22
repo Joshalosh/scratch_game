@@ -23,6 +23,8 @@ enum sprite_flag
     Sprite_Cycle    = 0x80000000,
 
     Sprite_IndexMask = 0x0FFFFFFF,
+
+    Sprite_BarrierTurnsOffSorting = 0xFFFF0000,
 };
 
 #define SPRITE_BARRIER_OFFSET_VALUE 0xFFFFFFFF

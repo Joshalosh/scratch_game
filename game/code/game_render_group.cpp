@@ -79,12 +79,13 @@ PushBuffer(render_group *RenderGroup, u32 SortEntryCount, u32 DataSize)
 }
 
 inline void
-PushSortBarrier(render_group *RenderGroup)
+PushSortBarrier(render_group *RenderGroup, b32 TurnOffSorting)
 {
     push_buffer_result Push = PushBuffer(RenderGroup, 1, 0);
     if(Push.SortEntry)
     {
         Push.SortEntry->Offset = SPRITE_BARRIER_OFFSET_VALUE;
+        Push.SortEntry->Flags = TurnOffSorting ? Sprite_BarrierTurnsOffSorting : 0;
     }
 }
 
@@ -447,7 +448,7 @@ PushClipRect(render_group *Group, object_transform *ObjectTransform, rectangle2 
 inline void
 PushBlendRenderTarget(render_group *Group, r32 Alpha, u32 SourceRenderTargetIndex)
 {
-    PushSortBarrier(Group);
+    PushSortBarrier(Group, false);
 
     sprite_bound SortKey = {};
     rectangle2 ScreenArea = {};
@@ -456,7 +457,7 @@ PushBlendRenderTarget(render_group *Group, r32 Alpha, u32 SourceRenderTargetInde
     Blend->SourceTargetIndex = SourceRenderTargetIndex;
     Blend->Alpha = Alpha;
 
-    PushSortBarrier(Group);
+    PushSortBarrier(Group, false);
 }
 
 inline v3
@@ -573,3 +574,4 @@ Orthographic(render_group *RenderGroup, r32 MetresToPixels)
     RenderGroup->CameraTransform.ScreenCentre = V2(0.5f*PixelWidth, 0.5f*PixelHeight);
     RenderGroup->CameraTransform.Orthographic = true;
 }
+
