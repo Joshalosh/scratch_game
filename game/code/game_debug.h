@@ -231,6 +231,7 @@ struct debug_state
     loaded_font *DebugFont;
     ga_font *DebugFontInfo;
 
+    // TODO: Remove all these, they are no longer needed
     object_transform ToolTipTransform;
     object_transform TextTransform;
     object_transform ShadowTransform;
@@ -288,6 +289,9 @@ struct debug_state
 
     u32 RootInfoSize;
     char *RootInfo;
+
+    u32 ToolTipCount;
+    char ToolTipText[16][256];
 };
 
 struct debug_statistic

@@ -115,10 +115,10 @@ TextOp(debug_state *DebugState, debug_text_op Op, v2 P, char *String, v4 Color =
                     v3 BitmapOffset = V3(AtX, AtY, AtZ);
                     if(Op == DEBUGTextOp_DrawText)
                     {
-                        PushBitmap(RenderGroup, &DebugState->TextTransform, BitmapID, BitmapScale,
-                                   BitmapOffset, Color, 1.0f);
                         PushBitmap(RenderGroup, &DebugState->ShadowTransform, BitmapID, BitmapScale,
                                    BitmapOffset + V3(2.0f, -2.0f, 0.0f), V4(0, 0, 0, 1.0f), 1.0f);
+                        PushBitmap(RenderGroup, &DebugState->TextTransform, BitmapID, BitmapScale,
+                                   BitmapOffset, Color, 1.0f);
                     }
                     else 
                     {
@@ -353,15 +353,15 @@ BasicTextElement(layout *Layout, char *Text, debug_interaction ItemInteraction,
 
     b32 IsHot = InteractionIsHot(Layout->DebugState, ItemInteraction);
 
-    TextOutAt(DebugState, V2(GetMinCorner(Element.Bounds).x + Border,
-                             GetMaxCorner(Element.Bounds).y - Border -
-                             DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
-              Text, IsHot ? HotColor : ItemColor);
     if(BackdropColor.w > 0.0f)
     {
         PushRect(&DebugState->RenderGroup,
                  &DebugState->BackingTransform, Element.Bounds, 0.0f, BackdropColor);
     }
+    TextOutAt(DebugState, V2(GetMinCorner(Element.Bounds).x + Border,
+                             GetMaxCorner(Element.Bounds).y - Border -
+                             DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
+              Text, IsHot ? HotColor : ItemColor);
 
     return(Dim);
 }
@@ -404,8 +404,30 @@ EndRow(layout *Layout)
     AdvanceElement(Layout, RectMinMax(Layout->At, Layout->At));
 }
 
+struct tooltip_buffer
+{
+    umm Size;
+    char *Data;
+};
+internal tooltip_buffer
+AddToolTip(debug_state *DebugState)
+{
+    tooltip_buffer Result;
+    Result.Size = sizeof(DebugState->ToolTipText[0]);
+    if(DebugState->ToolTipCount < ArrayCount(DebugState->ToolTipText))
+    {
+        Result.Data = DebugState->ToolTipText[DebugState->ToolTipCount++];
+    }
+    else 
+    {
+        Result.Data = DebugState->ToolTipText[DebugState->ToolTipCount - 1];
+    }
+
+    return(Result);
+}
+
 internal void
-AddTooltip(debug_state *DebugState, char *Text)
+DrawToolTips(debug_state *DebugState)
 {
     render_group *RenderGroup = &DebugState->RenderGroup;
     u32 OldClipRect = RenderGroup->CurrentClipRectIndex;
@@ -413,20 +435,25 @@ AddTooltip(debug_state *DebugState, char *Text)
 
     layout *Layout = &DebugState->MouseTextLayout;
 
-    rectangle2 TextBounds = GetTextSize(DebugState, Text);
-    v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
+    for(u32 ToolTipIndex = 0; ToolTipIndex < DebugState->ToolTipCount; ++ToolTipIndex)
+    {
+        char *Text = DebugState->ToolTipText[ToolTipIndex];
 
-    layout_element Element = BeginElementRectangle(Layout, &Dim);
-    EndElement(&Element);
+        rectangle2 TextBounds = GetTextSize(DebugState, Text);
+        v2 Dim = {GetDim(TextBounds).x, Layout->LineAdvance};
 
-    PushRect(&DebugState->RenderGroup, 
-             &DebugState->ToolTipTransform, AddRadiusTo(Element.Bounds, V2(4.0f, 4.0f)),
-             0.0f, V4(0, 0, 0, 0.75f));
+        layout_element Element = BeginElementRectangle(Layout, &Dim);
+        EndElement(&Element);
 
-    TextOutAt(DebugState, V2(GetMinCorner(Element.Bounds).x,
-                             GetMaxCorner(Element.Bounds).y - 
-                             DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
-              Text, V4(1, 1, 1, 1), 110000.0f);
+        PushRect(&DebugState->RenderGroup, 
+                 &DebugState->ToolTipTransform, AddRadiusTo(Element.Bounds, V2(4.0f, 4.0f)),
+                 0.0f, V4(0, 0, 0, 0.75f));
 
-    RenderGroup->CurrentClipRectIndex = OldClipRect;
+        TextOutAt(DebugState, V2(GetMinCorner(Element.Bounds).x,
+                                 GetMaxCorner(Element.Bounds).y - 
+                                 DebugState->FontScale*GetStartingBaselineY(DebugState->DebugFontInfo)),
+                  Text, V4(1, 1, 1, 1), 110000.0f);
+
+        RenderGroup->CurrentClipRectIndex = OldClipRect;
+    }
 }

@@ -510,9 +510,8 @@ DrawProfileBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRec
         // TODO: Pull this out so all profilers share it
         if(IsInRectangle(RegionRect, MouseP))
         {
-            char TextBuffer[256];
-            FormatString(sizeof(TextBuffer), TextBuffer, "%s: %10ucy", Element->GUID, (u32)Node->Duration);
-            AddTooltip(DebugState, TextBuffer);
+            tooltip_buffer TextBuffer = AddToolTip(DebugState);
+            FormatString(TextBuffer.Size, TextBuffer.Data, "%s: %10ucy", Element->GUID, (u32)Node->Duration);
 
             // TODO: It would be better to generate a graph+element debug ID here
             debug_view *View = GetOrCreateDebugViewFor(DebugState, GraphID);
@@ -635,10 +634,9 @@ DrawFrameBars(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileRect,
 
                     if(IsInRectangle(RegionRect, MouseP))
                     {
-                        char TextBuffer[256];
-                        FormatString(sizeof(TextBuffer), TextBuffer, "%s: %10ucy",
+                        tooltip_buffer TextBuffer = AddToolTip(DebugState);
+                        FormatString(TextBuffer.Size, TextBuffer.Data, "%s: %10ucy",
                                      Element->GUID, (u32)Node->Duration);
-                        AddTooltip(DebugState, TextBuffer);
 
                         debug_view *View = GetOrCreateDebugViewFor(DebugState, GraphID);
                         DebugState->NextHotInteraction =
@@ -733,10 +731,9 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
 
         if(IsInRectangle(TextRect, MouseP))
         {
-            char TextBuffer[256];
-            FormatString(sizeof(TextBuffer), TextBuffer, "Cumulative to this point: %02.02f%%",
+            tooltip_buffer TextBuffer = AddToolTip(DebugState);
+            FormatString(TextBuffer.Size, TextBuffer.Data, "Cumulative to this point: %02.02f%%",
                          (PC*RunningSum));
-            AddTooltip(DebugState, TextBuffer);
         }
 
         if(At.y < ProfileRect.Min.y)
@@ -805,9 +802,8 @@ DrawFrameSlider(debug_state *DebugState, debug_id SliderID, rectangle2 TotalRect
 
             if(IsInRectangle(RegionRect, MouseP))
             {
-                char TextBuffer[256];
-                FormatString(sizeof(TextBuffer), TextBuffer, "%u", FrameIndex);
-                AddTooltip(DebugState, TextBuffer);
+                tooltip_buffer TextBuffer = AddToolTip(DebugState);
+                FormatString(TextBuffer.Size, TextBuffer.Data, "%u", FrameIndex);
 
                 DebugState->NextHotInteraction = 
                     SetUInt32Interaction(SliderID, &DebugState->ViewingFrameOrdinal, FrameIndex);
@@ -1980,6 +1976,8 @@ DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets 
     DebugState->DefaultClipRect = DebugState->RenderGroup.CurrentClipRectIndex;
     DebugState->RenderTarget = 0;
 
+    DebugState->ToolTipCount = 0;
+
     if(!DebugState->Paused)
     {
         DebugState->ViewingFrameOrdinal = DebugState->MostRecentFrameOrdinal;
@@ -2009,6 +2007,8 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
     DrawTrees(DebugState, MouseP);
     EndLayout(&DebugState->MouseTextLayout);
     DEBUGInteract(DebugState, Input, MouseP);
+
+    DrawToolTips(DebugState);
 
     EndRenderGroup(&DebugState->RenderGroup);
 
