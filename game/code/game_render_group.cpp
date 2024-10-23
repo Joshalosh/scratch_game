@@ -27,8 +27,6 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform *CameraTrans
     }
     else
     {
-        real32 OffsetZ = 0.0f;
-
         real32 DistanceAboveTarget = CameraTransform->DistanceAboveTarget;
 
         if(Global_Renderer_Camera_UseDebug)
@@ -36,16 +34,30 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform *CameraTrans
             DistanceAboveTarget += Global_Renderer_Camera_DebugDistance;
         }
 
-        real32 DistanceToPZ = (DistanceAboveTarget - P.z);
+#if 0
+        f32 Apron = 0.1f;
+        f32 tFloor = Clamp01MapToRange(ObjectTransform->NextFloorZ - Apron, 
+                                       P.z - ObjectTransform->FloorZ, 
+                                       ObjectTransform->NextFloorZ);
+        f32 FloorZ = Lerp(ObjectTrasnform->FloorZ, tFloor, ObjectTransform->NextFloorZ);
+#else
+        f32 FloorZ = ObjectTransform->FloorZ;
+#endif
+        real32 DistanceToPZ = (DistanceAboveTarget - FloorZ);
         real32 NearClipPlane = 0.1f;
 
-        v3 RawXY = V3(P.xy, 1.0f);
 
         if(DistanceToPZ > NearClipPlane)
         {
+            f32 HeightOffFloor = P.z - FloorZ;
+
+            v3 RawXY = V3(P.xy, 1.0f);
+            f32 OrthoFromZ = 1.0f;
+            RawXY.y += OrthoFromZ*HeightOffFloor;
+
             v3 ProjectedXY = (1.0f / DistanceToPZ) * CameraTransform->FocalLength*RawXY;
             Result.Scale = CameraTransform->MetresToPixels*ProjectedXY.z;
-            Result.P = CameraTransform->ScreenCentre + CameraTransform->MetresToPixels*ProjectedXY.xy + V2(0.0f, Result.Scale*OffsetZ);
+            Result.P = CameraTransform->ScreenCentre + CameraTransform->MetresToPixels*ProjectedXY.xy; 
             Result.Valid = true;
         }
     }

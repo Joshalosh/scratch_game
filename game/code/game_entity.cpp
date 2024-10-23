@@ -59,6 +59,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 #define MinimumLevelIndex -4
 #define MaximumLevelIndex 1
     r32 FogAmount[(MaximumLevelIndex - MinimumLevelIndex + 1)];
+    f32 CamRelGroundZ[ArrayCount(FogAmount)];
     r32 TestAlpha = 0.0f;
     for(u32 LevelIndex = 0; LevelIndex < ArrayCount(FogAmount); ++LevelIndex)
     {
@@ -66,6 +67,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
         // for entities sometime soon.
         s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex;
         r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - WorldMode->CameraOffset.z;
+        CamRelGroundZ[LevelIndex] = CameraRelativeGroundZ;
 
         TestAlpha = Clamp01MapToRange(FadeTopEndZ, CameraRelativeGroundZ, FadeTopStartZ);
         FogAmount[LevelIndex] = Clamp01MapToRange(FadeBottomStartZ, CameraRelativeGroundZ, FadeBottomEndZ);
@@ -219,6 +221,9 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                     EntityTransform.Color = BackgroundColor;
                     EntityTransform.tColor = FogAmount[LayerIndex]*V4(1, 1, 1, 0);
                 }
+
+                EntityTransform.FloorZ = CamRelGroundZ[LayerIndex];
+                EntityTransform.NextFloorZ = EntityTransform.FloorZ + WorldMode->TypicalFloorHeight;
 
                 //
                 // NOTE: Rendering

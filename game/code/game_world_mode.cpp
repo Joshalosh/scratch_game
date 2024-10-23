@@ -148,7 +148,8 @@ struct standard_room
     traversable_reference Ground[17][9];
 };
 internal standard_room
-AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ, random_series *Series)
+AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ, 
+                random_series *Series, b32 AddStairs)
 {
     standard_room Result = {};
 
@@ -162,6 +163,7 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
 #if 0
             P.Offset_.x += 0.25f*RandomBilateral(Series);
             P.Offset_.y += 0.25f*RandomBilateral(Series);
+            P.Offset_.z += 0.1f*RandomBilateral(Series);
 #endif
 
             if((OffsetX >= -5) &&
@@ -173,32 +175,40 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
             }
             else
             {
-                if((OffsetX == 3) &&
+                b32 Add = true;
+                if(((OffsetX == 3) || (!AddStairs && (OffsetX == 2))) &&
                    (OffsetY >= -2) &&
-                   (OffsetY <= 2))
+                   ((OffsetY <= 2) || (!AddStairs && (OffsetY <= 3))))
                 {
                     P.Offset_.z += 0.5f*(r32)(OffsetY + 2);
+                    if(!AddStairs)
+                    {
+                        Add = false;
+                    }
                 }
 
                 //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
 
-                if((OffsetX == 2) && (OffsetY == 2))
+                if(Add)
                 {
-                    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
-                    StandingOn.Entity.Index = Entity->ID;
-                    Entity->TraversableCount = 1;
-                    Entity->Traversables[0].P = V3(0, 0, 0);
-                    Entity->Traversables[0].Occupier = 0;
-                    EndEntity(WorldMode, Entity, P);
-                }
-                else
-                {
-                    entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
-                    StandingOn.Entity.Index = Entity->ID;
-                    Entity->TraversableCount = 1;
-                    Entity->Traversables[0].P = V3(0, 0, 0);
-                    Entity->Traversables[0].Occupier = 0;
-                    EndEntity(WorldMode, Entity, P);
+                    if((OffsetX == 2) && (OffsetY == 2))
+                    {
+                        entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                        StandingOn.Entity.Index = Entity->ID;
+                        Entity->TraversableCount = 1;
+                        Entity->Traversables[0].P = V3(0, 0, 0);
+                        Entity->Traversables[0].Occupier = 0;
+                        EndEntity(WorldMode, Entity, P);
+                    }
+                    else
+                    {
+                        entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                        StandingOn.Entity.Index = Entity->ID;
+                        Entity->TraversableCount = 1;
+                        Entity->Traversables[0].P = V3(0, 0, 0);
+                        Entity->Traversables[0].Occupier = 0;
+                        EndEntity(WorldMode, Entity, P);
+                    }
                 }
             }
 
@@ -482,7 +492,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 4; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
     {
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
@@ -515,7 +525,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
         standard_room Room = AddStandardRoom(WorldMode,
                                              ScreenX*TilesPerWidth + TilesPerWidth/2,
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
-                                             AbsTileZ, Series);
+                                             AbsTileZ, Series, ScreenIndex == 0);
 
 #if 1
         AddMonster(WorldMode, Room.P[3][6], Room.Ground[3][6]);

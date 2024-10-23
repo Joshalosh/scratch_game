@@ -1,10 +1,8 @@
  TODO
 
-  - Disable sorting for the debug view so it isn't slow
-
  - Z
    - Make sure flying things can go over low walls
-   - Straighten out all of the coordinate systems.
+   - Straighten out all of the coordinate systems
      - Screen
      - World
      - Texture
