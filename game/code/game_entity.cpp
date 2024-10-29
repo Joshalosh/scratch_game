@@ -223,7 +223,6 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 }
 
                 EntityTransform.FloorZ = CamRelGroundZ[LayerIndex];
-                EntityTransform.NextFloorZ = EntityTransform.FloorZ + WorldMode->TypicalFloorHeight;
 
                 //
                 // NOTE: Rendering

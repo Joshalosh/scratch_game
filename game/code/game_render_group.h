@@ -124,7 +124,6 @@ struct object_transform
     v3 OffsetP;
     r32 Scale;
     r32 FloorZ;
-    r32 NextFloorZ;
     s32 ChunkZ;
     manual_sort_key ManualSort;
     v4 tColor;

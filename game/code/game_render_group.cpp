@@ -34,18 +34,9 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform *CameraTrans
             DistanceAboveTarget += Global_Renderer_Camera_DebugDistance;
         }
 
-#if 0
-        f32 Apron = 0.1f;
-        f32 tFloor = Clamp01MapToRange(ObjectTransform->NextFloorZ - Apron, 
-                                       P.z - ObjectTransform->FloorZ, 
-                                       ObjectTransform->NextFloorZ);
-        f32 FloorZ = Lerp(ObjectTrasnform->FloorZ, tFloor, ObjectTransform->NextFloorZ);
-#else
         f32 FloorZ = ObjectTransform->FloorZ;
-#endif
         real32 DistanceToPZ = (DistanceAboveTarget - FloorZ);
         real32 NearClipPlane = 0.1f;
-
 
         if(DistanceToPZ > NearClipPlane)
         {
