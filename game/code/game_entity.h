@@ -191,6 +191,8 @@ struct entity
     entity_visible_piece Pieces[4]; // NOTE: 0 is the most "on top" piece, N is the "on bottom" piece
 
     // TODO: Generation index so I know how "up to date" this entity is
+
+    traversable_reference AutoBoostTo;
 };
 
 #define InvalidP V3(100000.0f, 100000.0f, 100000.0f)

@@ -249,6 +249,7 @@ PackEntityIntoChunk(world *World, sim_region *SimRegion, entity *Source, world_c
     *DestE = *Source;
     PackTraversableReference(SimRegion, &DestE->Occupying);
     PackTraversableReference(SimRegion, &DestE->CameFrom);
+    PackTraversableReference(SimRegion, &DestE->AutoBoostTo);
 
     DestE->ddP = V3(0, 0, 0);
     DestE->ddtBob = 0.0f;

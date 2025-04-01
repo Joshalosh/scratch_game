@@ -1,16 +1,9 @@
  TODO
 
- - Z
-   - Make sure flying things can go over low walls
-   - Straighten out all of the coordinate systems
-     - Screen
-     - World
-     - Texture
-
+ - Graphics Upgrade
    - Particle systems
-
    - Transition to real artwork
-
+     - Clean up the notion of multi-part entities and how they are animated
    - Lighting
 
  - Collision detection
@@ -44,6 +37,7 @@
      - Non-overlapping?
      - Map display
        - Magnets - how do they work?
+     - Rigorous definition of how things move, when things trigger, etc.
  - Metagame / save game
    - How do you enter a 'save slot'?
    - Persistent unlocks/etc

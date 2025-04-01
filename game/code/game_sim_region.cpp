@@ -156,6 +156,7 @@ ConnectEntityPointers(sim_region *SimRegion)
         }
 
         LoadTraversableReference(SimRegion, &Entity->CameFrom);
+        LoadTraversableReference(SimRegion, &Entity->AutoBoostTo);
     }
 }
 

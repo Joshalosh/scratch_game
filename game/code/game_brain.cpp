@@ -220,7 +220,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                     }
                 }
 
-                v3 ClosestP = GetSimSpaceTraversable(Traversable).P;
+                v3 ClosestP = GetSimSpaceTraversable(Body->Occupying).P;
 
                 v3 ddP = V3(ConHero->ddP, 0);
                 r32 ddPLength = LengthSq(ddP);

@@ -98,6 +98,24 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
         if(Entity->Flags & EntityFlag_Active)
         {
+            // TODO: Should non-active entities not do simmy stuff?
+            entity_traversable_point *BoostTo = GetTraversable(Entity->AutoBoostTo);
+            if(BoostTo)
+            {
+                for(u32 TraversableIndex = 0; TraversableIndex < Entity->TraversableCount; ++TraversableIndex) {
+                    entity_traversable_point *Traversable = Entity->Traversables + TraversableIndex;
+                    entity *Occupier = Traversable->Occupier;
+                    if(Occupier && (Occupier->MovementMode == MovementMode_Planted))
+                    {
+                        Occupier->CameFrom = Occupier->Occupying;
+                        if(TransactionalOccupy(Occupier, &Occupier->Occupying, Entity->AutoBoostTo))
+                        {
+                            Occupier->tMovement = 0.0f;
+                            Occupier->MovementMode = MovementMode_Hopping;
+                        }
+                    }
+                }
+            }
 
             //
             // NOTE: Physics 
@@ -302,8 +320,17 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                 {
                     entity_traversable_point *Traversable =
                         Entity->Traversables + TraversableIndex;
-                    PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(1.4f, 1.4f), 
-                             Traversable->Occupier ? V4(1.0, 0.5f, 0.0f, 1.0f) : V4(0.05f, 0.25f, 0.05f, 1.0f));
+                    v4 Col = V4(0.05f, 0.25f, 0.05f, 1.0f);
+                    if(GetTraversable(Entity->AutoBoostTo))
+                    {
+                        Col = V4(1.0f, 0.0f, 1.0f, 1.0f);
+                    }
+                    if(Traversable->Occupier)
+                    {
+                        Col = V4(1.0f, 0.5f, 0.0f, 1.0f);
+                    }
+
+                    PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(1.4f, 1.4f), Col);
 
                     //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
                 }

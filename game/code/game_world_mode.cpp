@@ -148,8 +148,9 @@ struct standard_room
     traversable_reference Ground[17][9];
 };
 internal standard_room
-AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ, 
-                random_series *Series, b32 AddStairs)
+AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsTileZ,
+                random_series *Series, b32 LeftHole, b32 RightHole,
+                traversable_reference TargetRef)
 {
     standard_room Result = {};
 
@@ -166,50 +167,37 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
             P.Offset_.z += 0.1f*RandomBilateral(Series);
 #endif
 
-            if((OffsetX >= -5) &&
+            if(LeftHole &&
+               (OffsetX >= -5) &&
                (OffsetX <= -3) &&
                (OffsetY >= 0) &&
                (OffsetY <= 1))
             {
                 // NOTE: Hole down to floor below.
             }
+            else if(RightHole &&
+                   (OffsetX == 3) &&
+                   (OffsetY >= -2) &&
+                   (OffsetY <= 2))
+            {
+            }
             else
             {
-                b32 Add = true;
-                if(((OffsetX == 3) || (!AddStairs && (OffsetX == 2))) &&
-                   (OffsetY >= -2) &&
-                   ((OffsetY <= 2) || (!AddStairs && (OffsetY <= 3))))
+                entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                StandingOn.Entity.Index = Entity->ID;
+                Entity->TraversableCount = 1;
+                Entity->Traversables[0].P = V3(0, 0, 0);
+                Entity->Traversables[0].Occupier = 0;
+                if((LeftHole &&
+                    (OffsetX == -2) &&
+                    (OffsetY == 1)) ||
+                   (RightHole &&
+                    (OffsetX == 2) &&
+                    (OffsetY == 2)))
                 {
-                    P.Offset_.z += 0.5f*(r32)(OffsetY + 2);
-                    if(!AddStairs)
-                    {
-                        Add = false;
-                    }
+                    Entity->AutoBoostTo = TargetRef;
                 }
-
-                //P.Offset_.z = 0.25f*(r32)(OffsetX + OffsetY);
-
-                if(Add)
-                {
-                    if((OffsetX == 2) && (OffsetY == 2))
-                    {
-                        entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
-                        StandingOn.Entity.Index = Entity->ID;
-                        Entity->TraversableCount = 1;
-                        Entity->Traversables[0].P = V3(0, 0, 0);
-                        Entity->Traversables[0].Occupier = 0;
-                        EndEntity(WorldMode, Entity, P);
-                    }
-                    else
-                    {
-                        entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
-                        StandingOn.Entity.Index = Entity->ID;
-                        Entity->TraversableCount = 1;
-                        Entity->Traversables[0].P = V3(0, 0, 0);
-                        Entity->Traversables[0].Occupier = 0;
-                        EndEntity(WorldMode, Entity, P);
-                    }
-                }
+                EndEntity(WorldMode, Entity, P);
             }
 
             Result.P[OffsetX + 8][OffsetY + 4] = P;
@@ -247,7 +235,7 @@ AddStair(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint3
 internal void
 AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_reference StandingOn, brain_id BrainID)
 {
-    world_position P = MapIntoChunkSpace(SimRegion->World, SimRegion->Origin, 
+    world_position P = MapIntoChunkSpace(SimRegion->World, SimRegion->Origin,
                                          GetSimSpaceTraversable(StandingOn).P);
 
     entity *Body = BeginGroundedEntity(WorldMode, WorldMode->HeroBodyCollision);
@@ -477,12 +465,16 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                                          TileSideInMeters,
                                                          TileDepthInMeters);
 
-    uint32_t ScreenBaseX = 0;
-    uint32_t ScreenBaseY = 0;
-    uint32_t ScreenBaseZ = 0;
-    uint32_t ScreenX = ScreenBaseX;
-    uint32_t ScreenY = ScreenBaseY;
-    uint32_t AbsTileZ = ScreenBaseZ;
+    s32 ScreenBaseX = 0;
+    s32 ScreenBaseY = 0;
+    s32 ScreenBaseZ = 0;
+    s32 ScreenX = ScreenBaseX;
+    s32 ScreenY = ScreenBaseY;
+    s32 AbsTileZ = ScreenBaseZ;
+
+    s32 LastScreenX = ScreenX;
+    s32 LastScreenY = ScreenY;
+    s32 LastScreenZ = AbsTileZ;
 
     // TODO: Replace all of this with real world generation
     bool32 DoorLeft = false;
@@ -492,8 +484,12 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorUp = false;
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
+    standard_room PrevRoom = {};
     for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
     {
+        LastScreenX = ScreenX;
+        LastScreenY = ScreenY;
+        LastScreenZ = AbsTileZ;
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
 #else
@@ -522,10 +518,27 @@ PlayWorld(game_state *GameState, transient_state *TranState)
             DoorTop = true;
         }
 
+        b32 LeftHole = ScreenIndex % 2;
+        b32 RightHole = !LeftHole;
+        if(ScreenIndex == 0)
+        {
+            LeftHole = false;
+            RightHole = false;
+        }
+
+        traversable_reference TargetRef = {};
+        if(LeftHole)
+        {
+            TargetRef = PrevRoom.Ground[-3 + 8][1 + 4];
+        }
+        else if(RightHole)
+        {
+            TargetRef = PrevRoom.Ground[3 + 8][2 + 4];
+        }
         standard_room Room = AddStandardRoom(WorldMode,
                                              ScreenX*TilesPerWidth + TilesPerWidth/2,
                                              ScreenY*TilesPerHeight + TilesPerHeight/2,
-                                             AbsTileZ, Series, ScreenIndex == 0);
+                                             AbsTileZ, Series, LeftHole, RightHole, TargetRef);
 
 #if 1
         AddMonster(WorldMode, Room.P[3][6], Room.Ground[3][6]);
@@ -617,6 +630,8 @@ PlayWorld(game_state *GameState, transient_state *TranState)
         {
             ScreenY += 1;
         }
+
+        PrevRoom = Room;
     }
 
 #if 0
@@ -628,9 +643,9 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 #endif
 
     world_position NewCameraP = {};
-    uint32_t CameraTileX = ScreenBaseX*TilesPerWidth + 17/2;
-    uint32_t CameraTileY = ScreenBaseY*TilesPerHeight + 9/2;
-    uint32_t CameraTileZ = ScreenBaseZ;
+    uint32_t CameraTileX = LastScreenX*TilesPerWidth + 17/2;
+    uint32_t CameraTileY = LastScreenY*TilesPerHeight + 9/2;
+    uint32_t CameraTileZ = LastScreenZ;
     NewCameraP = ChunkPositionFromTilePosition(WorldMode->World, CameraTileX, CameraTileY, CameraTileZ);
     WorldMode->CameraP = NewCameraP;
 
