@@ -217,6 +217,7 @@ introspect(category:"math") struct rectangle3
 };
 
 #define U16Maximum 65535
+#define U32Maximum ((u32)-1)
 #define Real32Maximum FLT_MAX
 #define Real32Minimum -FLT_MAX
 #define R32Maximum FLT_MAX

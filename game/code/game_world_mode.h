@@ -66,6 +66,7 @@ struct game_mode_world
     entity CreationBuffer[4];
     u32 LastUsedEntityStorageIndex; // TODO: Worry about this wrapping - free list for IDs?
 
+    particle_cache *ParticleCache;
     particle_cel ParticleCels[PARTICLE_CEL_DIM][PARTICLE_CEL_DIM];
 };
 

@@ -427,6 +427,9 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
     game_mode_world *WorldMode = PushStruct(&GameState->ModeArena, game_mode_world);
 
+    WorldMode->ParticleCache = PushStruct(&GameState->ModeArena, particle_cache, NoClear());
+    InitParticleCache(WorldMode->ParticleCache);
+
     uint32_t TilesPerWidth = 17;
     uint32_t TilesPerHeight = 9;
 
@@ -686,8 +689,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
     world_position SimCentreP = WorldMode->CameraP;
-    sim_region *SimRegion = BeginSim(&TranState->TranArena, WorldMode, WorldMode->World,
-                                     SimCentreP, SimBounds, Input->dtForFrame);
+    sim_region *SimRegion = BeginSim(&TranState->TranArena, WorldMode, World,
+                                     SimCentreP, SimBounds, Input->dtForFrame, WorldMode->ParticleCache);
 
     v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
 
@@ -745,6 +748,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP,
                             DrawBuffer, BackgroundColor, dt, TranState, MouseP);
+    UpdateAndRenderParticleSystems(WorldMode->ParticleCache, dt, RenderGroup);
 
     Orthographic(RenderGroup, 1.0f);
 

@@ -51,6 +51,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 {
     TIMED_FUNCTION();
 
+    particle_cache *ParticleCache = WorldMode->ParticleCache;
+
     real32 FadeTopEndZ = 1.0f*WorldMode->TypicalFloorHeight;
     real32 FadeTopStartZ = 0.5f*WorldMode->TypicalFloorHeight;
     real32 FadeBottomStartZ = -1.0f*WorldMode->TypicalFloorHeight;

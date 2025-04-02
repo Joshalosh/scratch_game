@@ -1,4 +1,15 @@
 
+struct entity_id
+{
+    u32 Value;
+};
+inline b32 IsEqual(entity_id A, entity_id B)
+{
+    b32 Result = (A.Value == B.Value);
+
+    return(Result);
+}
+
 struct world_position
 {
     // It seems like we have to store ChunkX/Y/Z with each

@@ -1,5 +1,7 @@
  TODO
 
+ - Arena Upgrade
+
  - Graphics Upgrade
    - Particle systems
    - Transition to real artwork

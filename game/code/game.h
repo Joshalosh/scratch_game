@@ -33,6 +33,7 @@
 
 #include "game_world.h"
 #include "game_brain.h"
+#include "game_particles.h"
 #include "game_entity.h"
 #include "game_sim_region.h"
 #include "game_world_mode.h"

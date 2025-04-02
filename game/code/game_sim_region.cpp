@@ -161,7 +161,8 @@ ConnectEntityPointers(sim_region *SimRegion)
 }
 
 internal sim_region *
-BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world_position Origin, rectangle3 Bounds, real32 dt)
+BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world_position Origin, rectangle3 Bounds, real32 dt,
+         particle_cache *ParticleCache)
 {
     TIMED_FUNCTION();
 
@@ -234,7 +235,7 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                 Entry->Index = ID;
                                 Entry->Ptr = Dest;
 
-                                if(Source)
+                                Assert(Source);
                                 {
                                     // TODO: This should really be a decompression step, not a copy.
                                     *Dest = *Source;
@@ -251,6 +252,11 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                 if(EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds))
                                 {
                                     Dest->Flags |= EntityFlag_Active;
+                                    if(ParticleCache && Source->HasParticleSystem)
+                                    {
+                                        particle_system *ParticleSystem = GetOrCreateParticleSystem(ParticleCache, ID, &Source->ParticleSpec, true);
+                                        TouchParticleSystem(ParticleCache, ParticleSystem);
+                                    }
                                 }
 
                                 if(Dest->BrainID.Value)

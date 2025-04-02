@@ -24,11 +24,6 @@ struct hit_point
     uint8_t FilledAmount;
 };
 
-struct entity_id
-{
-    u32 Value;
-};
-
 struct entity_reference
 {
     entity *Ptr;
@@ -193,6 +188,9 @@ struct entity
     // TODO: Generation index so I know how "up to date" this entity is
 
     traversable_reference AutoBoostTo;
+
+    b32 HasParticleSystem;
+    particle_spec ParticleSpec;
 };
 
 #define InvalidP V3(100000.0f, 100000.0f, 100000.0f)

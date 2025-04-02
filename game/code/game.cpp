@@ -4,6 +4,7 @@
 #include "game_asset.cpp"
 #include "game_audio.cpp"
 #include "game_world.cpp"
+#include "game_particles.cpp"
 #include "game_sim_region.cpp"
 #include "game_brain.cpp"
 #include "game_entity.cpp"
