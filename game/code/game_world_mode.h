@@ -13,6 +13,7 @@ struct game_state;
 internal void AddCollisionRule(game_mode_world *WorldMode, uint32_t StorageIndexA, uint32_t StorageIndexB, bool32 ShouldCollide);
 internal void ClearCollisionRulesFor(game_mode_world *WorldMode, uint32_t StorageIndex); 
 
+#if 0
 struct particle_cel
 {
     r32 Density;
@@ -27,6 +28,7 @@ struct particle
     v4 Color;
     v4 dColor;
 };
+#endif
 
 struct game_mode_world
 {
@@ -58,16 +60,18 @@ struct game_mode_world
     random_series EffectsEntropy; // NOTE: This is entropy that doesn't affect the gameplay.
     real32 tSine;
 
-#define PARTICLE_CEL_DIM 32
-    u32 NextParticle;
-    particle Particles[256];
-
     u32 CreationBufferIndex;
     entity CreationBuffer[4];
     u32 LastUsedEntityStorageIndex; // TODO: Worry about this wrapping - free list for IDs?
 
     particle_cache *ParticleCache;
+
+#if 0
+#define PARTICLE_CEL_DIM 32
+    u32 NextParticle;
+    particle Particles[256];
     particle_cel ParticleCels[PARTICLE_CEL_DIM][PARTICLE_CEL_DIM];
+#endif
 };
 
 internal void PlayWorld(game_state *GameState, transient_state *TranState);
