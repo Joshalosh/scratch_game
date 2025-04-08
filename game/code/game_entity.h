@@ -16,6 +16,17 @@ enum entity_type
     EntityType_Stairwell,
 };
 
+struct entity_id
+{
+    u32 Value;
+};
+inline b32 IsEqual(entity_id A, entity_id B)
+{
+    b32 Result = (A.Value == B.Value);
+
+    return(Result);
+}
+
 #define HIT_POINT_SUB_COUNT 4
 struct hit_point
 {
@@ -188,9 +199,6 @@ struct entity
     // TODO: Generation index so I know how "up to date" this entity is
 
     traversable_reference AutoBoostTo;
-
-    b32 HasParticleSystem;
-    particle_spec ParticleSpec;
 };
 
 #define InvalidP V3(100000.0f, 100000.0f, 100000.0f)

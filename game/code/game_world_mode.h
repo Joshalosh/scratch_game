@@ -30,6 +30,7 @@ struct particle
 };
 #endif
 
+struct particle_cache;
 struct game_mode_world
 {
     world *World;
@@ -37,6 +38,7 @@ struct game_mode_world
 
     // TODO: Allow split-screen?
     entity_id CameraFollowingEntityIndex;
+    world_position LastCameraP;
     world_position CameraP;
     v3 CameraOffset;
 

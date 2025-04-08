@@ -428,7 +428,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     game_mode_world *WorldMode = PushStruct(&GameState->ModeArena, game_mode_world);
 
     WorldMode->ParticleCache = PushStruct(&GameState->ModeArena, particle_cache, NoClear());
-    InitParticleCache(WorldMode->ParticleCache);
+    InitParticleCache(WorldMode->ParticleCache, TranState->Assets);
 
     uint32_t TilesPerWidth = 17;
     uint32_t TilesPerHeight = 9;
@@ -496,7 +496,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
 #else
-        uint32_t DoorDirection = 2; //RandomChoice(Series, 2);
+        uint32_t DoorDirection = 1; //RandomChoice(Series, 2);
 #endif
 
 //            DoorDirection = 3;
@@ -650,7 +650,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     uint32_t CameraTileY = LastScreenY*TilesPerHeight + 9/2;
     uint32_t CameraTileZ = LastScreenZ;
     NewCameraP = ChunkPositionFromTilePosition(WorldMode->World, CameraTileX, CameraTileY, CameraTileZ);
-    WorldMode->CameraP = NewCameraP;
+    WorldMode->LastCameraP = WorldMode->CameraP = NewCameraP;
 
     GameState->WorldMode = WorldMode;
 }
@@ -688,7 +688,11 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
+
     world_position SimCentreP = WorldMode->CameraP;
+    v3 FrameToFrameCameraDeltaP = Subtract(World, &WorldMode->CameraP, &WorldMode->LastCameraP);
+    WorldMode->LastCameraP = WorldMode->CameraP;
+
     sim_region *SimRegion = BeginSim(&TranState->TranArena, WorldMode, World,
                                      SimCentreP, SimBounds, Input->dtForFrame, WorldMode->ParticleCache);
 
@@ -748,7 +752,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
     UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP,
                             DrawBuffer, BackgroundColor, dt, TranState, MouseP);
-    UpdateAndRenderParticleSystems(WorldMode->ParticleCache, dt, RenderGroup);
+    UpdateAndRenderParticleSystems(WorldMode->ParticleCache, dt, RenderGroup, 
+                                   -FrameToFrameCameraDeltaP, &WorldTransform);
 
     Orthographic(RenderGroup, 1.0f);
 

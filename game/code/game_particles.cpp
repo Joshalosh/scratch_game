@@ -1,64 +1,50 @@
 #define MMSetExpr(Expr) _mm_set_ps(Expr, Expr, Expr, Expr)
 
-inline __m128
-operator+(__m128 A, __m128 B)
+internal void
+SpawnFire(particle_cache *Cache, v3 AtPInit)
 {
-    __m128 Result = _mm_add_ps(A, B);
-    return(Result);
-}
+    particle_system *System = &Cache->FireSystem;
+    random_series *Entropy = &Cache->ParticleEntropy;
 
-inline __m128
-operator*(f32 A, __m128 B)
-{
-    __m128 Result = _mm_mul_ps(_mm_set1_ps(A), B);
-    return(Result);
-}
+    v3_4x AtP = ToV34x(AtPInit);
 
-inline void 
-GetParticle(particle_system *System, u32 Ai, particle *Result)
-{
-    Result->P = (particle_v3 *)(System->Px + Ai);
-    Result->dP = (particle_v3 *)(System->dPx + Ai);
-    Result->ddP = (particle_v3 *)(System->ddPx + Ai);
-    Result->C = (particle_v4 *)(System->Cr + Ai);
-    Result->dC = (particle_v4 *)(System->dCr + Ai);
+    u32 ParticleIndex4 = System->NextParticle4++;
+    if(System->NextParticle4 >= MAX_PARTICLE_COUNT_4)
+    {
+        System->NextParticle4 = 0;
+    }
+
+    particle_4x *A = System->Particles + ParticleIndex4;
+
+    A->P.x = MMSetExpr(RandomBetween(Entropy, -0.05f, 0.05f));
+    A->P.y = MMSetExpr(0.0f);
+    A->P.z = MMSetExpr(0.0f);
+    A->P += AtP;
+
+    A->dP.x = MMSetExpr(RandomBetween(Entropy, -0.01f, 0.01f));
+    A->dP.y = MMSetExpr(7.0f*RandomBetween(Entropy, 0.7f, 1.0f));
+    A->dP.z = MMSetExpr(0.0f);
+
+    A->ddP.x = MMSetExpr(0.0f);
+    A->ddP.y = MMSetExpr(-9.8f);
+    A->ddP.z = MMSetExpr(0.0f);
+
+    A->C.r = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
+    A->C.g = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
+    A->C.b = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
+    A->C.a = MMSetExpr(1.0f);
+
+    A->dC.r = MMSetExpr(0.0f);
+    A->dC.g = MMSetExpr(0.0f);
+    A->dC.b = MMSetExpr(0.0f);
+    A->dC.a = MMSetExpr(-1.0f);
 }
 
 internal void
-PlayAround(particle_system *System, random_series *Entropy, f32 dt)
+UpdateAndRenderFire(particle_system *System, random_series *Entropy, f32 dt, v3 FrameDisplacementInit,
+                    render_group *RenderGroup, object_transform *Transform)
 {
-    {
-        u32 Ai = System->NextParticle4++;
-        if(System->NextParticle4 >= MAX_PARTICLE_COUNT_4)
-        {
-            System->NextParticle4 = 0;
-        }
-
-        particle A;
-        GetParticle(System, Ai, &A);
-
-        A.P->x = MMSetExpr(RandomBetween(Entropy, -0.05f, 0.05f));
-        A.P->y = MMSetExpr(0.0f);
-        A.P->z = MMSetExpr(0.0f);
-
-        A.dP->x = MMSetExpr(RandomBetween(Entropy, -0.01f, 0.01f));
-        A.dP->y = MMSetExpr(7.0f*RandomBetween(Entropy, 0.7f, 1.0f));
-        A.dP->z = MMSetExpr(0.0f);
-
-        A.ddP->x = MMSetExpr(0.0f);
-        A.ddP->y = MMSetExpr(-9.8f);
-        A.ddP->z = MMSetExpr(0.0f);
-
-        A.C->r = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
-        A.C->g = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
-        A.C->b = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
-        A.C->a = MMSetExpr(1.0f);
-
-        A.dC->r = MMSetExpr(0.0f);
-        A.dC->g = MMSetExpr(0.0f);
-        A.dC->b = MMSetExpr(0.0f);
-        A.dC->a = MMSetExpr(-0.25f);
-    }
+    v3_4x FrameDisplacement = ToV34x(FrameDisplacementInit);
 
 #if 0
     // Particle system test.
@@ -102,8 +88,9 @@ PlayAround(particle_system *System, random_series *Entropy, f32 dt)
     }
 #endif
 
-    for(u32 Ai = 0; Ai < MAX_PARTICLE_COUNT_4; ++Ai)
+    for(u32 ParticleIndex4 = 0; ParticleIndex4 < MAX_PARTICLE_COUNT_4; ++ParticleIndex4)
     {
+        particle_4x *A = System->Particles + ParticleIndex4;
 #if 0
         particle *Particle = WorldMode->Particles + ParticleIndex;
 
@@ -132,14 +119,13 @@ PlayAround(particle_system *System, random_series *Entropy, f32 dt)
 
         v3 ddP = Particle->ddP + Dispersion;
 #endif
-        particle A;
-        GetParticle(System, Ai, &A);
 
         // Simulate the particle forward in time
-        *A.P += (0.5f*Square(dt)*(*A.ddP) + dt*(*A.dP));
-        *A.dP += dt*(*A.ddP);
+        A->P += 0.5f*Square(dt)*A->ddP + dt*A->dP + FrameDisplacement;
+        A->dP += dt*A->ddP;
+        A->C += dt*A->dC;
+
 #if 0
-        *A.C += dt*(*A.dC);
         if(Particle->P.y < 0.0f)
         {
             r32 CoefficientOfRestitution = 0.3f;
@@ -160,92 +146,53 @@ PlayAround(particle_system *System, random_series *Entropy, f32 dt)
         {
             Color.a = 0.9f*Clamp01MapToRange(1.0f, Color.a, 0.9f);
         }
+#endif
 
         // Render the particle.
-        PushBitmap(RenderGroup, EntityTransform, Particle->BitmapID, 1.0f, Particle->P, Color);
-#endif
-    }
-}
-
-internal void
-InitParticleSystem(particle_cache *Cache, particle_system *System,
-                   entity_id ID, particle_spec *Spec)
-{
-}
-        
-internal particle_system *
-GetOrCreateParticleSystem(particle_cache *Cache, entity_id ID, 
-                          particle_spec *Spec, b32 CreateIfNotFound)
-{
-    particle_system *Result = 0;
-
-#if 0
-    u32 MaxFramesSinceTouched = 0;
-    particle_system *Replace = 0;
-    for(u32 SystemIndex = 0; SystemIndex < ArrayCount(Cache->SystemInfos); ++SystemIndex)
-    {
-        particle_system_info *SystemInfos = Cache->SystemInfos + SystemIndex;
-        if(IsEqual(ID, SystemInfos->ID))
+        for(u32 SubIndex = 0; SubIndex < 4; ++SubIndex)
         {
-            Result = Cache->Systems + SystemIndex;
-            break;
-        }
+            v3 P =
+            {
+                M(A->P.x, SubIndex),
+                M(A->P.y, SubIndex),
+                M(A->P.z, SubIndex),
+            };
 
-        if(MaxFramesSinceTouched < SystemInfos->FramesSinceTouched)
-        {
-            MaxFramesSinceTouched = SystemInfos->FramesSinceTouched;
-            Replace = Cache->Systems + SystemIndex;
+            v4 C =
+            {
+                M(A->C.r, SubIndex),
+                M(A->C.g, SubIndex),
+                M(A->C.b, SubIndex),
+                M(A->C.a, SubIndex),
+            };
+
+            if(C.a > 0)
+            {
+                PushBitmap(RenderGroup, Transform, System->BitmapID, 1.0f, P, C);
+            }
         }
     }
-
-    if(CreateIfNotFound && !Result)
-    {
-        Result = Replace;
-
-        InitParticleSystem(Cache, Result, ID, Spec);
-    }
-#endif
-
-    return(Result);
 }
 
 internal void
-TouchParticleSystem(particle_cache *ParticleCache, particle_system *System)
+UpdateAndRenderParticleSystems(particle_cache *Cache, f32 dt, render_group *RenderGroup,
+                               v3 FrameDisplacement, object_transform *Transform)
 {
-#if 0
-    if(System)
-    {
-        u32 Index = (u32)(System - ParticleCache->Systems);
-        Assert(Index < ArrayCount(ParticleCache->SystemInfos));
-        particle_system_info *Info = ParticleCache->SystemInfos + Index;
-
-        Info->FramesSinceTouched = 0;
-    }
-#endif
+    TIMED_FUNCTION();
+    UpdateAndRenderFire(&Cache->FireSystem, &Cache->ParticleEntropy, dt, FrameDisplacement,
+                        RenderGroup, Transform);
 }
 
 internal void
-UpdateAndRenderParticleSystems(particle_cache *Cache, f32 dt, render_group *RenderGroup)
+InitParticleCache(particle_cache *Cache, game_assets *Assets)
 {
-    Assert(ArrayCount(Cache->Systems) == ArrayCount(Cache->SystemInfos));
-    for(u32 SystemIndex = 0; SystemIndex < ArrayCount(Cache->Systems); ++SystemIndex)
-    {
-        particle_system *System = Cache->Systems + SystemIndex;
-        particle_system_info *Info = Cache->SystemInfos + SystemIndex;
+    ZeroStruct(*Cache);
+    Cache->ParticleEntropy = RandomSeed(1234);
 
-        // TODO: Implement
-        
-        ++Info->FramesSinceTouched;
-    }
-}
+    asset_vector MatchVector = {};
+    MatchVector.E[Tag_FacingDirection] = 0.0f;
+    asset_vector WeightVector = {};
+    WeightVector.E[Tag_FacingDirection] = 1.0f;
 
-internal void
-InitParticleCache(particle_cache *Cache)
-{
-    for(u32 SystemIndex = 0; SystemIndex < ArrayCount(Cache->Systems); ++SystemIndex)
-    {
-        particle_system_info *Info = Cache->SystemInfos + SystemIndex;
-        Info->ID.Value = 0;
-        Info->FramesSinceTouched = 0;
-    }
+    Cache->FireSystem.BitmapID = GetBestMatchBitmapFrom(Assets, Asset_Head, &MatchVector, &WeightVector);
 }

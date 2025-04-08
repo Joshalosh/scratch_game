@@ -252,11 +252,6 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                                 if(EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds))
                                 {
                                     Dest->Flags |= EntityFlag_Active;
-                                    if(ParticleCache && Source->HasParticleSystem)
-                                    {
-                                        particle_system *ParticleSystem = GetOrCreateParticleSystem(ParticleCache, ID, &Source->ParticleSpec, true);
-                                        TouchParticleSystem(ParticleCache, ParticleSystem);
-                                    }
                                 }
 
                                 if(Dest->BrainID.Value)

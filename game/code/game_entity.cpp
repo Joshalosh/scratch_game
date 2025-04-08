@@ -159,6 +159,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                         Entity->CameFrom = Entity->Occupying;
                         Entity->MovementMode = MovementMode_Planted;
                         Entity->dtBob = -2.0f;
+
+                        SpawnFire(WorldMode->ParticleCache, Entity->P);
                     }
 
                     Entity->tMovement += 4.0f*dt;

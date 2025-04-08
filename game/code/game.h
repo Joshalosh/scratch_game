@@ -33,12 +33,12 @@
 
 #include "game_world.h"
 #include "game_brain.h"
-#include "game_particles.h"
 #include "game_entity.h"
 #include "game_sim_region.h"
 #include "game_world_mode.h"
 #include "game_render.h"
 #include "game_render_group.h"
+#include "game_particles.h"
 #include "game_asset.h"
 #include "game_audio.h"
 

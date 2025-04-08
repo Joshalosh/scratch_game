@@ -10,11 +10,6 @@
 #define IACA_VC64_END
 #endif
 
-#define mmSquare(a) _mm_mul_ps(a, a)
-#define M(a, i) ((float *)&(a))[i]
-#define Mi(a, i) ((uint32_t *)&(a))[i]
-
-
 global_variable b32 Global_Renderer_ShowLightingSamples = false;
 
 inline v4

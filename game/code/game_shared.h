@@ -2,6 +2,7 @@
 #include "game_intrinsics.h"
 #include "game_math.h"
 #include "game_memory.h"
+#include "game_simd.h"
 
 #include <stdarg.h>
 
