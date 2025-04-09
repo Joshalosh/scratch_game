@@ -9,6 +9,10 @@ struct particle_4x
     v3_4x ddP;
     v4_4x C;
     v4_4x dC;
+
+    r32 FloorZ;
+    s32 ChunkZ;
+    u32 Pad[2];
 };
 
 struct particle_system

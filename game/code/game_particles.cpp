@@ -1,7 +1,7 @@
 #define MMSetExpr(Expr) _mm_set_ps(Expr, Expr, Expr, Expr)
 
 internal void
-SpawnFire(particle_cache *Cache, v3 AtPInit)
+SpawnFire(particle_cache *Cache, v3 AtPInit, s32 ChunkZ, r32 FloorZ)
 {
     particle_system *System = &Cache->FireSystem;
     random_series *Entropy = &Cache->ParticleEntropy;
@@ -38,12 +38,16 @@ SpawnFire(particle_cache *Cache, v3 AtPInit)
     A->dC.g = MMSetExpr(0.0f);
     A->dC.b = MMSetExpr(0.0f);
     A->dC.a = MMSetExpr(-1.0f);
+
+    A->FloorZ = FloorZ;
+    A->ChunkZ = ChunkZ;
 }
 
 internal void
 UpdateAndRenderFire(particle_system *System, random_series *Entropy, f32 dt, v3 FrameDisplacementInit,
-                    render_group *RenderGroup, object_transform *Transform)
+                    render_group *RenderGroup, v3 CameraP)
 {
+    object_transform Transform = DefaultUprightTransform();
     v3_4x FrameDisplacement = ToV34x(FrameDisplacementInit);
 
 #if 0
@@ -149,6 +153,8 @@ UpdateAndRenderFire(particle_system *System, random_series *Entropy, f32 dt, v3 
 #endif
 
         // Render the particle.
+        Transform.ChunkZ = A->ChunkZ;
+        Transform.FloorZ = A->FloorZ - CameraP.z;
         for(u32 SubIndex = 0; SubIndex < 4; ++SubIndex)
         {
             v3 P =
@@ -166,9 +172,10 @@ UpdateAndRenderFire(particle_system *System, random_series *Entropy, f32 dt, v3 
                 M(A->C.a, SubIndex),
             };
 
+            Transform.OffsetP = -CameraP;
             if(C.a > 0)
             {
-                PushBitmap(RenderGroup, Transform, System->BitmapID, 1.0f, P, C);
+                PushBitmap(RenderGroup, &Transform, System->BitmapID, 1.0f, P, C);
             }
         }
     }
@@ -176,11 +183,11 @@ UpdateAndRenderFire(particle_system *System, random_series *Entropy, f32 dt, v3 
 
 internal void
 UpdateAndRenderParticleSystems(particle_cache *Cache, f32 dt, render_group *RenderGroup,
-                               v3 FrameDisplacement, object_transform *Transform)
+                               v3 FrameDisplacement, v3 CameraP)
 {
     TIMED_FUNCTION();
     UpdateAndRenderFire(&Cache->FireSystem, &Cache->ParticleEntropy, dt, FrameDisplacement,
-                        RenderGroup, Transform);
+                        RenderGroup, CameraP);
 }
 
 internal void

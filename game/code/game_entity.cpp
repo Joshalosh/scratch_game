@@ -68,7 +68,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
         // TODO: Probably indicates I want to seperate update and render
         // for entities sometime soon.
         s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex;
-        r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - WorldMode->CameraOffset.z;
+        r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - CameraP.z;
         CamRelGroundZ[LevelIndex] = CameraRelativeGroundZ;
 
         TestAlpha = Clamp01MapToRange(FadeTopEndZ, CameraRelativeGroundZ, FadeTopStartZ);
@@ -160,7 +160,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
                         Entity->MovementMode = MovementMode_Planted;
                         Entity->dtBob = -2.0f;
 
-                        SpawnFire(WorldMode->ParticleCache, Entity->P);
+                        r32 CameraRelativeGroundZ = (r32)(Entity->ZLayer - SimRegion->Origin.ChunkZ)*WorldMode->TypicalFloorHeight - CameraP.z;
+                        SpawnFire(WorldMode->ParticleCache, Entity->P, Entity->ZLayer, CameraRelativeGroundZ);
                     }
 
                     Entity->tMovement += 4.0f*dt;

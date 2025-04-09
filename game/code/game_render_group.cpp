@@ -15,10 +15,6 @@ inline entity_basis_p_result GetRenderEntityBasisP(camera_transform *CameraTrans
     entity_basis_p_result Result = {};
 
     v3 P = OriginalP + ObjectTransform->OffsetP;
-    //v3 P = OriginalP.xyz + ObjectTransform.OffsetP.xyz;
-    //r32 Pw = OriginalP.w + ObjectTransform.OffsetP.w;
-    r32 Pw = 0;
-
     if(CameraTransform->Orthographic)
     {
         Result.P = CameraTransform->ScreenCentre + CameraTransform->MetresToPixels*P.xy;

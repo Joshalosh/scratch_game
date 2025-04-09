@@ -427,7 +427,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
     game_mode_world *WorldMode = PushStruct(&GameState->ModeArena, game_mode_world);
 
-    WorldMode->ParticleCache = PushStruct(&GameState->ModeArena, particle_cache, NoClear());
+    WorldMode->ParticleCache = PushStruct(&GameState->ModeArena, particle_cache, AlignNoClear(16));
     InitParticleCache(WorldMode->ParticleCache, TranState->Assets);
 
     uint32_t TilesPerWidth = 17;
@@ -753,7 +753,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP,
                             DrawBuffer, BackgroundColor, dt, TranState, MouseP);
     UpdateAndRenderParticleSystems(WorldMode->ParticleCache, dt, RenderGroup, 
-                                   -FrameToFrameCameraDeltaP, &WorldTransform);
+                                   -FrameToFrameCameraDeltaP, CameraP);
 
     Orthographic(RenderGroup, 1.0f);
 
