@@ -22,18 +22,25 @@ AddBrain(game_mode_world *WorldMode)
     return(ID);
 }
 
+internal entity_id
+AllocateEntityID(game_mode_world *WorldMode)
+{
+    entity_id Result = {++WorldMode->LastUsedEntityStorageIndex};
+    return(Result);
+}
+
 internal entity *
 BeginEntity(game_mode_world *WorldMode)
 {
-    Assert(WorldMode->CreationBufferIndex < ArrayCount(WorldMode->CreationBuffer));
-    entity *Entity = WorldMode->CreationBuffer + WorldMode->CreationBufferIndex++;
-    // TODO: Worry about this taking a while once the entities are large (sparse clear?)
-    ZeroStruct(*Entity);
+    //Assert(WorldMode->CreationBufferIndex < ArrayCount(WorldMode->CreationBuffer));
+    //entity *Entity = WorldMode->CreationBuffer + WorldMode->CreationBufferIndex++;
+    //ZeroStruct(*Entity);
+
+    entity *Entity = CreateEntity(WorldMode->CreationRegion, AllocateEntityID(WorldMode));
 
     Entity->XAxis = V2(1, 0);
     Entity->YAxis = V2(0, 1);
 
-    Entity->ID.Value = ++WorldMode->LastUsedEntityStorageIndex;
     Entity->Collision = WorldMode->NullCollision;
 
     return(Entity);
@@ -42,10 +49,10 @@ BeginEntity(game_mode_world *WorldMode)
 internal void
 EndEntity(game_mode_world *WorldMode, entity *Entity, world_position P)
 {
-    --WorldMode->CreationBufferIndex;
-    Assert(Entity == (WorldMode->CreationBuffer + WorldMode->CreationBufferIndex));
-    Entity->P = P.Offset_;
-    PackEntityIntoWorld(WorldMode->World, 0, Entity, P);
+    //--WorldMode->CreationBufferIndex;
+    //Assert(Entity == (WorldMode->CreationBuffer + WorldMode->CreationBufferIndex));
+    Entity->P = Subtract(WorldMode->World, &P, &WorldMode->CreationRegion->Origin);
+    //PackEntityIntoWorld(WorldMode->World, 0, Entity, P);
 }
 
 internal entity *
@@ -235,6 +242,8 @@ AddStair(game_mode_world *WorldMode, uint32_t AbsTileX, uint32_t AbsTileY, uint3
 internal void
 AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_reference StandingOn, brain_id BrainID)
 {
+    WorldMode->CreationRegion = SimRegion;
+
     world_position P = MapIntoChunkSpace(SimRegion->World, SimRegion->Origin,
                                          GetSimSpaceTraversable(StandingOn).P);
 
@@ -285,6 +294,8 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     EndEntity(WorldMode, Glove, P);
     EndEntity(WorldMode, Head, P);
     EndEntity(WorldMode, Body, P);
+
+    WorldMode->CreationRegion = 0;
 }
 
 internal void
@@ -467,6 +478,12 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                                          TileSideInMeters,
                                                          TileSideInMeters,
                                                          TileDepthInMeters);
+
+    temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
+    world_position NullOrigin = {};
+    rectangle3 NullRect = {};
+    WorldMode->CreationRegion = BeginSim(&TranState->TranArena, WorldMode, WorldMode->World,
+                                         NullOrigin, NullRect, 0, 0);
 
     s32 ScreenBaseX = 0;
     s32 ScreenBaseY = 0;
@@ -651,6 +668,10 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     uint32_t CameraTileZ = LastScreenZ;
     NewCameraP = ChunkPositionFromTilePosition(WorldMode->World, CameraTileX, CameraTileY, CameraTileZ);
     WorldMode->LastCameraP = WorldMode->CameraP = NewCameraP;
+
+    EndSim(WorldMode->CreationRegion, WorldMode);
+    WorldMode->CreationRegion = 0;
+    EndTemporaryMemory(SimMemory);
 
     GameState->WorldMode = WorldMode;
 }

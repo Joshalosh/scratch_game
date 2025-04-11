@@ -1,5 +1,10 @@
  TODO
 
+ - Combine sim region and world
+   - Implement multiple sim regions per fram
+   - Per-entity clocking
+   - Sim region merging? For multiple players?
+
  - Arena Upgrade
 
  - Graphics Upgrade
@@ -23,10 +28,6 @@
  - Animtaion
    - Skeletal animation
    - Particle systems
- - Implement multiple sim regions per fram
-   - Per-entity clocking
-   - Sim region merging? For multiple players?
-   - Simple zoomed-out view for testing
  - AI
    - AI 'storage'
 

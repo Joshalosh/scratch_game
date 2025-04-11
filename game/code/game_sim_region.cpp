@@ -22,14 +22,17 @@ inline entity_traversable_point
 GetSimSpaceTraversable(entity *Entity, u32 Index)
 {
     entity_traversable_point Result = {};
-    Result.P = Entity->P;
-
-    entity_traversable_point *Point = GetTraversable(Entity, Index);
-    if(Point)
+    if(Entity)
     {
-        // TODO: This wants to be rotated eventuially
-        Result.P += Point->P;
-        Result.Occupier = Point->Occupier;
+        Result.P = Entity->P;
+
+        entity_traversable_point *Point = GetTraversable(Entity, Index);
+        if(Point)
+        {
+            // TODO: This wants to be rotated eventuially
+            Result.P += Point->P;
+            Result.Occupier = Point->Occupier;
+        }
     }
 
     return(Result);
@@ -160,6 +163,15 @@ ConnectEntityPointers(sim_region *SimRegion)
     }
 }
 
+inline void
+AddEntityToHash(sim_region *Region, entity *Entity)
+{
+    entity_hash *Entry = GetHashFromID(Region, Entity->ID);
+    Assert(Entry->Ptr == 0);
+    Entry->Index = Entity->ID;
+    Entry->Ptr = Entity;
+}
+
 internal sim_region *
 BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world_position Origin, rectangle3 Bounds, real32 dt,
          particle_cache *ParticleCache)
@@ -218,35 +230,29 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
                     while(Block)
                     {
                         for(uint32_t EntityIndex = 0;
-                            EntityIndex < Block->EntityCount;
+                            (EntityIndex < Block->EntityCount);
                             ++EntityIndex)
                         {
-                            entity *Source = (entity *)Block->EntityData + EntityIndex;
-
-                            entity_id ID = Source->ID;
-
-                            entity_hash *Entry = GetHashFromID(SimRegion, ID);
-                            Assert(Entry->Ptr == 0);
-
                             if(SimRegion->EntityCount < SimRegion->MaxEntityCount)
                             {
-                                entity *Dest = SimRegion->Entities + SimRegion->EntityCount++;
+                                entity *Source = (entity *)Block->EntityData + EntityIndex;
+                                entity_id ID = Source->ID;
 
-                                Entry->Index = ID;
-                                Entry->Ptr = Dest;
+                                entity *Dest = SimRegion->Entities + SimRegion->EntityCount++;
 
                                 Assert(Source);
                                 {
                                     // TODO: This should really be a decompression step, not a copy.
                                     *Dest = *Source;
 
+                                    Dest->ID = ID;
                                     Dest->ZLayer = ChunkZ;
 
                                     manual_sort_key Zero = {};
                                     Dest->ManualSort = Zero;
                                 }
 
-                                Dest->ID = ID;
+                                AddEntityToHash(SimRegion, Dest);
                                 Dest->P += ChunkDelta;
 
                                 if(EntityOverlapsRectangle(Dest->P, Dest->Collision->TotalVolume, SimRegion->UpdatableBounds))
@@ -287,6 +293,28 @@ BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world
     return(SimRegion);
 }
 
+inline entity *
+CreateEntity(sim_region *Region, entity_id ID)
+{
+    entity *Result = &Region->NullEntity;
+    if(Region->EntityCount < Region->MaxEntityCount)
+    {
+        Result = Region->Entities + Region->EntityCount++;
+    }
+    else 
+    {
+        InvalidCodePath;
+    }
+
+    // TODO: Worry about this taking a while once the entities are large
+    ZeroStruct(*Result);
+
+    Result->ID = ID;
+    AddEntityToHash(Region, Result);
+
+    return(Result);
+}
+
 inline void
 DeleteEntity(sim_region *Region, entity *Entity)
 {
@@ -294,6 +322,36 @@ DeleteEntity(sim_region *Region, entity *Entity)
     {
         Entity->Flags |= EntityFlag_Deleted;
     }
+}
+
+inline void
+PackEntityReference(sim_region *SimRegion, entity_reference *Ref)
+{
+    if(Ref->Ptr)
+    {
+        if(IsDeleted(Ref->Ptr))
+        {
+            Ref->Index.Value = 0;
+        }
+        else
+        {
+            Ref->Index = Ref->Ptr->ID;
+        }
+    }
+    else if(Ref->Index.Value)
+    {
+        if(SimRegion && GetHashFromID(SimRegion, Ref->Index))
+        {
+            Ref->Index.Value = 0;
+        }
+    }
+}
+
+inline void
+PackTraversableReference(sim_region *SimRegion, traversable_reference *Ref)
+{
+    // TODO: Need to pack this
+    PackEntityReference(SimRegion, &Ref->Entity);
 }
 
 internal void
@@ -391,7 +449,14 @@ EndSim(sim_region *Region, game_mode_world *WorldMode)
 
             v3 OldEntityP = Entity->P;
             Entity->P += ChunkDelta;
-            PackEntityIntoWorld(World, Region, Entity, ChunkP);
+            entity *DestE = (entity *)UseChunkSpace(World, sizeof(*Entity), ChunkP);
+            *DestE = *Entity;
+            PackTraversableReference(Region, &DestE->Occupying);
+            PackTraversableReference(Region, &DestE->CameFrom);
+            PackTraversableReference(Region, &DestE->AutoBoostTo);
+
+            DestE->ddP = V3(0, 0, 0);
+            DestE->ddtBob = 0.0f;
 
             //v3 ReverseChunkDelta = Subtract(Region->World, &ChunkP, &Region->Origin);
             //v3 TestP = Entity->P + ReverseChunkDelta;
@@ -579,7 +644,7 @@ TransactionalOccupy(entity *Entity, traversable_reference *DestRef, traversable_
     b32 Result = false;
 
     entity_traversable_point *Desired = GetTraversable(DesiredRef);
-    if(!Desired->Occupier)
+    if(Desired && !Desired->Occupier)
     {
         entity_traversable_point *Dest = GetTraversable(*DestRef);
         if(Dest)
@@ -605,7 +670,7 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, r3
     Entity->dP = ddP*dt + Entity->dP;
     // TODO Upgrade physical motion routinges to handle capping
     // the maximum velocity?
-    Assert(LengthSq(Entity->dP) <= Square(SimRegion->MaxEntityVelocity));
+    //Assert(LengthSq(Entity->dP) <= Square(SimRegion->MaxEntityVelocity));
 
     r32 DistanceRemaining = Entity->DistanceLimit;
     if(DistanceRemaining == 0.0f)

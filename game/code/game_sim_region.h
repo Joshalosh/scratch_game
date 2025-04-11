@@ -30,6 +30,8 @@ struct sim_region
 
     entity_hash EntityHash[4096];
     brain_hash BrainHash[256];
+
+    entity NullEntity;
 };
 
 internal entity_hash *GetHashFromID(sim_region *SimRegion, entity_id StorageIndex);

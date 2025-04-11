@@ -62,8 +62,7 @@ struct game_mode_world
     random_series EffectsEntropy; // NOTE: This is entropy that doesn't affect the gameplay.
     real32 tSine;
 
-    u32 CreationBufferIndex;
-    entity CreationBuffer[4];
+    sim_region *CreationRegion;
     u32 LastUsedEntityStorageIndex; // TODO: Worry about this wrapping - free list for IDs?
 
     particle_cache *ParticleCache;

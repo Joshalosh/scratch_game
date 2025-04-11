@@ -186,42 +186,10 @@ HasRoomFor(world_entity_block *Block, u32 Size)
     return(Result);
 }
 
-inline void
-PackEntityReference(sim_region *SimRegion, entity_reference *Ref)
+internal void *
+UseChunkSpace(world *World, u32 Size, world_chunk *Chunk)
 {
-    if(Ref->Ptr)
-    {
-        if(IsDeleted(Ref->Ptr))
-        {
-            Ref->Index.Value = 0;
-        }
-        else
-        {
-            Ref->Index = Ref->Ptr->ID;
-        }
-    }
-    else if(Ref->Index.Value)
-    {
-        if(SimRegion && GetHashFromID(SimRegion, Ref->Index))
-        {
-            Ref->Index.Value = 0;
-        }
-    }
-}
-
-inline void
-PackTraversableReference(sim_region *SimRegion, traversable_reference *Ref)
-{
-    // TODO: Need to pack this
-    PackEntityReference(SimRegion, &Ref->Entity);
-}
-
-internal void
-PackEntityIntoChunk(world *World, sim_region *SimRegion, entity *Source, world_chunk *Chunk)
-{
-    u32 PackSize = sizeof(*Source);
-
-    if(!Chunk->FirstBlock || !HasRoomFor(Chunk->FirstBlock, PackSize))
+    if(!Chunk->FirstBlock || !HasRoomFor(Chunk->FirstBlock, Size))
     {
         if(!World->FirstFreeBlock)
         {
@@ -240,27 +208,21 @@ PackEntityIntoChunk(world *World, sim_region *SimRegion, entity *Source, world_c
 
     world_entity_block *Block = Chunk->FirstBlock;
 
-    Assert(HasRoomFor(Block, PackSize));
+    Assert(HasRoomFor(Block, Size));
     u8 *Dest = (Block->EntityData + Block->EntityDataSize);
-    Block->EntityDataSize += PackSize;
+    Block->EntityDataSize += Size;
     ++Block->EntityCount;
 
-    entity *DestE = (entity *)Dest;
-    *DestE = *Source;
-    PackTraversableReference(SimRegion, &DestE->Occupying);
-    PackTraversableReference(SimRegion, &DestE->CameFrom);
-    PackTraversableReference(SimRegion, &DestE->AutoBoostTo);
-
-    DestE->ddP = V3(0, 0, 0);
-    DestE->ddtBob = 0.0f;
+    return(Dest);
 }
 
-internal void
-PackEntityIntoWorld(world *World, sim_region *SimRegion, entity *Source, world_position At)
+internal void *
+UseChunkSpace(world *World, u32 Size, world_position At)
 {
     world_chunk *Chunk = GetWorldChunk(World, At.ChunkX, At.ChunkY, At.ChunkZ, &World->Arena);
     Assert(Chunk);
-    PackEntityIntoChunk(World, SimRegion, Source, Chunk);
+    void *Result = UseChunkSpace(World, Size, Chunk);
+    return(Result);
 }
 
 inline void
