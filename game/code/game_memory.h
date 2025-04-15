@@ -5,6 +5,8 @@ struct memory_arena
     uint8_t *Base;
     memory_index Used;
 
+    memory_index MinimumBlockSize;
+
     int32_t TempCount;
 };
 
@@ -33,6 +35,17 @@ InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
     Arena->Base = (uint8_t *)Base;
     Arena->Used = 0;
     Arena->TempCount = 0;
+    Arena->MinimumBlockSize = 0;
+}
+
+inline void
+InitialiseArena(memory_arena *Arena, memory_index MinimumBlockSize)
+{
+    Arena->Size = 0;
+    Arena->Base = 0;
+    Arena->Used = 0;
+    Arena->TempCount = 0;
+    Arena->MinimumBlockSize = MinimumBlockSize;
 }
 
 inline memory_index
@@ -138,6 +151,21 @@ inline void *
 PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params = DefaultArenaParams())
 {
     memory_index Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
+
+    if((Arena->Used + Size) > Arena->Size)
+    { 
+        if(!Arena->MinimumBlockSize)
+        {
+            // TODO: Tune default block size eventually
+            Arena->MinimumBlockSize = 1024*1024;
+        }
+
+        Size = SizeInit; // NOTE: The base will automatically be aligned now
+        memory_index BlockSize = Maximum(Size, Arena->MinimumBlockSize);
+        Arena->Size = BlockSize;
+        Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize);
+        Arena->Used = 0;
+    }
 
     Assert((Arena->Used + Size) <= Arena->Size);
 

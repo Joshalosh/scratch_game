@@ -1,4 +1,7 @@
 
+#define Minimum(A, B) ((A < B) ? (A) : (B))
+#define Maximum(A, B) ((A > B) ? (A) : (B))
+
 #include "game_intrinsics.h"
 #include "game_math.h"
 #include "game_memory.h"

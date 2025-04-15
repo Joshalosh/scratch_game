@@ -28,9 +28,6 @@
 #define FREELIST_DEALLOCATE(Pointer, FreeListPointer) \
     if(Pointer) {(Pointer)->NextFree = (FreeListPointer); (FreeListPointer) = (Pointer);}
 
-#define Minimum(A, B) ((A < B) ? (A) : (B))
-#define Maximum(A, B) ((A > B) ? (A) : (B))
-
 #include "game_world.h"
 #include "game_brain.h"
 #include "game_entity.h"
@@ -116,8 +113,6 @@ struct transient_state
     // 0 is bottom, 1 is middle and 2 is top.
     environment_map EnvMaps[3];
 };
-
-global_variable platform_api Platform;
 
 internal task_with_memory *BeginTaskWithMemory(transient_state *TranState, b32 DependsOnGameMode);
 internal void EndTaskWithMemory(task_with_memory *Task);

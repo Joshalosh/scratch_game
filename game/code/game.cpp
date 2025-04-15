@@ -244,6 +244,7 @@ SetGameMode(game_state *GameState, transient_state *TranState, game_mode GameMod
 debug_table *GlobalDebugTable;
 game_memory *DebugGlobalMemory;
 #endif
+platform_api Platform;
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Platform = Memory->PlatformAPI;

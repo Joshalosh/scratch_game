@@ -605,6 +605,7 @@ typedef struct platform_api
 #endif
 
 } platform_api;
+extern platform_api Platform;
 
 typedef struct game_memory
 {
@@ -614,11 +615,9 @@ typedef struct game_memory
     uint64_t TransientStorageSize;
     void *TransientStorage; // Required to be cleared to zero at startup
 
-    uint64_t DebugStorageSize;
-    void *DebugStorage; // Required to be cleared to zero at startup
-
 #if GAME_INTERNAL
     struct debug_table *DebugTable;
+    struct debug_state *DebugState;
 #endif
 
     platform_work_queue *HighPriorityQueue;

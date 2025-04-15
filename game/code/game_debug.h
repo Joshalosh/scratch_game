@@ -221,8 +221,6 @@ struct debug_thread
 
 struct debug_state
 {
-    b32 Initialised;
-
     memory_arena DebugArena;
     memory_arena PerFrameArena;
 

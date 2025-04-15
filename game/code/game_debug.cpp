@@ -113,11 +113,7 @@ DEBUGGetState(game_memory *Memory)
     debug_state *DebugState = 0;
     if(Memory)
     {
-        DebugState = (debug_state *)Memory->DebugStorage;
-        if(!DebugState->Initialised)
-        {
-            DebugState = 0;
-        }
+        DebugState = Memory->DebugState;
     }
 
     return(DebugState);
@@ -1629,6 +1625,7 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
         }
         else
         {
+#if 0
             if(ArenaHasRoomFor(&DebugState->PerFrameArena, sizeof(debug_stored_event)))
             {
                 Result = PushStruct(&DebugState->PerFrameArena, debug_stored_event);
@@ -1637,6 +1634,9 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
             {
                 FreeOldestFrame(DebugState);
             }
+#else
+            Result = PushStruct(&DebugState->PerFrameArena, debug_stored_event);
+#endif
         }
     }
 
@@ -1862,85 +1862,38 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
     }
 }
 
+internal debug_state *
+DEBUGInit(u32 Width, u32 Height)
+{
+    memory_arena Bootstrap = {};
+    debug_state *DebugState = PushStruct(&Bootstrap, debug_state);
+    DebugState->DebugArena = Bootstrap;
+
+    DebugState->CollationFrameOrdinal = 1;
+    DebugState->TreeSentinel.Next = &DebugState->TreeSentinel;
+    DebugState->TreeSentinel.Prev = &DebugState->TreeSentinel;
+
+    DebugState->RootGroup = CreateVariableLink(DebugState, 4, "Root");
+    DebugState->RootInfoSize = 256;
+    DebugState->RootGroup->Name = 
+        DebugState->RootInfo = (char *)PushSize(&DebugState->DebugArena, DebugState->RootInfoSize);
+
+    DebugState->ProfileGroup = CreateVariableLink(DebugState, 7, "Profile");
+
+    debug_event RootProfileEvent = {};
+    RootProfileEvent.GUID = DEBUG_NAME("RootProfile");
+    DebugState->RootProfileElement = GetElementFromEvent(DebugState, &RootProfileEvent, 0, 0);
+
+    AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
+
+    return(DebugState);
+
+}
+
 internal void
 DEBUGStart(debug_state *DebugState, game_render_commands *Commands, game_assets *Assets, u32 MainGenerationID, u32 Width, u32 Height)
 {
     TIMED_FUNCTION();
-
-    if(!DebugState->Initialised)
-    {
-        DebugState->FrameBarLaneCount = 0;
-        DebugState->FirstThread = 0;
-        DebugState->FirstFreeThread = 0;
-        DebugState->FirstFreeBlock = 0;
-
-        DebugState->TotalFrameCount = 0;
-        DebugState->MostRecentFrameOrdinal = 0;
-        DebugState->CollationFrameOrdinal = 1;
-        DebugState->OldestFrameOrdinal = 0;
-
-        DebugState->TreeSentinel.Next = &DebugState->TreeSentinel;
-        DebugState->TreeSentinel.Prev = &DebugState->TreeSentinel;
-        DebugState->TreeSentinel.Group = 0;
-
-        memory_index TotalMemorySize = DebugGlobalMemory->DebugStorageSize - sizeof(debug_state);
-        InitialiseArena(&DebugState->DebugArena, TotalMemorySize, DebugState + 1);
-#if 1
-        SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, (TotalMemorySize / 2));
-#else
-        // This is the stress-testing case to make sure the memory recycling works
-        SubArena(&DebugState->PerFrameArena, &DebugState->DebugArena, 8*1024*1024);
-#endif
-
-        DebugState->RootGroup = CreateVariableLink(DebugState, 4, "Root");
-        DebugState->RootInfoSize = 256;
-        DebugState->RootGroup->Name = 
-            DebugState->RootInfo = (char *)PushSize(&DebugState->DebugArena, DebugState->RootInfoSize);
-
-        DebugState->ProfileGroup = CreateVariableLink(DebugState, 7, "Profile");
-
-#if 0
-        debug_variable_definition_context Context = {};
-        Context.State = DebugState;
-        Context.Arena = &DebugState->DebugArena;
-        Context.GroupStack[0] = 0;
-
-        DebugState->RootGroup = DEBUGBeginVariableGroup(&Context, "Root");
-        DEBUGBeginVariableGroup(&Context, "Debugging");
-
-        DEBUGCreateVariables(&Context);
-        DEBUGBeginVariableGroup(&Context, "Profile");
-        DEBUGBeginVariableGroup(&Context, "By Thread");
-        DEBUGAddVariable(&Context, DebugType_CounterThreadList, "");
-        DEBUGEndVariableGroup(&Context);
-        DEBUGBeginVariableGroup(&Context, "By Function");
-        DEBUGAddVariable(&Context, DebugType_CounterThreadList, "");
-        DEBUGEndVariableGroup(&Context);
-        DEBUGEndVariableGroup(&Context);
-
-        asset_vector MatchVector = {};
-        MatchVector.E[Tag_FacingDirection] = 0.0f;
-        asset_vector WeightVector = {};
-        WeightVector.E[Tag_FacingDirection] = 1.0f;
-        bitmap_id ID = GetBestMatchBitmapFrom(Assets, Asset_Head, &MatchVector, &WeightVector);
-
-        DEBUGAddVariable(&Context, "Test Bitmap", ID);
-
-        DEBUGEndVariableGroup(&Context);
-        DEBUGEndVariableGroup(&Context);
-        Assert(Context.GroupDepth == 0);
-#endif
-
-        debug_event RootProfileEvent = {};
-        RootProfileEvent.GUID = DEBUG_NAME("RootProfile");
-        DebugState->RootProfileElement = GetElementFromEvent(DebugState, &RootProfileEvent, 0, 0);
-
-        DebugState->Paused = false;
-
-        DebugState->Initialised = true;
-
-        AddTree(DebugState, DebugState->RootGroup, V2(-0.5f*Width, 0.5f*Height));
-    }
 
     DebugState->RenderGroup = BeginRenderGroup(Assets, Commands, MainGenerationID, false, Width, Height);
 
@@ -2028,7 +1981,12 @@ extern "C" DEBUG_GAME_FRAME_END(DEBUGGameFrameEnd)
     Assert(EventArrayIndex <= 1);
     u32 EventCount = ArrayIndex_EventIndex & 0xFFFFFFFF;
 
-    debug_state *DebugState = (debug_state *)Memory->DebugStorage;
+    if(!Memory->DebugState)
+    {
+        Memory->DebugState = DEBUGInit(RenderCommands->Width, RenderCommands->Height);
+    }
+
+    debug_state *DebugState = Memory->DebugState;
     if(DebugState)
     {
         game_assets *Assets = DEBUGGetGameAssets(Memory);

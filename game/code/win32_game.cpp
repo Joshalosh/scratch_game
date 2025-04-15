@@ -22,7 +22,7 @@ TODO: Additional Platform Layer Code
 
 #include "win32_game.h"
 
-global_variable platform_api Platform;
+platform_api Platform;
 
 global_variable b32 GlobalSoftwareRendering;
 global_variable b32 GlobalRunning;
@@ -1760,7 +1760,6 @@ WinMain(HINSTANCE Instance,
             game_memory GameMemory = {};
             GameMemory.PermanentStorageSize = Megabytes(256);
             GameMemory.TransientStorageSize = Gigabytes(1);
-            GameMemory.DebugStorageSize = Megabytes(256);
 #if GAME_INTERNAL
             GameMemory.DebugTable = GlobalDebugTable;
 #endif
@@ -1798,16 +1797,13 @@ WinMain(HINSTANCE Instance,
             Platform = GameMemory.PlatformAPI;
 
             Win32State.TotalSize = (GameMemory.PermanentStorageSize + 
-                                    GameMemory.TransientStorageSize + 
-                                    GameMemory.DebugStorageSize);
+                                    GameMemory.TransientStorageSize);
             Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
                                                       MEM_RESERVE|MEM_COMMIT,
                                                       PAGE_READWRITE);
             GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
             GameMemory.TransientStorage = ((uint8_t *)GameMemory.PermanentStorage +
                                            GameMemory.PermanentStorageSize);
-            GameMemory.DebugStorage = ((u8 *)GameMemory.TransientStorage +
-                                       GameMemory.TransientStorageSize);
 
             for(int ReplayIndex = 1; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
             {
