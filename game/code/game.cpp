@@ -201,8 +201,8 @@ DEBUGGetMainGenerationID(game_memory *Memory)
 {
     u32 Result = 0;
 
-    transient_state *TranState = (transient_state *)Memory->TransientStorage;
-    if(TranState->IsInitialised)
+    transient_state *TranState = Memory->TransientState;
+    if(TranState)
     {
         Result = TranState->MainGenerationID;
     }
@@ -215,8 +215,8 @@ DEBUGGetGameAssets(game_memory *Memory)
 {
     game_assets *Assets = 0;
 
-    transient_state *TranState = (transient_state *)Memory->TransientStorage;
-    if(TranState->IsInitialised)
+    transient_state *TranState = Memory->TransientState;
+    if(TranState)
     {
         Assets = TranState->Assets;
     }
@@ -287,39 +287,25 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) ==
            (ArrayCount(Input->Controllers[0].Buttons)));
 
-    Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
-    game_state *GameState = (game_state *)Memory->PermanentStorage;
-    if(!GameState->IsInitialised)
+    game_state *GameState = Memory->GameState;
+    if(!GameState)
     {
-        memory_arena TotalArena;
-        InitialiseArena(&TotalArena, Memory->PermanentStorageSize - sizeof(game_state),
-                        (uint8_t *)Memory->PermanentStorage + sizeof(game_state));
-
-        SubArena(&GameState->AudioArena, &TotalArena, Megabytes(1));
-        SubArena(&GameState->ModeArena, &TotalArena,
-                 GetArenaSizeRemaining(&TotalArena));
-
+        GameState = Memory->GameState = BootstrapPushStruct(game_state, TotalArena);
         InitialiseAudioState(&GameState->AudioState, &GameState->AudioArena);
-
-        GameState->IsInitialised = true;
     }
 
     // Transient initialisation
-    Assert(sizeof(transient_state) <= Memory->TransientStorageSize);
-    transient_state *TranState = (transient_state *)Memory->TransientStorage;
-    if(!TranState->IsInitialised)
+    transient_state *TranState = Memory->TransientState;
+    if(!TranState)
     {
-        InitialiseArena(&TranState->TranArena, Memory->TransientStorageSize - sizeof(transient_state),
-                        (uint8_t *)Memory->TransientStorage + sizeof(transient_state));
+        TranState = Memory->TransientState = BootstrapPushStruct(transient_state, TranArena);
 
         TranState->HighPriorityQueue = Memory->HighPriorityQueue;
         TranState->LowPriorityQueue = Memory->LowPriorityQueue;
         for(uint32_t TaskIndex = 0; TaskIndex < ArrayCount(TranState->Tasks); ++TaskIndex)
         {
             task_with_memory *Task = TranState->Tasks + TaskIndex;
-
             Task->BeingUsed = false;
-            SubArena(&Task->Arena, &TranState->TranArena, Megabytes(1));
         }
 
         TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(256), TranState,
@@ -348,8 +334,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 Height >>= 1;
             }
         }
-
-        TranState->IsInitialised = true;
     }
 
     {DEBUG_DATA_BLOCK("Memory");
@@ -449,8 +433,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
-    game_state *GameState = (game_state *)Memory->PermanentStorage;
-    transient_state *TranState = (transient_state *)Memory->TransientStorage;
+    game_state *GameState = Memory->GameState;
+    transient_state *TranState = Memory->TransientState;
 
     OutputPlayingSounds(&GameState->AudioState, SoundBuffer, TranState->Assets, &TranState->TranArena);
 }

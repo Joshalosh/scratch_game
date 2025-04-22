@@ -1,11 +1,18 @@
  TODO
 
+ - Arena Upgrade
+   - Looped live code editing support
+   - Show on profile
+   - Clean up where arenas are used and how
+
+ - Cutscenes now malfunctioning
+ - Bug in traversables where trees aren't occupying their spots
+
  - Combine sim region and world
    - Implement multiple sim regions per fram
    - Per-entity clocking
    - Sim region merging? For multiple players?
 
- - Arena Upgrade
 
  - Graphics Upgrade
    - Particle systems

@@ -1,4 +1,11 @@
 
+struct memory_block_footer
+{
+    u8 *Base;
+    umm Size;
+    umm Used;
+};
+
 struct memory_arena
 {
     memory_index Size;
@@ -7,12 +14,14 @@ struct memory_arena
 
     memory_index MinimumBlockSize;
 
-    int32_t TempCount;
+    u32 BlockCount;
+    s32 TempCount;
 };
 
 struct temporary_memory
 {
     memory_arena *Arena;
+    u8 *Base;
     memory_index Used;
 };
 
@@ -29,13 +38,9 @@ ZeroSize(memory_index Size, void *Ptr)
 }
 
 inline void
-InitialiseArena(memory_arena *Arena, memory_index Size, void *Base)
+SetMinimumBlockSize(memory_arena *Arena, memory_index MinimumBlockSize)
 {
-    Arena->Size = Size;
-    Arena->Base = (uint8_t *)Base;
-    Arena->Used = 0;
-    Arena->TempCount = 0;
-    Arena->MinimumBlockSize = 0;
+    Arena->MinimumBlockSize = MinimumBlockSize;
 }
 
 inline void
@@ -147,6 +152,13 @@ ArenaHasRoomFor(memory_arena *Arena, memory_index SizeInit, arena_push_params Pa
     return(Result);
 }
 
+inline memory_block_footer *
+GetFooter(memory_arena *Arena)
+{
+    memory_block_footer *Result = (memory_block_footer *)(Arena->Base + Arena->Size);
+    return(Result);
+}
+
 inline void *
 PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params = DefaultArenaParams())
 {
@@ -160,11 +172,20 @@ PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params =
             Arena->MinimumBlockSize = 1024*1024;
         }
 
+        memory_block_footer Save;
+        Save.Base = Arena->Base;
+        Save.Size = Arena->Size;
+        Save.Used = Arena->Used;
+
         Size = SizeInit; // NOTE: The base will automatically be aligned now
-        memory_index BlockSize = Maximum(Size, Arena->MinimumBlockSize);
-        Arena->Size = BlockSize;
+        memory_index BlockSize = Maximum(Size + sizeof(memory_block_footer), Arena->MinimumBlockSize);
+        Arena->Size = BlockSize - sizeof(memory_block_footer);
         Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize);
         Arena->Used = 0;
+        ++Arena->BlockCount;
+
+        memory_block_footer *Footer = GetFooter(Arena);
+        *Footer = Save;
     }
 
     Assert((Arena->Used + Size) <= Arena->Size);
@@ -222,6 +243,7 @@ BeginTemporaryMemory(memory_arena *Arena)
     temporary_memory Result;
 
     Result.Arena = Arena;
+    Result.Base = Arena->Base;
     Result.Used = Arena->Used;
 
     ++Arena->TempCount;
@@ -230,9 +252,30 @@ BeginTemporaryMemory(memory_arena *Arena)
 }
 
 inline void
+FreeLastBlock(memory_arena *Arena)
+{
+    void *Free = Arena->Base;
+
+    memory_block_footer *Footer = GetFooter(Arena);
+
+    Arena->Base = Footer->Base;
+    Arena->Size = Footer->Size;
+    Arena->Used = Footer->Used;
+
+    Platform.DeallocateMemory(Free);
+
+    --Arena->BlockCount;
+}
+
+inline void
 EndTemporaryMemory(temporary_memory TempMem)
 {
     memory_arena *Arena = TempMem.Arena;
+    while(Arena->Base != TempMem.Base)
+    {
+        FreeLastBlock(Arena);
+    }
+
     Assert(Arena->Used >= TempMem.Used);
     Arena->Used = TempMem.Used;
     Assert(Arena->TempCount > 0);
@@ -242,7 +285,10 @@ EndTemporaryMemory(temporary_memory TempMem)
 inline void
 Clear(memory_arena *Arena)
 {
-    InitialiseArena(Arena, Arena->Size, Arena->Base);
+    while(Arena->BlockCount > 0)
+    {
+        FreeLastBlock(Arena);
+    }
 }
 
 inline void
@@ -268,4 +314,16 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
     while(Size--) {*Dest++ = *Source++;}
 
     return(DestInit);
+}
+
+#define BootstrapPushStruct(type, Member, ...) (type *)BootstrapPushSize_(sizeof(type), OffsetOf(type, Member), ## __VA_ARGS__)
+inline void *
+BootstrapPushSize_(umm StructSize, umm OffsetToArena, umm MinimumBlockSize = 0, arena_push_params Params = DefaultArenaParams())
+{
+    memory_arena Bootstrap = {};
+    Bootstrap.MinimumBlockSize = MinimumBlockSize;
+    void *Struct = PushSize(&Bootstrap, StructSize, Params);
+    *(memory_arena *)((u8 *)Struct + OffsetToArena) = Bootstrap;
+
+    return(Struct);
 }

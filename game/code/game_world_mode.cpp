@@ -367,7 +367,7 @@ AddCollisionRule(game_mode_world *WorldMode, uint32_t IDA, uint32_t IDB, bool32 
         }
         else
         {
-            Found = PushStruct(&WorldMode->World->Arena, pairwise_collision_rule);
+            Found = PushStruct(WorldMode->World->Arena, pairwise_collision_rule);
         }
 
         Found->NextInHash = WorldMode->CollisionRuleHash[HashBucket];
@@ -387,9 +387,9 @@ MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY
                             real32 OffsetZ = 0.0f)
 {
     // TODO: Change to using the fundamental types arena, etc
-    entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, entity_collision_volume_group);
+    entity_collision_volume_group *Group = PushStruct(WorldMode->World->Arena, entity_collision_volume_group);
     Group->VolumeCount = 1;
-    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, entity_collision_volume);
+    Group->Volumes = PushArray(WorldMode->World->Arena, Group->VolumeCount, entity_collision_volume);
     Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ + OffsetZ);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Volumes[0] = Group->TotalVolume;
@@ -401,14 +401,14 @@ entity_collision_volume_group *
 MakeSimpleFloorCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ)
 {
     // TODO: Change to using the fundamental types arena, etc
-    entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, entity_collision_volume_group);
+    entity_collision_volume_group *Group = PushStruct(WorldMode->World->Arena, entity_collision_volume_group);
     Group->VolumeCount = 0;
     Group->TotalVolume.OffsetP = V3(0, 0, 0);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
 
 #if 0
     Group->VolumeCount = 1;
-    Group->Volumes = PushArray(&WorldMode->World->Arena, Group->VolumeCount, entity_collision_volume);
+    Group->Volumes = PushArray(WorldMode->World->Arena, Group->VolumeCount, entity_collision_volume);
     Group->TotalVolume.OffsetP = V3(0, 0, 0.5f*DimZ);
     Group->TotalVolume.Dim = V3(DimX, DimY, DimZ);
     Group->Volumes[0] = Group->TotalVolume;
@@ -421,7 +421,7 @@ entity_collision_volume_group *
 MakeNullCollision(game_mode_world *WorldMode)
 {
     // TODO: Change to using the fundamental types arena, etc
-    entity_collision_volume_group *Group = PushStruct(&WorldMode->World->Arena, entity_collision_volume_group);
+    entity_collision_volume_group *Group = PushStruct(WorldMode->World->Arena, entity_collision_volume_group);
     Group->VolumeCount = 0;
     Group->Volumes = 0;
     Group->TotalVolume.OffsetP = V3(0, 0, 0);

@@ -138,7 +138,7 @@ CreateWorld(v3 ChunkDimInMeters, memory_arena *ParentArena)
 
     World->ChunkDimInMeters = ChunkDimInMeters;
     World->FirstFree = 0;
-    SubArena(&World->Arena, ParentArena, GetArenaSizeRemaining(ParentArena), NoClear());
+    World->Arena = ParentArena;
 
     return(World);
 }
@@ -193,7 +193,7 @@ UseChunkSpace(world *World, u32 Size, world_chunk *Chunk)
     {
         if(!World->FirstFreeBlock)
         {
-            World->FirstFreeBlock = PushStruct(&World->Arena, world_entity_block);
+            World->FirstFreeBlock = PushStruct(World->Arena, world_entity_block);
             World->FirstFreeBlock->Next = 0;
         }
 
@@ -219,7 +219,7 @@ UseChunkSpace(world *World, u32 Size, world_chunk *Chunk)
 internal void *
 UseChunkSpace(world *World, u32 Size, world_position At)
 {
-    world_chunk *Chunk = GetWorldChunk(World, At.ChunkX, At.ChunkY, At.ChunkZ, &World->Arena);
+    world_chunk *Chunk = GetWorldChunk(World, At.ChunkX, At.ChunkY, At.ChunkZ, World->Arena);
     Assert(Chunk);
     void *Result = UseChunkSpace(World, Size, Chunk);
     return(Result);

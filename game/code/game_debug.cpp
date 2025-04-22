@@ -1865,9 +1865,7 @@ CollateDebugRecords(debug_state *DebugState, u32 EventCount, debug_event *EventA
 internal debug_state *
 DEBUGInit(u32 Width, u32 Height)
 {
-    memory_arena Bootstrap = {};
-    debug_state *DebugState = PushStruct(&Bootstrap, debug_state);
-    DebugState->DebugArena = Bootstrap;
+    debug_state *DebugState = BootstrapPushStruct(debug_state, DebugArena);
 
     DebugState->CollationFrameOrdinal = 1;
     DebugState->TreeSentinel.Next = &DebugState->TreeSentinel;

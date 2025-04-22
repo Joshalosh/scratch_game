@@ -64,8 +64,8 @@ enum game_mode
 
 struct game_state
 {
-    bool32 IsInitialised;
-    
+    memory_arena TotalArena;
+
     memory_arena ModeArena;
     memory_arena AudioArena; // TODO: Move this into the audio system proper
 

@@ -609,11 +609,8 @@ extern platform_api Platform;
 
 typedef struct game_memory
 {
-    uint64_t PermanentStorageSize;
-    void *PermanentStorage; // Required to be cleared to zero at startup
-
-    uint64_t TransientStorageSize;
-    void *TransientStorage; // Required to be cleared to zero at startup
+    struct game_state *GameState;
+    struct transient_state *TransientState;
 
 #if GAME_INTERNAL
     struct debug_table *DebugTable;

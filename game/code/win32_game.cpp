@@ -1738,9 +1738,7 @@ WinMain(HINSTANCE Instance,
             GlobalRunning = true;
 
             // TODO: I want to make this a growable arena
-            memory_arena FrameTempArena;
-            memory_index FrameTempArenaSize = Megabytes(64);
-            InitialiseArena(&FrameTempArena, FrameTempArenaSize, Win32AllocateMemory(FrameTempArenaSize));
+            memory_arena FrameTempArena = {};
 
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(64);
@@ -1758,8 +1756,6 @@ WinMain(HINSTANCE Instance,
 #endif
 
             game_memory GameMemory = {};
-            GameMemory.PermanentStorageSize = Megabytes(256);
-            GameMemory.TransientStorageSize = Gigabytes(1);
 #if GAME_INTERNAL
             GameMemory.DebugTable = GlobalDebugTable;
 #endif
@@ -1796,14 +1792,8 @@ WinMain(HINSTANCE Instance,
 
             Platform = GameMemory.PlatformAPI;
 
-            Win32State.TotalSize = (GameMemory.PermanentStorageSize + 
-                                    GameMemory.TransientStorageSize);
-            Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
-                                                      MEM_RESERVE|MEM_COMMIT,
-                                                      PAGE_READWRITE);
-            GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
-            GameMemory.TransientStorage = ((uint8_t *)GameMemory.PermanentStorage +
-                                           GameMemory.PermanentStorageSize);
+            Win32State.TotalSize = 0;
+            Win32State.GameMemoryBlock = 0;
 
             for(int ReplayIndex = 1; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
             {
@@ -1831,7 +1821,7 @@ WinMain(HINSTANCE Instance,
                 }
             }
 
-            if(Samples && GameMemory.PermanentStorage && GameMemory.TransientStorage)
+            if(Samples)
             {
                 // TODO: Monitor XBox controllers for being plugged in after the fact
                 b32 XBoxControllerPresent[XUSER_MAX_COUNT] = {};
