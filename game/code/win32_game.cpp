@@ -24,6 +24,7 @@ TODO: Additional Platform Layer Code
 
 platform_api Platform;
 
+global_variable win32_state GlobalWin32State;
 global_variable b32 GlobalSoftwareRendering;
 global_variable b32 GlobalRunning;
 global_variable b32 GlobalPause;
@@ -1026,34 +1027,33 @@ Win32GetInputFileLocation(win32_state *State, bool32 InputStream,
     Win32BuildEXEPathFilename(State, Temp, DestCount, Dest);
 }
 
-internal win32_replay_buffer *
-Win32GetReplayBuffer(win32_state *State, int unsigned Index)
-{
-    Assert(Index > 0);
-    Assert(Index < ArrayCount(State->ReplayBuffers));
-    win32_replay_buffer *Result = &State->ReplayBuffers[Index];
-    return(Result);
-}
-
 internal void
 Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
 {
-    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);
-    if(ReplayBuffer->MemoryBlock)
+    char Filename[WIN32_STATE_FILE_NAME_COUNT];
+    Win32GetInputFileLocation(State, true, InputRecordingIndex, sizeof(Filename), Filename);
+    State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+    if(State->RecordingHandle != INVALID_HANDLE_VALUE)
     {
+        DWORD BytesWritten;
+
         State->InputRecordingIndex = InputRecordingIndex;
+        win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
+        for(win32_memory_block *SourceBlock = Sentinel->Next; 
+            SourceBlock != Sentinel;
+            SourceBlock = SourceBlock->Next)
+        {
+            win32_saved_memory_block DestBlock;
+            void *BasePointer = GetBasePointer(SourceBlock);
+            DestBlock.BasePointer = (u64)BasePointer;
+            DestBlock.Size = SourceBlock->Size;
+            WriteFile(State->PlaybackHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
+            Assert(DestBlock.Size <= U32Maximum);
+            WriteFile(State->PlaybackHandle, BasePointer, (u32)DestBlock.Size, &BytesWritten, 0);
+        }
 
-        char Filename[WIN32_STATE_FILE_NAME_COUNT];
-        Win32GetInputFileLocation(State, true, InputRecordingIndex, sizeof(Filename), Filename);
-        State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
-
-#if 0
-        LARGE_INTEGER FilePosition;
-        FilePosition.QuadPart = State->TotalSize;
-        SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
-#endif
-
-        CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
+        win32_saved_memory_block DestBlock = {};
+        WriteFile(State->PlaybackHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
     }
 }
 
@@ -1067,22 +1067,32 @@ Win32EndRecordingInput(win32_state *State)
 internal void
 Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
 {
-    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputPlayingIndex);
-    if(ReplayBuffer->MemoryBlock)
+
+    char Filename[WIN32_STATE_FILE_NAME_COUNT];
+    Win32GetInputFileLocation(State, true, InputPlayingIndex, sizeof(Filename), Filename);
+    State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
+    if(State->PlaybackHandle != INVALID_HANDLE_VALUE)
     {
         State->InputPlayingIndex = InputPlayingIndex;
 
-        char Filename[WIN32_STATE_FILE_NAME_COUNT];
-        Win32GetInputFileLocation(State, true, InputPlayingIndex, sizeof(Filename), Filename);
-        State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
-
-#if 0
-        LARGE_INTEGER FilePosition;
-        FilePosition.QuadPart = State->TotalSize;
-        SetFilePointerEx(State->PlaybackHandle, FilePosition, 0, FILE_BEGIN);
-#endif
-
-        CopyMemory(State->GameMemoryBlock, ReplayBuffer->MemoryBlock, State->TotalSize);
+        for(;;)
+        {
+            win32_saved_memory_block Block = {};
+            DWORD BytesRead;
+            ReadFile(State->PlaybackHandle, &Block, sizeof(Block), &BytesRead, 0);
+            if(Block.BasePointer != 0)
+            {
+                void *BasePointer = (void *)Block.BasePointer;
+                DWORD BytesRead;
+                Assert(Block.Size <= U32Maximum);
+                ReadFile(State->PlaybackHandle, BasePointer, (u32)Block.Size, &BytesRead, 0);
+            }
+            else 
+            {
+                break;
+            }
+        }
+        // TODO: Stream memory in from the file
     }
 }
 
@@ -1562,7 +1572,25 @@ internal PLATFORM_FILE_ERROR(Win32CloseFile)
 
 PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
 {
-    void *Result = VirtualAlloc(0, Size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+    // I require memory block headers not to change the cache
+    // line alignment of an allocation
+    Assert(sizeof(win32_memory_block) == 64);
+
+    win32_memory_block *Block = (win32_memory_block *) VirtualAlloc(0, Size + sizeof(win32_memory_block),
+                                                                    MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+    Assert(Block);
+
+    win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
+    Block->Next = Sentinel;
+    Block->Size = Size;
+
+    BeginTicketMutex(&GlobalWin32State.MemoryMutex);
+    Block->Prev = Sentinel->Prev;
+    Block->Prev->Next = Block;
+    Block->Next->Prev = Block;
+    EndTicketMutex(&GlobalWin32State.MemoryMutex);
+
+    void *Result = GetBasePointer(Block);
 
     return(Result);
 }
@@ -1571,7 +1599,15 @@ PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
 {
     if(Memory)
     {
-        VirtualFree(Memory, 0, MEM_RELEASE);
+        win32_memory_block *Block = ((win32_memory_block *)Memory - 1);
+
+        BeginTicketMutex(&GlobalWin32State.MemoryMutex);
+        Block->Prev->Next = Block->Next;
+        Block->Next->Prev = Block->Prev;
+        EndTicketMutex(&GlobalWin32State.MemoryMutex);
+
+        BOOL Result = VirtualFree(Block, 0, MEM_RELEASE);
+        Assert(Result);
     }
 }
 
@@ -1622,36 +1658,38 @@ WinMain(HINSTANCE Instance,
 {
     DEBUGSetEventRecording(true);
 
-    win32_state Win32State = {};
+    win32_state *State = &GlobalWin32State;
+    State->MemorySentinel.Prev = &State->MemorySentinel;
+    State->MemorySentinel.Next = &State->MemorySentinel;
 
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
     GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 
-    Win32GetEXEFilename(&Win32State);
+    Win32GetEXEFilename(State);
 
     char Win32EXEFullPath[WIN32_STATE_FILE_NAME_COUNT];
-    Win32BuildEXEPathFilename(&Win32State, "win32_game.exe",
+    Win32BuildEXEPathFilename(State, "win32_game.exe",
                               sizeof(Win32EXEFullPath), Win32EXEFullPath);
 
     char TempWin32EXEFullPath[WIN32_STATE_FILE_NAME_COUNT];
-    Win32BuildEXEPathFilename(&Win32State, "win32_game_temp.exe",
+    Win32BuildEXEPathFilename(State, "win32_game_temp.exe",
                               sizeof(TempWin32EXEFullPath), TempWin32EXEFullPath);
 
     char DeleteWin32EXEFullPath[WIN32_STATE_FILE_NAME_COUNT];
-    Win32BuildEXEPathFilename(&Win32State, "win32_game_old.exe",
+    Win32BuildEXEPathFilename(State, "win32_game_old.exe",
                               sizeof(DeleteWin32EXEFullPath), DeleteWin32EXEFullPath);
 
     char SourceGameCodeDLLFullPath[WIN32_STATE_FILE_NAME_COUNT];
-    Win32BuildEXEPathFilename(&Win32State, "game.dll",
+    Win32BuildEXEPathFilename(State, "game.dll",
                               sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
     
     char TempGameCodeDLLFullPath[WIN32_STATE_FILE_NAME_COUNT];
-    Win32BuildEXEPathFilename(&Win32State, "game_temp.dll",
+    Win32BuildEXEPathFilename(State, "game_temp.dll",
                               sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
 
     char GameCodeLockFullPath[WIN32_STATE_FILE_NAME_COUNT];
-    Win32BuildEXEPathFilename(&Win32State, "lock.tmp",
+    Win32BuildEXEPathFilename(State, "lock.tmp",
                               sizeof(GameCodeLockFullPath), GameCodeLockFullPath);
 
     // Set the windows scheduler granularity to 1ms
@@ -1792,35 +1830,6 @@ WinMain(HINSTANCE Instance,
 
             Platform = GameMemory.PlatformAPI;
 
-            Win32State.TotalSize = 0;
-            Win32State.GameMemoryBlock = 0;
-
-            for(int ReplayIndex = 1; ReplayIndex < ArrayCount(Win32State.ReplayBuffers); ++ReplayIndex)
-            {
-                win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
-
-                Win32GetInputFileLocation(&Win32State, false, ReplayIndex,
-                                          sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
-
-                ReplayBuffer->FileHandle =
-                    CreateFileA(ReplayBuffer->Filename, GENERIC_WRITE|GENERIC_READ, 0, 0, CREATE_ALWAYS, 0, 0);
-
-                LARGE_INTEGER MaxSize;
-                MaxSize.QuadPart = Win32State.TotalSize;
-                ReplayBuffer->MemoryMap = CreateFileMapping(ReplayBuffer->FileHandle, 0, PAGE_READWRITE,
-                                                             MaxSize.HighPart, MaxSize.LowPart, 0);
-                 
-                ReplayBuffer->MemoryBlock = MapViewOfFile(
-                    ReplayBuffer->MemoryMap, FILE_MAP_ALL_ACCESS, 0, 0, Win32State.TotalSize);
-                if(ReplayBuffer->MemoryBlock)
-                {
-                }
-                else
-                {
-                    // TODO: Diagnostic
-                }
-            }
-
             if(Samples)
             {
                 // TODO: Monitor XBox controllers for being plugged in after the fact
@@ -1894,7 +1903,7 @@ WinMain(HINSTANCE Instance,
 
                     {
                         TIMED_BLOCK("Win32 Message Processing");
-                        Win32ProcessPendingMessages(&Win32State, NewKeyboardController);
+                        Win32ProcessPendingMessages(State, NewKeyboardController);
                     }
 
                     if(!GlobalPause)
@@ -2074,15 +2083,15 @@ WinMain(HINSTANCE Instance,
                     Buffer.Pitch = GlobalBackbuffer.Pitch;
                     if(!GlobalPause)
                     {
-                        if(Win32State.InputRecordingIndex)
+                        if(State->InputRecordingIndex)
                         {
-                            Win32RecordInput(&Win32State, NewInput);
+                            Win32RecordInput(State, NewInput);
                         }
 
-                        if(Win32State.InputPlayingIndex)
+                        if(State->InputPlayingIndex)
                         {
                             game_input Temp = *NewInput;
-                            Win32PlaybackInput(&Win32State, NewInput);
+                            Win32PlaybackInput(State, NewInput);
                             for(u32 MouseButtonIndex = 0;
                                 MouseButtonIndex < PlatformMouseButton_Count;
                                 ++MouseButtonIndex)

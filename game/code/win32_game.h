@@ -68,20 +68,31 @@ struct win32_fader
     r32 Alpha;
 };
 
-#define WIN32_STATE_FILE_NAME_COUNT MAX_PATH
-struct win32_replay_buffer
+struct win32_memory_block
 {
-    HANDLE FileHandle;
-    HANDLE MemoryMap;
-    char Filename[WIN32_STATE_FILE_NAME_COUNT];
-    void *MemoryBlock;
+    win32_memory_block *Prev;
+    win32_memory_block *Next;
+    u64 Size;
+    u64 Pad[5];
+};
+inline void *GetBasePointer(win32_memory_block *Block)
+{
+    void *Result = Block + 1;
+    return(Result);
 };
 
+struct win32_saved_memory_block
+{
+    u64 BasePointer;
+    u64 Size;
+};
+
+#define WIN32_STATE_FILE_NAME_COUNT MAX_PATH
 struct win32_state
 {
-    uint64_t TotalSize;
-    void *GameMemoryBlock;
-    win32_replay_buffer ReplayBuffers[4];
+    // To touch the memory ring, I need to take the memory mutex
+    ticket_mutex MemoryMutex;
+    win32_memory_block MemorySentinel;
 
     HANDLE RecordingHandle;
     int InputRecordingIndex;
