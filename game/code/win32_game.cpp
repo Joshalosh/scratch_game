@@ -1047,13 +1047,13 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
             void *BasePointer = GetBasePointer(SourceBlock);
             DestBlock.BasePointer = (u64)BasePointer;
             DestBlock.Size = SourceBlock->Size;
-            WriteFile(State->PlaybackHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
+            WriteFile(State->RecordingHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
             Assert(DestBlock.Size <= U32Maximum);
-            WriteFile(State->PlaybackHandle, BasePointer, (u32)DestBlock.Size, &BytesWritten, 0);
+            WriteFile(State->RecordingHandle, BasePointer, (u32)DestBlock.Size, &BytesWritten, 0);
         }
 
         win32_saved_memory_block DestBlock = {};
-        WriteFile(State->PlaybackHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
+        WriteFile(State->RecordingHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
     }
 }
 
