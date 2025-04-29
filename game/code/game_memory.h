@@ -14,6 +14,7 @@ struct memory_arena
 
     memory_index MinimumBlockSize;
 
+    u64 AllocationFlags;
     u32 BlockCount;
     s32 TempCount;
 };
@@ -78,12 +79,25 @@ struct arena_push_params
     u32 Alignment;
 };
 
+struct arena_bootstrap_params
+{
+    u64 AllocationFlags;
+    umm MinimumBlockSize;
+};
+
 inline arena_push_params
 DefaultArenaParams()
 {
     arena_push_params Params;
     Params.Flags = ArenaFlag_ClearToZero;
     Params.Alignment = 4;
+    return(Params);
+}
+
+inline arena_bootstrap_params
+DefaultBootstrapParams()
+{
+    arena_bootstrap_params Params = {};
     return(Params);
 }
 
@@ -180,7 +194,7 @@ PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params =
         Size = SizeInit; // NOTE: The base will automatically be aligned now
         memory_index BlockSize = Maximum(Size + sizeof(memory_block_footer), Arena->MinimumBlockSize);
         Arena->Size = BlockSize - sizeof(memory_block_footer);
-        Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize);
+        Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize, Arena->AllocationFlags);
         Arena->Used = 0;
         ++Arena->BlockCount;
 
@@ -318,10 +332,13 @@ Copy(memory_index Size, void *SourceInit, void *DestInit)
 
 #define BootstrapPushStruct(type, Member, ...) (type *)BootstrapPushSize_(sizeof(type), OffsetOf(type, Member), ## __VA_ARGS__)
 inline void *
-BootstrapPushSize_(umm StructSize, umm OffsetToArena, umm MinimumBlockSize = 0, arena_push_params Params = DefaultArenaParams())
+BootstrapPushSize_(umm StructSize, umm OffsetToArena, 
+                   arena_bootstrap_params BootstrapParams = DefaultBootstrapParams(), 
+                   arena_push_params Params = DefaultArenaParams())
 {
     memory_arena Bootstrap = {};
-    Bootstrap.MinimumBlockSize = MinimumBlockSize;
+    Bootstrap.AllocationFlags = BootstrapParams.AllocationFlags;
+    Bootstrap.MinimumBlockSize = BootstrapParams.MinimumBlockSize;
     void *Struct = PushSize(&Bootstrap, StructSize, Params);
     *(memory_arena *)((u8 *)Struct + OffsetToArena) = Bootstrap;
 

@@ -564,7 +564,7 @@ struct platform_work_queue;
 #define PLATFORM_WORK_QUEUE_CALLBACK(name) void name(platform_work_queue *Queue, void *Data)
 typedef PLATFORM_WORK_QUEUE_CALLBACK(platform_work_queue_callback);
 
-#define PLATFORM_ALLOCATE_MEMORY(name) void *name(memory_index Size)
+#define PLATFORM_ALLOCATE_MEMORY(name) void *name(memory_index Size, u64 Flags)
 typedef PLATFORM_ALLOCATE_MEMORY(platform_allocate_memory);
 
 #define PLATFORM_DEALLOCATE_MEMORY(name) void name(void *Memory)

@@ -94,6 +94,8 @@ struct asset_memory_block
 
 struct game_assets
 {
+    memory_arena NonRestoredMemory;
+
     platform_texture_op_queue *TextureOpQueue;
 
     u32 NextGenerationID;

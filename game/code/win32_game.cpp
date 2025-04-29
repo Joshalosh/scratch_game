@@ -1043,13 +1043,16 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
             SourceBlock != Sentinel;
             SourceBlock = SourceBlock->Next)
         {
-            win32_saved_memory_block DestBlock;
-            void *BasePointer = GetBasePointer(SourceBlock);
-            DestBlock.BasePointer = (u64)BasePointer;
-            DestBlock.Size = SourceBlock->Size;
-            WriteFile(State->RecordingHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
-            Assert(DestBlock.Size <= U32Maximum);
-            WriteFile(State->RecordingHandle, BasePointer, (u32)DestBlock.Size, &BytesWritten, 0);
+            if(SourceBlock->Flags & Win32Memory_NotRestored)
+            {
+                win32_saved_memory_block DestBlock;
+                void *BasePointer = GetBasePointer(SourceBlock);
+                DestBlock.BasePointer = (u64)BasePointer;
+                DestBlock.Size = SourceBlock->Size;
+                WriteFile(State->RecordingHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
+                Assert(DestBlock.Size <= U32Maximum);
+                WriteFile(State->RecordingHandle, BasePointer, (u32)DestBlock.Size, &BytesWritten, 0);
+            }
         }
 
         win32_saved_memory_block DestBlock = {};
@@ -1583,6 +1586,7 @@ PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
     win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
     Block->Next = Sentinel;
     Block->Size = Size;
+    Block->Size = Flags;
 
     BeginTicketMutex(&GlobalWin32State.MemoryMutex);
     Block->Prev = Sentinel->Prev;
@@ -1780,7 +1784,7 @@ WinMain(HINSTANCE Instance,
 
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(64);
-            void *PushBuffer = Win32AllocateMemory(PushBufferSize);
+            void *PushBuffer = Win32AllocateMemory(PushBufferSize, Win32Memory_NotRestored);
 
             // TODO: Probably remove MaxPossibleOverrun.
             u32 MaxPossibleOverrun = 2*8*sizeof(u16); 

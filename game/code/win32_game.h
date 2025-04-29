@@ -68,12 +68,17 @@ struct win32_fader
     r32 Alpha;
 };
 
+enum win32_memory_block_flags
+{
+    Win32Memory_NotRestored = 0x1,
+};
 struct win32_memory_block
 {
     win32_memory_block *Prev;
     win32_memory_block *Next;
     u64 Size;
-    u64 Pad[5];
+    u64 Flags;
+    u64 Pad[4];
 };
 inline void *GetBasePointer(win32_memory_block *Block)
 {

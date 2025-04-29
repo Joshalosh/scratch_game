@@ -308,8 +308,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             Task->BeingUsed = false;
         }
 
-        TranState->Assets = AllocateGameAssets(&TranState->TranArena, Megabytes(256), TranState,
-                                               &Memory->TextureOpQueue);
+        TranState->Assets = AllocateGameAssets(Megabytes(256), TranState, &Memory->TextureOpQueue);
 
 //        GameState->Music = PlaySound(&GameState->AudioState, GetFirstSoundFrom(TranState->Assets, Asset_Music));
 

@@ -639,12 +639,14 @@ GetBestMatchFontFrom(game_assets *Assets, asset_type_id TypeID, asset_vector *Ma
 }
 
 internal game_assets *
-AllocateGameAssets(memory_arena *Arena, memory_index Size, transient_state *TranState,
+AllocateGameAssets(memory_index Size, transient_state *TranState,
                    platform_texture_op_queue *TextureOpQueue)
 {
     TIMED_FUNCTION();
 
-    game_assets *Assets = PushStruct(Arena, game_assets);
+    game_assets *Assets = BootstrapPushStruct(game_assets, NonRestoredMemory);
+    memory_arena *Arena = &Assets->NonRestoredMemory;
+
     Assets->TextureOpQueue = TextureOpQueue;
 
     Assets->NextGenerationID = 0;
