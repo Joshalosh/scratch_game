@@ -196,9 +196,9 @@ GenerationHasCompleted(game_assets *Assets, u32 CheckID)
 {
     b32 Result = true;
 
-    for(u32 Index = 0; Index < Assets->InFlightGenerationCount; ++Index)
+    for(u32 Index = 0; Index < Assets->TranState->InFlightGenerationCount; ++Index)
     {
-        if(Assets->InFlightGenerations[Index] == CheckID)
+        if(Assets->TranState->InFlightGenerations[Index] == CheckID)
         {
             Result = false;
             break;
@@ -647,10 +647,8 @@ AllocateGameAssets(memory_index Size, transient_state *TranState,
     game_assets *Assets = BootstrapPushStruct(game_assets, NonRestoredMemory);
     memory_arena *Arena = &Assets->NonRestoredMemory;
 
+    Assets->TranState = TranState;
     Assets->TextureOpQueue = TextureOpQueue;
-
-    Assets->NextGenerationID = 0;
-    Assets->InFlightGenerationCount = 0;
 
     Assets->MemorySentinel.Flags = 0;
     Assets->MemorySentinel.Size = 0;
@@ -658,8 +656,6 @@ AllocateGameAssets(memory_index Size, transient_state *TranState,
     Assets->MemorySentinel.Next = &Assets->MemorySentinel;
 
     InsertBlock(&Assets->MemorySentinel, Size, PushSize(Arena, Size, NoClear()));
-
-    Assets->TranState = TranState;
 
     Assets->LoadedAssetSentinel.Next = Assets->LoadedAssetSentinel.Prev = &Assets->LoadedAssetSentinel;
 

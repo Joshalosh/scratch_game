@@ -543,6 +543,11 @@ typedef enum platform_file_type
     PlatformFileType_Count,
 } platform_file_type;
 
+enum platform_memory_block_flags
+{
+    PlatformMemory_NotRestored = 0x1,
+};
+
 #define PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(name) platform_file_group name(platform_file_type Type)
 typedef PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(platform_get_all_files_of_type_begin);
 

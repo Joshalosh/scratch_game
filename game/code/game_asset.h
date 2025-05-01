@@ -98,8 +98,6 @@ struct game_assets
 
     platform_texture_op_queue *TextureOpQueue;
 
-    u32 NextGenerationID;
-
     // TODO: This back pointer kind of sucks.
     struct transient_state *TranState;
 
@@ -119,11 +117,6 @@ struct game_assets
     asset *Assets;
 
     asset_type AssetTypes[Asset_Count];
-
-    u32 OperationLock;
-
-    u32 InFlightGenerationCount;
-    u32 InFlightGenerations[16];
 };
 
 inline void
@@ -131,7 +124,7 @@ BeginAssetLock(game_assets *Assets)
 {
     for(;;)
     {
-        if(AtomicCompareExchangeUInt32(&Assets->OperationLock, 1, 0) == 0)
+        if(AtomicCompareExchangeUInt32(&Assets->TranState->OperationLock, 1, 0) == 0)
         {
             break;
         }
@@ -142,7 +135,7 @@ inline void
 EndAssetLock(game_assets *Assets)
 {
     CompletePreviousWritesBeforeFutureWrites;
-    Assets->OperationLock = 0;
+    Assets->TranState->OperationLock = 0;
 }
 
 inline void
@@ -310,9 +303,9 @@ BeginGeneration(game_assets *Assets)
 {
     BeginAssetLock(Assets);
     
-    Assert(Assets->InFlightGenerationCount < ArrayCount(Assets->InFlightGenerations));
-    u32 Result = Assets->NextGenerationID++;
-    Assets->InFlightGenerations[Assets->InFlightGenerationCount++] = Result;
+    Assert(Assets->TranState->InFlightGenerationCount < ArrayCount(Assets->TranState->InFlightGenerations));
+    u32 Result = Assets->TranState->NextGenerationID++;
+    Assets->TranState->InFlightGenerations[Assets->TranState->InFlightGenerationCount++] = Result;
 
     EndAssetLock(Assets);
 
@@ -324,11 +317,11 @@ EndGeneration(game_assets *Assets, u32 GenerationID)
 {
     BeginAssetLock(Assets);
 
-    for(u32 Index = 0; Index < Assets->InFlightGenerationCount; ++Index)
+    for(u32 Index = 0; Index < Assets->TranState->InFlightGenerationCount; ++Index)
     {
-        if(Assets->InFlightGenerations[Index] == GenerationID)
+        if(Assets->TranState->InFlightGenerations[Index] == GenerationID)
         {
-            Assets->InFlightGenerations[Index] = Assets->InFlightGenerations[--Assets->InFlightGenerationCount];
+            Assets->TranState->InFlightGenerations[Index] = Assets->TranState->InFlightGenerations[--Assets->TranState->InFlightGenerationCount];
             break;
         }
     }

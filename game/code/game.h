@@ -36,6 +36,41 @@
 #include "game_render.h"
 #include "game_render_group.h"
 #include "game_particles.h"
+
+struct task_with_memory
+{
+    b32 BeingUsed;
+    b32 DependsOnGameMode;
+    memory_arena Arena;
+
+    temporary_memory MemoryFlush;
+};
+
+struct transient_state
+{
+    bool32 IsInitialised;
+    memory_arena TranArena;
+
+    task_with_memory Tasks[4];
+
+    struct game_assets *Assets;
+    u32 MainGenerationID;
+
+    platform_work_queue *HighPriorityQueue;
+    platform_work_queue *LowPriorityQueue;
+
+    uint32_t EnvMapWidth;
+    uint32_t EnvMapHeight;
+    // 0 is bottom, 1 is middle and 2 is top.
+    environment_map EnvMaps[3];
+
+    // TODO: Think about removing this system as it's just for asset locking
+    u32 NextGenerationID;
+    u32 OperationLock;
+    u32 InFlightGenerationCount;
+    u32 InFlightGenerations[16];
+};
+
 #include "game_asset.h"
 #include "game_audio.h"
 
@@ -84,34 +119,6 @@ struct game_state
         game_mode_cutscene *Cutscene;
         game_mode_world *WorldMode;
     };
-};
-
-struct task_with_memory
-{
-    b32 BeingUsed;
-    b32 DependsOnGameMode;
-    memory_arena Arena;
-
-    temporary_memory MemoryFlush;
-};
-
-struct transient_state
-{
-    bool32 IsInitialised;
-    memory_arena TranArena;
-
-    task_with_memory Tasks[4];
-
-    game_assets *Assets;
-    u32 MainGenerationID;
-
-    platform_work_queue *HighPriorityQueue;
-    platform_work_queue *LowPriorityQueue;
-
-    uint32_t EnvMapWidth;
-    uint32_t EnvMapHeight;
-    // 0 is bottom, 1 is middle and 2 is top.
-    environment_map EnvMaps[3];
 };
 
 internal task_with_memory *BeginTaskWithMemory(transient_state *TranState, b32 DependsOnGameMode);

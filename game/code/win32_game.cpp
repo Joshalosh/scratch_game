@@ -1043,7 +1043,7 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
             SourceBlock != Sentinel;
             SourceBlock = SourceBlock->Next)
         {
-            if(SourceBlock->Flags & Win32Memory_NotRestored)
+            if(SourceBlock->Flags & PlatformMemory_NotRestored)
             {
                 win32_saved_memory_block DestBlock;
                 void *BasePointer = GetBasePointer(SourceBlock);
@@ -1784,7 +1784,7 @@ WinMain(HINSTANCE Instance,
 
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(64);
-            void *PushBuffer = Win32AllocateMemory(PushBufferSize, Win32Memory_NotRestored);
+            void *PushBuffer = Win32AllocateMemory(PushBufferSize, PlatformMemory_NotRestored);
 
             // TODO: Probably remove MaxPossibleOverrun.
             u32 MaxPossibleOverrun = 2*8*sizeof(u16); 

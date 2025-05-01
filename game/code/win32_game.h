@@ -68,10 +68,6 @@ struct win32_fader
     r32 Alpha;
 };
 
-enum win32_memory_block_flags
-{
-    Win32Memory_NotRestored = 0x1,
-};
 struct win32_memory_block
 {
     win32_memory_block *Prev;

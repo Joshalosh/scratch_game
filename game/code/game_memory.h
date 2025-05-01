@@ -79,25 +79,12 @@ struct arena_push_params
     u32 Alignment;
 };
 
-struct arena_bootstrap_params
-{
-    u64 AllocationFlags;
-    umm MinimumBlockSize;
-};
-
 inline arena_push_params
 DefaultArenaParams()
 {
     arena_push_params Params;
     Params.Flags = ArenaFlag_ClearToZero;
     Params.Alignment = 4;
-    return(Params);
-}
-
-inline arena_bootstrap_params
-DefaultBootstrapParams()
-{
-    arena_bootstrap_params Params = {};
     return(Params);
 }
 
@@ -131,6 +118,27 @@ NoClear()
 {
     arena_push_params Params = DefaultArenaParams();
     Params.Flags &= ~ArenaFlag_ClearToZero;
+    return(Params);
+}
+
+struct arena_bootstrap_params
+{
+    u64 AllocationFlags;
+    umm MinimumBlockSize;
+};
+
+inline arena_bootstrap_params 
+DefaultBootstrapParams()
+{
+    arena_bootstrap_params Params = {};
+    return(Params);
+}
+
+inline arena_bootstrap_params
+NonRestoredArena()
+{
+    arena_bootstrap_params Params = DefaultBootstrapParams();
+    Params.AllocationFlags = PlatformMemory_NotRestored;
     return(Params);
 }
 
