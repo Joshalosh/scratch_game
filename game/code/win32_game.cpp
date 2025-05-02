@@ -540,7 +540,6 @@ Win32SetPixelFormat(HDC WindowDC)
             IntAttribList[10] = 0;
         }
 
-
         wglChoosePixelFormatARB(WindowDC, IntAttribList, 0, 1,
                                 &SuggestedPixelFormatIndex, &ExtendedPick);
     }
@@ -1039,11 +1038,11 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
 
         State->InputRecordingIndex = InputRecordingIndex;
         win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
-        for(win32_memory_block *SourceBlock = Sentinel->Next; 
+        for(win32_memory_block *SourceBlock = Sentinel->Next;
             SourceBlock != Sentinel;
             SourceBlock = SourceBlock->Next)
         {
-            if(SourceBlock->Flags & PlatformMemory_NotRestored)
+            if(!(SourceBlock->Flags & PlatformMemory_NotRestored))
             {
                 win32_saved_memory_block DestBlock;
                 void *BasePointer = GetBasePointer(SourceBlock);
@@ -1068,8 +1067,40 @@ Win32EndRecordingInput(win32_state *State)
 }
 
 internal void
+Win32FreeMemoryBlock(win32_memory_block *Block)
+{
+    BeginTicketMutex(&GlobalWin32State.MemoryMutex);
+    Block->Prev->Next = Block->Next;
+    Block->Next->Prev = Block->Prev;
+    EndTicketMutex(&GlobalWin32State.MemoryMutex);
+
+    BOOL Result = VirtualFree(Block, 0, MEM_RELEASE);
+    Assert(Result);
+}
+
+internal void
+Win32ClearBlocksByMask(win32_state *State, u64 Mask)
+{
+    for(win32_memory_block *BlockIter = State->MemorySentinel.Next; BlockIter != &State->MemorySentinel;)
+    {
+        win32_memory_block *Block = BlockIter;
+        BlockIter = BlockIter->Next;
+
+        if((Block->LoopingFlags & Mask) == Mask)
+        {
+            Win32FreeMemoryBlock(Block);
+        }
+        else
+        {
+            Block->LoopingFlags = 0;
+        }
+    }
+}
+
+internal void
 Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
 {
+    Win32ClearBlocksByMask(State, Win32Mem_AllocatedDuringLooping);
 
     char Filename[WIN32_STATE_FILE_NAME_COUNT];
     Win32GetInputFileLocation(State, true, InputPlayingIndex, sizeof(Filename), Filename);
@@ -1086,11 +1117,11 @@ Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
             if(Block.BasePointer != 0)
             {
                 void *BasePointer = (void *)Block.BasePointer;
-                DWORD BytesRead;
                 Assert(Block.Size <= U32Maximum);
+                DWORD BytesRead;
                 ReadFile(State->PlaybackHandle, BasePointer, (u32)Block.Size, &BytesRead, 0);
             }
-            else 
+            else
             {
                 break;
             }
@@ -1102,6 +1133,7 @@ Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
 internal void
 Win32EndInputPlayback(win32_state *State)
 {
+    Win32ClearBlocksByMask(State, Win32Mem_FreedDuringLooping);
     CloseHandle(State->PlaybackHandle);
     State->InputPlayingIndex = 0;
 }
@@ -1573,6 +1605,14 @@ internal PLATFORM_FILE_ERROR(Win32CloseFile)
 
 */
 
+inline b32
+Win32IsInLoop(win32_state *State)
+{
+    b32 Result = ((State->InputRecordingIndex != 0) ||
+                  (State->InputPlayingIndex));
+    return(Result);
+}
+
 PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
 {
     // I require memory block headers not to change the cache
@@ -1586,7 +1626,8 @@ PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
     win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
     Block->Next = Sentinel;
     Block->Size = Size;
-    Block->Size = Flags;
+    Block->Flags = Flags;
+    Block->LoopingFlags = Win32IsInLoop(&GlobalWin32State) ? Win32Mem_AllocatedDuringLooping : 0;
 
     BeginTicketMutex(&GlobalWin32State.MemoryMutex);
     Block->Prev = Sentinel->Prev;
@@ -1604,14 +1645,14 @@ PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
     if(Memory)
     {
         win32_memory_block *Block = ((win32_memory_block *)Memory - 1);
-
-        BeginTicketMutex(&GlobalWin32State.MemoryMutex);
-        Block->Prev->Next = Block->Next;
-        Block->Next->Prev = Block->Prev;
-        EndTicketMutex(&GlobalWin32State.MemoryMutex);
-
-        BOOL Result = VirtualFree(Block, 0, MEM_RELEASE);
-        Assert(Result);
+        if(Win32IsInLoop(&GlobalWin32State))
+        {
+            Block->LoopingFlags = Win32Mem_FreedDuringLooping;
+        }
+        else
+        {
+            Win32FreeMemoryBlock(Block);
+        }
     }
 }
 
