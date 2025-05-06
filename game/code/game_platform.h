@@ -546,6 +546,8 @@ typedef enum platform_file_type
 enum platform_memory_block_flags
 {
     PlatformMemory_NotRestored = 0x1,
+    PlatformMemory_OverflowCheck = 0x2,
+    PlatformMemory_UnderflowCheck = 0x4,
 };
 
 #define PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(name) platform_file_group name(platform_file_type Type)

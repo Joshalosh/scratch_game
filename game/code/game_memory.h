@@ -184,39 +184,50 @@ GetFooter(memory_arena *Arena)
 inline void *
 PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params = DefaultArenaParams())
 {
-    memory_index Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
+    void *Result = 0;
 
-    if((Arena->Used + Size) > Arena->Size)
-    { 
-        if(!Arena->MinimumBlockSize)
-        {
-            // TODO: Tune default block size eventually
-            Arena->MinimumBlockSize = 1024*1024;
+    Arena->AllocationFlags |= PlatformMemory_OverflowCheck;
+    if(Arena->AllocationFlags & (PlatformMemory_OverflowCheck |
+                                 PlatformMemory_UnderflowCheck))
+    {
+        Result = Platform.AllocateMemory(SizeInit, Arena->AllocationFlags);
+    }
+    else 
+    {
+        memory_index Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
+
+        if((Arena->Used + Size) > Arena->Size)
+        { 
+            if(!Arena->MinimumBlockSize)
+            {
+                // TODO: Tune default block size eventually
+                Arena->MinimumBlockSize = 1024*1024;
+            }
+
+            memory_block_footer Save;
+            Save.Base = Arena->Base;
+            Save.Size = Arena->Size;
+            Save.Used = Arena->Used;
+
+            Size = SizeInit; // NOTE: The base will automatically be aligned now
+            memory_index BlockSize = Maximum(Size + sizeof(memory_block_footer), Arena->MinimumBlockSize);
+            Arena->Size = BlockSize - sizeof(memory_block_footer);
+            Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize, Arena->AllocationFlags);
+            Arena->Used = 0;
+            ++Arena->BlockCount;
+
+            memory_block_footer *Footer = GetFooter(Arena);
+            *Footer = Save;
         }
 
-        memory_block_footer Save;
-        Save.Base = Arena->Base;
-        Save.Size = Arena->Size;
-        Save.Used = Arena->Used;
+        Assert((Arena->Used + Size) <= Arena->Size);
 
-        Size = SizeInit; // NOTE: The base will automatically be aligned now
-        memory_index BlockSize = Maximum(Size + sizeof(memory_block_footer), Arena->MinimumBlockSize);
-        Arena->Size = BlockSize - sizeof(memory_block_footer);
-        Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize, Arena->AllocationFlags);
-        Arena->Used = 0;
-        ++Arena->BlockCount;
+        memory_index AlignmentOffset = GetAlignmentOffset(Arena, Params.Alignment);
+        Result = Arena->Base + Arena->Used + AlignmentOffset;
+        Arena->Used += Size;
 
-        memory_block_footer *Footer = GetFooter(Arena);
-        *Footer = Save;
+        Assert(Size >= SizeInit);
     }
-
-    Assert((Arena->Used + Size) <= Arena->Size);
-
-    memory_index AlignmentOffset = GetAlignmentOffset(Arena, Params.Alignment);
-    void *Result = Arena->Base + Arena->Used + AlignmentOffset;
-    Arena->Used += Size;
-
-    Assert(Size >= SizeInit);
 
     if(Params.Flags & ArenaFlag_ClearToZero)
     {
