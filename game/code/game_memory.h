@@ -1,9 +1,10 @@
 
-struct memory_block_footer
+struct memory_block_chain
 {
     u8 *Base;
     umm Size;
     umm Used;
+    umm Pad;
 };
 
 struct memory_arena
@@ -174,10 +175,10 @@ ArenaHasRoomFor(memory_arena *Arena, memory_index SizeInit, arena_push_params Pa
     return(Result);
 }
 
-inline memory_block_footer *
+inline memory_block_chain *
 GetFooter(memory_arena *Arena)
 {
-    memory_block_footer *Result = (memory_block_footer *)(Arena->Base + Arena->Size);
+    memory_block_chain *Result = (memory_block_chain *)(Arena->Base + Arena->Size);
     return(Result);
 }
 
@@ -187,47 +188,45 @@ PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params =
     void *Result = 0;
 
     Arena->AllocationFlags |= PlatformMemory_OverflowCheck;
-    if(Arena->AllocationFlags & (PlatformMemory_OverflowCheck |
-                                 PlatformMemory_UnderflowCheck))
-    {
-        Result = Platform.AllocateMemory(SizeInit, Arena->AllocationFlags);
-    }
-    else 
-    {
-        memory_index Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
 
-        if((Arena->Used + Size) > Arena->Size)
-        { 
-            if(!Arena->MinimumBlockSize)
-            {
-                // TODO: Tune default block size eventually
-                Arena->MinimumBlockSize = 1024*1024;
-            }
+    memory_index Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
 
-            memory_block_footer Save;
-            Save.Base = Arena->Base;
-            Save.Size = Arena->Size;
-            Save.Used = Arena->Used;
-
-            Size = SizeInit; // NOTE: The base will automatically be aligned now
-            memory_index BlockSize = Maximum(Size + sizeof(memory_block_footer), Arena->MinimumBlockSize);
-            Arena->Size = BlockSize - sizeof(memory_block_footer);
-            Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize, Arena->AllocationFlags);
-            Arena->Used = 0;
-            ++Arena->BlockCount;
-
-            memory_block_footer *Footer = GetFooter(Arena);
-            *Footer = Save;
+    if((Arena->Used + Size) > Arena->Size)
+    { 
+        if(Arena->AllocationFlags & (PlatformMemory_OverflowCheck |
+                                     PlatformMemory_UnderflowCheck))
+        {
+            Arena->MinimumBlockSize = 0;
+        }
+        else if(!Arena->MinimumBlockSize)
+        {
+            // TODO: Tune default block size eventually
+            Arena->MinimumBlockSize = 1024*1024;
         }
 
-        Assert((Arena->Used + Size) <= Arena->Size);
+        memory_block_chain Save;
+        Save.Base = Arena->Base;
+        Save.Size = Arena->Size;
+        Save.Used = Arena->Used;
 
-        memory_index AlignmentOffset = GetAlignmentOffset(Arena, Params.Alignment);
-        Result = Arena->Base + Arena->Used + AlignmentOffset;
-        Arena->Used += Size;
+        Size = SizeInit; // NOTE: The base will automatically be aligned now
+        memory_index BlockSize = Maximum(Size + sizeof(memory_block_chain), Arena->MinimumBlockSize);
+        Arena->Size = BlockSize - sizeof(memory_block_chain);
+        Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize, Arena->AllocationFlags);
+        Arena->Used = 0;
+        ++Arena->BlockCount;
 
-        Assert(Size >= SizeInit);
+        memory_block_chain *Footer = GetFooter(Arena);
+        *Footer = Save;
     }
+
+    Assert((Arena->Used + Size) <= Arena->Size);
+
+    memory_index AlignmentOffset = GetAlignmentOffset(Arena, Params.Alignment);
+    Result = Arena->Base + Arena->Used + AlignmentOffset;
+    Arena->Used += Size;
+
+    Assert(Size >= SizeInit);
 
     if(Params.Flags & ArenaFlag_ClearToZero)
     {
@@ -289,13 +288,13 @@ FreeLastBlock(memory_arena *Arena)
 {
     void *Free = Arena->Base;
 
-    memory_block_footer *Footer = GetFooter(Arena);
+    memory_block_chain *Footer = GetFooter(Arena);
 
     Arena->Base = Footer->Base;
     Arena->Size = Footer->Size;
     Arena->Used = Footer->Used;
 
-    Platform.DeallocateMemory(Free);
+    Platform.DeallocateMemory(Free, Arena->AllocationFlags);
 
     --Arena->BlockCount;
 }

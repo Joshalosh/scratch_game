@@ -1045,7 +1045,7 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
             if(!(SourceBlock->Flags & PlatformMemory_NotRestored))
             {
                 win32_saved_memory_block DestBlock;
-                void *BasePointer = GetBasePointer(SourceBlock);
+                void *BasePointer = SourceBlock->Base;
                 DestBlock.BasePointer = (u64)BasePointer;
                 DestBlock.Size = SourceBlock->Size;
                 WriteFile(State->RecordingHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
@@ -1613,15 +1613,32 @@ Win32IsInLoop(win32_state *State)
     return(Result);
 }
 
+global_variable umm GlobalWin32PageSize = 4096; // TODO: I can also get this from the OS 
 PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
 {
     // I require memory block headers not to change the cache
     // line alignment of an allocation
     Assert(sizeof(win32_memory_block) == 64);
 
+    umm PageSize = GlobalWin32PageSize; 
+    umm TotalSize = Size + sizeof(win32_memory_block);
+    if(Flags & PlatformMemory_UnderflowCheck)
+    {
+        TotalSize += PageSize;
+    }
+
     win32_memory_block *Block = (win32_memory_block *) VirtualAlloc(0, Size + sizeof(win32_memory_block),
                                                                     MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Assert(Block);
+    Block->Base = Block + 1;
+
+    if (Flags & PlatformMemory_UnderflowCheck)
+    {
+        DWORD OldProtect = 0;
+        BOOL Protected = VirtualProtect((u8 *)Block + PageSize, PageSize, PAGE_NOACCESS, &OldProtect);
+        Assert(Protected);
+        Block->Base = (u8 *)Block + 2*PageSize;
+    }
 
     win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
     Block->Next = Sentinel;
@@ -1635,8 +1652,7 @@ PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
     Block->Next->Prev = Block;
     EndTicketMutex(&GlobalWin32State.MemoryMutex);
 
-    void *Result = GetBasePointer(Block);
-
+    void *Result = Block->Base;
     return(Result);
 }
 
@@ -1644,7 +1660,14 @@ PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
 {
     if(Memory)
     {
+        umm PageSize = GlobalWin32PageSize;
+
         win32_memory_block *Block = ((win32_memory_block *)Memory - 1);
+        if(Flags & PlatformMemory_UnderflowCheck)
+        {
+            Block = (win32_memory_block *)((u8 *)Memory - 2*PageSize);
+        }
+
         if(Win32IsInLoop(&GlobalWin32State))
         {
             Block->LoopingFlags = Win32Mem_FreedDuringLooping;

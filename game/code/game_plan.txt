@@ -1,7 +1,7 @@
  TODO
 
  - Arena Upgrade
-   - Looped live code editing support
+   - Consolidate Win32 and Platform-nonspecific memory headers
    - Show on profile
    - Clean up where arenas are used and how
 

@@ -77,15 +77,12 @@ struct win32_memory_block
 {
     win32_memory_block *Prev;
     win32_memory_block *Next;
+    u64 LoopingFlags;
+
     u64 Size;
     u64 Flags;
-    u64 LoopingFlags;
-    u64 Pad[3];
-};
-inline void *GetBasePointer(win32_memory_block *Block)
-{
-    void *Result = Block + 1;
-    return(Result);
+    void *Base;
+    u64 Pad[2];
 };
 
 struct win32_saved_memory_block
