@@ -1042,12 +1042,12 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
             SourceBlock != Sentinel;
             SourceBlock = SourceBlock->Next)
         {
-            if(!(SourceBlock->Flags & PlatformMemory_NotRestored))
+            if(!(SourceBlock->Block.Flags & PlatformMemory_NotRestored))
             {
                 win32_saved_memory_block DestBlock;
-                void *BasePointer = SourceBlock->Base;
+                void *BasePointer = SourceBlock->Block.Base;
                 DestBlock.BasePointer = (u64)BasePointer;
-                DestBlock.Size = SourceBlock->Size;
+                DestBlock.Size = SourceBlock->Block.Size;
                 WriteFile(State->RecordingHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
                 Assert(DestBlock.Size <= U32Maximum);
                 WriteFile(State->RecordingHandle, BasePointer, (u32)DestBlock.Size, &BytesWritten, 0);
@@ -1613,37 +1613,48 @@ Win32IsInLoop(win32_state *State)
     return(Result);
 }
 
-global_variable umm GlobalWin32PageSize = 4096; // TODO: I can also get this from the OS 
 PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
 {
     // I require memory block headers not to change the cache
     // line alignment of an allocation
     Assert(sizeof(win32_memory_block) == 64);
 
-    umm PageSize = GlobalWin32PageSize; 
+    umm PageSize = 4096; // TODO: Get this from the system maybe? 
     umm TotalSize = Size + sizeof(win32_memory_block);
+    umm BaseOffset = sizeof(win32_memory_block);
+    umm ProtectOffset = 0;
     if(Flags & PlatformMemory_UnderflowCheck)
     {
-        TotalSize += PageSize;
+        TotalSize = Size + 2*PageSize;
+        BaseOffset = 2*PageSize;
+        ProtectOffset = PageSize;
+    }
+    if(Flags & PlatformMemory_OverflowCheck)
+    {
+        umm SizeRoundedUp = AlignPow2(Size, PageSize);
+        TotalSize = SizeRoundedUp + 2*PageSize;
+        BaseOffset = PageSize + SizeRoundedUp - Size;
+        ProtectOffset = PageSize + SizeRoundedUp;
     }
 
-    win32_memory_block *Block = (win32_memory_block *) VirtualAlloc(0, Size + sizeof(win32_memory_block),
+    win32_memory_block *Block = (win32_memory_block *) VirtualAlloc(0, TotalSize,
                                                                     MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Assert(Block);
-    Block->Base = Block + 1;
+    Block->Block.Base = (u8 *)Block + BaseOffset;
+    Assert(Block->Block.Used == 0);
+    Assert(Block->Block.ArenaPrev == 0);
 
-    if (Flags & PlatformMemory_UnderflowCheck)
+    if(Flags & (PlatformMemory_UnderflowCheck|PlatformMemory_OverflowCheck))
     {
         DWORD OldProtect = 0;
-        BOOL Protected = VirtualProtect((u8 *)Block + PageSize, PageSize, PAGE_NOACCESS, &OldProtect);
+        BOOL Protected = VirtualProtect((u8 *)Block + ProtectOffset, PageSize, PAGE_NOACCESS, &OldProtect);
         Assert(Protected);
-        Block->Base = (u8 *)Block + 2*PageSize;
     }
 
     win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
     Block->Next = Sentinel;
-    Block->Size = Size;
-    Block->Flags = Flags;
+    Block->Block.Size = Size;
+    Block->Block.Flags = Flags;
     Block->LoopingFlags = Win32IsInLoop(&GlobalWin32State) ? Win32Mem_AllocatedDuringLooping : 0;
 
     BeginTicketMutex(&GlobalWin32State.MemoryMutex);
@@ -1652,29 +1663,22 @@ PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
     Block->Next->Prev = Block;
     EndTicketMutex(&GlobalWin32State.MemoryMutex);
 
-    void *Result = Block->Base;
-    return(Result);
+    platform_memory_block *PlatBlock = &Block->Block;
+    return(PlatBlock);
 }
 
 PLATFORM_DEALLOCATE_MEMORY(Win32DeallocateMemory)
 {
-    if(Memory)
+    if(Block)
     {
-        umm PageSize = GlobalWin32PageSize;
-
-        win32_memory_block *Block = ((win32_memory_block *)Memory - 1);
-        if(Flags & PlatformMemory_UnderflowCheck)
-        {
-            Block = (win32_memory_block *)((u8 *)Memory - 2*PageSize);
-        }
-
+        win32_memory_block *Win32Block = ((win32_memory_block *)Block);
         if(Win32IsInLoop(&GlobalWin32State))
         {
-            Block->LoopingFlags = Win32Mem_FreedDuringLooping;
+            Win32Block->LoopingFlags = Win32Mem_FreedDuringLooping;
         }
         else
         {
-            Win32FreeMemoryBlock(Block);
+            Win32FreeMemoryBlock(Win32Block);
         }
     }
 }

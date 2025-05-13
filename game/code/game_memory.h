@@ -1,29 +1,19 @@
 
-struct memory_block_chain
-{
-    u8 *Base;
-    umm Size;
-    umm Used;
-    umm Pad;
-};
-
 struct memory_arena
 {
-    memory_index Size;
-    uint8_t *Base;
-    memory_index Used;
-
-    memory_index MinimumBlockSize;
+    // TODO: If I start to see performance problems here, then maybe I can 
+    // move Used/Base/Size out
+    platform_memory_block *CurrentBlock;
+    umm MinimumBlockSize;
 
     u64 AllocationFlags;
-    u32 BlockCount;
     s32 TempCount;
 };
 
 struct temporary_memory
 {
     memory_arena *Arena;
-    u8 *Base;
+    platform_memory_block *Block;
     memory_index Used;
 };
 
@@ -45,22 +35,12 @@ SetMinimumBlockSize(memory_arena *Arena, memory_index MinimumBlockSize)
     Arena->MinimumBlockSize = MinimumBlockSize;
 }
 
-inline void
-InitialiseArena(memory_arena *Arena, memory_index MinimumBlockSize)
-{
-    Arena->Size = 0;
-    Arena->Base = 0;
-    Arena->Used = 0;
-    Arena->TempCount = 0;
-    Arena->MinimumBlockSize = MinimumBlockSize;
-}
-
 inline memory_index
 GetAlignmentOffset(memory_arena *Arena, memory_index Alignment)
 {
     memory_index AlignmentOffset = 0;
 
-    memory_index ResultPointer = (memory_index)Arena->Base + Arena->Used;
+    memory_index ResultPointer = (memory_index)Arena->CurrentBlock->Base + Arena->CurrentBlock->Used;
     memory_index AlignmentMask = Alignment - 1;
     if(ResultPointer & AlignmentMask)
     {
@@ -143,14 +123,6 @@ NonRestoredArena()
     return(Params);
 }
 
-inline memory_index
-GetArenaSizeRemaining(memory_arena *Arena, arena_push_params Params = DefaultArenaParams())
-{
-    memory_index Result = Arena->Size - (Arena->Used + GetAlignmentOffset(Arena, Params.Alignment));
-
-    return(Result);
-}
-
 // TODO Optional "clear" parameter.
 #define PushStruct(Arena, type, ...) (type *)PushSize_(Arena, sizeof(type), ## __VA_ARGS__)
 #define PushArray(Arena, Count, type, ...) (type *)PushSize_(Arena, (Count)*sizeof(type), ## __VA_ARGS__)
@@ -167,36 +139,25 @@ GetEffectiveSizeFor(memory_arena *Arena, memory_index SizeInit, arena_push_param
     return(Size);
 }
 
-inline b32
-ArenaHasRoomFor(memory_arena *Arena, memory_index SizeInit, arena_push_params Params = DefaultArenaParams())
-{
-    memory_index Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
-    b32 Result = ((Arena->Used + Size) <= Arena->Size);
-    return(Result);
-}
-
-inline memory_block_chain *
-GetFooter(memory_arena *Arena)
-{
-    memory_block_chain *Result = (memory_block_chain *)(Arena->Base + Arena->Size);
-    return(Result);
-}
-
 inline void *
 PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params = DefaultArenaParams())
 {
     void *Result = 0;
 
-    Arena->AllocationFlags |= PlatformMemory_OverflowCheck;
+    memory_index Size = 0;
+    if(Arena->CurrentBlock)
+    {
+        Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
+    }
 
-    memory_index Size = GetEffectiveSizeFor(Arena, SizeInit, Params);
-
-    if((Arena->Used + Size) > Arena->Size)
+    if(!Arena->CurrentBlock || (Arena->CurrentBlock->Used + Size) > Arena->CurrentBlock->Size)
     { 
+        Size = SizeInit; // NOTE: The base will automatically be aligned now
         if(Arena->AllocationFlags & (PlatformMemory_OverflowCheck |
                                      PlatformMemory_UnderflowCheck))
         {
             Arena->MinimumBlockSize = 0;
+            Size = AlignPow2((u32)Size, Params.Alignment);
         }
         else if(!Arena->MinimumBlockSize)
         {
@@ -204,27 +165,18 @@ PushSize_(memory_arena *Arena, memory_index SizeInit, arena_push_params Params =
             Arena->MinimumBlockSize = 1024*1024;
         }
 
-        memory_block_chain Save;
-        Save.Base = Arena->Base;
-        Save.Size = Arena->Size;
-        Save.Used = Arena->Used;
+        memory_index BlockSize = Maximum(Size, Arena->MinimumBlockSize);
 
-        Size = SizeInit; // NOTE: The base will automatically be aligned now
-        memory_index BlockSize = Maximum(Size + sizeof(memory_block_chain), Arena->MinimumBlockSize);
-        Arena->Size = BlockSize - sizeof(memory_block_chain);
-        Arena->Base = (u8 *)Platform.AllocateMemory(BlockSize, Arena->AllocationFlags);
-        Arena->Used = 0;
-        ++Arena->BlockCount;
-
-        memory_block_chain *Footer = GetFooter(Arena);
-        *Footer = Save;
+        platform_memory_block *NewBlock = Platform.AllocateMemory(BlockSize, Arena->AllocationFlags);
+        NewBlock->ArenaPrev = Arena->CurrentBlock;
+        Arena->CurrentBlock = NewBlock;
     }
 
-    Assert((Arena->Used + Size) <= Arena->Size);
+    Assert((Arena->CurrentBlock->Used + Size) <= Arena->CurrentBlock->Size);
 
     memory_index AlignmentOffset = GetAlignmentOffset(Arena, Params.Alignment);
-    Result = Arena->Base + Arena->Used + AlignmentOffset;
-    Arena->Used += Size;
+    Result = Arena->CurrentBlock->Base + Arena->CurrentBlock->Used + AlignmentOffset;
+    Arena->CurrentBlock->Used += Size;
 
     Assert(Size >= SizeInit);
 
@@ -275,8 +227,8 @@ BeginTemporaryMemory(memory_arena *Arena)
     temporary_memory Result;
 
     Result.Arena = Arena;
-    Result.Base = Arena->Base;
-    Result.Used = Arena->Used;
+    Result.Block = Arena->CurrentBlock;
+    Result.Used = Arena->CurrentBlock ? Arena->CurrentBlock->Used : 0;
 
     ++Arena->TempCount;
 
@@ -286,38 +238,33 @@ BeginTemporaryMemory(memory_arena *Arena)
 inline void
 FreeLastBlock(memory_arena *Arena)
 {
-    void *Free = Arena->Base;
-
-    memory_block_chain *Footer = GetFooter(Arena);
-
-    Arena->Base = Footer->Base;
-    Arena->Size = Footer->Size;
-    Arena->Used = Footer->Used;
-
-    Platform.DeallocateMemory(Free, Arena->AllocationFlags);
-
-    --Arena->BlockCount;
+    platform_memory_block *Free = Arena->CurrentBlock;
+    Arena->CurrentBlock = Free->ArenaPrev;
+    Platform.DeallocateMemory(Free);
 }
 
 inline void
 EndTemporaryMemory(temporary_memory TempMem)
 {
     memory_arena *Arena = TempMem.Arena;
-    while(Arena->Base != TempMem.Base)
+    while(Arena->CurrentBlock != TempMem.Block)
     {
         FreeLastBlock(Arena);
     }
 
-    Assert(Arena->Used >= TempMem.Used);
-    Arena->Used = TempMem.Used;
-    Assert(Arena->TempCount > 0);
+    if(Arena->CurrentBlock)
+    {
+        Assert(Arena->CurrentBlock->Used >= TempMem.Used);
+        Arena->CurrentBlock->Used = TempMem.Used;
+        Assert(Arena->TempCount > 0);
+    }
     --Arena->TempCount;
 }
 
 inline void
 Clear(memory_arena *Arena)
 {
-    while(Arena->BlockCount > 0)
+    while(Arena->CurrentBlock)
     {
         FreeLastBlock(Arena);
     }
@@ -327,15 +274,6 @@ inline void
 CheckArena(memory_arena *Arena)
 {
     Assert(Arena->TempCount == 0);
-}
-
-inline void
-SubArena(memory_arena *Result, memory_arena *Arena, memory_index Size, arena_push_params Params = DefaultArenaParams())
-{
-    Result->Size = Size;
-    Result->Base = (uint8_t *)PushSize_(Arena, Size, Params);
-    Result->Used = 0;
-    Result->TempCount = 0;
 }
 
 inline void *

@@ -526,6 +526,7 @@ internal void
 DrawArenaOccupancy(debug_state *DebugState, debug_id GraphID, rectangle2 FrameRect, v2 MouseP,
                    debug_element *RootElement)
 {
+#if 0
     debug_element_frame *RootFrame = RootElement->Frames + DebugState->ViewingFrameOrdinal;
     debug_stored_event *Event = RootFrame->OldestEvent;
     if(Event)
@@ -545,6 +546,7 @@ DrawArenaOccupancy(debug_state *DebugState, debug_id GraphID, rectangle2 FrameRe
         PushRectOutline(&DebugState->RenderGroup, &DebugState->UITransform, UnusedRect, 
                         1.0f, V4(0, 0, 0, 1), 2.0f);
     }
+#endif
 }
 
 internal void
@@ -1003,11 +1005,13 @@ DEBUGDrawElement(layout *Layout, debug_tree *Tree, debug_element *Element, debug
 
         case DebugType_DebugMemoryInfo:
         {
+#if 0
             char Text[256];
             FormatString(sizeof(Text), Text, "Per-frame arena space remaining: %ukb",
                          (u32)(GetArenaSizeRemaining(&DebugState->PerFrameArena, AlignNoClear(1)) / 1024));
 
             BasicTextElement(Layout, Text, ItemInteraction);
+#endif
         } break;
 
         default:
@@ -1625,18 +1629,7 @@ StoreEvent(debug_state *DebugState, debug_element *Element, debug_event *Event)
         }
         else
         {
-#if 0
-            if(ArenaHasRoomFor(&DebugState->PerFrameArena, sizeof(debug_stored_event)))
-            {
-                Result = PushStruct(&DebugState->PerFrameArena, debug_stored_event);
-            }
-            else
-            {
-                FreeOldestFrame(DebugState);
-            }
-#else
             Result = PushStruct(&DebugState->PerFrameArena, debug_stored_event);
-#endif
         }
     }
 

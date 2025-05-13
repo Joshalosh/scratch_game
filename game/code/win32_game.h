@@ -75,14 +75,10 @@ enum win32_memory_block_flag
 };
 struct win32_memory_block
 {
+    platform_memory_block Block;
     win32_memory_block *Prev;
     win32_memory_block *Next;
     u64 LoopingFlags;
-
-    u64 Size;
-    u64 Flags;
-    void *Base;
-    u64 Pad[2];
 };
 
 struct win32_saved_memory_block

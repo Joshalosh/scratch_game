@@ -549,6 +549,14 @@ enum platform_memory_block_flags
     PlatformMemory_OverflowCheck = 0x2,
     PlatformMemory_UnderflowCheck = 0x4,
 };
+struct platform_memory_block 
+{
+    u64 Flags;
+    u64 Size;
+    u8 *Base;
+    umm Used;
+    platform_memory_block *ArenaPrev;
+};
 
 #define PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(name) platform_file_group name(platform_file_type Type)
 typedef PLATFORM_GET_ALL_FILE_OF_TYPE_BEGIN(platform_get_all_files_of_type_begin);
@@ -571,10 +579,10 @@ struct platform_work_queue;
 #define PLATFORM_WORK_QUEUE_CALLBACK(name) void name(platform_work_queue *Queue, void *Data)
 typedef PLATFORM_WORK_QUEUE_CALLBACK(platform_work_queue_callback);
 
-#define PLATFORM_ALLOCATE_MEMORY(name) void *name(memory_index Size, u64 Flags)
+#define PLATFORM_ALLOCATE_MEMORY(name) platform_memory_block *name(memory_index Size, u64 Flags)
 typedef PLATFORM_ALLOCATE_MEMORY(platform_allocate_memory);
 
-#define PLATFORM_DEALLOCATE_MEMORY(name) void name(void *Memory, u64 Flags)
+#define PLATFORM_DEALLOCATE_MEMORY(name) void name(platform_memory_block *Block)
 typedef PLATFORM_DEALLOCATE_MEMORY(platform_deallocate_memory);
 
 typedef void platform_add_entry(platform_work_queue *Queue, platform_work_queue_callback *Callback, void *Data);
