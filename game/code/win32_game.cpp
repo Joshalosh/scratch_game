@@ -1026,16 +1026,10 @@ Win32GetInputFileLocation(win32_state *State, bool32 InputStream,
     Win32BuildEXEPathFilename(State, Temp, DestCount, Dest);
 }
 
-struct platform_memory_stats
+internal
+DEBUG_PLATFORM_GET_MEMORY_STATS(Win32GetMemoryStats)
 {
-    umm BlockCount;
-    umm TotalSize; // Does not technically include the header
-    umm TotalUsed;
-};
-internal platform_memory_stats
-Win32GetMemoryStats()
-{
-    platform_memory_stats Stats = {};
+    debug_platform_memory_stats Stats = {};
     BeginTicketMutex(&GlobalWin32State.MemoryMutex);
     win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
     for(win32_memory_block *SourceBlock = Sentinel->Next; 
@@ -1936,6 +1930,7 @@ WinMain(HINSTANCE Instance,
             GameMemory.PlatformAPI.DEBUGWriteEntireFile = DEBUGPlatformWriteEntireFile;
             GameMemory.PlatformAPI.DEBUGExecuteSystemCommand = DEBUGExecuteSystemCommand;
             GameMemory.PlatformAPI.DEBUGGetProcessState = DEBUGGetProcessState;
+            GameMemory.PlatformAPI.DEBUGGetMemoryStats = Win32GetMemoryStats;
 #endif
             u32 TextureOpCount = 1024;
             platform_texture_op_queue *TextureOpQueue = &GameMemory.TextureOpQueue;

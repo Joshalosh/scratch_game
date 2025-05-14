@@ -345,6 +345,12 @@ typedef struct debug_process_state
     s32 ReturnCode;
 } debug_process_state;
 
+typedef struct debug_platform_memory_stats
+{
+    umm BlockCount;
+    umm TotalSize; // Does not technically include the header
+    umm TotalUsed;
+} debug_platform_memory_stats;
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(void *Memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 
@@ -356,6 +362,9 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
 #define DEBUG_PLATFORM_EXECUTE_SYSTEM_COMMAND(name) debug_executing_process name(char *Path, char *Command, char *CommandLine)
 typedef DEBUG_PLATFORM_EXECUTE_SYSTEM_COMMAND(debug_platform_execute_system_command);
+
+#define DEBUG_PLATFORM_GET_MEMORY_STATS(name) debug_platform_memory_stats name(void)
+typedef DEBUG_PLATFORM_GET_MEMORY_STATS(debug_platform_get_memory_stats);
 
 // TODO: Do I want a formal release mechanism here?
 #define DEBUG_PLATFORM_GET_PROCESS_STATE(name) debug_process_state name(debug_executing_process Process)
@@ -617,6 +626,7 @@ typedef struct platform_api
     debug_platform_write_entire_file *DEBUGWriteEntireFile;
     debug_platform_execute_system_command *DEBUGExecuteSystemCommand;
     debug_platform_get_process_state *DEBUGGetProcessState;
+    debug_platform_get_memory_stats *DEBUGGetMemoryStats;
 #endif
 
 } platform_api;

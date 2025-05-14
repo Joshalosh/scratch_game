@@ -1938,12 +1938,18 @@ DEBUGEnd(debug_state *DebugState, game_input *Input)
 
     debug_event *HotEvent = 0;
 
+    debug_platform_memory_stats MemStats = Platform.DEBUGGetMemoryStats();
+
     debug_frame *MostRecentFrame = DebugState->Frames + DebugState->ViewingFrameOrdinal;
-    FormatString(DebugState->RootInfoSize, DebugState->RootInfo, "%.02fms %de %dp %dd",
+    FormatString(DebugState->RootInfoSize, DebugState->RootInfo, 
+                 "%.02fms %de %dp %dd - Mem: %lu blocks, %lu used / %lu size",
                  MostRecentFrame->WallSecondsElapsed * 1000.0f,
                  MostRecentFrame->StoredEventCount,
                  MostRecentFrame->ProfileBlockCount,
-                 MostRecentFrame->DataBlockCount);
+                 MostRecentFrame->DataBlockCount,
+                 MemStats.BlockCount,
+                 MemStats.TotalUsed,
+                 MemStats.TotalSize);
 
     DebugState->AltUI = Input->MouseButtons[PlatformMouseButton_Right].EndedDown;
     v2 MouseP = Unproject(RenderGroup, DefaultFlatTransform(), V2(Input->MouseX, Input->MouseY)).xy;

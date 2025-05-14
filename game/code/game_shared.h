@@ -339,6 +339,7 @@ FormatStringList(umm DestSize, char *DestInit, char *Format, va_list ArgList)
                 }
                 else if(*At == 'l')
                 {
+                    IntegerLength = 8;
                     ++At;
                 }
                 else if(*At == 'j')
