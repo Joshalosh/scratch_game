@@ -1026,6 +1026,49 @@ Win32GetInputFileLocation(win32_state *State, bool32 InputStream,
     Win32BuildEXEPathFilename(State, Temp, DestCount, Dest);
 }
 
+struct platform_memory_stats
+{
+    umm BlockCount;
+    umm TotalSize; // Does not technically include the header
+    umm TotalUsed;
+};
+internal platform_memory_stats
+Win32GetMemoryStats()
+{
+    platform_memory_stats Stats = {};
+    BeginTicketMutex(&GlobalWin32State.MemoryMutex);
+    win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
+    for(win32_memory_block *SourceBlock = Sentinel->Next; 
+        SourceBlock != Sentinel; 
+        SourceBlock = SourceBlock->Next)
+    {
+        Assert(SourceBlock->Block.Size <= U32Maximum);
+
+        ++Stats.BlockCount;
+        Stats.TotalSize += SourceBlock->Block.Size;
+        Stats.TotalUsed += SourceBlock->Block.Used;
+    }
+    EndTicketMutex(&GlobalWin32State.MemoryMutex);
+
+    return(Stats);
+}
+
+internal void 
+Win32VerifyMemoryListIntegrity()
+{
+    BeginTicketMutex(&GlobalWin32State.MemoryMutex);
+    local_persist u32 FailCounter;
+    win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
+    for(win32_memory_block *SourceBlock = Sentinel->Next;
+            SourceBlock != Sentinel;
+            SourceBlock = SourceBlock->Next)
+    {
+        Assert(SourceBlock->Block.Size <= U32Maximum);
+    }
+    ++FailCounter;
+    EndTicketMutex(&GlobalWin32State.MemoryMutex);
+}
+
 internal void
 Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
 {
@@ -1038,6 +1081,8 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
 
         State->InputRecordingIndex = InputRecordingIndex;
         win32_memory_block *Sentinel = &GlobalWin32State.MemorySentinel;
+
+        BeginTicketMutex(&GlobalWin32State.MemoryMutex);
         for(win32_memory_block *SourceBlock = Sentinel->Next;
             SourceBlock != Sentinel;
             SourceBlock = SourceBlock->Next)
@@ -1053,6 +1098,7 @@ Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
                 WriteFile(State->RecordingHandle, BasePointer, (u32)DestBlock.Size, &BytesWritten, 0);
             }
         }
+        EndTicketMutex(&GlobalWin32State.MemoryMutex);
 
         win32_saved_memory_block DestBlock = {};
         WriteFile(State->RecordingHandle, &DestBlock, sizeof(DestBlock), &BytesWritten, 0);
@@ -1629,7 +1675,7 @@ PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
         BaseOffset = 2*PageSize;
         ProtectOffset = PageSize;
     }
-    if(Flags & PlatformMemory_OverflowCheck)
+    else if(Flags & PlatformMemory_OverflowCheck)
     {
         umm SizeRoundedUp = AlignPow2(Size, PageSize);
         TotalSize = SizeRoundedUp + 2*PageSize;
@@ -1852,7 +1898,8 @@ WinMain(HINSTANCE Instance,
 
             // TODO: Need to figure out what the pushbuffer size is.
             u32 PushBufferSize = Megabytes(64);
-            void *PushBuffer = Win32AllocateMemory(PushBufferSize, PlatformMemory_NotRestored);
+            platform_memory_block *PushBufferBlock = Win32AllocateMemory(PushBufferSize, PlatformMemory_NotRestored);
+            u8 *PushBuffer = PushBufferBlock->Base;
 
             // TODO: Probably remove MaxPossibleOverrun.
             u32 MaxPossibleOverrun = 2*8*sizeof(u16); 

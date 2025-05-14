@@ -409,7 +409,7 @@ typedef struct game_render_commands
     struct render_entry_cliprect *LastRect;
 } game_render_commands;
 #define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
-    {Width, Height, MaxPushBufferSize, 0, (u8 *)PushBuffer, ((u8 *)PushBuffer) + MaxPushBufferSize};
+    {Width, Height, MaxPushBufferSize, 0, PushBuffer, PushBuffer + MaxPushBufferSize};
 
 inline struct sort_sprite_bound *GetSortEntries(game_render_commands *Commands)
 {
