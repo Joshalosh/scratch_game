@@ -5,7 +5,6 @@
    - Show on profile
    - Clean up where arenas are used and how
 
- - Cutscenes now malfunctioning
  - Bug in traversables where trees aren't occupying their spots
 
  - Combine sim region and world

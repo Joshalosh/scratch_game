@@ -83,7 +83,8 @@ RenderLayeredScene(game_assets *Assets, render_group *RenderGroup, loaded_bitmap
                     Transform.OffsetP.y = P.y - CameraOffset.y;
                 }
 
-                Transform.OffsetP.z = P.z - CameraOffset.z;
+                //Transform.OffsetP.z = P.z - CameraOffset.z;
+                Transform.OffsetP.z = Transform.FloorZ = P.z - CameraOffset.z;
 
                 RenderGroup->DebugTag = LayerIndex;
                 PushBitmap(RenderGroup, &Transform, LayerImage, Layer.Height, V3(0, 0, 0), Colour);
