@@ -191,16 +191,17 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
             else
             {
                 entity *Entity = BeginGroundedEntity(WorldMode, WorldMode->FloorCollision);
+                StandingOn.Entity.Ptr = Entity;
                 StandingOn.Entity.Index = Entity->ID;
                 Entity->TraversableCount = 1;
                 Entity->Traversables[0].P = V3(0, 0, 0);
                 Entity->Traversables[0].Occupier = 0;
                 if((LeftHole &&
                     (OffsetX == -2) &&
-                    (OffsetY == 1)) ||
+                    (OffsetY == 0)) ||
                    (RightHole &&
                     (OffsetX == 2) &&
-                    (OffsetY == 2)))
+                    (OffsetY == 0)))
                 {
                     Entity->AutoBoostTo = TargetRef;
                 }
@@ -505,7 +506,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorDown = false;
     random_series *Series = &WorldMode->GameEntropy;
     standard_room PrevRoom = {};
-    for(uint32_t ScreenIndex = 0; ScreenIndex < 2; ++ScreenIndex)
+    for(uint32_t ScreenIndex = 0; ScreenIndex < 20; ++ScreenIndex)
     {
         LastScreenX = ScreenX;
         LastScreenY = ScreenY;
@@ -513,7 +514,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 #if 0
         uint32_t DoorDirection = RandomChoice(Series, (DoorUp || DoorDown) ? 2 : 4);
 #else
-        uint32_t DoorDirection = 1; //RandomChoice(Series, 2);
+        uint32_t DoorDirection = RandomChoice(Series, 2);
 #endif
 
 //            DoorDirection = 3;
@@ -676,38 +677,17 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     GameState->WorldMode = WorldMode;
 }
 
-internal b32
-UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transient_state *TranState,
-                     game_input *Input, render_group *RenderGroup, loaded_bitmap *DrawBuffer)
+internal void
+UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode, 
+                         render_group *RenderGroup, v4 BackgroundColor, rectangle2 ScreenBounds, 
+                         rectangle3 SimBounds, game_input *Input, game_state *GameState, loaded_bitmap *DrawBuffer) 
 {
-    TIMED_FUNCTION();
-
-    b32 Result = false;
-
     world *World = WorldMode->World;
 
     v2 MouseP = {Input->MouseX, Input->MouseY};
 
-    camera_params Camera = GetStandardCameraParams(DrawBuffer->Width, 0.3f);
-
-    real32 DistanceAboveGround = 11.0f;
-    Perspective(RenderGroup, Camera.MetersToPixels, Camera.FocalLength, DistanceAboveGround);
-
-    v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 0.0f);
-    Clear(RenderGroup, BackgroundColor);
-
-    v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
-                       0.5f*(real32)DrawBuffer->Height};
-
-    rectangle2 ScreenBounds = GetCameraRectangleAtTarget(RenderGroup);
-    rectangle3 CameraBoundsInMetres = RectMinMax(V3(ScreenBounds.Min, 0.0f), V3(ScreenBounds.Max, 0.0f));
-    CameraBoundsInMetres.Min.z = -3.0f*WorldMode->TypicalFloorHeight;
-    CameraBoundsInMetres.Max.z = 1.0f*WorldMode->TypicalFloorHeight;
-
     // TODO: How big do I actually want to expand here?
     // TODO: Do we I want to simulate upper floors and stuff?
-    v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
-    rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
 
     world_position SimCentreP = WorldMode->CameraP;
@@ -733,25 +713,28 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     // NOTE: Look to see if any players are trying to join
     //
 
-    for(u32 ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
+    if(Input)
     {
-        game_controller_input *Controller = GetController(Input, ControllerIndex);
-        controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
-        if(ConHero->BrainID.Value == 0)
+        for(u32 ControllerIndex = 0; ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
         {
-            if(WasPressed(Controller->Start))
+            game_controller_input *Controller = GetController(Input, ControllerIndex);
+            controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
+            if(ConHero->BrainID.Value == 0)
             {
-                *ConHero = {};
-                traversable_reference Traversable;
-                if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
+                if(WasPressed(Controller->Start))
                 {
-                    ConHero->BrainID = {ReservedBrainID_FirstHero + ControllerIndex};
-                    AddPlayer(WorldMode, SimRegion, Traversable, ConHero->BrainID);
-                }
-                else
-                {
-                    // TODO: GameUI that tells you there's no safe place, 
-                    // maybe keep trying on subsequent frames?
+                    *ConHero = {};
+                    traversable_reference Traversable;
+                    if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
+                    {
+                        ConHero->BrainID = {ReservedBrainID_FirstHero + ControllerIndex};
+                        AddPlayer(WorldMode, SimRegion, Traversable, ConHero->BrainID);
+                    }
+                    else
+                    {
+                        // TODO: GameUI that tells you there's no safe place, 
+                        // maybe keep trying on subsequent frames?
+                    }
                 }
             }
         }
@@ -786,6 +769,39 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
     EndSim(SimRegion, WorldMode);
     EndTemporaryMemory(SimMemory);
+}
+
+internal b32
+UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transient_state *TranState,
+                     game_input *Input, render_group *RenderGroup, loaded_bitmap *DrawBuffer)
+{
+    TIMED_FUNCTION();
+
+    b32 Result = false;
+
+    world *World = WorldMode->World;
+
+    camera_params Camera = GetStandardCameraParams(DrawBuffer->Width, 0.3f);
+
+    real32 DistanceAboveGround = 11.0f;
+    Perspective(RenderGroup, Camera.MetersToPixels, Camera.FocalLength, DistanceAboveGround);
+
+    v4 BackgroundColor = V4(0.15f, 0.15f, 0.15f, 0.0f);
+    Clear(RenderGroup, BackgroundColor);
+
+    v2 ScreenCentre = {0.5f*(real32)DrawBuffer->Width,
+                       0.5f*(real32)DrawBuffer->Height};
+
+    rectangle2 ScreenBounds = GetCameraRectangleAtTarget(RenderGroup);
+    rectangle3 CameraBoundsInMetres = RectMinMax(V3(ScreenBounds.Min, 0.0f), V3(ScreenBounds.Max, 0.0f));
+    CameraBoundsInMetres.Min.z = -3.0f*WorldMode->TypicalFloorHeight;
+    CameraBoundsInMetres.Max.z = 1.0f*WorldMode->TypicalFloorHeight;
+
+    v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
+    rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
+
+    UpdateAndRenderSimRegion(TranState, WorldMode, RenderGroup, BackgroundColor,
+                             ScreenBounds, SimBounds, Input, GameState, DrawBuffer);
 
     b32 HeroesExist = false;
     for(u32 ConHeroIndex = 0; ConHeroIndex < ArrayCount(GameState->ControlledHeroes); ++ConHeroIndex)
