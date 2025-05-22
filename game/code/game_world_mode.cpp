@@ -679,14 +679,19 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
 internal void
 UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode, 
-                         rectangle3 SimBounds,
+                         rectangle3 SimBounds, r32 dt,
                          // These are optional for the render part
                          v4 BackgroundColor, rectangle2 ScreenBounds, game_state *GameState, game_input *Input, 
                          render_group *RenderGroup, loaded_bitmap *DrawBuffer) 
 {
     world *World = WorldMode->World;
 
-    v2 MouseP = {Input->MouseX, Input->MouseY};
+    v2 MouseP = {};
+    if(Input)
+    {
+        MouseP.x = Input->MouseX;
+        MouseP.y = Input->MouseY;
+    }
 
     // TODO: How big do I actually want to expand here?
     // TODO: Do we I want to simulate upper floors and stuff?
@@ -697,11 +702,9 @@ UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode,
     WorldMode->LastCameraP = WorldMode->CameraP;
 
     sim_region *SimRegion = BeginSim(&TranState->TranArena, WorldMode, World,
-                                     SimCentreP, SimBounds, Input->dtForFrame, WorldMode->ParticleCache);
+                                     SimCentreP, SimBounds, dt, WorldMode->ParticleCache);
 
     v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
-
-    r32 dt = Input->dtForFrame;
 
     //
     // NOTE: Look to see if any players are trying to join
@@ -800,12 +803,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
 
-#if 0
-    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds, BackgroundColor, 
+    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds, Input->dtForFrame, BackgroundColor, 
                              ScreenBounds, GameState, Input, RenderGroup, DrawBuffer);
-#else 
-    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds, v4(0, 0, 0, 0), ScreenBounds, 0, 0, 0, 0);
-#endif
+
+    rectangle3 SimBounds2 = Offset(SimBounds, V3(-100.0f, -100.0f, 0.0f));
+    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds2, Input->dtForFrame, BackgroundColor, 
+                             ScreenBounds, 0, 0, RenderGroup, DrawBuffer);
 
     b32 HeroesExist = false;
     for(u32 ConHeroIndex = 0; ConHeroIndex < ArrayCount(GameState->ControlledHeroes); ++ConHeroIndex)

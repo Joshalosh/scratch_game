@@ -33,6 +33,8 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
     {
         case Type_brain_hero:
         {
+            controlled_hero ConHero_ = {};
+            controlled_hero *ConHero = &ConHero_;
             brain_hero *Parts = &Brain->Hero;
             entity *Head = Parts->Head;
             entity *Body = Parts->Body;
@@ -48,7 +50,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
             {
                 u32 ControllerIndex = Brain->ID.Value - ReservedBrainID_FirstHero;
                 game_controller_input *Controller = GetController(Input, ControllerIndex);
-                controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
+                ConHero = GameState->ControlledHeroes + ControllerIndex;
                 if(Controller->IsAnalogue)
                 {
                     // Use analogue movement tuning
@@ -166,16 +168,16 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                     Attacked = true;
                     dSword = V2(1.0f, 0.0f);
                 }
-            }
 
-            if(Glove && (Glove->MovementMode != MovementMode_AngleOffset))
-            {
-                Attacked = false;
-            }
+                if(Glove && (Glove->MovementMode != MovementMode_AngleOffset))
+                {
+                    Attacked = false;
+                }
 
-            if(WasPressed(Controller->Back))
-            {
-                Exited = true;
+                if(WasPressed(Controller->Back))
+                {
+                    Exited = true;
+                }
             }
 
             if(Glove && Attacked)
