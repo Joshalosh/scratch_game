@@ -46,8 +46,10 @@ ConvertToLayerRelative(game_mode_world *WorldMode, r32 *Z)
 }
 
 internal void
-UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, render_group *RenderGroup, v3 CameraP,
-                        loaded_bitmap *DrawBuffer, v4 BackgroundColor, r32 dt, transient_state *TranState, v2 MouseP)
+UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 dt, 
+                        // these are optional for rendering
+                        render_group *RenderGroup, v3 CameraP,
+                        loaded_bitmap *DrawBuffer, v4 BackgroundColor, game_assets *Assets, v2 MouseP)
 {
     TIMED_FUNCTION();
 
@@ -77,12 +79,18 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
     s32 StopLevelIndex = MaximumLevelIndex - 1;
     u32 AlphaFloorRenderTarget = 1;
-    u32 NormalFloorClipRect = RenderGroup->CurrentClipRectIndex;
-    u32 AlphaFloorClipRect = RenderGroup->CurrentClipRectIndex;
-    if(TestAlpha > 0)
+    u32 NormalFloorClipRect = 0;
+    u32 AlphaFloorClipRect = 0;
+
+    if(RenderGroup)
     {
-        StopLevelIndex = MaximumLevelIndex;
-        AlphaFloorClipRect = PushClipRect(RenderGroup, 0, 0, DrawBuffer->Width, DrawBuffer->Height, AlphaFloorRenderTarget);
+        NormalFloorClipRect = RenderGroup->CurrentClipRectIndex;
+        AlphaFloorClipRect = RenderGroup->CurrentClipRectIndex;
+        if(TestAlpha > 0)
+        {
+            StopLevelIndex = MaximumLevelIndex;
+            AlphaFloorClipRect = PushClipRect(RenderGroup, 0, 0, DrawBuffer->Width, DrawBuffer->Height, AlphaFloorRenderTarget);
+        }
     }
 
     s32 CurrentAbsoluteZLayer = (SimRegion->EntityCount ? SimRegion->Entities[0].ZLayer : 0);
@@ -214,190 +222,196 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, rende
 
             END_BLOCK();
 
-            object_transform EntityTransform = DefaultUprightTransform();
-            EntityTransform.OffsetP = GetEntityGroundPoint(Entity) - CameraP;
-
-            s32 RelativeLayer = Entity->ZLayer - SimRegion->Origin.ChunkZ;
-
-            EntityTransform.ManualSort = Entity->ManualSort;
-            EntityTransform.ChunkZ = Entity->ZLayer;
-
-            if((RelativeLayer >= MinimumLevelIndex) &&
-               (RelativeLayer <= StopLevelIndex))
+            if(RenderGroup)
             {
-                if(CurrentAbsoluteZLayer != Entity->ZLayer)
-                {
-                    Assert(CurrentAbsoluteZLayer < Entity->ZLayer);
-                    CurrentAbsoluteZLayer = Entity->ZLayer;
-                    PushSortBarrier(RenderGroup, false);
-                }
+                object_transform EntityTransform = DefaultUprightTransform();
+                EntityTransform.OffsetP = GetEntityGroundPoint(Entity) - CameraP;
 
-                s32 LayerIndex = RelativeLayer - MinimumLevelIndex;
-                if(RelativeLayer == MaximumLevelIndex)
-                {
-                    RenderGroup->CurrentClipRectIndex = AlphaFloorClipRect;
-                    EntityTransform.tColor = V4(0, 0, 0, 0);
-                }
-                else
-                {
-                    RenderGroup->CurrentClipRectIndex = NormalFloorClipRect;
-                    EntityTransform.Color = BackgroundColor;
-                    EntityTransform.tColor = FogAmount[LayerIndex]*V4(1, 1, 1, 0);
-                }
+                s32 RelativeLayer = Entity->ZLayer - SimRegion->Origin.ChunkZ;
 
-                EntityTransform.FloorZ = CamRelGroundZ[LayerIndex];
+                EntityTransform.ManualSort = Entity->ManualSort;
+                EntityTransform.ChunkZ = Entity->ZLayer;
 
-                //
-                // NOTE: Rendering
-                //
-                asset_vector MatchVector = {};
-                MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
-                asset_vector WeightVector = {};
-                WeightVector.E[Tag_FacingDirection] = 1.0f;
-
-                /* TODO:
-                 * This is where articulated figures will be happening, so I need to have
-                 * this code look correct in terms of how I want rendering submitted.
-                 * It should begin by creatingt a sort key for the entire armature, 
-                 * and then it should be able to guarantee that each piece will be rendered
-                 * in the order it was submitted after being sorted into the scene at 
-                 * large by the key. 
-                 *
-                 * This should eliminate the need for render_group-side sort bias as 
-                 * well, since now the user is in control of setting the sort value 
-                 * specifically. 
-                 *
-                 * And probably I will want the sort keys to be u32's now so I'll convert 
-                 * from float at this time and that way I can use the low bits for maintaining order?
-                 * or maybe I just use a stable sort.
-                 */
-
-                if(Entity->PieceCount > 1)
+                if((RelativeLayer >= MinimumLevelIndex) &&
+                   (RelativeLayer <= StopLevelIndex))
                 {
-                    BeginAggregateSortKey(RenderGroup);
-                }
-                for(u32 PieceIndex = 0; PieceIndex < Entity->PieceCount; ++PieceIndex)
-                {
-                    entity_visible_piece *Piece = Entity->Pieces + PieceIndex;
-                    bitmap_id BitmapID = GetBestMatchBitmapFrom(TranState->Assets, Piece->AssetType, 
-                                                                &MatchVector, &WeightVector);
-                    v2 XAxis = {1, 0};
-                    v2 YAxis = {0, 1};
-                    if(Piece->Flags & PieceMove_AxesDeform)
+                    if(CurrentAbsoluteZLayer != Entity->ZLayer)
                     {
-                        XAxis = Entity->XAxis;
-                        YAxis = Entity->YAxis;
+                        Assert(CurrentAbsoluteZLayer < Entity->ZLayer);
+                        CurrentAbsoluteZLayer = Entity->ZLayer;
+                        PushSortBarrier(RenderGroup, false);
                     }
 
-                    r32 tBob = 0.0f;
-                    v3 Offset = {};
-                    if(Piece->Flags & PieceMove_BobOffset)
+                    s32 LayerIndex = RelativeLayer - MinimumLevelIndex;
+                    if(RelativeLayer == MaximumLevelIndex)
                     {
-                        tBob = Entity->tBob;
-                        Offset = V3(Entity->FloorDisplace, 0.0f);
-                        Offset.y += Entity->tBob;
+                        RenderGroup->CurrentClipRectIndex = AlphaFloorClipRect;
+                        EntityTransform.tColor = V4(0, 0, 0, 0);
+                    }
+                    else
+                    {
+                        RenderGroup->CurrentClipRectIndex = NormalFloorClipRect;
+                        EntityTransform.Color = BackgroundColor;
+                        EntityTransform.tColor = FogAmount[LayerIndex]*V4(1, 1, 1, 0);
                     }
 
-                    v4 Color = Piece->Color;
-                    PushBitmap(RenderGroup, &EntityTransform, BitmapID, Piece->Height, Offset + Piece->Offset, Color, 1.0f, XAxis, YAxis);
-                }
-                if(Entity->PieceCount > 1)
-                {
-                    EndAggregateSortKey(RenderGroup);
-                }
+                    EntityTransform.FloorZ = CamRelGroundZ[LayerIndex];
 
-                DrawHitPoints(Entity, RenderGroup, &EntityTransform);
+                    //
+                    // NOTE: Rendering
+                    //
+                    asset_vector MatchVector = {};
+                    MatchVector.E[Tag_FacingDirection] = Entity->FacingDirection;
+                    asset_vector WeightVector = {};
+                    WeightVector.E[Tag_FacingDirection] = 1.0f;
 
-                EntityTransform.Upright = false;
+                    /* TODO:
+                     * This is where articulated figures will be happening, so I need to have
+                     * this code look correct in terms of how I want rendering submitted.
+                     * It should begin by creatingt a sort key for the entire armature, 
+                     * and then it should be able to guarantee that each piece will be rendered
+                     * in the order it was submitted after being sorted into the scene at 
+                     * large by the key. 
+                     *
+                     * This should eliminate the need for render_group-side sort bias as 
+                     * well, since now the user is in control of setting the sort value 
+                     * specifically. 
+                     *
+                     * And probably I will want the sort keys to be u32's now so I'll convert 
+                     * from float at this time and that way I can use the low bits for maintaining order?
+                     * or maybe I just use a stable sort.
+                     */
+
+                    if(Entity->PieceCount > 1)
+                    {
+                        BeginAggregateSortKey(RenderGroup);
+                    }
+                    for(u32 PieceIndex = 0; PieceIndex < Entity->PieceCount; ++PieceIndex)
+                    {
+                        entity_visible_piece *Piece = Entity->Pieces + PieceIndex;
+                        bitmap_id BitmapID = GetBestMatchBitmapFrom(Assets, Piece->AssetType, 
+                                                                    &MatchVector, &WeightVector);
+                        v2 XAxis = {1, 0};
+                        v2 YAxis = {0, 1};
+                        if(Piece->Flags & PieceMove_AxesDeform)
+                        {
+                            XAxis = Entity->XAxis;
+                            YAxis = Entity->YAxis;
+                        }
+
+                        r32 tBob = 0.0f;
+                        v3 Offset = {};
+                        if(Piece->Flags & PieceMove_BobOffset)
+                        {
+                            tBob = Entity->tBob;
+                            Offset = V3(Entity->FloorDisplace, 0.0f);
+                            Offset.y += Entity->tBob;
+                        }
+
+                        v4 Color = Piece->Color;
+                        PushBitmap(RenderGroup, &EntityTransform, BitmapID, Piece->Height, Offset + Piece->Offset, Color, 1.0f, XAxis, YAxis);
+                    }
+                    if(Entity->PieceCount > 1)
+                    {
+                        EndAggregateSortKey(RenderGroup);
+                    }
+
+                    DrawHitPoints(Entity, RenderGroup, &EntityTransform);
+
+                    EntityTransform.Upright = false;
 #if 0
-                for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
-                {
-                    entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-                    PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                    Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1.0f));
-                }
-#endif
-
-                BEGIN_BLOCK("TraversableRendering");
-                for(u32 TraversableIndex = 0; 
-                    TraversableIndex < Entity->TraversableCount;
-                    ++TraversableIndex)
-                {
-                    entity_traversable_point *Traversable =
-                        Entity->Traversables + TraversableIndex;
-                    v4 Col = V4(0.05f, 0.25f, 0.05f, 1.0f);
-                    if(GetTraversable(Entity->AutoBoostTo))
-                    {
-                        Col = V4(1.0f, 0.0f, 1.0f, 1.0f);
-                    }
-                    if(Traversable->Occupier)
-                    {
-                        Col = V4(1.0f, 0.5f, 0.0f, 1.0f);
-                    }
-
-                    PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(1.4f, 1.4f), Col);
-
-                    //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
-                }
-                END_BLOCK();
-
-                if(DEBUG_UI_ENABLED)
-                {
-                    debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->ID.Value); // NOTE: Have a custom u64 cast to get past the warning
-
-                    for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
+                    for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+                        PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                                        Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1.0f));
+                    }
+#endif
 
-                        v3 LocalMouseP = Unproject(RenderGroup, EntityTransform, MouseP);
-
-                        if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
-                           (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
+                    BEGIN_BLOCK("TraversableRendering");
+                    for(u32 TraversableIndex = 0; 
+                        TraversableIndex < Entity->TraversableCount;
+                        ++TraversableIndex)
+                    {
+                        entity_traversable_point *Traversable =
+                            Entity->Traversables + TraversableIndex;
+                        v4 Col = V4(0.05f, 0.25f, 0.05f, 1.0f);
+                        if(GetTraversable(Entity->AutoBoostTo))
                         {
-                            DEBUG_HIT(EntityDebugID, LocalMouseP.z);
+                            Col = V4(1.0f, 0.0f, 1.0f, 1.0f);
+                        }
+                        if(Traversable->Occupier)
+                        {
+                            Col = V4(1.0f, 0.5f, 0.0f, 1.0f);
                         }
 
-                        v4 OutlineColour;
-                        if(DEBUG_HIGHLIGHTED(EntityDebugID, &OutlineColour))
+                        PushRect(RenderGroup, &EntityTransform, Traversable->P, V2(1.4f, 1.4f), Col);
+
+                        //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
+                    }
+                    END_BLOCK();
+
+                    if(DEBUG_UI_ENABLED)
+                    {
+                        debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->ID.Value); // NOTE: Have a custom u64 cast to get past the warning
+
+                        for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                         {
-                            PushRectOutline(RenderGroup, &EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                            Volume->Dim.xy, OutlineColour, 0.05f);
+                            entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+
+                            v3 LocalMouseP = Unproject(RenderGroup, EntityTransform, MouseP);
+
+                            if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
+                               (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
+                            {
+                                DEBUG_HIT(EntityDebugID, LocalMouseP.z);
+                            }
+
+                            v4 OutlineColour;
+                            if(DEBUG_HIGHLIGHTED(EntityDebugID, &OutlineColour))
+                            {
+                                PushRectOutline(RenderGroup, &EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                                                Volume->Dim.xy, OutlineColour, 0.05f);
+                            }
                         }
                     }
                 }
-            }
 
-            if(DEBUG_REQUESTED(EntityDebugID))
-            {
-                DEBUG_VALUE(Entity->ID.Value);
-                DEBUG_VALUE(Entity->P);
-                DEBUG_VALUE(Entity->dP);
-                DEBUG_VALUE(Entity->DistanceLimit);
-                DEBUG_VALUE(Entity->FacingDirection);
-                DEBUG_VALUE(Entity->tBob);
-                DEBUG_VALUE(Entity->dAbsTileZ);
-                DEBUG_VALUE(Entity->HitPointMax);
-#if 0
-                DEBUG_BEGIN_ARRAY(Entity->HitPoint);
-                for(u32 HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
+                if(DEBUG_REQUESTED(EntityDebugID))
                 {
-                    DEBUG_VALUE(Entity->HitPoint[HitPointIndex]);
-                }
-                DEBUG_END_ARRAY();
-                DEBUG_VALUE(Entity->Sword);
+                    DEBUG_VALUE(Entity->ID.Value);
+                    DEBUG_VALUE(Entity->P);
+                    DEBUG_VALUE(Entity->dP);
+                    DEBUG_VALUE(Entity->DistanceLimit);
+                    DEBUG_VALUE(Entity->FacingDirection);
+                    DEBUG_VALUE(Entity->tBob);
+                    DEBUG_VALUE(Entity->dAbsTileZ);
+                    DEBUG_VALUE(Entity->HitPointMax);
+#if 0
+                    DEBUG_BEGIN_ARRAY(Entity->HitPoint);
+                    for(u32 HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
+                    {
+                        DEBUG_VALUE(Entity->HitPoint[HitPointIndex]);
+                    }
+                    DEBUG_END_ARRAY();
+                    DEBUG_VALUE(Entity->Sword);
 #endif
-                DEBUG_VALUE(Entity->WalkableDim);
-                DEBUG_VALUE(Entity->WalkableHeight);
+                    DEBUG_VALUE(Entity->WalkableDim);
+                    DEBUG_VALUE(Entity->WalkableHeight);
 
-                DEBUG_END_DATA_BLOCK("Simulation/Entity");
+                    DEBUG_END_DATA_BLOCK("Simulation/Entity");
+                }
             }
         }
     }
     END_BLOCK();
 
-    RenderGroup->CurrentClipRectIndex = NormalFloorClipRect;
-    if(TestAlpha > 0)
+    if(RenderGroup)
     {
-        PushBlendRenderTarget(RenderGroup, TestAlpha, AlphaFloorRenderTarget);
+        RenderGroup->CurrentClipRectIndex = NormalFloorClipRect;
+        if(TestAlpha > 0)
+        {
+            PushBlendRenderTarget(RenderGroup, TestAlpha, AlphaFloorRenderTarget);
+        }
     }
 }

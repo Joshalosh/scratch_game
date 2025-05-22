@@ -679,8 +679,10 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
 internal void
 UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode, 
-                         render_group *RenderGroup, v4 BackgroundColor, rectangle2 ScreenBounds, 
-                         rectangle3 SimBounds, game_input *Input, game_state *GameState, loaded_bitmap *DrawBuffer) 
+                         rectangle3 SimBounds,
+                         // These are optional for the render part
+                         v4 BackgroundColor, rectangle2 ScreenBounds, game_state *GameState, game_input *Input, 
+                         render_group *RenderGroup, loaded_bitmap *DrawBuffer) 
 {
     world *World = WorldMode->World;
 
@@ -698,14 +700,6 @@ UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode,
                                      SimCentreP, SimBounds, Input->dtForFrame, WorldMode->ParticleCache);
 
     v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
-
-    object_transform WorldTransform = DefaultUprightTransform();
-    WorldTransform.OffsetP -= CameraP;
-
-    PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
-//    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
-    PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
-    PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
 
     r32 dt = Input->dtForFrame;
 
@@ -750,25 +744,31 @@ UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode,
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
     {
         brain *Brain = SimRegion->Brains + BrainIndex;
-        ExecuteBrain(GameState, WorldMode, Input, RenderGroup, SimRegion, Brain, dt);
+        ExecuteBrain(GameState, WorldMode, Input, SimRegion, Brain, dt);
     }
     END_BLOCK();
 
-    UpdateAndRenderEntities(WorldMode, SimRegion, RenderGroup, CameraP,
-                            DrawBuffer, BackgroundColor, dt, TranState, MouseP);
-    UpdateAndRenderParticleSystems(WorldMode->ParticleCache, dt, RenderGroup, 
-                                   -FrameToFrameCameraDeltaP, CameraP);
+    UpdateAndRenderEntities(WorldMode, SimRegion, dt, RenderGroup, CameraP, 
+                            DrawBuffer, BackgroundColor, TranState->Assets, MouseP);
+    if(RenderGroup)
+    {
+        UpdateAndRenderParticleSystems(WorldMode->ParticleCache, dt, RenderGroup, 
+                                       -FrameToFrameCameraDeltaP, CameraP);
 
-    Orthographic(RenderGroup, 1.0f);
+        object_transform WorldTransform = DefaultUprightTransform();
+        WorldTransform.OffsetP -= CameraP;
 
-    object_transform Flat = DefaultFlatTransform();
-    PushRectOutline(RenderGroup, &Flat, V3(MouseP, 0.0f), V2(2.0f, 2.0f));
+        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
+    //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
+        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
+        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
 
-    // TODO: Make sure we hoist the camera update out to a place where the
-    // renderer can know about the location of the camera at the end of the
-    // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
-    EndSim(SimRegion, WorldMode);
-    EndTemporaryMemory(SimMemory);
+        // TODO: Make sure we hoist the camera update out to a place where the
+        // renderer can know about the location of the camera at the end of the
+        // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
+        EndSim(SimRegion, WorldMode);
+        EndTemporaryMemory(SimMemory);
+    }
 }
 
 internal b32
@@ -800,8 +800,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
 
-    UpdateAndRenderSimRegion(TranState, WorldMode, RenderGroup, BackgroundColor,
-                             ScreenBounds, SimBounds, Input, GameState, DrawBuffer);
+#if 0
+    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds, BackgroundColor, 
+                             ScreenBounds, GameState, Input, RenderGroup, DrawBuffer);
+#else 
+    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds, v4(0, 0, 0, 0), ScreenBounds, 0, 0, 0, 0);
+#endif
 
     b32 HeroesExist = false;
     for(u32 ConHeroIndex = 0; ConHeroIndex < ArrayCount(GameState->ControlledHeroes); ++ConHeroIndex)

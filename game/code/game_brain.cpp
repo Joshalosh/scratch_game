@@ -27,7 +27,7 @@ MarkBrainActives(brain *Brain)
 
 inline void
 ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Input, 
-             render_group *RenderGroup, sim_region *SimRegion, brain *Brain, r32 dt)
+             sim_region *SimRegion, brain *Brain, r32 dt)
 {
     switch(Brain->Type)
     {
@@ -38,133 +38,134 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
             entity *Body = Parts->Body;
             entity *Glove = Parts->Glove;
 
-            u32 ControllerIndex = Brain->ID.Value - ReservedBrainID_FirstHero;
-            game_controller_input *Controller = GetController(Input, ControllerIndex);
-            controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
-
             v2 dSword = {};
             r32 dZ = 0.0f;
             b32 Exited = false;
             b32 DebugSpawn = false;
+            b32 Attacked = false;
 
-            if(Controller->IsAnalogue)
+            if(Input)
             {
-                // Use analogue movement tuning
-                ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
-            }
-            else
-            {
-                // Use digital movement tuning
-                r32 Recentre = 0.5f;
-                if(WasPressed(Controller->MoveUp))
+                u32 ControllerIndex = Brain->ID.Value - ReservedBrainID_FirstHero;
+                game_controller_input *Controller = GetController(Input, ControllerIndex);
+                controlled_hero *ConHero = GameState->ControlledHeroes + ControllerIndex;
+                if(Controller->IsAnalogue)
                 {
-                    ConHero->ddP.x = 0.0f;
-                    ConHero->ddP.y = 1.0f;
-                    ConHero->RecentreTimer = Recentre;
+                    // Use analogue movement tuning
+                    ConHero->ddP = V2(Controller->StickAverageX, Controller->StickAverageY);
                 }
-                if(WasPressed(Controller->MoveDown))
+                else
                 {
-                    ConHero->ddP.x = 0.0f;
-                    ConHero->ddP.y = -1.0f;
-                    ConHero->RecentreTimer = Recentre;
-                }
-                if(WasPressed(Controller->MoveLeft))
-                {
-                    ConHero->ddP.x = -1.0f;
-                    ConHero->ddP.y = 0.0f;
-                    ConHero->RecentreTimer = Recentre;
-                }
-                if(WasPressed(Controller->MoveRight))
-                {
-                    ConHero->ddP.x = 1.0f;
-                    ConHero->ddP.y = 0.0f;
-                    ConHero->RecentreTimer = Recentre;
-                }
-
-                if(!IsDown(Controller->MoveLeft) &&
-                   !IsDown(Controller->MoveRight))
-                {
-                    ConHero->ddP.x = 0.0f;
-                    if(IsDown(Controller->MoveUp))
+                    // Use digital movement tuning
+                    r32 Recentre = 0.5f;
+                    if(WasPressed(Controller->MoveUp))
                     {
+                        ConHero->ddP.x = 0.0f;
                         ConHero->ddP.y = 1.0f;
+                        ConHero->RecentreTimer = Recentre;
                     }
-                    if(IsDown(Controller->MoveDown))
+                    if(WasPressed(Controller->MoveDown))
                     {
+                        ConHero->ddP.x = 0.0f;
                         ConHero->ddP.y = -1.0f;
+                        ConHero->RecentreTimer = Recentre;
                     }
-                }
-
-                if(!IsDown(Controller->MoveUp) &&
-                   !IsDown(Controller->MoveDown))
-                {
-                    ConHero->ddP.y = 0.0f;
-                    if(IsDown(Controller->MoveLeft))
+                    if(WasPressed(Controller->MoveLeft))
                     {
                         ConHero->ddP.x = -1.0f;
+                        ConHero->ddP.y = 0.0f;
+                        ConHero->RecentreTimer = Recentre;
                     }
-                    if(IsDown(Controller->MoveRight))
+                    if(WasPressed(Controller->MoveRight))
                     {
                         ConHero->ddP.x = 1.0f;
+                        ConHero->ddP.y = 0.0f;
+                        ConHero->RecentreTimer = Recentre;
                     }
-                }
 
-                if(WasPressed(Controller->Start))
-                {
-                    DebugSpawn = true;
-                }
-            }
-
-            if(Head && WasPressed(Controller->Start))
-            {
-                entity *ClosestHero = 0;
-                r32 ClosestHeroDSq = Square(10.0f);
-                entity *TestEntity = SimRegion->Entities;
-                for(u32 TestEntityIndex = 0; TestEntityIndex < SimRegion->EntityCount; ++TestEntityIndex, ++TestEntity)
-                {
-                    if((TestEntity->BrainID.Value != Head->BrainID.Value) && TestEntity->BrainID.Value)
+                    if(!IsDown(Controller->MoveLeft) &&
+                       !IsDown(Controller->MoveRight))
                     {
-                        r32 TestDSq = LengthSq(TestEntity->P - Head->P);
-                        if(ClosestHeroDSq > TestDSq)
+                        ConHero->ddP.x = 0.0f;
+                        if(IsDown(Controller->MoveUp))
                         {
-                            ClosestHero = TestEntity;
-                            ClosestHeroDSq = TestDSq;
+                            ConHero->ddP.y = 1.0f;
+                        }
+                        if(IsDown(Controller->MoveDown))
+                        {
+                            ConHero->ddP.y = -1.0f;
                         }
                     }
+
+                    if(!IsDown(Controller->MoveUp) &&
+                       !IsDown(Controller->MoveDown))
+                    {
+                        ConHero->ddP.y = 0.0f;
+                        if(IsDown(Controller->MoveLeft))
+                        {
+                            ConHero->ddP.x = -1.0f;
+                        }
+                        if(IsDown(Controller->MoveRight))
+                        {
+                            ConHero->ddP.x = 1.0f;
+                        }
+                    }
+
+                    if(WasPressed(Controller->Start))
+                    {
+                        DebugSpawn = true;
+                    }
                 }
 
-                if(ClosestHero)
+                if(Head && WasPressed(Controller->Start))
                 {
-                    brain_id OldBrainID = Head->BrainID;
-                    brain_slot OldBrainSlot = Head->BrainSlot;
-                    Head->BrainID = ClosestHero->BrainID;
-                    Head->BrainSlot = ClosestHero->BrainSlot;
-                    ClosestHero->BrainID = OldBrainID;
-                    ClosestHero->BrainSlot = OldBrainSlot;
-                }
-            }
+                    entity *ClosestHero = 0;
+                    r32 ClosestHeroDSq = Square(10.0f);
+                    entity *TestEntity = SimRegion->Entities;
+                    for(u32 TestEntityIndex = 0; TestEntityIndex < SimRegion->EntityCount; ++TestEntityIndex, ++TestEntity)
+                    {
+                        if((TestEntity->BrainID.Value != Head->BrainID.Value) && TestEntity->BrainID.Value)
+                        {
+                            r32 TestDSq = LengthSq(TestEntity->P - Head->P);
+                            if(ClosestHeroDSq > TestDSq)
+                            {
+                                ClosestHero = TestEntity;
+                                ClosestHeroDSq = TestDSq;
+                            }
+                        }
+                    }
 
-            b32 Attacked = false;
-            dSword = {};
-            if(Controller->ActionUp.EndedDown)
-            {
-                Attacked = true;
-                dSword = V2(0.0f, 1.0f);
-            }
-            if(Controller->ActionDown.EndedDown)
-            {
-                Attacked = true;
-                dSword = V2(0.0f, -1.0f);
-            }
-            if(Controller->ActionLeft.EndedDown)
-            {
-                Attacked = true;
-                dSword = V2(-1.0f, 0.0f);
-            }
-            if(Controller->ActionRight.EndedDown)
-            {
-                Attacked = true;
-                dSword = V2(1.0f, 0.0f);
+                    if(ClosestHero)
+                    {
+                        brain_id OldBrainID = Head->BrainID;
+                        brain_slot OldBrainSlot = Head->BrainSlot;
+                        Head->BrainID = ClosestHero->BrainID;
+                        Head->BrainSlot = ClosestHero->BrainSlot;
+                        ClosestHero->BrainID = OldBrainID;
+                        ClosestHero->BrainSlot = OldBrainSlot;
+                    }
+                }
+
+                if(Controller->ActionUp.EndedDown)
+                {
+                    Attacked = true;
+                    dSword = V2(0.0f, 1.0f);
+                }
+                if(Controller->ActionDown.EndedDown)
+                {
+                    Attacked = true;
+                    dSword = V2(0.0f, -1.0f);
+                }
+                if(Controller->ActionLeft.EndedDown)
+                {
+                    Attacked = true;
+                    dSword = V2(-1.0f, 0.0f);
+                }
+                if(Controller->ActionRight.EndedDown)
+                {
+                    Attacked = true;
+                    dSword = V2(1.0f, 0.0f);
+                }
             }
 
             if(Glove && (Glove->MovementMode != MovementMode_AngleOffset))
@@ -193,12 +194,6 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
                 {
                     Head->FacingDirection = ATan2(dSword.y, dSword.x);
                 }
-            }
-
-            // TODO: Check that we I am attached as well (eg., not floating head)
-            if(Head && Body)
-            {
-                Body->ManualSort.AlwaysBehind = Head->ManualSort.AlwaysInFrontOf = ReserveSortKey(RenderGroup);
             }
 
             traversable_reference Traversable;
