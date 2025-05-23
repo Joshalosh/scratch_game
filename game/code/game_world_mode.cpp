@@ -483,8 +483,8 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
     world_position NullOrigin = {};
     rectangle3 NullRect = {};
-    WorldMode->CreationRegion = BeginSim(&TranState->TranArena, WorldMode, WorldMode->World,
-                                         NullOrigin, NullRect, 0, 0);
+    WorldMode->CreationRegion = BeginWorldChange(&TranState->TranArena, WorldMode, WorldMode->World,
+                                                 NullOrigin, NullRect, 0, 0);
 
     s32 ScreenBaseX = 0;
     s32 ScreenBaseY = 0;
@@ -670,7 +670,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     NewCameraP = ChunkPositionFromTilePosition(WorldMode->World, CameraTileX, CameraTileY, CameraTileZ);
     WorldMode->LastCameraP = WorldMode->CameraP = NewCameraP;
 
-    EndSim(WorldMode->CreationRegion, WorldMode);
+    EndWorldChange(WorldMode->CreationRegion, WorldMode);
     WorldMode->CreationRegion = 0;
     EndTemporaryMemory(SimMemory);
 
@@ -678,34 +678,9 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 }
 
 internal void
-UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode, 
-                         rectangle3 SimBounds, r32 dt,
-                         // These are optional for the render part
-                         v4 BackgroundColor, rectangle2 ScreenBounds, game_state *GameState, game_input *Input, 
-                         render_group *RenderGroup, loaded_bitmap *DrawBuffer) 
+CheckForJoiningPlayers(game_input *Input, game_state *GameState, game_mode_world *WorldMode,
+                       sim_region *SimRegion, v3 CameraP)
 {
-    world *World = WorldMode->World;
-
-    v2 MouseP = {};
-    if(Input)
-    {
-        MouseP.x = Input->MouseX;
-        MouseP.y = Input->MouseY;
-    }
-
-    // TODO: How big do I actually want to expand here?
-    // TODO: Do we I want to simulate upper floors and stuff?
-    temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
-
-    world_position SimCentreP = WorldMode->CameraP;
-    v3 FrameToFrameCameraDeltaP = Subtract(World, &WorldMode->CameraP, &WorldMode->LastCameraP);
-    WorldMode->LastCameraP = WorldMode->CameraP;
-
-    sim_region *SimRegion = BeginSim(&TranState->TranArena, WorldMode, World,
-                                     SimCentreP, SimBounds, dt, WorldMode->ParticleCache);
-
-    v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
-
     //
     // NOTE: Look to see if any players are trying to join
     //
@@ -736,6 +711,47 @@ UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode,
             }
         }
     }
+}
+
+internal world_sim
+BeginSim(transient_state *TranState, game_mode_world *WorldMode, rectangle3 SimBounds, r32 dt)
+{
+    world_sim Result = {};
+
+    world *World = WorldMode->World;
+
+    // TODO: How big do I actually want to expand here?
+    // TODO: Do we I want to simulate upper floors and stuff?
+    temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
+
+    world_position SimCentreP = WorldMode->CameraP;
+
+    sim_region *SimRegion = BeginWorldChange(&TranState->TranArena, WorldMode, World,
+                                             SimCentreP, SimBounds, dt, WorldMode->ParticleCache);
+
+    v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
+
+    Result.CameraP = CameraP;
+    Result.SimRegion = SimRegion;
+    Result.SimMemory = SimMemory;
+
+    return(Result);
+}
+
+internal void
+Simulate(world_sim *WorldSim, game_mode_world *WorldMode, r32 dt,
+         // These are optional for rendering)
+         v4 BackgroundColor, game_state *GameState, game_assets *Assets,
+         game_input *Input, render_group *RenderGroup, loaded_bitmap *DrawBuffer)
+{
+    sim_region *SimRegion = WorldSim->SimRegion;
+
+    v2 MouseP = {};
+    if(Input)
+    {
+        MouseP.x = Input->MouseX;
+        MouseP.y = Input->MouseY;
+    }
 
     // NOTE: Run all brains
     BEGIN_BLOCK("ExecuteBrains");
@@ -751,27 +767,18 @@ UpdateAndRenderSimRegion(transient_state *TranState, game_mode_world *WorldMode,
     }
     END_BLOCK();
 
-    UpdateAndRenderEntities(WorldMode, SimRegion, dt, RenderGroup, CameraP, 
-                            DrawBuffer, BackgroundColor, TranState->Assets, MouseP);
-    if(RenderGroup)
-    {
-        UpdateAndRenderParticleSystems(WorldMode->ParticleCache, dt, RenderGroup, 
-                                       -FrameToFrameCameraDeltaP, CameraP);
-
-        object_transform WorldTransform = DefaultUprightTransform();
-        WorldTransform.OffsetP -= CameraP;
-
-        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
-    //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
-        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
-        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
-
-        // TODO: Make sure we hoist the camera update out to a place where the
-        // renderer can know about the location of the camera at the end of the
-        // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
-        EndSim(SimRegion, WorldMode);
-        EndTemporaryMemory(SimMemory);
+    UpdateAndRenderEntities(WorldMode, SimRegion, dt, RenderGroup, WorldSim->CameraP, 
+                            DrawBuffer, BackgroundColor, Assets, MouseP);
     }
+
+internal void
+EndSim(game_mode_world *WorldMode, world_sim *WorldSim)
+{
+    // TODO: Make sure we hoist the camera update out to a place where the
+    // renderer can know about the location of the camera at the end of the
+    // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
+    EndWorldChange(WorldSim->SimRegion, WorldMode);
+    EndTemporaryMemory(WorldSim->SimMemory);
 }
 
 internal b32
@@ -803,12 +810,32 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
 
-    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds, Input->dtForFrame, BackgroundColor, 
-                             ScreenBounds, GameState, Input, RenderGroup, DrawBuffer);
+    world_sim WorldSim = BeginSim(TranState, WorldMode, SimBounds, Input->dtForFrame);
+    {
+        CheckForJoiningPlayers(Input, GameState, WorldMode, WorldSim.SimRegion, WorldSim.CameraP);
+        Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 
+                 TranState->Assets, Input, RenderGroup, DrawBuffer);
+        v3 FrameToFrameCameraDeltaP = Subtract(World, &WorldMode->CameraP, &WorldMode->LastCameraP);
+        WorldMode->LastCameraP = WorldMode->CameraP;
+
+        UpdateAndRenderParticleSystems(WorldMode->ParticleCache, Input->dtForFrame, RenderGroup,
+                                       -FrameToFrameCameraDeltaP, WorldSim.CameraP);
+        object_transform WorldTransform = DefaultUprightTransform();
+        WorldTransform.OffsetP -= WorldSim.CameraP;
+
+        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
+    //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
+        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
+        PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(WorldSim.SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
+    }
+    EndSim(WorldMode, &WorldSim);
 
     rectangle3 SimBounds2 = Offset(SimBounds, V3(-100.0f, -100.0f, 0.0f));
-    UpdateAndRenderSimRegion(TranState, WorldMode, SimBounds2, Input->dtForFrame, BackgroundColor, 
-                             ScreenBounds, 0, 0, RenderGroup, DrawBuffer);
+    WorldSim = BeginSim(TranState, WorldMode, SimBounds2, Input->dtForFrame);
+    Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 
+             TranState->Assets, Input, RenderGroup, DrawBuffer);
+    //Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 0, 0, 0, 0);
+    EndSim(WorldMode, &WorldSim);
 
     b32 HeroesExist = false;
     for(u32 ConHeroIndex = 0; ConHeroIndex < ArrayCount(GameState->ControlledHeroes); ++ConHeroIndex)

@@ -75,4 +75,11 @@ struct game_mode_world
 #endif
 };
 
+struct world_sim
+{
+    sim_region *SimRegion;
+    temporary_memory SimMemory;
+    v3 CameraP;
+};
+
 internal void PlayWorld(game_state *GameState, transient_state *TranState);

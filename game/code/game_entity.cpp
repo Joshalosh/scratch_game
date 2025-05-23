@@ -45,6 +45,66 @@ ConvertToLayerRelative(game_mode_world *WorldMode, r32 *Z)
     return(RelativeIndex);
 }
 
+
+internal void
+DEBUGPickEntities(sim_region *SimRegion, entity *Entity, 
+                  render_group *RenderGroup, object_transform *EntityTransform)
+{
+    if(DEBUG_UI_ENABLED)
+    {
+        // TODO: I don't really have a way to unique-ify these at all just yet
+        debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->ID.Value); // TODO: Have a custom cast to u64 to get past the warning.
+        if(DEBUG_REQUESTED(EntityDebugID))
+        {
+            DEBUG_BEGIN_DATA_BLOCK("Simulation/Entity");
+        }
+
+        for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
+        {
+            entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
+
+            v3 LocalMouseP = Unproject(RenderGroup, EntityTransform, MouseP);
+
+            if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
+               (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
+            {
+                DEBUG_HIT(EntityDebugID, LocalMouseP.z);
+            }
+
+            v4 OutlineColour;
+            if(DEBUG_HIGHLIGHTED(EntityDebugID, &OutlineColour))
+            {
+                PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                                Volume->Dim.xy, OutlineColour, 0.05f);
+            }
+        }
+        if(DEBUG_REQUESTED(EntityDebugID))
+        {
+            DEBUG_VALUE(Entity->ID.Value);
+            DEBUG_VALUE(Entity->P);
+            DEBUG_VALUE(Entity->dP);
+            DEBUG_VALUE(Entity->DistanceLimit);
+            DEBUG_VALUE(Entity->FacingDirection);
+            DEBUG_VALUE(Entity->tBob);
+            DEBUG_VALUE(Entity->dAbsTileZ);
+            DEBUG_VALUE(Entity->HitPointMax);
+#if 0
+            DEBUG_BEGIN_ARRAY(Entity->HitPoint);
+            for(u32 HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
+            {
+                DEBUG_VALUE(Entity->HitPoint[HitPointIndex]);
+            }
+            DEBUG_END_ARRAY();
+            DEBUG_VALUE(Entity->Sword);
+#endif
+            DEBUG_VALUE(Entity->WalkableDim);
+            DEBUG_VALUE(Entity->WalkableHeight);
+
+            DEBUG_END_DATA_BLOCK("Simulation/Entity");
+        }
+    }
+}
+
 internal void
 UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 dt, 
                         // these are optional for rendering
@@ -98,13 +158,6 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
     for(uint32_t EntityIndex = 0; EntityIndex < SimRegion->EntityCount; ++EntityIndex)
     {
         entity *Entity = SimRegion->Entities + EntityIndex;
-
-        // TODO: I don't really have a way to unique-ify these at all just yet
-        debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->ID.Value); // TODO: Have a custom cast to u64 to get past the warning.
-        if(DEBUG_REQUESTED(EntityDebugID))
-        {
-            DEBUG_BEGIN_DATA_BLOCK("Simulation/Entity");
-        }
 
         if(Entity->Flags & EntityFlag_Active)
         {
@@ -351,60 +404,11 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
                     }
                     END_BLOCK();
 
-                    if(DEBUG_UI_ENABLED)
-                    {
-                        debug_id EntityDebugID = DEBUG_POINTER_ID((void *)(u64)Entity->ID.Value); // NOTE: Have a custom u64 cast to get past the warning
-
-                        for(u32 VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
-                        {
-                            entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-
-                            v3 LocalMouseP = Unproject(RenderGroup, EntityTransform, MouseP);
-
-                            if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
-                               (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
-                            {
-                                DEBUG_HIT(EntityDebugID, LocalMouseP.z);
-                            }
-
-                            v4 OutlineColour;
-                            if(DEBUG_HIGHLIGHTED(EntityDebugID, &OutlineColour))
-                            {
-                                PushRectOutline(RenderGroup, &EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
-                                                Volume->Dim.xy, OutlineColour, 0.05f);
-                            }
-                        }
-                    }
-                }
-
-                if(DEBUG_REQUESTED(EntityDebugID))
-                {
-                    DEBUG_VALUE(Entity->ID.Value);
-                    DEBUG_VALUE(Entity->P);
-                    DEBUG_VALUE(Entity->dP);
-                    DEBUG_VALUE(Entity->DistanceLimit);
-                    DEBUG_VALUE(Entity->FacingDirection);
-                    DEBUG_VALUE(Entity->tBob);
-                    DEBUG_VALUE(Entity->dAbsTileZ);
-                    DEBUG_VALUE(Entity->HitPointMax);
-#if 0
-                    DEBUG_BEGIN_ARRAY(Entity->HitPoint);
-                    for(u32 HitPointIndex = 0; HitPointIndex < Entity->HitPointMax; ++HitPointIndex)
-                    {
-                        DEBUG_VALUE(Entity->HitPoint[HitPointIndex]);
-                    }
-                    DEBUG_END_ARRAY();
-                    DEBUG_VALUE(Entity->Sword);
-#endif
-                    DEBUG_VALUE(Entity->WalkableDim);
-                    DEBUG_VALUE(Entity->WalkableHeight);
-
-                    DEBUG_END_DATA_BLOCK("Simulation/Entity");
+                    DEBUGPickEntity(SimRegion, Entity, RenderGroup, &EntityTransform);
                 }
             }
         }
     }
-    END_BLOCK();
 
     if(RenderGroup)
     {

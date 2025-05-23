@@ -173,8 +173,8 @@ AddEntityToHash(sim_region *Region, entity *Entity)
 }
 
 internal sim_region *
-BeginSim(memory_arena *SimArena, game_mode_world *WorldMode, world *World, world_position Origin, rectangle3 Bounds, real32 dt,
-         particle_cache *ParticleCache)
+BeginWorldChange(memory_arena *SimArena, game_mode_world *WorldMode, world *World, 
+                 world_position Origin, rectangle3 Bounds, real32 dt, particle_cache *ParticleCache)
 {
     TIMED_FUNCTION();
 
@@ -355,7 +355,7 @@ PackTraversableReference(sim_region *SimRegion, traversable_reference *Ref)
 }
 
 internal void
-EndSim(sim_region *Region, game_mode_world *WorldMode)
+EndWorldChange(sim_region *Region, game_mode_world *WorldMode)
 {
     TIMED_FUNCTION();
 
