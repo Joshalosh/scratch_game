@@ -714,7 +714,7 @@ CheckForJoiningPlayers(game_input *Input, game_state *GameState, game_mode_world
 }
 
 internal world_sim
-BeginSim(transient_state *TranState, game_mode_world *WorldMode, rectangle3 SimBounds, r32 dt)
+BeginSim(memory_arena *TempArena, game_mode_world *WorldMode, rectangle3 SimBounds, r32 dt)
 {
     world_sim Result = {};
 
@@ -722,11 +722,11 @@ BeginSim(transient_state *TranState, game_mode_world *WorldMode, rectangle3 SimB
 
     // TODO: How big do I actually want to expand here?
     // TODO: Do we I want to simulate upper floors and stuff?
-    temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
+    temporary_memory SimMemory = BeginTemporaryMemory(TempArena);
 
     world_position SimCentreP = WorldMode->CameraP;
 
-    sim_region *SimRegion = BeginWorldChange(&TranState->TranArena, WorldMode, World,
+    sim_region *SimRegion = BeginWorldChange(TempArena, WorldMode, World,
                                              SimCentreP, SimBounds, dt, WorldMode->ParticleCache);
 
     v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
@@ -746,13 +746,6 @@ Simulate(world_sim *WorldSim, game_mode_world *WorldMode, r32 dt,
 {
     sim_region *SimRegion = WorldSim->SimRegion;
 
-    v2 MouseP = {};
-    if(Input)
-    {
-        MouseP.x = Input->MouseX;
-        MouseP.y = Input->MouseY;
-    }
-
     // NOTE: Run all brains
     BEGIN_BLOCK("ExecuteBrains");
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
@@ -768,7 +761,7 @@ Simulate(world_sim *WorldSim, game_mode_world *WorldMode, r32 dt,
     END_BLOCK();
 
     UpdateAndRenderEntities(WorldMode, SimRegion, dt, RenderGroup, WorldSim->CameraP, 
-                            DrawBuffer, BackgroundColor, Assets, MouseP);
+                            DrawBuffer, BackgroundColor, Assets);
     }
 
 internal void
@@ -781,6 +774,30 @@ EndSim(game_mode_world *WorldMode, world_sim *WorldSim)
     EndTemporaryMemory(WorldSim->SimMemory);
 }
 
+struct world_sim_work
+{
+    rectangle3 SimBounds;
+    game_mode_world *WorldMode;
+    f32 dt;
+    game_state *GameState;
+};
+internal PLATFORM_WORK_QUEUE_CALLBACK(DoWorldSim)
+{
+    TIMED_FUNCTION();
+
+    // TODO: It is inefficient to reallocate every time - this should probably 
+    // be something that is passed in as a property of the worker thread
+    memory_arena Arena = {};
+
+    world_sim_work *Work = (world_sim_work *)Data;
+
+    world_sim WorldSim = BeginSim(&Arena, Work->WorldMode, Work->SimBounds, Work->dt);
+    Simulate(&WorldSim, Work->WorldMode, Work->dt, V4(0, 0, 0, 0), Work->GameState, 0, 0, 0, 0);
+    EndSim(Work->WorldMode, &WorldSim);
+
+    Clear(&Arena);
+}
+
 internal b32
 UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transient_state *TranState,
                      game_input *Input, render_group *RenderGroup, loaded_bitmap *DrawBuffer)
@@ -788,6 +805,14 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     TIMED_FUNCTION();
 
     b32 Result = false;
+
+    v2 MouseP = {};
+    if(Input)
+    {
+        MouseP.x = Input->MouseX;
+        MouseP.y = Input->MouseY;
+    }
+    SET_DEBUG_MOUSE_P(MouseP);
 
     world *World = WorldMode->World;
 
@@ -810,7 +835,8 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
 
-    world_sim WorldSim = BeginSim(TranState, WorldMode, SimBounds, Input->dtForFrame);
+    // This is simulating the prinary region
+    world_sim WorldSim = BeginSim(&TranState->TranArena, WorldMode, SimBounds, Input->dtForFrame);
     {
         CheckForJoiningPlayers(Input, GameState, WorldMode, WorldSim.SimRegion, WorldSim.CameraP);
         Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 
@@ -828,13 +854,6 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(WorldSim.SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
     }
-    EndSim(WorldMode, &WorldSim);
-
-    rectangle3 SimBounds2 = Offset(SimBounds, V3(-100.0f, -100.0f, 0.0f));
-    WorldSim = BeginSim(TranState, WorldMode, SimBounds2, Input->dtForFrame);
-    Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 
-             TranState->Assets, Input, RenderGroup, DrawBuffer);
-    //Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 0, 0, 0, 0);
     EndSim(WorldMode, &WorldSim);
 
     b32 HeroesExist = false;

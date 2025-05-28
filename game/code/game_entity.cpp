@@ -46,9 +46,10 @@ ConvertToLayerRelative(game_mode_world *WorldMode, r32 *Z)
 }
 
 
+#if GAME_INTERNAL
 internal void
-DEBUGPickEntities(sim_region *SimRegion, entity *Entity, 
-                  render_group *RenderGroup, object_transform *EntityTransform)
+DEBUGPickEntity(sim_region *SimRegion, entity *Entity, 
+                render_group *RenderGroup, object_transform *EntityTransform)
 {
     if(DEBUG_UI_ENABLED)
     {
@@ -63,7 +64,7 @@ DEBUGPickEntities(sim_region *SimRegion, entity *Entity,
         {
             entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
 
-            v3 LocalMouseP = Unproject(RenderGroup, EntityTransform, MouseP);
+            v3 LocalMouseP = Unproject(RenderGroup, *EntityTransform, GET_DEBUG_MOUSE_P());
 
             if((LocalMouseP.x > -0.5f*Volume->Dim.x) && (LocalMouseP.x < 0.5f*Volume->Dim.x) &&
                (LocalMouseP.y > -0.5f*Volume->Dim.y) && (LocalMouseP.y < 0.5f*Volume->Dim.y))
@@ -104,12 +105,15 @@ DEBUGPickEntities(sim_region *SimRegion, entity *Entity,
         }
     }
 }
+#else 
+#define DEBUGPickEntity(...)
+#endif
 
 internal void
 UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 dt, 
                         // these are optional for rendering
                         render_group *RenderGroup, v3 CameraP,
-                        loaded_bitmap *DrawBuffer, v4 BackgroundColor, game_assets *Assets, v2 MouseP)
+                        loaded_bitmap *DrawBuffer, v4 BackgroundColor, game_assets *Assets)
 {
     TIMED_FUNCTION();
 

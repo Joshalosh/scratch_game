@@ -78,6 +78,7 @@ struct debug_event
 struct debug_table
 {
     debug_event EditEvent;
+    v2 MouseP;
     u32 RecordIncrement;
 
     // TODO: No attempt is being made at the moment to ensure that
@@ -217,6 +218,9 @@ struct debug_data_block
 
 internal void DEBUGEditEventData(char *GUID, debug_event *Event);
 
+#define GET_DEBUG_MOUSE_P() GlobalDebugTable->MouseP
+#define SET_DEBUG_MOUSE_P(P) GlobalDebugTable->MouseP = (P)
+
 #define DEBUG_VALUE(Value)                                                                   \
 {                                                                                            \
          RecordDebugEvent(DebugType_Unknown, DEBUG_NAME(#Value));                            \
@@ -260,6 +264,9 @@ internal b32 DEBUG_REQUESTED(debug_id ID);
 #else
 
 inline debug_id DEBUG_POINTER_ID(void *Pointer) {debug_id NullID = {}; return(NullID);}
+
+#define GET_DEBUG_MOUSE_P(...)
+#define SET_DEBUG_MOUSE_P(...)
 
 #define DEBUG_DATA_BLOCK(...)
 #define DEBUG_VALUE(...)

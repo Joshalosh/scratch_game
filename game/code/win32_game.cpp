@@ -1026,6 +1026,7 @@ Win32GetInputFileLocation(win32_state *State, bool32 InputStream,
     Win32BuildEXEPathFilename(State, Temp, DestCount, Dest);
 }
 
+#if GAME_INTERNAL
 internal
 DEBUG_PLATFORM_GET_MEMORY_STATS(Win32GetMemoryStats)
 {
@@ -1046,6 +1047,7 @@ DEBUG_PLATFORM_GET_MEMORY_STATS(Win32GetMemoryStats)
 
     return(Stats);
 }
+#endif
 
 internal void 
 Win32VerifyMemoryListIntegrity()
