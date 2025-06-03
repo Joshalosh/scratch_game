@@ -3,44 +3,47 @@
 internal void
 SpawnFire(particle_cache *Cache, v3 AtPInit, s32 ChunkZ, r32 FloorZ)
 {
-    particle_system *System = &Cache->FireSystem;
-    random_series *Entropy = &Cache->ParticleEntropy;
-
-    v3_4x AtP = ToV34x(AtPInit);
-
-    u32 ParticleIndex4 = System->NextParticle4++;
-    if(System->NextParticle4 >= MAX_PARTICLE_COUNT_4)
+    if(Cache)
     {
-        System->NextParticle4 = 0;
+        particle_system *System = &Cache->FireSystem;
+        random_series *Entropy = &Cache->ParticleEntropy;
+
+        v3_4x AtP = ToV34x(AtPInit);
+
+        u32 ParticleIndex4 = System->NextParticle4++;
+        if(System->NextParticle4 >= MAX_PARTICLE_COUNT_4)
+        {
+            System->NextParticle4 = 0;
+        }
+
+        particle_4x *A = System->Particles + ParticleIndex4;
+
+        A->P.x = MMSetExpr(RandomBetween(Entropy, -0.05f, 0.05f));
+        A->P.y = MMSetExpr(0.0f);
+        A->P.z = MMSetExpr(0.0f);
+        A->P += AtP;
+
+        A->dP.x = MMSetExpr(RandomBetween(Entropy, -0.01f, 0.01f));
+        A->dP.y = MMSetExpr(7.0f*RandomBetween(Entropy, 0.7f, 1.0f));
+        A->dP.z = MMSetExpr(0.0f);
+
+        A->ddP.x = MMSetExpr(0.0f);
+        A->ddP.y = MMSetExpr(-9.8f);
+        A->ddP.z = MMSetExpr(0.0f);
+
+        A->C.r = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
+        A->C.g = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
+        A->C.b = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
+        A->C.a = MMSetExpr(1.0f);
+
+        A->dC.r = MMSetExpr(0.0f);
+        A->dC.g = MMSetExpr(0.0f);
+        A->dC.b = MMSetExpr(0.0f);
+        A->dC.a = MMSetExpr(-1.0f);
+
+        A->FloorZ = FloorZ;
+        A->ChunkZ = ChunkZ;
     }
-
-    particle_4x *A = System->Particles + ParticleIndex4;
-
-    A->P.x = MMSetExpr(RandomBetween(Entropy, -0.05f, 0.05f));
-    A->P.y = MMSetExpr(0.0f);
-    A->P.z = MMSetExpr(0.0f);
-    A->P += AtP;
-
-    A->dP.x = MMSetExpr(RandomBetween(Entropy, -0.01f, 0.01f));
-    A->dP.y = MMSetExpr(7.0f*RandomBetween(Entropy, 0.7f, 1.0f));
-    A->dP.z = MMSetExpr(0.0f);
-
-    A->ddP.x = MMSetExpr(0.0f);
-    A->ddP.y = MMSetExpr(-9.8f);
-    A->ddP.z = MMSetExpr(0.0f);
-
-    A->C.r = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
-    A->C.g = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
-    A->C.b = MMSetExpr(RandomBetween(Entropy, 0.75, 1.0f));
-    A->C.a = MMSetExpr(1.0f);
-
-    A->dC.r = MMSetExpr(0.0f);
-    A->dC.g = MMSetExpr(0.0f);
-    A->dC.b = MMSetExpr(0.0f);
-    A->dC.a = MMSetExpr(-1.0f);
-
-    A->FloorZ = FloorZ;
-    A->ChunkZ = ChunkZ;
 }
 
 internal void

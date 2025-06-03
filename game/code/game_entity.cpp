@@ -110,19 +110,17 @@ DEBUGPickEntity(sim_region *SimRegion, entity *Entity,
 #endif
 
 internal void
-UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 dt, 
+UpdateAndRenderEntities(f32 TypicalFloorHeight, sim_region *SimRegion, r32 dt, 
                         // these are optional for rendering
-                        render_group *RenderGroup, v3 CameraP,
-                        loaded_bitmap *DrawBuffer, v4 BackgroundColor, game_assets *Assets)
+                        render_group *RenderGroup, v3 CameraP, loaded_bitmap *DrawBuffer, 
+                        v4 BackgroundColor, particle_cache *ParticleCache, game_assets *Assets)
 {
     TIMED_FUNCTION();
 
-    particle_cache *ParticleCache = WorldMode->ParticleCache;
-
-    real32 FadeTopEndZ = 1.0f*WorldMode->TypicalFloorHeight;
-    real32 FadeTopStartZ = 0.5f*WorldMode->TypicalFloorHeight;
-    real32 FadeBottomStartZ = -1.0f*WorldMode->TypicalFloorHeight;
-    real32 FadeBottomEndZ = -4.0f*WorldMode->TypicalFloorHeight;
+    real32 FadeTopEndZ = 1.0f*TypicalFloorHeight;
+    real32 FadeTopStartZ = 0.5f*TypicalFloorHeight;
+    real32 FadeBottomStartZ = -1.0f*TypicalFloorHeight;
+    real32 FadeBottomEndZ = -4.0f*TypicalFloorHeight;
 
 #define MinimumLevelIndex -4
 #define MaximumLevelIndex 1
@@ -134,7 +132,7 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
         // TODO: Probably indicates I want to seperate update and render
         // for entities sometime soon.
         s32 RelativeLayerIndex = MinimumLevelIndex + LevelIndex;
-        r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*WorldMode->TypicalFloorHeight - CameraP.z;
+        r32 CameraRelativeGroundZ = (r32)RelativeLayerIndex*TypicalFloorHeight - CameraP.z;
         CamRelGroundZ[LevelIndex] = CameraRelativeGroundZ;
 
         TestAlpha = Clamp01MapToRange(FadeTopEndZ, CameraRelativeGroundZ, FadeTopStartZ);
@@ -188,8 +186,6 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
             // NOTE: Physics 
             //
 
-            BEGIN_BLOCK("EntityPhysics");
-
             switch(Entity->MovementMode)
             {
                 case MovementMode_Planted:
@@ -225,8 +221,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
                         Entity->MovementMode = MovementMode_Planted;
                         Entity->dtBob = -2.0f;
 
-                        r32 CameraRelativeGroundZ = (r32)(Entity->ZLayer - SimRegion->Origin.ChunkZ)*WorldMode->TypicalFloorHeight - CameraP.z;
-                        SpawnFire(WorldMode->ParticleCache, Entity->P, Entity->ZLayer, CameraRelativeGroundZ);
+                        r32 CameraRelativeGroundZ = (r32)(Entity->ZLayer - SimRegion->Origin.ChunkZ)*TypicalFloorHeight - CameraP.z;
+                        SpawnFire(ParticleCache, Entity->P, Entity->ZLayer, CameraRelativeGroundZ);
                     }
 
                     Entity->tMovement += 4.0f*dt;
@@ -274,10 +270,8 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
 
             if((LengthSq(Entity->dP) > 0) || (LengthSq(Entity->ddP) > 0))
             {
-                MoveEntity(WorldMode, SimRegion, Entity, dt, Entity->ddP);
+                MoveEntity(SimRegion, Entity, dt, Entity->ddP);
             }
-
-            END_BLOCK();
 
             if(RenderGroup)
             {
@@ -385,7 +379,6 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
                     }
 #endif
 
-                    BEGIN_BLOCK("TraversableRendering");
                     for(u32 TraversableIndex = 0; 
                         TraversableIndex < Entity->TraversableCount;
                         ++TraversableIndex)
@@ -406,7 +399,6 @@ UpdateAndRenderEntities(game_mode_world *WorldMode, sim_region *SimRegion, r32 d
 
                         //PushRectOutline(RenderGroup, EntityTransform, Traversable->P, V2(1.2f, 1.2f), V4(0, 0, 0, 1));
                     }
-                    END_BLOCK();
 
                     DEBUGPickEntity(SimRegion, Entity, RenderGroup, &EntityTransform);
                 }

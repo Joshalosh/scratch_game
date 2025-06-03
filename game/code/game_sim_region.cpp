@@ -173,8 +173,7 @@ AddEntityToHash(sim_region *Region, entity *Entity)
 }
 
 internal sim_region *
-BeginWorldChange(memory_arena *SimArena, game_mode_world *WorldMode, world *World, 
-                 world_position Origin, rectangle3 Bounds, real32 dt, particle_cache *ParticleCache)
+BeginWorldChange(memory_arena *SimArena, world *World, world_position Origin, rectangle3 Bounds, real32 dt)
 {
     TIMED_FUNCTION();
 
@@ -355,11 +354,9 @@ PackTraversableReference(sim_region *SimRegion, traversable_reference *Ref)
 }
 
 internal void
-EndWorldChange(sim_region *Region, game_mode_world *WorldMode)
+EndWorldChange(sim_region *Region, world *World, game_mode_world *WorldMode)
 {
     TIMED_FUNCTION();
-
-    world *World = WorldMode->World;
 
     entity *Entity = Region->Entities;
     for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
@@ -501,7 +498,7 @@ TestWall(real32 WallX, real32 RelX, real32 RelY, real32 PlayerDeltaX, real32 Pla
 }
 
 internal bool32
-CanCollide(game_mode_world *WorldMode, entity *A, entity *B)
+CanCollide(entity *A, entity *B)
 {
     b32 Result = false;
 
@@ -517,20 +514,6 @@ CanCollide(game_mode_world *WorldMode, entity *A, entity *B)
         if(IsSet(A, EntityFlag_Collides) && IsSet(B, EntityFlag_Collides))
         {
             Result = true;
-
-            // TODO Implement a better hash function.
-            uint32_t HashBucket = A->ID.Value & (ArrayCount(WorldMode->CollisionRuleHash) - 1);
-            for(pairwise_collision_rule *Rule = WorldMode->CollisionRuleHash[HashBucket];
-                Rule;
-                Rule = Rule->NextInHash)
-            {
-                if((Rule->IDA == A->ID.Value) &&
-                   (Rule->IDB == B->ID.Value))
-                {
-                    Result = Rule->CanCollide;
-                    break;
-                }
-            }
         }
     }
 
@@ -538,7 +521,7 @@ CanCollide(game_mode_world *WorldMode, entity *A, entity *B)
 }
 
 internal bool32
-HandleCollision(game_mode_world *WorldMode, entity *A, entity *B)
+HandleCollision(entity *A, entity *B)
 {
     bool32 StopsOnCollision = true;
 
@@ -555,7 +538,7 @@ HandleCollision(game_mode_world *WorldMode, entity *A, entity *B)
 }
 
 internal bool32
-CanOverlap(game_mode_world *WorldMode, entity *Mover, entity *Region)
+CanOverlap(entity *Mover, entity *Region)
 {
     bool32 Result = false;
 
@@ -660,7 +643,7 @@ TransactionalOccupy(entity *Entity, traversable_reference *DestRef, traversable_
 }
 
 internal void
-MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, r32 dt, v3 ddP)
+MoveEntity(sim_region *SimRegion, entity *Entity, r32 dt, v3 ddP)
 {
     TIMED_FUNCTION();
 
@@ -705,7 +688,7 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, r3
 
                 real32 OverlapEpsilon = 0.001f;
 
-                if(CanCollide(WorldMode, Entity, TestEntity))
+                if(CanCollide(Entity, TestEntity))
                 {
                     for(uint32_t VolumeIndex = 0;
                         VolumeIndex < Entity->Collision->VolumeCount;
@@ -804,7 +787,7 @@ MoveEntity(game_mode_world *WorldMode, sim_region *SimRegion, entity *Entity, r3
             {
                 PlayerDelta = DesiredPosition - Entity->P;
 
-                bool32 StopsOnCollision = HandleCollision(WorldMode, Entity, HitEntity);
+                bool32 StopsOnCollision = HandleCollision(Entity, HitEntity);
                 if(StopsOnCollision)
                 {
                     PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;

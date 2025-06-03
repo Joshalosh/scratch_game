@@ -37,6 +37,8 @@ struct world_chunk
 
 struct world
 {
+    ticket_mutex ChangeTicket;
+
     v3 ChunkDimInMeters;
 
     world_entity_block *FirstFree;

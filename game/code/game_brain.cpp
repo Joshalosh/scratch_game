@@ -26,7 +26,7 @@ MarkBrainActives(brain *Brain)
 }
 
 inline void
-ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Input, 
+ExecuteBrain(game_state *GameState, random_series *Entropy, game_input *Input, 
              sim_region *SimRegion, brain *Brain, r32 dt)
 {
     switch(Brain->Type)
@@ -306,8 +306,8 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
             entity *Head = Parts->Segments[0];
             if(Head)
             {
-                v3 Delta = {RandomBilateral(&WorldMode->GameEntropy),
-                            RandomBilateral(&WorldMode->GameEntropy),
+                v3 Delta = {RandomBilateral(Entropy),
+                            RandomBilateral(Entropy),
                             0.0f};
                 traversable_reference Traversable;
                 if(GetClosestTraversable(SimRegion, Head->P + Delta, &Traversable))
@@ -404,7 +404,7 @@ ExecuteBrain(game_state *GameState, game_mode_world *WorldMode, game_input *Inpu
             entity *Body = Parts->Body;
             if(Body)
             {
-                v3 Delta = {RandomBilateral(&WorldMode->GameEntropy), RandomBilateral(&WorldMode->GameEntropy), 0.0f};
+                v3 Delta = {RandomBilateral(Entropy), RandomBilateral(Entropy), 0.0f};
                 traversable_reference Traversable;
                 if(GetClosestTraversable(SimRegion, Body->P + Delta, &Traversable))
                 {

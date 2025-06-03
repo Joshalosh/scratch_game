@@ -42,10 +42,6 @@ struct game_mode_world
     world_position CameraP;
     v3 CameraOffset;
 
-    // TODO: Must be a power of two.
-    pairwise_collision_rule *CollisionRuleHash[256];
-    pairwise_collision_rule *FirstFreeCollisionRule;
-
     entity_collision_volume_group *NullCollision;
     entity_collision_volume_group *StairCollision;
     entity_collision_volume_group *HeroHeadCollision;
@@ -80,6 +76,14 @@ struct world_sim
     sim_region *SimRegion;
     temporary_memory SimMemory;
     v3 CameraP;
+};
+
+struct world_sim_work
+{
+    rectangle3 SimBounds;
+    game_mode_world *WorldMode;
+    f32 dt;
+    game_state *GameState;
 };
 
 internal void PlayWorld(game_state *GameState, transient_state *TranState);

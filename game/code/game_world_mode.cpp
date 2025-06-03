@@ -299,90 +299,6 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     WorldMode->CreationRegion = 0;
 }
 
-internal void
-ClearCollisionRulesFor(game_mode_world *WorldMode, uint32_t ID)
-{
-    // TODO Make a better data structure that allows the removal
-    // of collision rules without having to search the entire table.
-    // One way to make removal easy would be to always add _both_
-    // orders of the pairs of storage indeces to the hash table,
-    // so that way no matter which position the entity is in, I can
-    // always find it. Then, when I do my first pass through for
-    // removal, I can just remember the original top of the free list,
-    // and then when i'm done, I can do another pass through all the
-    // new things on the free list, and remove the reverse of those pairs.
-    for(uint32_t HashBucket = 0; HashBucket < ArrayCount(WorldMode->CollisionRuleHash); ++HashBucket)
-    {
-        for(pairwise_collision_rule **Rule = &WorldMode->CollisionRuleHash[HashBucket];
-            *Rule;
-            )
-        {
-            if(((*Rule)->IDA == ID) ||
-               ((*Rule)->IDB == ID))
-            {
-                pairwise_collision_rule *RemovedRule = *Rule;
-                *Rule = (*Rule)->NextInHash;
-
-                RemovedRule->NextInHash = WorldMode->FirstFreeCollisionRule;
-                WorldMode->FirstFreeCollisionRule = RemovedRule;
-            }
-            else
-            {
-                Rule = &(*Rule)->NextInHash;
-            }
-        }
-    }
-}
-
-internal void
-AddCollisionRule(game_mode_world *WorldMode, uint32_t IDA, uint32_t IDB, bool32 CanCollide)
-{
-    if(IDA > IDB)
-    {
-        uint32_t Temp = IDA;
-        IDA = IDB;
-        IDB = Temp;
-    }
-
-    // TODO Implement a better hash function.
-    pairwise_collision_rule *Found = 0;
-    uint32_t HashBucket = IDA & (ArrayCount(WorldMode->CollisionRuleHash) - 1);
-    for(pairwise_collision_rule *Rule = WorldMode->CollisionRuleHash[HashBucket];
-        Rule;
-        Rule = Rule->NextInHash)
-    {
-        if((Rule->IDA == IDA) &&
-           (Rule->IDB == IDB))
-        {
-            Found = Rule;
-            break;
-        }
-    }
-
-    if(!Found)
-    {
-        Found = WorldMode->FirstFreeCollisionRule;
-        if(Found)
-        {
-            WorldMode->FirstFreeCollisionRule = Found->NextInHash;
-        }
-        else
-        {
-            Found = PushStruct(WorldMode->World->Arena, pairwise_collision_rule);
-        }
-
-        Found->NextInHash = WorldMode->CollisionRuleHash[HashBucket];
-        WorldMode->CollisionRuleHash[HashBucket] = Found;
-    }
-
-    if(Found)
-    {
-        Found->IDA = IDA;
-        Found->IDB = IDB;
-        Found->CanCollide = CanCollide;
-    }
-}
-
 entity_collision_volume_group *
 MakeSimpleGroundedCollision(game_mode_world *WorldMode, real32 DimX, real32 DimY, real32 DimZ,
                             real32 OffsetZ = 0.0f)
@@ -483,8 +399,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
     world_position NullOrigin = {};
     rectangle3 NullRect = {};
-    WorldMode->CreationRegion = BeginWorldChange(&TranState->TranArena, WorldMode, WorldMode->World,
-                                                 NullOrigin, NullRect, 0, 0);
+    WorldMode->CreationRegion = BeginWorldChange(&TranState->TranArena, WorldMode->World, NullOrigin, NullRect, 0);
 
     s32 ScreenBaseX = 0;
     s32 ScreenBaseY = 0;
@@ -670,7 +585,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     NewCameraP = ChunkPositionFromTilePosition(WorldMode->World, CameraTileX, CameraTileY, CameraTileZ);
     WorldMode->LastCameraP = WorldMode->CameraP = NewCameraP;
 
-    EndWorldChange(WorldMode->CreationRegion, WorldMode);
+    EndWorldChange(WorldMode->CreationRegion, WorldMode->World, WorldMode);
     WorldMode->CreationRegion = 0;
     EndTemporaryMemory(SimMemory);
 
@@ -726,8 +641,7 @@ BeginSim(memory_arena *TempArena, game_mode_world *WorldMode, rectangle3 SimBoun
 
     world_position SimCentreP = WorldMode->CameraP;
 
-    sim_region *SimRegion = BeginWorldChange(TempArena, WorldMode, World,
-                                             SimCentreP, SimBounds, dt, WorldMode->ParticleCache);
+    sim_region *SimRegion = BeginWorldChange(TempArena, World, SimCentreP, SimBounds, dt);
 
     v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
 
@@ -742,7 +656,7 @@ internal void
 Simulate(world_sim *WorldSim, game_mode_world *WorldMode, r32 dt,
          // These are optional for rendering)
          v4 BackgroundColor, game_state *GameState, game_assets *Assets,
-         game_input *Input, render_group *RenderGroup, loaded_bitmap *DrawBuffer)
+         game_input *Input, render_group *RenderGroup, particle_cache *ParticleCache, loaded_bitmap *DrawBuffer)
 {
     sim_region *SimRegion = WorldSim->SimRegion;
 
@@ -756,12 +670,12 @@ Simulate(world_sim *WorldSim, game_mode_world *WorldMode, r32 dt,
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
     {
         brain *Brain = SimRegion->Brains + BrainIndex;
-        ExecuteBrain(GameState, WorldMode, Input, SimRegion, Brain, dt);
+        ExecuteBrain(GameState, &WorldMode->GameEntropy, Input, SimRegion, Brain, dt);
     }
     END_BLOCK();
 
-    UpdateAndRenderEntities(WorldMode, SimRegion, dt, RenderGroup, WorldSim->CameraP, 
-                            DrawBuffer, BackgroundColor, Assets);
+    UpdateAndRenderEntities(WorldMode->TypicalFloorHeight, SimRegion, dt, RenderGroup, WorldSim->CameraP, 
+                            DrawBuffer, BackgroundColor, ParticleCache, Assets);
     }
 
 internal void
@@ -770,17 +684,10 @@ EndSim(game_mode_world *WorldMode, world_sim *WorldSim)
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the
     // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
-    EndWorldChange(WorldSim->SimRegion, WorldMode);
+    EndWorldChange(WorldSim->SimRegion, WorldMode->World, WorldMode);
     EndTemporaryMemory(WorldSim->SimMemory);
 }
 
-struct world_sim_work
-{
-    rectangle3 SimBounds;
-    game_mode_world *WorldMode;
-    f32 dt;
-    game_state *GameState;
-};
 internal PLATFORM_WORK_QUEUE_CALLBACK(DoWorldSim)
 {
     TIMED_FUNCTION();
@@ -791,9 +698,19 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoWorldSim)
 
     world_sim_work *Work = (world_sim_work *)Data;
 
+    // TODO: This is probably much too heavyweight, I should probably lock only the world 
+    // data structures when I use them
+    world *World =  Work->WorldMode->World;
+
+    BeginTicketMutex(&World->ChangeTicket);
     world_sim WorldSim = BeginSim(&Arena, Work->WorldMode, Work->SimBounds, Work->dt);
-    Simulate(&WorldSim, Work->WorldMode, Work->dt, V4(0, 0, 0, 0), Work->GameState, 0, 0, 0, 0);
+    EndTicketMutex(&World->ChangeTicket);
+
+    Simulate(&WorldSim, Work->WorldMode, Work->dt, V4(0, 0, 0, 0), Work->GameState, 0, 0, 0, 0, 0);
+
+    BeginTicketMutex(&World->ChangeTicket);
     EndSim(Work->WorldMode, &WorldSim);
+    EndTicketMutex(&World->ChangeTicket);
 
     Clear(&Arena);
 }
@@ -835,12 +752,40 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
     rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
 
+    world_sim_work SimWork[16];
+    u32 SimIndex = 0;
+    for(u32 SimY = 0; SimY < 4; ++SimY)
+    {
+        for(u32 SimX = 0; SimX < 4; ++SimX)
+        {
+            world_sim_work *Work = SimWork + SimIndex ++;
+
+            r32 OffsetX = (f32)(SimX + 1) * -100.0f;
+            r32 OffsetY = (f32)(SimY + 1) * -100.0f;
+
+            Work->SimBounds = Offset(SimBounds, V3(OffsetX, OffsetY, 0.0f));
+            Work->WorldMode = WorldMode;
+            Work->dt = Input->dtForFrame;
+            Work->GameState = GameState;
+
+#if 1
+            // This is the multi-threaded path.
+            Platform.AddEntry(TranState->HighPriorityQueue, DoWorldSim, Work);
+#else
+            // This is the single-threaded path.
+            DoWorldSim(TranState->HighPriorityQueue, Work);
+#endif
+        }
+    }
+
+    Platform.CompleteAllWork(TranState->HighPriorityQueue);
+
     // This is simulating the prinary region
     world_sim WorldSim = BeginSim(&TranState->TranArena, WorldMode, SimBounds, Input->dtForFrame);
     {
         CheckForJoiningPlayers(Input, GameState, WorldMode, WorldSim.SimRegion, WorldSim.CameraP);
         Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 
-                 TranState->Assets, Input, RenderGroup, DrawBuffer);
+                 TranState->Assets, Input, RenderGroup, WorldMode->ParticleCache, DrawBuffer);
         v3 FrameToFrameCameraDeltaP = Subtract(World, &WorldMode->CameraP, &WorldMode->LastCameraP);
         WorldMode->LastCameraP = WorldMode->CameraP;
 

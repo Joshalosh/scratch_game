@@ -1,14 +1,9 @@
  TODO
 
  - Arena Upgrade
-   - Set default alignment to 1 in overflow/underflow checking modes
-   - Show on profile
-   - Clean up where arenas are used and how
-
- - Bug in traversables where trees aren't occupying their spots
-
- - Combine sim region and world
-   - Implement multiple sim regions per fram
+   - Pull out the camera concept into something clear and optional
+   - Where do things like TypicalFloorHeight live, etc
+   - Eliminate world mode from sim step entirely
    - Per-entity clocking
    - Sim region merging? For multiple players?
 
