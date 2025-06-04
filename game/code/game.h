@@ -124,7 +124,3 @@ struct game_state
 internal task_with_memory *BeginTaskWithMemory(transient_state *TranState, b32 DependsOnGameMode);
 internal void EndTaskWithMemory(task_with_memory *Task);
 internal void SetGameMode(game_state *GameState, transient_state *TranState, game_mode GameMode);
-
-// TODO: Get these into a more reasonable location
-#define GroundBufferWidth 256
-#define GroundBufferHeight 256

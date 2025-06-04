@@ -181,18 +181,9 @@ BeginWorldChange(memory_arena *SimArena, world *World, world_position Origin, re
 
     SimRegion->World = World;
 
-    // TODO Try to make these get enforced more rigorously
-    SimRegion->MaxEntityRadius = 5.0f;
-    SimRegion->MaxEntityVelocity = 30.0f;
-    real32 UpdateSafetyMargin = SimRegion->MaxEntityRadius + dt*SimRegion->MaxEntityVelocity;
-    real32 UpdateSafetyMarginZ = 1.0f;
-
     SimRegion->Origin = Origin;
-    SimRegion->UpdatableBounds = AddRadiusTo(Bounds, V3(SimRegion->MaxEntityRadius,
-                                                        SimRegion->MaxEntityRadius,
-                                                        0.0f));
-    SimRegion->Bounds = AddRadiusTo(SimRegion->UpdatableBounds,
-                                    V3(UpdateSafetyMargin, UpdateSafetyMargin, UpdateSafetyMarginZ));
+    SimRegion->Bounds = Bounds;
+    SimRegion->UpdatableBounds = SimRegion->Bounds;
 
     // TODO: Need to be more specific about entity counts.
     SimRegion->MaxEntityCount = 4096;
@@ -558,8 +549,6 @@ CanOverlap(entity *Mover, entity *Region)
 internal bool32
 SpeculativeCollide(entity *Mover, entity *Region, v3 TestP)
 {
-    TIMED_FUNCTION();
-
     bool32 Result = true;
 
 #if 0
@@ -582,8 +571,6 @@ SpeculativeCollide(entity *Mover, entity *Region, v3 TestP)
 internal bool32
 EntitiesOverlap(entity *Entity, entity *TestEntity, v3 Epsilon = V3(0, 0, 0))
 {
-    TIMED_FUNCTION();
-
     bool32 Result = false;
 
     for(uint32_t VolumeIndex = 0;
@@ -645,8 +632,6 @@ TransactionalOccupy(entity *Entity, traversable_reference *DestRef, traversable_
 internal void
 MoveEntity(sim_region *SimRegion, entity *Entity, r32 dt, v3 ddP)
 {
-    TIMED_FUNCTION();
-
     world *World = SimRegion->World;
 
     v3 PlayerDelta = (0.5f*ddP*Square(dt) + Entity->dP*dt);

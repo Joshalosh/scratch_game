@@ -238,3 +238,12 @@ AddChunkToFreeList(world *World, world_chunk *Old)
     Old->NextInHash = World->FirstFreeChunk;
     World->FirstFreeChunk = Old;
 }
+
+inline rectangle3
+GetWorldChunkBounds(world *World, s32 ChunkX, s32 ChunkY, s32 ChunkZ)
+{
+    v3 ChunkCenter = Hadamard(World->ChunkDimInMeters, V3((f32)ChunkX, (f32)ChunkY, (f32)ChunkZ));
+    rectangle3 Result = RectCenterDim(ChunkCenter, World->ChunkDimInMeters);
+
+    return(Result);
+}

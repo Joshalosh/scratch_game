@@ -41,6 +41,7 @@ struct game_mode_world
     world_position LastCameraP;
     world_position CameraP;
     v3 CameraOffset;
+    v3 StandardRoomDimension;
 
     entity_collision_volume_group *NullCollision;
     entity_collision_volume_group *StairCollision;

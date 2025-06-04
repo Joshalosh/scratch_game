@@ -369,10 +369,11 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
     // TODO: Remove this.
     real32 PixelsToMetres = 1.0f / 42.0f;
-    v3 WorldChunkDimInMeters = {PixelsToMetres*(real32)GroundBufferWidth,
-                                PixelsToMetres*(real32)GroundBufferHeight,
+    v3 WorldChunkDimInMeters = {17.0f*1.4f,
+                                9.0f*1.4f,
                                 WorldMode->TypicalFloorHeight};
     WorldMode->World = CreateWorld(WorldChunkDimInMeters, &GameState->ModeArena);
+    WorldMode->StandardRoomDimension = V3(17.0f*1.4f, 9.0f*1.4f, WorldMode->TypicalFloorHeight);
 
     real32 TileSideInMeters = 1.4f;
     real32 TileDepthInMeters = WorldMode->TypicalFloorHeight;
@@ -749,8 +750,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     CameraBoundsInMetres.Min.z = -3.0f*WorldMode->TypicalFloorHeight;
     CameraBoundsInMetres.Max.z = 1.0f*WorldMode->TypicalFloorHeight;
 
-    v3 SimBoundsExpansion = {15.0f, 15.0f, 15.0f};
-    rectangle3 SimBounds = AddRadiusTo(CameraBoundsInMetres, SimBoundsExpansion);
+    rectangle3 SimBounds = RectCenterDim(V3(GetCenter(ScreenBounds), 0.0f), 3.0f*WorldMode->StandardRoomDimension);
 
     world_sim_work SimWork[16];
     u32 SimIndex = 0;
@@ -786,18 +786,21 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         CheckForJoiningPlayers(Input, GameState, WorldMode, WorldSim.SimRegion, WorldSim.CameraP);
         Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 
                  TranState->Assets, Input, RenderGroup, WorldMode->ParticleCache, DrawBuffer);
+
         v3 FrameToFrameCameraDeltaP = Subtract(World, &WorldMode->CameraP, &WorldMode->LastCameraP);
         WorldMode->LastCameraP = WorldMode->CameraP;
-
         UpdateAndRenderParticleSystems(WorldMode->ParticleCache, Input->dtForFrame, RenderGroup,
                                        -FrameToFrameCameraDeltaP, WorldSim.CameraP);
+
         object_transform WorldTransform = DefaultUprightTransform();
         WorldTransform.OffsetP -= WorldSim.CameraP;
-
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
     //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(WorldSim.SimRegion->Bounds).xy, V4(1.0f, 0.0f, 1.0f, 1));
+
+        rectangle3 ChunkRect = GetWorldChunkBounds(World, 0, 0, 0);
+        PushRectOutline(RenderGroup, &WorldTransform, GetCenter(ChunkRect), GetDim(ChunkRect).xy, V4(1.0f, 1.0f, 1.0f, 1));
     }
     EndSim(WorldMode, &WorldSim);
 
