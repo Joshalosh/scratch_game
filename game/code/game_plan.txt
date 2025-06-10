@@ -1,15 +1,21 @@
  TODO
 
- - Arena Upgrade
-   - Pull out the camera concept into something clear and optional
-   - Where do things like TypicalFloorHeight live, etc
+ - Implement multiple sim regions per frame
+   - Fix hash table routines in sim_region to not have to do clears on returns
+     (just have them return a bool as to whether they found the entry or not)
    - Eliminate world mode from sim step entirely
    - Per-entity clocking
    - Sim region merging? For multiple players?
 
 
  - Graphics Upgrade
+   - 3D 
+     - 3D pipeline
+     - Make concept of 3D rooms that can be queried
+     - Update camera to move between viewing locations for 3D rooms
    - Particle systems
+     - Bug with sliding relative to the grid during camera offset?
+     - How will floor Z's be handled?
    - Transition to real artwork
      - Clean up the notion of multi-part entities and how they are animated
    - Lighting
@@ -22,15 +28,10 @@
      overlap outside and so on.
    - Transient collision rules, clear based on flag
      - Allow non-stransient rules to overide transient ones
-   - Entry / exit?
+     - Entry / exit?
    - What's the plan for robustness / shape definition?
    - Implement reprojection to handle interpenetration
    - Things pushing other things
- - Animtaion
-   - Skeletal animation
-   - Particle systems
- - AI
-   - AI 'storage'
 
  PRODUCTION
  -> GAME

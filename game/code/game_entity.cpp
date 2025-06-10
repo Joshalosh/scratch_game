@@ -370,11 +370,11 @@ UpdateAndRenderEntities(f32 TypicalFloorHeight, sim_region *SimRegion, r32 dt,
                     DrawHitPoints(Entity, RenderGroup, &EntityTransform);
 
                     EntityTransform.Upright = false;
-#if 0
+#if 1
                     for(uint32_t VolumeIndex = 0; VolumeIndex < Entity->Collision->VolumeCount; ++VolumeIndex)
                     {
                         entity_collision_volume *Volume = Entity->Collision->Volumes + VolumeIndex;
-                        PushRectOutline(RenderGroup, EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
+                        PushRectOutline(RenderGroup, &EntityTransform, Volume->OffsetP - V3(0, 0, 0.5f*Volume->Dim.z),
                                         Volume->Dim.xy, V4(0, 0.5f, 1.0f, 1.0f));
                     }
 #endif

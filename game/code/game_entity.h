@@ -5,6 +5,8 @@ enum entity_type
 {
     EntityType_Null,
 
+    EntityType_Room,
+
     EntityType_HeroBody,
     EntityType_HeroHead,
 

@@ -730,7 +730,9 @@ DrawTopClocksList(debug_state *DebugState, debug_id GraphID, rectangle2 ProfileR
         if(IsInRectangle(TextRect, MouseP))
         {
             tooltip_buffer TextBuffer = AddToolTip(DebugState);
-            FormatString(TextBuffer.Size, TextBuffer.Data, "Cumulative to this point: %02.02f%%",
+            FormatString(TextBuffer.Size, TextBuffer.Data, 
+                         "   %05.02fcy each; cumulative to this point: %02.02f%%",
+                         SafeRatio0((f64)Stats->Sum, (f64)Stats->Count),
                          (PC*RunningSum));
         }
 

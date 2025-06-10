@@ -1,13 +1,11 @@
 struct entity_hash
 {
     entity *Ptr;
-    entity_id Index; // TODO: Why is this being stored in the hash?
 };
 
 struct brain_hash
 {
     brain *Ptr;
-    brain_id ID; // TODO: Why is this being stored in the hash?
 };
 
 struct sim_region
@@ -28,6 +26,9 @@ struct sim_region
 
     entity_hash EntityHash[4096];
     brain_hash BrainHash[256];
+
+    u64 EntityHashOccupancy[4096/64];
+    u64 BrainHashOccupancy[256/64];
 
     entity NullEntity;
 };

@@ -189,6 +189,27 @@ SafeRatio1(real32 Numerator, real32 Divisor)
     return(Result);
 }
 
+inline f64
+SafeRatioN(f64 Numerator, f64 Divisor, f64 N)
+{
+    f64 Result = N;
+
+    if(Divisor != 0.0f)
+    {
+        Result = Numerator / Divisor;
+    }
+
+    return(Result);
+}
+
+inline f64
+SafeRatio0(f64 Numerator, f64 Divisor)
+{
+    f64 Result = SafeRatioN(Numerator, Divisor, 0.0);
+
+    return(Result);
+}
+
 //
 // v2 OPERATIONS
 //

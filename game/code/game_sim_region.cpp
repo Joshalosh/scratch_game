@@ -45,6 +45,38 @@ GetSimSpaceTraversable(traversable_reference Reference)
     return(Result);
 }
 
+internal void
+MarkBit(u64 *Array, umm Index)
+{
+    umm OccIndex = Index / 64;
+    umm BitIndex = Index % 64;
+    Array[OccIndex] |= ((u64)1 << BitIndex);
+}
+
+internal b32
+IsEmpty(u64 *Array, umm Index)
+{
+    umm OccIndex = Index / 64;
+    umm BitIndex = Index % 64;
+    b32 Result = !(Array[OccIndex] & ((u64)1 << BitIndex));
+    return(Result);
+}
+
+internal void
+MarkOccupied(sim_region *SimRegion, entity_hash *Entry)
+{
+    umm Index = Entry - SimRegion->EntityHash;
+    MarkBit(SimRegion->EntityHashOccupancy, Index);
+}
+
+internal void
+MarkOccupied(sim_region *SimRegion, brain_hash *Entry)
+{
+    umm Index = Entry - SimRegion->BrainHash;
+    MarkBit(SimRegion->BrainHashOccupancy, Index);
+}
+
+
 internal entity_hash *
 GetHashFromID(sim_region *SimRegion, entity_id StorageIndex)
 {
@@ -58,13 +90,20 @@ GetHashFromID(sim_region *SimRegion, entity_id StorageIndex)
         uint32_t HashMask  = (ArrayCount(SimRegion->EntityHash) - 1);
         uint32_t HashIndex = ((HashValue + Offset) & HashMask);
         entity_hash *Entry = SimRegion->EntityHash + HashIndex;
-        if((Entry->Index.Value == 0) || (Entry->Index.Value == StorageIndex.Value))
+        if(IsEmpty(SimRegion->EntityHashOccupancy, HashIndex))
+        {
+            Result = Entry;
+            Result->Ptr = 0;
+            break;
+        }
+        else if(Entry->Ptr->ID.Value == StorageIndex. Value)
         {
             Result = Entry;
             break;
         }
     }
 
+    Assert(Result);
     return(Result);
 }
 
@@ -81,13 +120,20 @@ GetHashFromID(sim_region *SimRegion, brain_id StorageIndex)
         u32 HashMask = (ArrayCount(SimRegion->BrainHash) - 1);
         u32 HashIndex = ((HashValue + Offset) & HashMask);
         brain_hash *Entry = SimRegion->BrainHash + HashIndex;
-        if((Entry->ID.Value == 0) || (Entry->ID.Value == StorageIndex.Value))
+        if(IsEmpty(SimRegion->BrainHashOccupancy, HashIndex))
+        {
+            Result = Entry;
+            Result->Ptr = 0;
+            break;
+        }
+        else if (Entry->Ptr->ID.Value == StorageIndex.Value)
         {
             Result = Entry;
             break;
         }
     }
 
+    Assert(Result);
     return(Result);
 }
 
@@ -125,6 +171,8 @@ EntityOverlapsRectangle(v3 P, entity_collision_volume Volume, rectangle3 Rect)
 internal brain *
 GetOrAddBrain(sim_region *SimRegion, brain_id ID, brain_type Type)
 {
+    TIMED_FUNCTION();
+
     brain *Result = 0;
 
     brain_hash *Hash = GetHashFromID(SimRegion, ID);
@@ -133,11 +181,15 @@ GetOrAddBrain(sim_region *SimRegion, brain_id ID, brain_type Type)
     if(!Result)
     {
         Assert(SimRegion->BrainCount < SimRegion->MaxBrainCount);
+        Assert(IsEmpty(SimRegion->BrainHashOccupancy, Hash - SimRegion->BrainHash));
         Result = SimRegion->Brains + SimRegion->BrainCount++;
+        ZeroStruct(*Result);
         Result->ID = ID;
         Result->Type = Type;
 
         Hash->Ptr = Result;
+
+        MarkOccupied(SimRegion, Hash);
     }
 
     return(Result);
@@ -166,10 +218,42 @@ ConnectEntityPointers(sim_region *SimRegion)
 inline void
 AddEntityToHash(sim_region *Region, entity *Entity)
 {
+    TIMED_FUNCTION();
+
     entity_hash *Entry = GetHashFromID(Region, Entity->ID);
-    Assert(Entry->Ptr == 0);
-    Entry->Index = Entity->ID;
+    Assert(IsEmpty(Region->EntityHashOccupancy, Entry - Region->EntityHash));
     Entry->Ptr = Entity;
+    MarkOccupied(Region, Entry);
+}
+
+inline void
+PackEntityReference(sim_region *SimRegion, entity_reference *Ref)
+{
+    if(Ref->Ptr)
+    {
+        if(IsDeleted(Ref->Ptr))
+        {
+            Ref->Index.Value = 0;
+        }
+        else
+        {
+            Ref->Index = Ref->Ptr->ID;
+        }
+    }
+    else if(Ref->Index.Value)
+    {
+        if(SimRegion && GetHashFromID(SimRegion, Ref->Index))
+        {
+            Ref->Index.Value = 0;
+        }
+    }
+}
+
+inline void
+PackTraversableReference(sim_region *SimRegion, traversable_reference *Ref)
+{
+    // TODO: Need to pack this
+    PackEntityReference(SimRegion, &Ref->Entity);
 }
 
 internal sim_region *
@@ -177,7 +261,15 @@ BeginWorldChange(memory_arena *SimArena, world *World, world_position Origin, re
 {
     TIMED_FUNCTION();
 
-    sim_region *SimRegion = PushStruct(SimArena, sim_region);
+    BEGIN_BLOCK("SimArenaAlloc");
+    sim_region *SimRegion = PushStruct(SimArena, sim_region, NoClear());
+    END_BLOCK();
+
+    BEGIN_BLOCK("SimArenaClear");
+    ZeroStruct(SimRegion->EntityHashOccupancy);
+    ZeroStruct(SimRegion->BrainHashOccupancy);
+    ZeroStruct(SimRegion->NullEntity);
+    END_BLOCK();
 
     SimRegion->World = World;
 
@@ -209,6 +301,7 @@ BeginWorldChange(memory_arena *SimArena, world *World, world_position Origin, re
             for(int32_t ChunkX = MinChunkP.ChunkX; ChunkX <= MaxChunkP.ChunkX; ++ChunkX)
             {
                 world_chunk *Chunk = RemoveWorldChunk(World, ChunkX, ChunkY, ChunkZ);
+
                 if(Chunk)
                 {
                     Assert(Chunk->ChunkX == ChunkX);
@@ -216,9 +309,13 @@ BeginWorldChange(memory_arena *SimArena, world *World, world_position Origin, re
                     Assert(Chunk->ChunkZ == ChunkZ);
                     world_position ChunkPosition = {ChunkX, ChunkY, ChunkZ};
                     v3 ChunkDelta = Subtract(SimRegion->World, &ChunkPosition, &SimRegion->Origin);
-                    world_entity_block *Block = Chunk->FirstBlock;
-                    while(Block)
+                    world_entity_block *FirstBlock = Chunk->FirstBlock;
+                    world_entity_block *LastBlock = FirstBlock;
+                    world_entity_block *Block = FirstBlock;
+                    for(world_entity_block *Block = FirstBlock; Block; Block = Block->Next)
                     {
+                        LastBlock = Block;
+
                         for(uint32_t EntityIndex = 0;
                             (EntityIndex < Block->EntityCount);
                             ++EntityIndex)
@@ -264,13 +361,9 @@ BeginWorldChange(memory_arena *SimArena, world *World, world_position Origin, re
                                 InvalidCodePath;
                             }
                         }
-
-                        world_entity_block *NextBlock = Block->Next;
-                        AddBlockToFreeList(World, Block);
-                        Block = NextBlock;
                     }
 
-                    AddChunkToFreeList(World, Chunk);
+                    AddToFreeList(World, Chunk, FirstBlock, LastBlock);
                 }
             }
         }
@@ -281,6 +374,42 @@ BeginWorldChange(memory_arena *SimArena, world *World, world_position Origin, re
     DEBUG_VALUE(SimRegion->EntityCount);
 
     return(SimRegion);
+}
+
+internal void
+EndWorldChange(sim_region *Region, world *World)
+{
+    TIMED_FUNCTION();
+
+    entity *Entity = Region->Entities;
+    for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
+    {
+        if(!(Entity->Flags & EntityFlag_Deleted))
+        {
+            world_position EntityP = MapIntoChunkSpace(World, Region->Origin, Entity->P);
+            world_position ChunkP = EntityP;
+            ChunkP.Offset_ = V3(0, 0, 0);
+
+            v3 ChunkDelta = EntityP.Offset_ - Entity->P;
+
+            // TODO: Camera code to go here
+
+            v3 OldEntityP = Entity->P;
+            Entity->P += ChunkDelta;
+            entity *DestE = (entity *)UseChunkSpace(World, sizeof(*Entity), ChunkP);
+            *DestE = *Entity;
+            PackTraversableReference(Region, &DestE->Occupying);
+            PackTraversableReference(Region, &DestE->CameFrom);
+            PackTraversableReference(Region, &DestE->AutoBoostTo);
+
+            DestE->ddP = V3(0, 0, 0);
+            DestE->ddtBob = 0.0f;
+
+            //v3 ReverseChunkDelta = Subtract(Region->World, &ChunkP, &Region->Origin);
+            //v3 TestP = Entity->P + ReverseChunkDelta;
+            //Assert(OldEntityP.z == TestP.z);
+        }
+    }
 }
 
 inline entity *
@@ -314,143 +443,69 @@ DeleteEntity(sim_region *Region, entity *Entity)
     }
 }
 
-inline void
-PackEntityReference(sim_region *SimRegion, entity_reference *Ref)
-{
-    if(Ref->Ptr)
-    {
-        if(IsDeleted(Ref->Ptr))
-        {
-            Ref->Index.Value = 0;
-        }
-        else
-        {
-            Ref->Index = Ref->Ptr->ID;
-        }
-    }
-    else if(Ref->Index.Value)
-    {
-        if(SimRegion && GetHashFromID(SimRegion, Ref->Index))
-        {
-            Ref->Index.Value = 0;
-        }
-    }
-}
-
-inline void
-PackTraversableReference(sim_region *SimRegion, traversable_reference *Ref)
-{
-    // TODO: Need to pack this
-    PackEntityReference(SimRegion, &Ref->Entity);
-}
-
 internal void
-EndWorldChange(sim_region *Region, world *World, game_mode_world *WorldMode)
+UpdateCameraForEntityMovement(game_camera *Camera, world *World, entity *Entity)
 {
-    TIMED_FUNCTION();
+    Assert(Entity->ID.Value == Camera->FollowingEntityIndex.Value)
+    world_position NewCameraP = Camera->P;
 
-    entity *Entity = Region->Entities;
-    for(uint32_t EntityIndex = 0; EntityIndex < Region->EntityCount; ++EntityIndex, ++Entity)
+    v3 RoomDelta = {24.0f, 12.5f, 3.0f};
+    v3 hRoomDelta = 0.5f * RoomDelta;
+    r32 ApronSize = 0.7f;
+    r32 BounceHeight = 0.5f;
+    v3 hRoomApron = {hRoomDelta.x - ApronSize, hRoomDelta.y - ApronSize, hRoomDelta.z - ApronSize};
+
+    Camera->Offset = V3(0, 0, 0);
+
+    v3 AppliedDelta = {};
+    for(u32 E = 0; E < 3; ++E)
     {
-        if(!(Entity->Flags & EntityFlag_Deleted))
+        if(Entity->P.E[E] > hRoomDelta.E[E])
         {
-            world_position EntityP = MapIntoChunkSpace(World, Region->Origin, Entity->P);
-            world_position ChunkP = EntityP;
-            ChunkP.Offset_ = V3(0, 0, 0);
-
-            v3 ChunkDelta = EntityP.Offset_ - Entity->P;
-
-            // TODO: Save state back to the stored entity, once high Entities
-            // do state decompression, etc
-
-            if(Entity->ID.Value == WorldMode->CameraFollowingEntityIndex.Value)
-            {
-                world_position NewCameraP = WorldMode->CameraP;
-
-                v3 RoomDelta = {24.0f, 12.5f, WorldMode->TypicalFloorHeight};
-                v3 hRoomDelta = 0.5f * RoomDelta;
-                r32 ApronSize = 0.7f;
-                r32 BounceHeight = 0.5f;
-                v3 hRoomApron = {hRoomDelta.x - ApronSize, hRoomDelta.y - ApronSize, hRoomDelta.z - ApronSize};
-
-                if(Global_Renderer_Camera_RoomBased)
-                {
-                    WorldMode->CameraOffset = V3(0, 0, 0);
-
-                    v3 AppliedDelta = {};
-                    for(u32 E = 0; E < 3; ++E)
-                    {
-                        if(Entity->P.E[E] > hRoomDelta.E[E])
-                        {
-                            AppliedDelta.E[E] = RoomDelta.E[E];
-                            NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
-                        }
-                        if(Entity->P.E[E] < -hRoomDelta.E[E])
-                        {
-                            AppliedDelta.E[E] = -RoomDelta.E[E];
-                            NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
-                        }
-                    }
-
-                    v3 EntityP = Entity->P - AppliedDelta;
-
-                    if(EntityP.y > hRoomApron.y)
-                    {
-                        r32 t = Clamp01MapToRange(hRoomApron.y, EntityP.y, hRoomDelta.y);
-                        WorldMode->CameraOffset = V3(0, t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
-                    }
-                    if(EntityP.y < -hRoomApron.y)
-                    {
-                        r32 t = Clamp01MapToRange(-hRoomApron.y, EntityP.y, -hRoomDelta.y);
-                        WorldMode->CameraOffset = V3(0, -t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
-                    }
-                    if(EntityP.x > hRoomApron.x)
-                    {
-                        r32 t = Clamp01MapToRange(hRoomApron.x, EntityP.x, hRoomDelta.x);
-                        WorldMode->CameraOffset = V3(t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
-                    }
-                    if(EntityP.x < -hRoomApron.x)
-                    {
-                        r32 t = Clamp01MapToRange(-hRoomApron.x, EntityP.x, -hRoomDelta.x);
-                        WorldMode->CameraOffset = V3(-t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
-                    }
-                    if(EntityP.z > hRoomApron.z)
-                    {
-                        r32 t = Clamp01MapToRange(hRoomApron.z, EntityP.z, hRoomDelta.z);
-                        WorldMode->CameraOffset = V3(0, 0, t*hRoomDelta.z);
-                    }
-                    if(EntityP.z < -hRoomApron.z)
-                    {
-                        r32 t = Clamp01MapToRange(-hRoomApron.z, EntityP.z, -hRoomDelta.z);
-                        WorldMode->CameraOffset = V3(0, 0, -t*hRoomDelta.z);
-                    }
-                }
-                else
-                {
-    //            real32 CamZOffset = NewCameraP.Offset_.z;
-                    NewCameraP = EntityP;
-    //            NewCameraP.Offset_.z = CamZOffset;
-                }
-
-                WorldMode->CameraP = NewCameraP;
-            }
-
-            v3 OldEntityP = Entity->P;
-            Entity->P += ChunkDelta;
-            entity *DestE = (entity *)UseChunkSpace(World, sizeof(*Entity), ChunkP);
-            *DestE = *Entity;
-            PackTraversableReference(Region, &DestE->Occupying);
-            PackTraversableReference(Region, &DestE->CameFrom);
-            PackTraversableReference(Region, &DestE->AutoBoostTo);
-
-            DestE->ddP = V3(0, 0, 0);
-            DestE->ddtBob = 0.0f;
-
-            //v3 ReverseChunkDelta = Subtract(Region->World, &ChunkP, &Region->Origin);
-            //v3 TestP = Entity->P + ReverseChunkDelta;
-            //Assert(OldEntityP.z == TestP.z);
+            AppliedDelta.E[E] = RoomDelta.E[E];
+            NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
+        }
+        if(Entity->P.E[E] < -hRoomDelta.E[E])
+        {
+            AppliedDelta.E[E] = -RoomDelta.E[E];
+            NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
         }
     }
+
+    v3 EntityP = Entity->P - AppliedDelta;
+
+    if(EntityP.y > hRoomApron.y)
+    {
+        r32 t = Clamp01MapToRange(hRoomApron.y, EntityP.y, hRoomDelta.y);
+        Camera->Offset = V3(0, t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
+    }
+    if(EntityP.y < -hRoomApron.y)
+    {
+        r32 t = Clamp01MapToRange(-hRoomApron.y, EntityP.y, -hRoomDelta.y);
+        Camera->Offset = V3(0, -t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
+    }
+    if(EntityP.x > hRoomApron.x)
+    {
+        r32 t = Clamp01MapToRange(hRoomApron.x, EntityP.x, hRoomDelta.x);
+        Camera->Offset = V3(t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
+    }
+    if(EntityP.x < -hRoomApron.x)
+    {
+        r32 t = Clamp01MapToRange(-hRoomApron.x, EntityP.x, -hRoomDelta.x);
+        Camera->Offset = V3(-t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
+    }
+    if(EntityP.z > hRoomApron.z)
+    {
+        r32 t = Clamp01MapToRange(hRoomApron.z, EntityP.z, hRoomDelta.z);
+        Camera->Offset = V3(0, 0, t*hRoomDelta.z);
+    }
+    if(EntityP.z < -hRoomApron.z)
+    {
+        r32 t = Clamp01MapToRange(-hRoomApron.z, EntityP.z, -hRoomDelta.z);
+        Camera->Offset = V3(0, 0, -t*hRoomDelta.z);
+    }
+
+    Camera->P = NewCameraP;
 }
 
 struct test_wall

@@ -30,17 +30,21 @@ struct particle
 };
 #endif
 
+struct game_camera
+{
+    entity_id FollowingEntityIndex;
+    world_position LastP;
+    world_position P;
+    v3 Offset;
+};
+
 struct particle_cache;
 struct game_mode_world
 {
     world *World;
     real32 TypicalFloorHeight;
 
-    // TODO: Allow split-screen?
-    entity_id CameraFollowingEntityIndex;
-    world_position LastCameraP;
-    world_position CameraP;
-    v3 CameraOffset;
+    game_camera Camera;
     v3 StandardRoomDimension;
 
     entity_collision_volume_group *NullCollision;
@@ -52,16 +56,12 @@ struct game_mode_world
     entity_collision_volume_group *FamiliarCollision;
     entity_collision_volume_group *WallCollision;
     entity_collision_volume_group *FloorCollision;
-
-    real32 Time;
-
-    random_series GameEntropy; // NOTE: This is entropy that does affect the gameplay
-    random_series EffectsEntropy; // NOTE: This is entropy that doesn't affect the gameplay.
-    real32 tSine;
+    entity_collision_volume_group *RoomCollision;
 
     sim_region *CreationRegion;
     u32 LastUsedEntityStorageIndex; // TODO: Worry about this wrapping - free list for IDs?
 
+    random_series EffectsEntropy; // NOTE: This is entropy that doesn't affect the gameplay.
     particle_cache *ParticleCache;
 
 #if 0
@@ -76,11 +76,11 @@ struct world_sim
 {
     sim_region *SimRegion;
     temporary_memory SimMemory;
-    v3 CameraP;
 };
 
 struct world_sim_work
 {
+    world_position SimCenterP;
     rectangle3 SimBounds;
     game_mode_world *WorldMode;
     f32 dt;

@@ -40,6 +40,7 @@ struct world
     ticket_mutex ChangeTicket;
 
     v3 ChunkDimInMeters;
+    random_series GameEntropy; // NOTE: This is entropy that 'DOES' affect the gameplay
 
     world_entity_block *FirstFree;
 

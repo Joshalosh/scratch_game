@@ -65,8 +65,6 @@ ClearWorldEntityBlock(world_entity_block *Block)
 inline world_chunk **
 GetWorldChunkInternal(world *World, int32_t ChunkX, int32_t ChunkY, int32_t ChunkZ)
 {
-    TIMED_FUNCTION();
-
     Assert(ChunkX > -TILE_CHUNK_SAFE_MARGIN);
     Assert(ChunkY > -TILE_CHUNK_SAFE_MARGIN);
     Assert(ChunkZ > -TILE_CHUNK_SAFE_MARGIN);
@@ -121,12 +119,18 @@ GetWorldChunk(world *World, s32 ChunkX, s32 ChunkY, s32 ChunkZ, memory_arena *Ar
 internal world_chunk *
 RemoveWorldChunk(world *World, s32 ChunkX, s32 ChunkY, s32 ChunkZ)
 {
+    TIMED_FUNCTION();
+
+    BeginTicketMutex(&World->ChangeTicket);
+
     world_chunk **ChunkPtr = GetWorldChunkInternal(World, ChunkX, ChunkY, ChunkZ);
     world_chunk *Result = *ChunkPtr;
     if(Result)
     {
         *ChunkPtr = Result->NextInHash;
     }
+
+    EndTicketMutex(&World->ChangeTicket);
 
     return(Result);
 }
@@ -139,6 +143,7 @@ CreateWorld(v3 ChunkDimInMeters, memory_arena *ParentArena)
     World->ChunkDimInMeters = ChunkDimInMeters;
     World->FirstFree = 0;
     World->Arena = ParentArena;
+    World->GameEntropy = RandomSeed(1234);
 
     return(World);
 }
@@ -219,24 +224,37 @@ UseChunkSpace(world *World, u32 Size, world_chunk *Chunk)
 internal void *
 UseChunkSpace(world *World, u32 Size, world_position At)
 {
+    TIMED_FUNCTION();
+
+    BeginTicketMutex(&World->ChangeTicket);
+
     world_chunk *Chunk = GetWorldChunk(World, At.ChunkX, At.ChunkY, At.ChunkZ, World->Arena);
     Assert(Chunk);
     void *Result = UseChunkSpace(World, Size, Chunk);
+
+    EndTicketMutex(&World->ChangeTicket);
+
     return(Result);
 }
 
 inline void
-AddBlockToFreeList(world *World, world_entity_block *Old)
+AddToFreeList(world *World, world_chunk *Old, world_entity_block *FirstBlock, world_entity_block *LastBlock)
 {
-    Old->Next = World->FirstFreeBlock;
-    World->FirstFreeBlock = Old;
-}
+    TIMED_FUNCTION();
 
-inline void
-AddChunkToFreeList(world *World, world_chunk *Old)
-{
+    BeginTicketMutex(&World->ChangeTicket);
+
     Old->NextInHash = World->FirstFreeChunk;
     World->FirstFreeChunk = Old;
+
+    if(FirstBlock)
+    {
+        Assert(LastBlock);
+        LastBlock->Next = World->FirstFreeBlock;
+        World->FirstFreeBlock = FirstBlock;
+    }
+
+    EndTicketMutex(&World->ChangeTicket);
 }
 
 inline rectangle3

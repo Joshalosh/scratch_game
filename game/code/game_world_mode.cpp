@@ -203,7 +203,7 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
                     (OffsetX == 2) &&
                     (OffsetY == 0)))
                 {
-                    Entity->AutoBoostTo = TargetRef;
+                    //Entity->AutoBoostTo = TargetRef;
                 }
                 EndEntity(WorldMode, Entity, P);
             }
@@ -212,6 +212,9 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
             Result.Ground[OffsetX + 8][OffsetY + 4] = StandingOn;
         }
     }
+    
+    entity *Room = BeginGroundedEntity(WorldMode, WorldMode->RoomCollision);
+    EndEntity(WorldMode, Room, ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ));
 
     return(Result);
 }
@@ -275,9 +278,9 @@ AddPlayer(game_mode_world *WorldMode, sim_region *SimRegion, traversable_referen
     Glove->BrainSlot = BrainSlotFor(brain_hero, Glove);
     Glove->BrainID = BrainID;
 
-    if(WorldMode->CameraFollowingEntityIndex.Value == 0)
+    if(WorldMode->Camera.FollowingEntityIndex.Value == 0)
     {
-        WorldMode->CameraFollowingEntityIndex = Head->ID;
+        WorldMode->Camera.FollowingEntityIndex = Head->ID;
     }
 
     entity_id Result = Head->ID;
@@ -364,7 +367,6 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     WorldMode->LastUsedEntityStorageIndex = ReservedBrainID_FirstFree;
 
     WorldMode->EffectsEntropy = RandomSeed(1234);
-    WorldMode->GameEntropy = RandomSeed(1234);
     WorldMode->TypicalFloorHeight = 3.0f;
 
     // TODO: Remove this.
@@ -396,6 +398,10 @@ PlayWorld(game_state *GameState, transient_state *TranState)
                                                          TileSideInMeters,
                                                          TileSideInMeters,
                                                          TileDepthInMeters);
+    WorldMode->RoomCollision = MakeSimpleGroundedCollision(WorldMode,
+                                                           17.0f*TileSideInMeters,
+                                                           9.0f*TileSideInMeters,
+                                                           WorldMode->TypicalFloorHeight);
 
     temporary_memory SimMemory = BeginTemporaryMemory(&TranState->TranArena);
     world_position NullOrigin = {};
@@ -420,7 +426,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     bool32 DoorBottom = false;
     bool32 DoorUp = false;
     bool32 DoorDown = false;
-    random_series *Series = &WorldMode->GameEntropy;
+    random_series *Series = &WorldMode->World->GameEntropy;
     standard_room PrevRoom = {};
     for(uint32_t ScreenIndex = 0; ScreenIndex < 20; ++ScreenIndex)
     {
@@ -584,9 +590,9 @@ PlayWorld(game_state *GameState, transient_state *TranState)
     uint32_t CameraTileY = LastScreenY*TilesPerHeight + 9/2;
     uint32_t CameraTileZ = LastScreenZ;
     NewCameraP = ChunkPositionFromTilePosition(WorldMode->World, CameraTileX, CameraTileY, CameraTileZ);
-    WorldMode->LastCameraP = WorldMode->CameraP = NewCameraP;
+    WorldMode->Camera.LastP = WorldMode->Camera.P = NewCameraP;
 
-    EndWorldChange(WorldMode->CreationRegion, WorldMode->World, WorldMode);
+    EndWorldChange(WorldMode->CreationRegion, WorldMode->World);
     WorldMode->CreationRegion = 0;
     EndTemporaryMemory(SimMemory);
 
@@ -595,7 +601,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
 internal void
 CheckForJoiningPlayers(game_input *Input, game_state *GameState, game_mode_world *WorldMode,
-                       sim_region *SimRegion, v3 CameraP)
+                       sim_region *SimRegion)
 {
     //
     // NOTE: Look to see if any players are trying to join
@@ -613,7 +619,7 @@ CheckForJoiningPlayers(game_input *Input, game_state *GameState, game_mode_world
                 {
                     *ConHero = {};
                     traversable_reference Traversable;
-                    if(GetClosestTraversable(SimRegion, CameraP, &Traversable))
+                    if(GetClosestTraversable(SimRegion, V3(0, 0, 0), &Traversable))
                     {
                         ConHero->BrainID = {ReservedBrainID_FirstHero + ControllerIndex};
                         AddPlayer(WorldMode, SimRegion, Traversable, ConHero->BrainID);
@@ -630,23 +636,16 @@ CheckForJoiningPlayers(game_input *Input, game_state *GameState, game_mode_world
 }
 
 internal world_sim
-BeginSim(memory_arena *TempArena, game_mode_world *WorldMode, rectangle3 SimBounds, r32 dt)
+BeginSim(memory_arena *TempArena, world *World, world_position SimCenterP, rectangle3 SimBounds, r32 dt)
 {
     world_sim Result = {};
-
-    world *World = WorldMode->World;
 
     // TODO: How big do I actually want to expand here?
     // TODO: Do we I want to simulate upper floors and stuff?
     temporary_memory SimMemory = BeginTemporaryMemory(TempArena);
 
-    world_position SimCentreP = WorldMode->CameraP;
+    sim_region *SimRegion = BeginWorldChange(TempArena, World, SimCenterP, SimBounds, dt);
 
-    sim_region *SimRegion = BeginWorldChange(TempArena, World, SimCentreP, SimBounds, dt);
-
-    v3 CameraP = Subtract(World, &WorldMode->CameraP, &SimCentreP) + WorldMode->CameraOffset;
-
-    Result.CameraP = CameraP;
     Result.SimRegion = SimRegion;
     Result.SimMemory = SimMemory;
 
@@ -654,10 +653,11 @@ BeginSim(memory_arena *TempArena, game_mode_world *WorldMode, rectangle3 SimBoun
 }
 
 internal void
-Simulate(world_sim *WorldSim, game_mode_world *WorldMode, r32 dt,
+Simulate(world_sim *WorldSim, f32 TypicalFloorHeight, random_series *GameEntropy, r32 dt,
          // These are optional for rendering)
          v4 BackgroundColor, game_state *GameState, game_assets *Assets,
-         game_input *Input, render_group *RenderGroup, particle_cache *ParticleCache, loaded_bitmap *DrawBuffer)
+         game_input *Input, render_group *RenderGroup, particle_cache *ParticleCache, 
+         loaded_bitmap *DrawBuffer, v3 CameraOffset)
 {
     sim_region *SimRegion = WorldSim->SimRegion;
 
@@ -671,21 +671,21 @@ Simulate(world_sim *WorldSim, game_mode_world *WorldMode, r32 dt,
     for(u32 BrainIndex = 0; BrainIndex < SimRegion->BrainCount; ++BrainIndex)
     {
         brain *Brain = SimRegion->Brains + BrainIndex;
-        ExecuteBrain(GameState, &WorldMode->GameEntropy, Input, SimRegion, Brain, dt);
+        ExecuteBrain(GameState, GameEntropy, Input, SimRegion, Brain, dt);
     }
     END_BLOCK();
 
-    UpdateAndRenderEntities(WorldMode->TypicalFloorHeight, SimRegion, dt, RenderGroup, WorldSim->CameraP, 
+    UpdateAndRenderEntities(TypicalFloorHeight, SimRegion, dt, RenderGroup, CameraOffset, 
                             DrawBuffer, BackgroundColor, ParticleCache, Assets);
     }
 
 internal void
-EndSim(game_mode_world *WorldMode, world_sim *WorldSim)
+EndSim(world_sim *WorldSim, world *World)
 {
     // TODO: Make sure we hoist the camera update out to a place where the
     // renderer can know about the location of the camera at the end of the
     // frame so there isn't a frame of lag in camera updating compared to the main protagonist.
-    EndWorldChange(WorldSim->SimRegion, WorldMode->World, WorldMode);
+    EndWorldChange(WorldSim->SimRegion, World);
     EndTemporaryMemory(WorldSim->SimMemory);
 }
 
@@ -703,15 +703,10 @@ internal PLATFORM_WORK_QUEUE_CALLBACK(DoWorldSim)
     // data structures when I use them
     world *World =  Work->WorldMode->World;
 
-    BeginTicketMutex(&World->ChangeTicket);
-    world_sim WorldSim = BeginSim(&Arena, Work->WorldMode, Work->SimBounds, Work->dt);
-    EndTicketMutex(&World->ChangeTicket);
-
-    Simulate(&WorldSim, Work->WorldMode, Work->dt, V4(0, 0, 0, 0), Work->GameState, 0, 0, 0, 0, 0);
-
-    BeginTicketMutex(&World->ChangeTicket);
-    EndSim(Work->WorldMode, &WorldSim);
-    EndTicketMutex(&World->ChangeTicket);
+    world_sim WorldSim = BeginSim(&Arena, World, Work->SimCenterP, Work->SimBounds, Work->dt);
+    Simulate(&WorldSim, Work->WorldMode->TypicalFloorHeight, &World->GameEntropy, Work->dt, V4(0, 0, 0, 0), 
+             Work->GameState, 0, 0, 0, 0, 0, V3(0, 0, 0));
+    EndSim(&WorldSim, World);
 
     Clear(&Arena);
 }
@@ -760,10 +755,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
         {
             world_sim_work *Work = SimWork + SimIndex ++;
 
-            r32 OffsetX = (f32)(SimX + 1) * -100.0f;
-            r32 OffsetY = (f32)(SimY + 1) * -100.0f;
+            world_position CenterP = WorldMode->Camera.P;
+            CenterP.ChunkX += -70*(SimX + 1);
+            CenterP.ChunkY += -70*(SimX + 1);
 
-            Work->SimBounds = Offset(SimBounds, V3(OffsetX, OffsetY, 0.0f));
+            Work->SimCenterP = CenterP;
+            Work->SimBounds = SimBounds;
             Work->WorldMode = WorldMode;
             Work->dt = Input->dtForFrame;
             Work->GameState = GameState;
@@ -781,19 +778,21 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
     Platform.CompleteAllWork(TranState->HighPriorityQueue);
 
     // This is simulating the prinary region
-    world_sim WorldSim = BeginSim(&TranState->TranArena, WorldMode, SimBounds, Input->dtForFrame);
+    world_sim WorldSim = BeginSim(&TranState->TranArena, World, WorldMode->Camera.P, 
+                                  SimBounds, Input->dtForFrame);
     {
-        CheckForJoiningPlayers(Input, GameState, WorldMode, WorldSim.SimRegion, WorldSim.CameraP);
-        Simulate(&WorldSim, WorldMode, Input->dtForFrame, BackgroundColor, GameState, 
-                 TranState->Assets, Input, RenderGroup, WorldMode->ParticleCache, DrawBuffer);
+        CheckForJoiningPlayers(Input, GameState, WorldMode, WorldSim.SimRegion);
+        Simulate(&WorldSim, WorldMode->TypicalFloorHeight, &World->GameEntropy, Input->dtForFrame, 
+                 BackgroundColor, GameState, TranState->Assets, Input, RenderGroup, WorldMode->ParticleCache, 
+                 DrawBuffer, WorldMode->Camera.Offset);
 
-        v3 FrameToFrameCameraDeltaP = Subtract(World, &WorldMode->CameraP, &WorldMode->LastCameraP);
-        WorldMode->LastCameraP = WorldMode->CameraP;
+        v3 FrameToFrameCameraDeltaP = Subtract(World, &WorldMode->Camera.P, &WorldMode->Camera.LastP);
+        WorldMode->Camera.LastP = WorldMode->Camera.P;
         UpdateAndRenderParticleSystems(WorldMode->ParticleCache, Input->dtForFrame, RenderGroup,
-                                       -FrameToFrameCameraDeltaP, WorldSim.CameraP);
+                                       -FrameToFrameCameraDeltaP, WorldMode->Camera.Offset);
 
         object_transform WorldTransform = DefaultUprightTransform();
-        WorldTransform.OffsetP -= WorldSim.CameraP;
+        WorldTransform.OffsetP -= WorldMode->Camera.Offset;
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
     //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
@@ -801,8 +800,14 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
         rectangle3 ChunkRect = GetWorldChunkBounds(World, 0, 0, 0);
         PushRectOutline(RenderGroup, &WorldTransform, GetCenter(ChunkRect), GetDim(ChunkRect).xy, V4(1.0f, 1.0f, 1.0f, 1));
+
+        entity *CameraEntity = GetEntityByID(WorldSim.SimRegion, WorldMode->Camera.FollowingEntityIndex);
+        if(CameraEntity)
+        {
+            UpdateCameraForEntityMovement(&WorldMode->Camera, World, CameraEntity);
+        }
     }
-    EndSim(WorldMode, &WorldSim);
+    EndSim(&WorldSim, World);
 
     b32 HeroesExist = false;
     for(u32 ConHeroIndex = 0; ConHeroIndex < ArrayCount(GameState->ControlledHeroes); ++ConHeroIndex)
