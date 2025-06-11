@@ -444,68 +444,89 @@ DeleteEntity(sim_region *Region, entity *Entity)
 }
 
 internal void
-UpdateCameraForEntityMovement(game_camera *Camera, world *World, entity *Entity)
+UpdateCameraForEntityMovement(game_camera *Camera, sim_region *Region, world *World, entity *Entity)
 {
-    Assert(Entity->ID.Value == Camera->FollowingEntityIndex.Value)
-    world_position NewCameraP = Camera->P;
+    Assert(Entity->ID.Value == Camera->FollowingEntityIndex.Value);
 
-    v3 RoomDelta = {24.0f, 12.5f, 3.0f};
-    v3 hRoomDelta = 0.5f * RoomDelta;
-    r32 ApronSize = 0.7f;
-    r32 BounceHeight = 0.5f;
-    v3 hRoomApron = {hRoomDelta.x - ApronSize, hRoomDelta.y - ApronSize, hRoomDelta.z - ApronSize};
-
-    Camera->Offset = V3(0, 0, 0);
-
-    v3 AppliedDelta = {};
-    for(u32 E = 0; E < 3; ++E)
+    // TODO: Probably don't want to loop over all entities - maintain a 
+    // seperate list of room entities during unpack?
+    entity *InRoom = 0;
+    for(u32 TestIndex = 0; TestIndex < Region->EntityCount; ++TestIndex)
     {
-        if(Entity->P.E[E] > hRoomDelta.E[E])
+        entity *TestEntity = Region->Entities + TestIndex;
+        if(TestEntity->BrainSlot.Type == Type_brain_room)
         {
-            AppliedDelta.E[E] = RoomDelta.E[E];
-            NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
-        }
-        if(Entity->P.E[E] < -hRoomDelta.E[E])
-        {
-            AppliedDelta.E[E] = -RoomDelta.E[E];
-            NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
+            rectangle3 SimCenter = {};
+            if(EntityOverlapsRectangle(TestEntity->P, TestEntity->Collision->TotalVolume, SimCenter))
+            {
+                InRoom = TestEntity;
+                break;
+            }
         }
     }
 
-    v3 EntityP = Entity->P - AppliedDelta;
+    if(InRoom)
+    {
+        v3 RoomDelta = InRoom->Collision->TotalVolume.Dim; //{24.0f, 12.5f, 3.0f};
 
-    if(EntityP.y > hRoomApron.y)
-    {
-        r32 t = Clamp01MapToRange(hRoomApron.y, EntityP.y, hRoomDelta.y);
-        Camera->Offset = V3(0, t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
-    }
-    if(EntityP.y < -hRoomApron.y)
-    {
-        r32 t = Clamp01MapToRange(-hRoomApron.y, EntityP.y, -hRoomDelta.y);
-        Camera->Offset = V3(0, -t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
-    }
-    if(EntityP.x > hRoomApron.x)
-    {
-        r32 t = Clamp01MapToRange(hRoomApron.x, EntityP.x, hRoomDelta.x);
-        Camera->Offset = V3(t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
-    }
-    if(EntityP.x < -hRoomApron.x)
-    {
-        r32 t = Clamp01MapToRange(-hRoomApron.x, EntityP.x, -hRoomDelta.x);
-        Camera->Offset = V3(-t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
-    }
-    if(EntityP.z > hRoomApron.z)
-    {
-        r32 t = Clamp01MapToRange(hRoomApron.z, EntityP.z, hRoomDelta.z);
-        Camera->Offset = V3(0, 0, t*hRoomDelta.z);
-    }
-    if(EntityP.z < -hRoomApron.z)
-    {
-        r32 t = Clamp01MapToRange(-hRoomApron.z, EntityP.z, -hRoomDelta.z);
-        Camera->Offset = V3(0, 0, -t*hRoomDelta.z);
-    }
+        v3 hRoomDelta = 0.5f * RoomDelta;
+        r32 ApronSize = 0.7f;
+        r32 BounceHeight = 0.5f;
+        v3 hRoomApron = {hRoomDelta.x - ApronSize, hRoomDelta.y - ApronSize, hRoomDelta.z - ApronSize};
+        world_position NewCameraP = Camera->P;
 
-    Camera->P = NewCameraP;
+        Camera->Offset = V3(0, 0, 0);
+
+        v3 AppliedDelta = {};
+        for(u32 E = 0; E < 3; ++E)
+        {
+            if(Entity->P.E[E] > hRoomDelta.E[E])
+            {
+                AppliedDelta.E[E] = RoomDelta.E[E];
+                NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
+            }
+            if(Entity->P.E[E] < -hRoomDelta.E[E])
+            {
+                AppliedDelta.E[E] = -RoomDelta.E[E];
+                NewCameraP = MapIntoChunkSpace(World, NewCameraP, AppliedDelta);
+            }
+        }
+
+        v3 EntityP = Entity->P - AppliedDelta;
+
+        if(EntityP.y > hRoomApron.y)
+        {
+            r32 t = Clamp01MapToRange(hRoomApron.y, EntityP.y, hRoomDelta.y);
+            Camera->Offset = V3(0, t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
+        }
+        if(EntityP.y < -hRoomApron.y)
+        {
+            r32 t = Clamp01MapToRange(-hRoomApron.y, EntityP.y, -hRoomDelta.y);
+            Camera->Offset = V3(0, -t*hRoomDelta.y, (-(t*t)+2.0f*t)*BounceHeight);
+        }
+        if(EntityP.x > hRoomApron.x)
+        {
+            r32 t = Clamp01MapToRange(hRoomApron.x, EntityP.x, hRoomDelta.x);
+            Camera->Offset = V3(t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
+        }
+        if(EntityP.x < -hRoomApron.x)
+        {
+            r32 t = Clamp01MapToRange(-hRoomApron.x, EntityP.x, -hRoomDelta.x);
+            Camera->Offset = V3(-t*hRoomDelta.x, 0, (-(t*t)+2.0f*t)*BounceHeight);
+        }
+        if(EntityP.z > hRoomApron.z)
+        {
+            r32 t = Clamp01MapToRange(hRoomApron.z, EntityP.z, hRoomDelta.z);
+            Camera->Offset = V3(0, 0, t*hRoomDelta.z);
+        }
+        if(EntityP.z < -hRoomApron.z)
+        {
+            r32 t = Clamp01MapToRange(-hRoomApron.z, EntityP.z, -hRoomDelta.z);
+            Camera->Offset = V3(0, 0, -t*hRoomDelta.z);
+        }
+
+        Camera->P = NewCameraP;
+    }
 }
 
 struct test_wall

@@ -214,6 +214,7 @@ AddStandardRoom(game_mode_world *WorldMode, u32 AbsTileX, u32 AbsTileY, u32 AbsT
     }
     
     entity *Room = BeginGroundedEntity(WorldMode, WorldMode->RoomCollision);
+    Room->BrainSlot = SpecialBrainSlot(Type_brain_room);
     EndEntity(WorldMode, Room, ChunkPositionFromTilePosition(WorldMode->World, AbsTileX, AbsTileY, AbsTileZ));
 
     return(Result);
@@ -525,7 +526,7 @@ PlayWorld(game_state *GameState, transient_state *TranState)
 
                 if(ShouldBeDoor)
                 {
-                    AddWall(WorldMode, P, Ground);
+                    //AddWall(WorldMode, P, Ground);
                 }
                 else if(CreatedZDoor)
                 {
@@ -793,6 +794,7 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
         object_transform WorldTransform = DefaultUprightTransform();
         WorldTransform.OffsetP -= WorldMode->Camera.Offset;
+#if 0
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(ScreenBounds), V4(1.0f, 1.0f, 0.0f, 1));
     //    PushRectOutline(RenderGroup, V3(0.0f, 0.0f, 0.0f), GetDim(CameraBoundsInMetres).xy, V4(1.0f, 1.0f, 1.0f, 1));
         PushRectOutline(RenderGroup, &WorldTransform, V3(0.0f, 0.0f, 0.0f), GetDim(SimBounds).xy, V4(0.0f, 1.0f, 1.0f, 1));
@@ -800,11 +802,12 @@ UpdateAndRenderWorld(game_state *GameState, game_mode_world *WorldMode, transien
 
         rectangle3 ChunkRect = GetWorldChunkBounds(World, 0, 0, 0);
         PushRectOutline(RenderGroup, &WorldTransform, GetCenter(ChunkRect), GetDim(ChunkRect).xy, V4(1.0f, 1.0f, 1.0f, 1));
+#endif
 
         entity *CameraEntity = GetEntityByID(WorldSim.SimRegion, WorldMode->Camera.FollowingEntityIndex);
         if(CameraEntity)
         {
-            UpdateCameraForEntityMovement(&WorldMode->Camera, World, CameraEntity);
+            UpdateCameraForEntityMovement(&WorldMode->Camera, WorldSim.SimRegion, World, CameraEntity);
         }
     }
     EndSim(&WorldSim, World);

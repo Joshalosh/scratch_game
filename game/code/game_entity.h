@@ -1,23 +1,6 @@
 
 struct entity;
 
-enum entity_type
-{
-    EntityType_Null,
-
-    EntityType_Room,
-
-    EntityType_HeroBody,
-    EntityType_HeroHead,
-
-    EntityType_Wall,
-    EntityType_Floor,
-    EntityType_FloatyThingForNow,
-    EntityType_Familiar,
-    EntityType_Monster,
-    EntityType_Stairwell,
-};
-
 struct entity_id
 {
     u32 Value;

@@ -41,6 +41,10 @@ enum brain_type
     Type_brain_floaty_thing_for_now,
     Type_brain_monster,
 
+    // NOTE: These are special types which are used to mark special entities,
+    // but these entities do not get actual brains (the brain ID value is set to 0)
+    Type_brain_room,
+
     Type_brain_count,
 };
 
@@ -55,6 +59,13 @@ IsType(brain_slot Slot, brain_type Type)
     b32 Result = ((Slot.Index != 0) && (Slot.Type == Type));
     return(Result);
 }
+
+inline brain_slot
+SpecialBrainSlot(brain_type Type)
+{
+    brain_slot Result = {(u16)Type, 0};
+    return(Result);
+};
 
 #define BrainSlotFor(type, Member) BrainSlotFor_(Type_##type, &(((type *)0)->Member) - (entity **)0)
 #define IndexedBrainSlotFor(type, Member, Index) BrainSlotFor_(Type_##type, (u16)(Index) + (u16)((((type *)0)->Member) - (entity **)0))

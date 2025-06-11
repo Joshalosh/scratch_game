@@ -129,6 +129,7 @@ UpdateAndRenderFire(particle_system *System, random_series *Entropy, f32 dt, v3 
 
         // Simulate the particle forward in time
         A->P += 0.5f*Square(dt)*A->ddP + dt*A->dP + FrameDisplacement;
+        //A->P += FrameDisplacement;
         A->dP += dt*A->ddP;
         A->C += dt*A->dC;
 

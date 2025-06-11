@@ -333,6 +333,7 @@ UpdateAndRenderEntities(f32 TypicalFloorHeight, sim_region *SimRegion, r32 dt,
                      * or maybe I just use a stable sort.
                      */
 
+#if 1
                     if(Entity->PieceCount > 1)
                     {
                         BeginAggregateSortKey(RenderGroup);
@@ -366,6 +367,7 @@ UpdateAndRenderEntities(f32 TypicalFloorHeight, sim_region *SimRegion, r32 dt,
                     {
                         EndAggregateSortKey(RenderGroup);
                     }
+#endif
 
                     DrawHitPoints(Entity, RenderGroup, &EntityTransform);
 
