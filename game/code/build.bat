@@ -21,6 +21,9 @@ REM pushd ..\game\code
 REM ..\..\build\simple_preprocessor.exe > game_generated.h
 REM popd
 
+REM Simple compressor 
+cl %CommonCompilerFlags% -D_CRT_SECURE_NO_WARNINGS ..\game\code\simple_compressor.cpp /link %CommonLinkerFlags%
+
 REM Asset file builder build
 REM cl %CommonCompilerFlags% -D_CRT_SECURE_NO_WARNINGS ..\game\code\test_asset_builder.cpp /link %CommonLinkerFlags%
 
