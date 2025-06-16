@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -54,17 +55,102 @@ Copy(size_t Size, u8 *Source, u8 *Dest)
     }
 }
 
-static size_t 
-Compress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
+static size_t
+RLECompress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *OutBase)
 {
-    Copy(InSize, In, Out);
-    return(InSize);
+    u8 *Out = OutBase;
+
+#define MAX_LITERAL_COUNT 255
+#define MAX_RUN_COUNT 255
+    int LiteralCount = 0;
+    u8 Literals[MAX_LITERAL_COUNT];
+
+    u8 *InEnd = In + InSize;
+    while(In < InEnd)
+    {
+        u8 StartingValue = In[0];
+        size_t Run = 1;
+        while((Run < (size_t)(InEnd - In)) &&
+              (Run < MAX_RUN_COUNT) &&
+              (In[Run] == StartingValue))
+        {
+            ++Run;
+        }
+
+        if((Run > 1) || (LiteralCount == MAX_LITERAL_COUNT))
+        {
+            // Output a literal/run pair
+            u8 LiteralCount8 = (u8)LiteralCount;
+            assert(LiteralCount8 == LiteralCount);
+            *Out++ = LiteralCount8;
+
+            for(int LiteralIndex = 0; LiteralIndex < LiteralCount; ++LiteralIndex)
+            {
+                *Out++ = Literals[LiteralIndex];
+            }
+            LiteralCount = 0;
+
+            u8 Run8 = (u8)Run;
+            assert(Run8 == Run);
+            *Out++ = Run8;
+
+            *Out++ = StartingValue;
+
+            In += Run;
+        }
+        else 
+        {
+            // Buffer literals
+            Literals[LiteralCount++] = StartingValue;
+
+            ++In;
+        }
+    }
+#undef MAX_LITERAL_COUNT
+#undef MAX_RUN_COUNT
+
+    assert(In == InEnd);
+
+    size_t OutSize = Out - OutBase;
+    assert(OutSize <= MaxOutSize);
+
+    return(OutSize);
+}
+
+static void 
+RLEDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
+{
+    u8 *InEnd = In + InSize;
+    while(In < InEnd)
+    {
+        int LiteralCount = *In++;
+        while(LiteralCount--)
+        {
+            *Out++ = *In++;
+        }
+
+        int RepCount = *In++;
+        u8 RepValue = *In++;
+        while(RepCount--)
+        {
+            *Out++ = RepValue;
+        }
+    }
+
+    assert(In == InEnd);
+}
+
+static size_t 
+Compress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *Out)
+{
+    size_t OutSize = RLECompress(InSize, In, MaxOutSize, Out);
+    return(OutSize);
 }
 
 static void
 Decompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
 {
-    Copy(InSize, In, Out);
+    RLEDecompress(InSize, In, OutSize, Out);
 }
 
 int 
@@ -85,7 +171,7 @@ main(int ArgCount, char **Args)
             size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
             u8 *OutBuffer = (u8 *)malloc(OutBufferSize + 4);
             size_t CompressedSize = Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer + 4);
-            *(int unsigned *)OutBuffer = (int unsigned)CompressedSize;
+            *(int unsigned *)OutBuffer = (int unsigned)InFile.FileSize;
 
             FinalOutputSize = CompressedSize + 4;
             FinalOutputBuffer = OutBuffer;
