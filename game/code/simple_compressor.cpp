@@ -140,6 +140,30 @@ RLEDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
     assert(In == InEnd);
 }
 
+static void 
+LZDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
+{
+    u8 *InEnd = In + InSize;
+    while(In < InEnd)
+    {
+        int LiteralCount = *In++;
+        while(LiteralCount--)
+        {
+            *Out++ = *In++;
+        }
+
+        int CopyCount = *In++;
+        u8 CopyDistance = *In++;
+        u8 *Source = Out - CopyDistance;
+        while(CopyCount--)
+        {
+            *Out++ = *Source++;
+        }
+    }
+
+    assert(In == InEnd);
+}
+
 static size_t 
 Compress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *Out)
 {
