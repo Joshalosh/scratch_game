@@ -140,6 +140,73 @@ RLEDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
     assert(In == InEnd);
 }
 
+static size_t
+LZCompress(size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
+{
+    u8 *Out = OutBase;
+    u8 *In = InBase;
+
+#define MAX_LITERAL_COUNT 255
+#define MAX_RUN_COUNT 255
+    int LiteralCount = 0;
+    u8 Literals[MAX_LITERAL_COUNT];
+
+    u8 *InEnd = In + InSize;
+    while(In < InEnd)
+    {
+        size_t Run = 0;
+        if(In > InBase)
+        {
+            u8 StartingValue = In[-1];
+            while((Run < (size_t)(InEnd - In)) &&
+                  (Run < MAX_RUN_COUNT) &&
+                  (In[Run] == StartingValue))
+            {
+                ++Run;
+            }
+        }
+
+        if((Run > 1) || (LiteralCount == MAX_LITERAL_COUNT))
+        {
+            // Flush
+            u8 LiteralCount8 = (u8)LiteralCount;
+            assert(LiteralCount8 == LiteralCount);
+            if(LiteralCount8)
+            {
+                *Out++ = LiteralCount8;
+                *Out++ = 0;
+
+                for(int LiteralIndex = 0; LiteralIndex < LiteralCount; ++LiteralIndex)
+                {
+                    *Out++ = Literals[LiteralIndex];
+                }
+                LiteralCount = 0;
+            }
+
+            u8 Run8 = (u8)Run;
+            assert(Run8 == Run);
+            *Out++ = Run8;
+            *Out++ = 1;
+
+            In += Run;
+        }
+        else 
+        {
+            // Buffer literals
+            Literals[LiteralCount++] = *In++;
+        }
+    }
+#undef MAX_LITERAL_COUNT
+#undef MAX_RUN_COUNT
+
+    assert(In == InEnd);
+
+    size_t OutSize = Out - OutBase;
+    assert(OutSize <= MaxOutSize);
+
+    return(OutSize);
+}
+
 static void 
 LZDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
 {
@@ -168,14 +235,14 @@ LZDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
 static size_t 
 Compress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *Out)
 {
-    size_t OutSize = RLECompress(InSize, In, MaxOutSize, Out);
+    size_t OutSize = LZCompress(InSize, In, MaxOutSize, Out);
     return(OutSize);
 }
 
 static void
 Decompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
 {
-    RLEDecompress(InSize, In, OutSize, Out);
+    LZDecompress(InSize, In, OutSize, Out);
 }
 
 int 
@@ -215,6 +282,22 @@ main(int ArgCount, char **Args)
             else 
             {
                 fprintf(stderr, "Invalid input file\n");
+            }
+        }
+        else if(strcmp(Command, "test") == 0)
+        {
+            size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
+            u8 *OutBuffer = (u8 *)malloc(OutBufferSize);
+            u8 *TestBuffer = (u8 *)malloc(InFile.FileSize);
+            size_t CompressedSize = Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer);
+            Decompress(CompressedSize, OutBuffer, InFile.FileSize, TestBuffer);
+            if(memcmp(InFile.Contents, TestBuffer, InFile.FileSize) == 0)
+            {
+                fprintf(stderr, "Success!\n");
+            }
+            else 
+            {
+                fprintf(stderr, "Failure :(\n");
             }
         }
         else 
