@@ -146,16 +146,17 @@ LZDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
     u8 *InEnd = In + InSize;
     while(In < InEnd)
     {
-        int LiteralCount = *In++;
-        while(LiteralCount--)
+        int Count = *In++;
+        u8 CopyDistance = *In++;
+
+        u8 *Source = Out - CopyDistance;
+        if(CopyDistance == 0)
         {
-            *Out++ = *In++;
+            Source = In;
+            In += Count;
         }
 
-        int CopyCount = *In++;
-        u8 CopyDistance = *In++;
-        u8 *Source = Out - CopyDistance;
-        while(CopyCount--)
+        while(Count--)
         {
             *Out++ = *Source++;
         }
