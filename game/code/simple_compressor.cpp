@@ -7,10 +7,47 @@
 
 typedef char unsigned u8;
 
+enum stat_type
+{
+    Stat_Literal,
+    Stat_Repeat,
+    Stat_Copy,
+
+    Stat_LiteralBytes,
+    Stat_NonLiteralBytes,
+
+    Stat_Count,
+};
+struct stat 
+{
+    size_t Count;
+    size_t Total;
+};
+
+struct stat_group
+{
+    size_t UncompressedBytes;
+    size_t CompressedBytes;
+    stat Stats[Stat_Count];
+};
+
 struct file_contents
 {
     size_t FileSize;
     u8 *Contents;
+};
+
+#define COMPRESS_HANDLER(name) size_t name(size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
+#define DECOMPRESS_HANDLER(name) void name(size_t InSize, u8 *InBase, size_t OutSize, u8 *OutBase)
+
+typedef COMPRESS_HANDLER(compress_handler);
+typedef DECOMPRESS_HANDLER(decompress_handler);
+
+struct compressor
+{
+    char *Name;
+    compress_handler *Compress;
+    decompress_handler *Decompress;
 };
 
 static file_contents
@@ -42,7 +79,7 @@ static size_t
 GetMaximumCompressedOutputSize(size_t InSize)
 {
     // TODO: Actually figure out the equation for _our_ compressor
-    size_t OutSize = 256 + 2 *InSize;
+    size_t OutSize = 256 + 8*InSize;
     return(OutSize);
 }
 
@@ -55,8 +92,7 @@ Copy(size_t Size, u8 *Source, u8 *Dest)
     }
 }
 
-static size_t
-RLECompress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *OutBase)
+COMPRESS_HANDLER(RLECompress)
 {
     u8 *Out = OutBase;
 
@@ -65,6 +101,7 @@ RLECompress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *OutBase)
     int LiteralCount = 0;
     u8 Literals[MAX_LITERAL_COUNT];
 
+    u8 *In = InBase;
     u8 *InEnd = In + InSize;
     while(In < InEnd)
     {
@@ -117,9 +154,10 @@ RLECompress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *OutBase)
     return(OutSize);
 }
 
-static void 
-RLEDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
+DECOMPRESS_HANDLER(RLEDecompress)
 {
+    u8 *Out = OutBase;
+    u8 *In = InBase;
     u8 *InEnd = In + InSize;
     while(In < InEnd)
     {
@@ -140,12 +178,12 @@ RLEDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
     assert(In == InEnd);
 }
 
-static size_t
-LZCompress(size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
+COMPRESS_HANDLER(LZCompress)
 {
     u8 *Out = OutBase;
     u8 *In = InBase;
 
+#define MAX_LOOKBACK_COUNT 255
 #define MAX_LITERAL_COUNT 255
 #define MAX_RUN_COUNT 255
     int LiteralCount = 0;
@@ -154,19 +192,49 @@ LZCompress(size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
     u8 *InEnd = In + InSize;
     while(In < InEnd)
     {
-        size_t Run = 0;
-        if(In > InBase)
+        size_t MaxLookback = In - InBase;
+        if(MaxLookback > MAX_LOOKBACK_COUNT)
         {
-            u8 StartingValue = In[-1];
-            while((Run < (size_t)(InEnd - In)) &&
-                  (Run < MAX_RUN_COUNT) &&
-                  (In[Run] == StartingValue))
+            MaxLookback = MAX_LOOKBACK_COUNT;
+        }
+
+        size_t BestRun = 0;
+        size_t BestDistance = 0;
+        for(u8 *WindowStart = In - MaxLookback; WindowStart < In; ++WindowStart)
+        {
+            size_t WindowSize = InEnd - WindowStart;
+            if(WindowSize > MAX_RUN_COUNT)
             {
-                ++Run;
+                WindowSize = MAX_RUN_COUNT;
+            }
+
+            u8 *WindowEnd = WindowStart + WindowSize;
+            u8 *TestIn = In;
+            u8 *WindowIn = WindowStart;
+            size_t TestRun = 0;
+            while((WindowIn < WindowEnd) && (*TestIn++ == *WindowIn++))
+            {
+                ++TestRun;
+            }
+
+            if(BestRun < TestRun)
+            {
+                BestRun = TestRun;
+                BestDistance = In - WindowStart;
             }
         }
 
-        if((Run > 1) || (LiteralCount == MAX_LITERAL_COUNT))
+        bool OutputRun = false;
+        if(LiteralCount)
+        {
+            OutputRun = (BestRun > 4);
+        }
+        else 
+        {
+            OutputRun = (BestRun > 2);
+        }
+
+        if(OutputRun || (LiteralCount == MAX_LITERAL_COUNT))
         {
             // Flush
             u8 LiteralCount8 = (u8)LiteralCount;
@@ -183,12 +251,19 @@ LZCompress(size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
                 LiteralCount = 0;
             }
 
-            u8 Run8 = (u8)Run;
-            assert(Run8 == Run);
-            *Out++ = Run8;
-            *Out++ = 1;
+            if(OutputRun)
+            {
+                u8 Run8 = (u8)BestRun;
+                assert(Run8 == BestRun);
+                *Out++ = Run8;
+                *Out++ = 1;
 
-            In += Run;
+                u8 Distance8 = (u8)BestDistance;
+                assert(Distance8 == BestDistance);
+                *Out++ = Distance8;
+
+                In += BestRun;
+            }
         }
         else 
         {
@@ -207,9 +282,10 @@ LZCompress(size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
     return(OutSize);
 }
 
-static void 
-LZDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
+DECOMPRESS_HANDLER(LZDecompress)
 {
+    u8 *Out = OutBase;
+    u8 *In = InBase;
     u8 *InEnd = In + InSize;
     while(In < InEnd)
     {
@@ -232,77 +308,89 @@ LZDecompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
     assert(In == InEnd);
 }
 
-static size_t 
-Compress(size_t InSize, u8 *In, size_t MaxOutSize, u8 *Out)
+compressor Compressors[] =
 {
-    size_t OutSize = LZCompress(InSize, In, MaxOutSize, Out);
-    return(OutSize);
-}
-
-static void
-Decompress(size_t InSize, u8 *In, size_t OutSize, u8 *Out)
-{
-    LZDecompress(InSize, In, OutSize, Out);
-}
+    {"rle", RLECompress, RLEDecompress},
+    {"lz", LZCompress, LZDecompress},
+};
 
 int 
 main(int ArgCount, char **Args)
 {
-    if(ArgCount == 4)
+    if(ArgCount == 5)
     {
         size_t FinalOutputSize = 0;
         u8 *FinalOutputBuffer = 0;
 
-        char *Command = Args[1];
-        char *InFilename = Args[2];
-        char *OutFilename = Args[3];
+        char *CodecName = Args[1];
+        char *Command = Args[2];
+        char *InFilename = Args[3];
+        char *OutFilename = Args[4];
 
-        file_contents InFile = ReadEntireFileIntoMemory(InFilename);
-        if(strcmp(Command, "compress") == 0)
+        compressor *Compressor = 0;
+        for(int CompressorIndex = 0; CompressorIndex < (sizeof(Compressors)/sizeof(Compressors[0])); ++CompressorIndex)
         {
-            size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
-            u8 *OutBuffer = (u8 *)malloc(OutBufferSize + 4);
-            size_t CompressedSize = Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer + 4);
-            *(int unsigned *)OutBuffer = (int unsigned)InFile.FileSize;
-
-            FinalOutputSize = CompressedSize + 4;
-            FinalOutputBuffer = OutBuffer;
-        }
-        else if(strcmp(Command, "decompress") == 0)
-        {
-            if(InFile.FileSize >= 4)
+            compressor *TestCompressor = Compressors + CompressorIndex;
+            if(strcmp(CodecName, Compressor->Name) == 0)
             {
-                size_t OutBufferSize = *(int unsigned *)InFile.Contents;
-                u8 *OutBuffer = (u8 *)malloc(OutBufferSize);
-                Decompress(InFile.FileSize - 4, InFile.Contents + 4, OutBufferSize, OutBuffer);
+                Compressor = TestCompressor;
+                break;
+            }
+        }
 
-                FinalOutputSize = OutBufferSize;
+        if(Compressor)
+        {
+            file_contents InFile = ReadEntireFileIntoMemory(InFilename);
+            if(strcmp(Command, "compress") == 0)
+            {
+                size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
+                u8 *OutBuffer = (u8 *)malloc(OutBufferSize + 4);
+                size_t CompressedSize = Compressor->Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer + 4);
+                *(int unsigned *)OutBuffer = (int unsigned)InFile.FileSize;
+
+                FinalOutputSize = CompressedSize + 4;
                 FinalOutputBuffer = OutBuffer;
             }
+            else if(strcmp(Command, "decompress") == 0)
+            {
+                if(InFile.FileSize >= 4)
+                {
+                    size_t OutBufferSize = *(int unsigned *)InFile.Contents;
+                    u8 *OutBuffer = (u8 *)malloc(OutBufferSize);
+                    Compressor->Decompress(InFile.FileSize - 4, InFile.Contents + 4, OutBufferSize, OutBuffer);
+
+                    FinalOutputSize = OutBufferSize;
+                    FinalOutputBuffer = OutBuffer;
+                }
+                else 
+                {
+                    fprintf(stderr, "Invalid input file\n");
+                }
+            }
+            else if(strcmp(Command, "test") == 0)
+            {
+                size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
+                u8 *OutBuffer = (u8 *)malloc(OutBufferSize);
+                u8 *TestBuffer = (u8 *)malloc(InFile.FileSize);
+                size_t CompressedSize = Compressor->Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer);
+                Compressor->Decompress(CompressedSize, OutBuffer, InFile.FileSize, TestBuffer);
+                if(memcmp(InFile.Contents, TestBuffer, InFile.FileSize) == 0)
+                {
+                    fprintf(stderr, "Success!\n");
+                }
+                else 
+                {
+                    fprintf(stderr, "Failure :(\n");
+                }
+            }
             else 
             {
-                fprintf(stderr, "Invalid input file\n");
-            }
-        }
-        else if(strcmp(Command, "test") == 0)
-        {
-            size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
-            u8 *OutBuffer = (u8 *)malloc(OutBufferSize);
-            u8 *TestBuffer = (u8 *)malloc(InFile.FileSize);
-            size_t CompressedSize = Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer);
-            Decompress(CompressedSize, OutBuffer, InFile.FileSize, TestBuffer);
-            if(memcmp(InFile.Contents, TestBuffer, InFile.FileSize) == 0)
-            {
-                fprintf(stderr, "Success!\n");
-            }
-            else 
-            {
-                fprintf(stderr, "Failure :(\n");
+                fprintf(stderr, "Unrecognised command %s\n", Command);
             }
         }
         else 
         {
-            fprintf(stderr, "Unrecognised command %s\n", Command);
+            fprintf(stderr, "Unrecognised compressor %s\n", CodecName);
         }
 
         if(FinalOutputBuffer)
