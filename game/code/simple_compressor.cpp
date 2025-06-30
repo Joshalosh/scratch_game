@@ -13,12 +13,22 @@ enum stat_type
     Stat_Repeat,
     Stat_Copy,
 
-    Stat_LiteralBytes,
-    Stat_NonLiteralBytes,
-
     Stat_Count,
 };
-struct stat 
+static char *GetStatName(stat_type Type)
+{
+#define StringCase(a) case a: {return((char *)(#a + 5));}
+    switch(Type)
+    {
+        StringCase(Stat_Literal);
+        StringCase(Stat_Repeat);
+        StringCase(Stat_Copy);
+    }
+
+    return("unknown");
+}
+
+struct stat
 {
     size_t Count;
     size_t Total;
@@ -37,7 +47,7 @@ struct file_contents
     u8 *Contents;
 };
 
-#define COMPRESS_HANDLER(name) size_t name(size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
+#define COMPRESS_HANDLER(name) size_t name(stat_group *Stats, size_t InSize, u8 *InBase, size_t MaxOutSize, u8 *OutBase)
 #define DECOMPRESS_HANDLER(name) void name(size_t InSize, u8 *InBase, size_t OutSize, u8 *OutBase)
 
 typedef COMPRESS_HANDLER(compress_handler);
@@ -67,12 +77,54 @@ ReadEntireFileIntoMemory(char *Filename)
 
         fclose(File);
     }
-    else 
+    else
     {
         fprintf(stderr, "Unable to read file %s\n", Filename);
     }
 
-    return (Result);
+    return(Result);
+}
+
+static double
+Percent(size_t Num, size_t Den)
+{
+    double Result = 0.0f;
+
+    if(Den != 0)
+    {
+        Result = (double)Num / (double)Den;
+    }
+
+    return(100.0*Result);
+}
+
+static void
+PrintStats(stat_group *Stats)
+{
+    if(Stats->UncompressedBytes > 0)
+    {
+        fprintf(stdout, "Compression: %.0f -> %.0f (%.02f%%)\n",
+                (double)Stats->UncompressedBytes,
+                (double)Stats->CompressedBytes,
+                Percent(Stats->CompressedBytes, Stats->UncompressedBytes));
+
+        for(int StatIndex = 0; StatIndex < Stat_Count; ++StatIndex)
+        {
+            stat *Stat = Stats->Stats + StatIndex;
+            if(Stat->Count)
+            {
+                fprintf(stdout, "%s: %.0f %.0f\n",
+                        GetStatName((stat_type)StatIndex), (double)Stat->Count, (double)Stat->Total);
+            }
+        }
+    }
+}
+
+inline void
+Increment(stat_group *Stats, stat_type Type, size_t Value)
+{
+    ++Stats->Stats[Type].Count;
+    Stats->Stats[Type].Total += Value;
 }
 
 static size_t
@@ -103,10 +155,10 @@ COMPRESS_HANDLER(RLECompress)
 
     u8 *In = InBase;
     u8 *InEnd = In + InSize;
-    while(In < InEnd)
+    while(In <= InEnd)
     {
-        u8 StartingValue = In[0];
-        size_t Run = 1;
+        u8 StartingValue = (In == InEnd) ? 0 : In[0];
+        size_t Run = 0;
         while((Run < (size_t)(InEnd - In)) &&
               (Run < MAX_RUN_COUNT) &&
               (In[Run] == StartingValue))
@@ -114,8 +166,10 @@ COMPRESS_HANDLER(RLECompress)
             ++Run;
         }
 
-        if((Run > 1) || (LiteralCount == MAX_LITERAL_COUNT))
+        if((In == InEnd) || (Run > 1) || (LiteralCount == MAX_LITERAL_COUNT))
         {
+            Increment(Stats, Stat_Literal, LiteralCount);
+            Increment(Stats, Stat_Repeat, Run);
             // Output a literal/run pair
             u8 LiteralCount8 = (u8)LiteralCount;
             assert(LiteralCount8 == LiteralCount);
@@ -135,18 +189,24 @@ COMPRESS_HANDLER(RLECompress)
 
             In += Run;
         }
-        else 
+        else
         {
             // Buffer literals
             Literals[LiteralCount++] = StartingValue;
 
             ++In;
         }
+
+        if(In == InEnd)
+        {
+            break;
+        }
     }
 #undef MAX_LITERAL_COUNT
 #undef MAX_RUN_COUNT
 
     assert(In == InEnd);
+    assert(LiteralCount == 0);
 
     size_t OutSize = Out - OutBase;
     assert(OutSize <= MaxOutSize);
@@ -190,7 +250,7 @@ COMPRESS_HANDLER(LZCompress)
     u8 Literals[MAX_LITERAL_COUNT];
 
     u8 *InEnd = In + InSize;
-    while(In < InEnd)
+    while(In <= InEnd)
     {
         size_t MaxLookback = In - InBase;
         if(MaxLookback > MAX_LOOKBACK_COUNT)
@@ -229,12 +289,12 @@ COMPRESS_HANDLER(LZCompress)
         {
             OutputRun = (BestRun > 4);
         }
-        else 
+        else
         {
             OutputRun = (BestRun > 2);
         }
 
-        if(OutputRun || (LiteralCount == MAX_LITERAL_COUNT))
+        if((In == InEnd) || OutputRun || (LiteralCount == MAX_LITERAL_COUNT))
         {
             // Flush
             u8 LiteralCount8 = (u8)LiteralCount;
@@ -253,10 +313,11 @@ COMPRESS_HANDLER(LZCompress)
 
             if(OutputRun)
             {
+                Increment(Stats, (BestDistance >= BestRun) ? Stat_Copy : Stat_Repeat, BestRun);
+
                 u8 Run8 = (u8)BestRun;
                 assert(Run8 == BestRun);
                 *Out++ = Run8;
-                *Out++ = 1;
 
                 u8 Distance8 = (u8)BestDistance;
                 assert(Distance8 == BestDistance);
@@ -265,14 +326,20 @@ COMPRESS_HANDLER(LZCompress)
                 In += BestRun;
             }
         }
-        else 
+        else
         {
             // Buffer literals
             Literals[LiteralCount++] = *In++;
         }
+
+        if(In == InEnd)
+        {
+            break;
+        }
     }
 #undef MAX_LITERAL_COUNT
 #undef MAX_RUN_COUNT
+#undef MAX_LOOKBACK_COUNT
 
     assert(In == InEnd);
 
@@ -284,8 +351,8 @@ COMPRESS_HANDLER(LZCompress)
 
 DECOMPRESS_HANDLER(LZDecompress)
 {
-    u8 *Out = OutBase;
     u8 *In = InBase;
+    u8 *Out = OutBase;
     u8 *InEnd = In + InSize;
     while(In < InEnd)
     {
@@ -314,7 +381,7 @@ compressor Compressors[] =
     {"lz", LZCompress, LZDecompress},
 };
 
-int 
+int
 main(int ArgCount, char **Args)
 {
     if(ArgCount == 5)
@@ -327,11 +394,13 @@ main(int ArgCount, char **Args)
         char *InFilename = Args[3];
         char *OutFilename = Args[4];
 
+        stat_group Stats = {};
+
         compressor *Compressor = 0;
         for(int CompressorIndex = 0; CompressorIndex < (sizeof(Compressors)/sizeof(Compressors[0])); ++CompressorIndex)
         {
             compressor *TestCompressor = Compressors + CompressorIndex;
-            if(strcmp(CodecName, Compressor->Name) == 0)
+            if(strcmp(CodecName, TestCompressor->Name) == 0)
             {
                 Compressor = TestCompressor;
                 break;
@@ -345,11 +414,14 @@ main(int ArgCount, char **Args)
             {
                 size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
                 u8 *OutBuffer = (u8 *)malloc(OutBufferSize + 4);
-                size_t CompressedSize = Compressor->Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer + 4);
+                size_t CompressedSize = Compressor->Compress(&Stats, InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer + 4);
                 *(int unsigned *)OutBuffer = (int unsigned)InFile.FileSize;
 
                 FinalOutputSize = CompressedSize + 4;
                 FinalOutputBuffer = OutBuffer;
+
+                Stats.UncompressedBytes = InFile.FileSize;
+                Stats.CompressedBytes = CompressedSize;
             }
             else if(strcmp(Command, "decompress") == 0)
             {
@@ -362,7 +434,7 @@ main(int ArgCount, char **Args)
                     FinalOutputSize = OutBufferSize;
                     FinalOutputBuffer = OutBuffer;
                 }
-                else 
+                else
                 {
                     fprintf(stderr, "Invalid input file\n");
                 }
@@ -372,7 +444,7 @@ main(int ArgCount, char **Args)
                 size_t OutBufferSize = GetMaximumCompressedOutputSize(InFile.FileSize);
                 u8 *OutBuffer = (u8 *)malloc(OutBufferSize);
                 u8 *TestBuffer = (u8 *)malloc(InFile.FileSize);
-                size_t CompressedSize = Compressor->Compress(InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer);
+                size_t CompressedSize = Compressor->Compress(&Stats, InFile.FileSize, InFile.Contents, OutBufferSize, OutBuffer);
                 Compressor->Decompress(CompressedSize, OutBuffer, InFile.FileSize, TestBuffer);
                 if(memcmp(InFile.Contents, TestBuffer, InFile.FileSize) == 0)
                 {
@@ -382,13 +454,16 @@ main(int ArgCount, char **Args)
                 {
                     fprintf(stderr, "Failure :(\n");
                 }
+
+                Stats.UncompressedBytes = InFile.FileSize;
+                Stats.CompressedBytes = CompressedSize;
             }
             else 
             {
                 fprintf(stderr, "Unrecognised command %s\n", Command);
             }
         }
-        else 
+        else
         {
             fprintf(stderr, "Unrecognised compressor %s\n", CodecName);
         }
@@ -400,15 +475,23 @@ main(int ArgCount, char **Args)
             {
                 fwrite(FinalOutputBuffer, 1, FinalOutputSize, OutFile);
             }
-            else 
+            else
             {
                 fprintf(stderr, "Unable to open output file %s\n", OutFilename);
             }
         }
+
+        PrintStats(&Stats);
     }
-    else 
+    else
     {
-        fprintf(stderr, "Usage: %s compress [raw filename] [compressed filename]\n", Args[0]);
-        fprintf(stderr, "       %s decompress [compressed filename] [raw filename]\n", Args[0]);
+        fprintf(stderr, "Usage: %s [algorithm] compress [raw filename] [compressed filename]\n", Args[0]);
+        fprintf(stderr, "       %s [algorithm] decompress [compressed filename] [raw filename]\n", Args[0]);
+
+        for(int CompressorIndex = 0; CompressorIndex < (sizeof(Compressors)/sizeof(Compressors[0])); ++CompressorIndex)
+        {
+            compressor *Compressor = Compressors + CompressorIndex;
+            fprintf(stderr, "[algorithm] = %s\n", Compressor->Name);
+        }
     }
 }
